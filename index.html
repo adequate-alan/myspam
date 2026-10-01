@@ -713,7 +713,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 }
 .auto-btn:hover { background: #241E1A; border-color: #46382F; }
 .valbar.custom .fill { opacity: 1; background: repeating-linear-gradient(135deg, var(--rose) 0 4px, var(--burgundy) 4px 8px); }
-body.editing td.val { min-width: 330px; }
+body.editing #panel-rankings td.val { min-width: 330px; }
 
 /* ---------- Trade calculator ---------- */
 .trade-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -919,6 +919,96 @@ button.tr-player:hover:not(:disabled) { background: var(--surface-2); }
 .lo-format { grid-column: 1; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
 .lo-status { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 0.68rem; font-weight: 650; letter-spacing: 0.06em; color: var(--ink-2); }
 
+/* ---------- Player photos ---------- */
+.face {
+  position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%; overflow: hidden;
+  background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line);
+}
+.face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.face-i { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; color: var(--muted); user-select: none; }
+.face.sm { width: 24px; height: 24px; } .face.sm .face-i { font-size: 0.54rem; }
+.face.xs { width: 20px; height: 20px; } .face.xs .face-i { font-size: 0.5rem; }
+.face.lg { width: 52px; height: 52px; } .face.lg .face-i { font-size: 0.92rem; }
+.face.team { border-radius: 8px; } .face.team.lg { border-radius: 12px; }
+.pl-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pl-text { min-width: 0; }
+.tr-player .face, .results .face { margin-right: -2px; }
+
+/* ---------- League tab: power rankings ---------- */
+.method-note { margin: -6px 0 18px; max-width: 72ch; color: var(--muted); font-size: 0.82rem; line-height: 1.5; }
+.pr-head, .pr-row {
+  display: grid; align-items: center; gap: 16px;
+  grid-template-columns: 34px minmax(190px, 1.5fr) minmax(130px, 1fr) minmax(150px, 0.9fr) 88px;
+}
+.pr-head {
+  white-space: nowrap; padding: 0 18px 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
+}
+.pr-list { border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.pr-row {
+  width: 100%; text-align: left; padding: 14px 18px; border: 0; border-bottom: 1px solid var(--line-soft);
+  background: none; color: var(--ink); cursor: pointer; transition: background 0.16s ease;
+}
+.pr-row:last-child { border-bottom: 0; }
+.pr-row:hover { background: var(--surface-hover); }
+.pr-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.pr-row.mine { box-shadow: inset 3px 0 0 var(--gold); }
+.pr-rank { font-size: 1.15rem; font-weight: 800; font-stretch: 112%; color: var(--rank); font-variant-numeric: tabular-nums; }
+.pr-row:nth-child(-n+3) .pr-rank { color: var(--gold); }
+.pr-team { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pr-text { display: flex; flex-direction: column; min-width: 0; }
+.pr-name { font-weight: 700; font-size: 0.98rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-name .owner { margin-left: 8px; display: inline; }
+.pr-meta { font-size: 0.74rem; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.pr-strength { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.pr-score { font-size: 0.98rem; font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; }
+.pr-bar { height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.pr-bar span { display: block; height: 100%; background: var(--gold); opacity: 0.85; border-radius: 2px; }
+.pr-pos { display: flex; flex-direction: column; gap: 5px; }
+.pr-pos-item { display: flex; align-items: center; gap: 8px; }
+.pr-pos-label { width: 52px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pr-pos .pos { min-width: 34px; height: 19px; font-size: 0.64rem; }
+.pr-place { font-size: 0.74rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pr-stars { display: flex; justify-content: flex-end; }
+.pr-head span:last-child { text-align: right; }
+.role-inline { display: none; }
+.pr-stars .face { box-shadow: 0 0 0 2px var(--surface); }
+.pr-stars .face + .face { margin-left: -6px; }
+.pr-row:hover .pr-stars .face { box-shadow: 0 0 0 2px var(--surface-hover); }
+
+/* ---------- League tab: team breakdown ---------- */
+.back-link {
+  background: none; border: 0; padding: 0; margin-bottom: 16px; cursor: pointer;
+  font-size: 0.7rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.back-link:hover { color: var(--cream); }
+.team-head { display: flex; align-items: center; gap: 16px 24px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line-soft); }
+.team-head-text { flex: 1 1 260px; min-width: 0; }
+.team-head .panel-title .owner { font-size: 0.62rem; vertical-align: middle; }
+.team-head-rank, .team-head-score { display: flex; align-items: center; gap: 10px; }
+.team-head-score { padding-left: 24px; border-left: 1px solid var(--line-soft); }
+.thr-num { font-size: 2.3rem; font-weight: 850; font-stretch: 115%; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.ths-num { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--cream); font-variant-numeric: tabular-nums; }
+.thr-label { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); line-height: 1.35; }
+.strength-grid.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.st-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cream); height: 22px; display: inline-flex; align-items: center; }
+.lineup-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.lineup-chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px;
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: 999px; font-size: 0.82rem;
+}
+.lc-slot { min-width: 34px; text-align: center; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.lc-player { font-weight: 650; color: var(--cream); white-space: nowrap; }
+.team-table td.role { width: 1%; white-space: nowrap; }
+.role-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--cream); background: color-mix(in srgb, var(--gold) 16%, transparent);
+}
+.role-tag.bench { color: var(--muted); background: var(--surface-2); }
+.team-table tbody td { padding-block: 11px; }
+.tier-sub { margin-left: 12px; color: var(--muted); font-weight: 550; letter-spacing: 0.04em; text-transform: none; font-size: 0.74rem; }
+.team-actions { margin-top: 20px; display: flex; justify-content: flex-end; }
+
 /* ---------- Footer, dialog, toast ---------- */
 footer { border-top: 1px solid var(--line-soft); padding-block: 22px 40px; color: var(--muted); font-size: 0.8rem; }
 .footer-row { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
@@ -953,7 +1043,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   .masthead-top { padding-block: 18px 0; }
   .brand-name { font-size: 1.5rem; }
   .meta { font-size: 0.6rem; letter-spacing: 0.08em; }
-  .tabs { gap: 24px; margin-top: 10px; }
+  .tabs { gap: 16px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -18px; padding-inline: 18px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: none; white-space: nowrap; font-size: 0.72rem; letter-spacing: 0.05em; }
+  body.has-league .tab-long { display: none; }
+  .tab::after { bottom: 0; }
   main { padding-block: 22px 48px; }
   .controls { flex-direction: column; align-items: stretch; border-bottom: 0; gap: 10px; }
   .chips { gap: 20px; border-bottom: 1px solid var(--line-soft); }
@@ -965,8 +1059,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   .valbar .track { display: none; }
   .pl-name { white-space: nowrap; }
   .pl-team { display: block; margin-left: 0; margin-top: 2px; }
-  body.editing .table-scroll table { min-width: 610px; }
-  body.editing td.val { min-width: 200px; }
+  body.editing #panel-rankings .table-scroll table { min-width: 610px; }
+  body.editing #panel-rankings td.val { min-width: 200px; }
   td.edit-col { width: 84px; }
   .handle, .arrow { color: var(--muted); width: 25px; height: 32px; }
   .editor-bar { padding: 10px 12px; }
@@ -981,6 +1075,53 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   .panel-title { font-size: 1.4rem; }
   .owner { display: block; margin-left: 0; margin-top: 2px; }
   .league-controls { margin-top: 0; }
+  .pl-cell { gap: 10px; }
+  .face { width: 26px; height: 26px; }
+  body:not(.editing) #panel-rankings .pl-name { white-space: normal; }
+  body:not(.editing) #panel-rankings tbody td, body:not(.editing) #panel-rankings thead th { padding-inline: 10px; }
+  body:not(.editing) #panel-rankings td.rk { width: 34px; padding-left: 14px; }
+  .pr-head { display: none; }
+  .pr-row {
+    grid-template-columns: 26px minmax(0, 1fr) auto; grid-template-areas: "rank team stars" "rank strength strength" "rank pos pos";
+    gap: 10px 12px; padding: 14px;
+  }
+  .pr-rank { grid-area: rank; align-self: start; padding-top: 6px; }
+  .pr-team { grid-area: team; }
+  .pr-strength { grid-area: strength; flex-direction: row; align-items: center; gap: 12px; }
+  .pr-strength .pr-bar { flex: 1; }
+  .pr-score { min-width: 56px; font-size: 0.9rem; }
+  .pr-pos { grid-area: pos; flex-direction: row; flex-wrap: wrap; gap: 6px 18px; }
+  .pr-pos-label { width: auto; }
+  .pr-stars { grid-area: stars; }
+  .team-head { gap: 14px 18px; }
+  .team-head-text { flex-basis: calc(100% - 70px); }
+  .team-head-score { padding-left: 18px; }
+  .strength-grid.five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .strength-grid.five .strength:last-child { grid-column: 1 / -1; }
+  .tier-sub { display: block; margin: 3px 0 0; }
+  .team-table .role { display: none; }
+  .team-table .pl-team { display: inline; margin-left: 0; }
+  .role-inline { display: inline-block; margin-left: 8px; padding: 1px 6px; font-size: 0.56rem; vertical-align: 1px; }
+  .team-table .pl-text { display: flex; flex-direction: column; align-items: flex-start; }
+  .team-table .pl-text > span + span { margin-top: 3px; }
+  .team-table .role-inline { margin-left: 0; }
+  .mt-table td.mt-val { width: auto; }
+  .team-table .pl-name, #panel-myteam .pl-name, #panel-fa .pl-name { white-space: normal; }
+  #panel-fa .fa-status { display: none; }
+  #panel-myteam .mt-table td, #panel-myteam .mt-table th, #panel-fa td, #panel-fa th { padding-inline: 6px; }
+  #panel-myteam .mt-table td:first-child, #panel-myteam .mt-table th:first-child, #panel-fa td:first-child, #panel-fa th:first-child { padding-left: 14px; }
+  #panel-myteam .mt-table td.slot { width: 40px; }
+  .mt-table .pos { min-width: 38px; padding: 0 5px; }
+  .mt-table .face { width: 26px; height: 26px; }
+  .mt-table thead th, #panel-fa thead th { letter-spacing: 0.06em; font-size: 0.6rem; }
+  .mt-table .pl-cell { gap: 8px; }
+  .mt-table td.mt-val { font-size: 0.86rem; }
+  #panel-myteam .mt-table td.slot:first-child { padding-left: 12px; padding-right: 4px; width: 1%; font-size: 0.62rem; }
+  .mt-table td.mt-val .muted { font-size: 0.72rem; }
+  .mt-table td.rk { width: 36px; }
+  .team-table tbody td, .team-table thead th { padding-inline: 10px; }
+  .team-table tbody td:first-child, .team-table thead th:first-child { padding-left: 14px; }
+  .strength-grid.five .st-note, .strength .st-note { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
@@ -1011,8 +1152,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" id="tab-rankings" aria-controls="panel-rankings" aria-selected="true">Rankings</button>
       <button class="tab" role="tab" id="tab-myteam" aria-controls="panel-myteam" aria-selected="false" hidden>My Team</button>
+      <button class="tab" role="tab" id="tab-league" aria-controls="panel-league" aria-selected="false" hidden>League</button>
       <button class="tab" role="tab" id="tab-fa" aria-controls="panel-fa" aria-selected="false" hidden>Free Agents</button>
-      <button class="tab" role="tab" id="tab-trade" aria-controls="panel-trade" aria-selected="false">Trade Calculator</button>
+      <button class="tab" role="tab" id="tab-trade" aria-controls="panel-trade" aria-selected="false">Trade<span class="tab-long"> Calculator</span></button>
     </nav>
   </div>
 </header>
@@ -1071,6 +1213,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     <div id="myteam-body"></div>
   </section>
 
+  <section id="panel-league" role="tabpanel" aria-labelledby="tab-league" hidden>
+    <div id="league-body"></div>
+  </section>
+
   <section id="panel-fa" role="tabpanel" aria-labelledby="tab-fa" hidden>
     <div class="panel-head">
       <div>
@@ -1084,7 +1230,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th><th scope="col">Status</th></tr></thead>
+        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th><th scope="col" class="fa-status">Status</th></tr></thead>
         <tbody id="fa-body"></tbody>
       </table>
     </div>
@@ -1408,7 +1554,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   if (SITE.sampleNote) $("sample-note").textContent = SITE.sampleNote;
 
   /* ---------- Tabs ---------- */
-  const tabs = { rankings: $("tab-rankings"), myteam: $("tab-myteam"), fa: $("tab-fa"), trade: $("tab-trade") };
+  const tabs = { rankings: $("tab-rankings"), myteam: $("tab-myteam"), league: $("tab-league"), fa: $("tab-fa"), trade: $("tab-trade") };
   function showTab(name) {
     if (!tabs[name] || tabs[name].hidden) name = "rankings";
     for (const [k, btn] of Object.entries(tabs)) {
@@ -1533,7 +1679,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           <button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>⠿</button><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${numOf(p) <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${numOf(p) >= lastNum ? " disabled" : ""}>▼</button>` : ""}</td>`;
       out.push(`<tr class="player" data-id="${p.id}">${editCol}
         <td class="rk">${rk(p)}</td>
-        <td><span class="pl-name">${esc(p.name)}</span>${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}${ownerTag(p)}</td>
+        <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-name">${esc(p.name)}</span>${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span></td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
@@ -1568,7 +1714,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       hl = 0;
       list.innerHTML = current.length ? current.map((p, i) =>
         `<li><button type="button" data-id="${p.id}" class="${i === hl ? "hl" : ""}">
-          <span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+          ${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
           <span class="r-name">${esc(p.name)}${ownerTag(p)}</span>
           <span class="r-val">${fmt(dv(p))}</span></button></li>`).join("")
         : `<li class="empty" style="padding:10px">No match</li>`;
@@ -1613,7 +1759,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const ids = sides[side];
     $("roster-" + side).innerHTML = ids.length ? ids.map(id => {
       const p = byId.get(id);
-      return `<li><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+      return `<li>${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
         <span class="n">${esc(p.name)}${ownerTag(p)}</span><span class="v">${fmt(dv(p))}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
     }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
@@ -1669,7 +1815,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       $("balance-title").textContent = `To even it out, add to Team ${loser}`;
       $("balance-list").innerHTML = scored.map(s =>
         `<button class="suggest" type="button" data-id="${s.p.id}" data-side="${loser}">
-          <span class="pos ${esc(s.p.pos)}">${esc(s.p.posRank)}</span>${esc(s.p.name)}
+          ${face(s.p.sleeperId, s.p.name, "xs")}<span class="pos ${esc(s.p.pos)}">${esc(s.p.posRank)}</span>${esc(s.p.name)}
           <span class="r-val">${fmt(dv(s.p))}</span></button>`).join("");
       $("balance").hidden = false;
     }
@@ -2216,7 +2362,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       const u = users.get(r.owner_id) || {};
       const manager = u.display_name || "Open team";
       const mine = r.owner_id === sl.userId || (r.co_owners || []).includes(sl.userId);
-      return { rosterId: r.roster_id, name: u.team_name || manager, manager, short: manager, mine, roster: r };
+      return { rosterId: r.roster_id, name: u.team_name || manager, manager, short: manager, mine, roster: r, avatar: u.avatar || "" };
     }).sort((a, b) => (b.mine - a.mine) || a.name.localeCompare(b.name));
     const mineTeam = LG.teams.find(t => t.mine);
     LG.myRosterId = mineTeam ? mineTeam.rosterId : null;
@@ -2258,12 +2404,13 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("sl-connect").hidden = !!d;
     $("league-pick").hidden = !d;
     $("meta").hidden = !!d;
-    tabs.myteam.hidden = tabs.fa.hidden = !d;
+    tabs.myteam.hidden = tabs.league.hidden = tabs.fa.hidden = !d;
+    document.body.classList.toggle("has-league", !!d);
     $("league-controls").hidden = !d;
     ["A", "B"].forEach(s => { $("team-" + s).hidden = !d; });
     if (!d) {
       ["A", "B"].forEach(s => { $("teamroster-" + s).hidden = true; });
-      if (["myteam", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
+      if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
       return;
     }
     $("lc-name").textContent = d.league.name;
@@ -2309,7 +2456,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function renderLeagueAll() {
     leagueRecalc();
     renderLeagueUI();
-    renderRankings(); renderTrade(); renderMyTeam(); renderFA();
+    renderRankings(); renderTrade(); renderMyTeam(); renderLeague(); renderFA();
   }
 
   /* Connect flow */
@@ -2381,12 +2528,18 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (!league) throw new Error("Sleeper couldn't find that league.");
     sl.data = { [id]: {
       league: trimLeague(league),
-      users: (users || []).map(u => ({ user_id: u.user_id, display_name: u.display_name, team_name: (u.metadata && u.metadata.team_name) || "" })),
+      users: (users || []).map(u => ({
+        user_id: u.user_id, display_name: u.display_name, team_name: (u.metadata && u.metadata.team_name) || "",
+        avatar: (u.metadata && /^https:\/\//.test(u.metadata.avatar || "") ? u.metadata.avatar : (u.avatar ? `https://sleepercdn.com/avatars/thumbs/${u.avatar}` : ""))
+      })),
       rosters: (rosters || []).map(r => ({
         roster_id: r.roster_id, owner_id: r.owner_id, co_owners: r.co_owners || [],
         players: (r.players || []).map(String), starters: (r.starters || []).map(String),
         reserve: (r.reserve || []).map(String), taxi: (r.taxi || []).map(String),
-        settings: { wins: (r.settings || {}).wins || 0, losses: (r.settings || {}).losses || 0, ties: (r.settings || {}).ties || 0 }
+        settings: (st => ({
+          wins: st.wins || 0, losses: st.losses || 0, ties: st.ties || 0,
+          pf: (st.fpts || 0) + (st.fpts_decimal || 0) / 100, pa: (st.fpts_against || 0) + (st.fpts_against_decimal || 0) / 100
+        }))(r.settings || {})
       })),
       syncedAt: Date.now()
     } };
@@ -2444,11 +2597,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* Player helpers for roster views (ranked or not) */
   const bySleeper = () => new Map(players.filter(p => p.sleeperId).map(p => [p.sleeperId, p]));
   function rosterEntry(sid, map) {
-    const p = map.get(String(sid));
-    if (p) return { p, name: p.name, pos: p.pos, team: p.team, ranked: true };
-    if (/^[A-Z]{2,3}$/.test(String(sid))) return { name: `${sid} D/ST`, pos: "DEF", team: sid, ranked: false };
+    sid = String(sid);
+    const p = map.get(sid);
+    if (p) return { sid, p, name: p.name, pos: p.pos, team: p.team, ranked: true };
+    if (/^[A-Z]{2,3}$/.test(sid)) return { sid, name: `${sid} D/ST`, pos: "DEF", team: sid, ranked: false };
     const info = slPlayers && slPlayers[sid];
-    return info ? { name: info[0], pos: info[1], team: info[2], ranked: false } : { name: `Player ${sid}`, pos: "", team: "", ranked: false };
+    return info ? { sid, name: info[0], pos: info[1], team: info[2], ranked: false } : { sid, name: `Player ${sid}`, pos: "", team: "", ranked: false };
   }
   const overallRank = p => (leagueView() ? LG.adjRank.get(p.id) : p.rank) ?? "–";
 
@@ -2471,7 +2625,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? e.p.posRank : e.pos)}</span>` : "";
       return `<tr class="mt-row">
         <td class="slot">${esc(slot)}</td>
-        <td><span class="pl-name">${esc(e.name)}</span>${e.team ? `<span class="pl-team">${esc(e.team)}</span>` : ""}</td>
+        <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text"><span class="pl-name">${esc(e.name)}</span>${e.team ? `<span class="pl-team">${esc(e.team)}</span>` : ""}</div></div></td>
         <td class="pos-col">${badge}</td>
         <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
         <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
@@ -2484,31 +2638,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const ir = r.reserve.map(x => row("IR", x)).join("");
     const taxi = r.taxi.map(x => row("TAXI", x)).join("");
 
-    // Roster strength: total value at each position, ranked against the league
-    const posTotal = t => {
-      const out = { QB: 0, RB: 0, WR: 0, TE: 0 }, best = {}, count = { QB: 0, RB: 0, WR: 0, TE: 0 };
-      (t.roster.players || []).forEach(sid => {
-        const p = map.get(String(sid)); if (!p || !(p.pos in out)) return;
-        out[p.pos] += dv(p); count[p.pos]++;
-        if (!best[p.pos] || dv(p) > dv(best[p.pos])) best[p.pos] = p;
-      });
-      return { out, best, count };
-    };
-    const all = LG.teams.map(t => ({ t, ...posTotal(t) }));
-    const mine = all.find(x => x.t.mine);
-    const ord = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
-    const strength = EDIT_POS.map(pos => {
-      const sorted = [...all].sort((a, b) => b.out[pos] - a.out[pos]);
-      const place = sorted.findIndex(x => x.t.mine) + 1, max = sorted[0].out[pos] || 1;
-      const b = mine.best[pos];
-      return `<div class="strength">
-        <div class="st-top"><span class="pos ${pos}">${pos}</span><span class="st-place">${ord(place)} of ${all.length}</span></div>
-        <div class="st-total">${fmt(mine.out[pos])}</div>
-        <div class="st-bar" style="--c: var(--${pos.toLowerCase()})"><span style="width:${Math.max(3, 100 * mine.out[pos] / max).toFixed(1)}%"></span></div>
-        <div class="st-note">${mine.count[pos]} ranked${b ? ` · best: ${esc(b.name)}` : ""}</div>
-      </div>`;
-    }).join("");
-    const rec = r.settings, wl = rec.wins + rec.losses + rec.ties ? ` · ${rec.wins}-${rec.losses}${rec.ties ? "-" + rec.ties : ""}` : "";
+    // Roster strength: same evaluation as the League power rankings
+    const ev = evaluateTeams(), mineEv = ev.list.find(x => x.team.mine);
+    const strength = strengthCards(mineEv, ev);
+    const wl = recordText(r.settings) ? ` · ${recordText(r.settings)}` : "";
     const others = LG.teams.filter(t => !t.mine);
     box.innerHTML = `
       <div class="panel-head">
@@ -2516,6 +2649,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           <h2 class="panel-title">${esc(me.name)}</h2>
           <p class="panel-sub">${esc(me.manager)}${wl} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
         </div>
+        <button class="btn" type="button" data-open-team="${me.rosterId}">Power rank ${mineEv.power} of ${ev.list.length} · Position breakdown</button>
       </div>
       <h3 class="section-label">Roster strength</h3>
       <div class="strength-grid">${strength}</div>
@@ -2529,6 +2663,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         <span class="tw-name">${esc(t.name)}</span>${t.name !== t.manager ? `<span class="tw-manager">${esc(t.manager)}</span>` : ""}</button>`).join("")}</div>`;
   }
   $("myteam-body").addEventListener("click", e => {
+    const ot = e.target.closest("[data-open-team]");
+    if (ot) { openTeam(ot.dataset.openTeam); return; }
     const b = e.target.closest("[data-roster]");
     if (!b || LG.myRosterId == null) return;
     $("team-A").value = String(LG.myRosterId); $("team-B").value = b.dataset.roster;
@@ -2536,6 +2672,184 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     renderTeamRosters(); renderTrade();
     showTab("trade"); history.replaceState(null, "", "#trade");
     window.scrollTo({ top: 0 });
+  });
+
+  /* ---------- Photos ---------- */
+  function initials(name) {
+    const w = String(name || "").replace(/[^A-Za-z' .-]/g, "").split(/\s+/).filter(x => x && !/^(jr|sr|ii|iii|iv)\.?$/i.test(x));
+    return ((w[0] || "?")[0] + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase();
+  }
+  // Player photo from Sleeper's CDN (team logo for defenses); initials show if it's missing
+  function face(sid, name, size = "") {
+    sid = sid ? String(sid) : "";
+    const src = !sid ? "" : /^[A-Z]{2,3}$/.test(sid)
+      ? `https://sleepercdn.com/images/team_logos/nfl/${sid.toLowerCase()}.png`
+      : `https://sleepercdn.com/content/nfl/players/thumb/${encodeURIComponent(sid)}.jpg`;
+    return `<span class="face ${size}" aria-hidden="true"><span class="face-i">${esc(initials(name))}</span>${src ? `<img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  }
+  function teamFace(team, size = "") {
+    return `<span class="face team ${size}" aria-hidden="true"><span class="face-i">${esc(initials(team.name))}</span>${team.avatar ? `<img src="${esc(team.avatar)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ""}</span>`;
+  }
+  const ordinal = n => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
+  function recordText(st) {
+    if (!st || !(st.wins + st.losses + st.ties)) return "";
+    return `${st.wins}-${st.losses}${st.ties ? "-" + st.ties : ""}`;
+  }
+  const pts = v => (v ? v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "");
+
+  /* ---------- Team evaluation (power rankings) ----------
+     For every team: the best lineup its healthy roster can field in this league's
+     slots using SPMetrics values, plus bench depth. Score = starters + benchWeight x bench.
+     Position rooms = starters at that position + benchWeight x bench at that position. */
+  const ELIG = { QB: ["QB"], RB: ["RB"], WR: ["WR"], TE: ["TE"], WRRB_FLEX: ["RB", "WR"], REC_FLEX: ["WR", "TE"],
+                 FLEX: ["RB", "WR", "TE"], SUPER_FLEX: ["QB", "RB", "WR", "TE"] };
+  const SLOT_ORDER = ["QB", "RB", "WR", "TE", "WRRB_FLEX", "REC_FLEX", "FLEX", "SUPER_FLEX"];
+  function evaluateTeams() {
+    const d = activeData();
+    if (!d) return { list: [], byRoster: new Map() };
+    const map = bySleeper(), lu = lineupOf(d.league), bw = VALUE_MODEL.benchWeight;
+    const slots = d.league.roster_positions.filter(s => ELIG[s]).sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
+    const list = LG.teams.map(team => {
+      const r = team.roster, out = new Set([...(r.reserve || []), ...(r.taxi || [])]);
+      const pool = (r.players || []).filter(sid => !out.has(sid)).map(sid => map.get(sid)).filter(Boolean).sort((a, b) => dv(b) - dv(a));
+      const role = new Map(), starters = [];
+      for (const slot of slots) {
+        const p = pool.find(x => !role.has(x.id) && ELIG[slot].includes(x.pos));
+        if (p) { role.set(p.id, SLOT_LABEL[slot] || slot); starters.push(p); }
+      }
+      const bench = pool.filter(p => !role.has(p.id));
+      const depthList = bench.slice(0, Math.max(lu.bench, 1));
+      const startVal = starters.reduce((a, p) => a + dv(p), 0), depthVal = depthList.reduce((a, p) => a + dv(p), 0);
+      const room = {}, roomPlayers = {};
+      for (const pos of EDIT_POS) {
+        roomPlayers[pos] = pool.filter(p => p.pos === pos);
+        room[pos] = starters.filter(p => p.pos === pos).reduce((a, p) => a + dv(p), 0)
+          + bw * bench.filter(p => p.pos === pos).reduce((a, p) => a + dv(p), 0);
+      }
+      return { team, starters, bench, startVal, depthVal, score: startVal + bw * depthVal, room, roomPlayers, role, place: {} };
+    });
+    const n = list.length;
+    [...list].sort((a, b) => b.score - a.score).forEach((x, k) => { x.power = k + 1; });
+    for (const pos of EDIT_POS) [...list].sort((a, b) => b.room[pos] - a.room[pos]).forEach((x, k) => { x.place[pos] = k + 1; });
+    [...list].sort((a, b) => b.depthVal - a.depthVal).forEach((x, k) => { x.place.DEPTH = k + 1; });
+    const avg = {}, max = {};
+    for (const k of [...EDIT_POS, "DEPTH"]) {
+      const vals = list.map(x => (k === "DEPTH" ? x.depthVal : x.room[k]));
+      avg[k] = vals.reduce((a, b) => a + b, 0) / (n || 1); max[k] = Math.max(1, ...vals);
+    }
+    list.forEach(x => {
+      const ranked = EDIT_POS.map(p => [p, x.place[p]]).sort((a, b) => a[1] - b[1] || x.room[b[0]] - x.room[a[0]]);
+      x.best = ranked[0]; x.worst = ranked[ranked.length - 1];
+    });
+    return { list: list.sort((a, b) => a.power - b.power), byRoster: new Map(list.map(x => [String(x.team.rosterId), x])), avg, max, n };
+  }
+  // Position strength cards (QB, RB, WR, TE, bench depth) for one team, compared with the league
+  function strengthCards(x, ev) {
+    const card = (k, label, val, note, color) => `<div class="strength">
+        <div class="st-top">${k === "DEPTH" ? `<span class="st-label">${label}</span>` : `<span class="pos ${k}">${k}</span>`}<span class="st-place">${ordinal(x.place[k])} of ${ev.n}</span></div>
+        <div class="st-total">${fmt(val)}</div>
+        <div class="st-bar" style="--c: ${color}"><span style="width:${Math.max(3, 100 * val / ev.max[k]).toFixed(1)}%"></span></div>
+        <div class="st-note">${note}</div></div>`;
+    return EDIT_POS.map(pos => {
+      const top = x.roomPlayers[pos][0];
+      const diff = x.room[pos] - ev.avg[pos];
+      return card(pos, pos, x.room[pos], `${top ? esc(top.name) : "No ranked players"} · ${diff >= 0 ? "+" : "−"}${fmt(Math.abs(diff))} vs avg`, `var(--${pos.toLowerCase()})`);
+    }).join("") + card("DEPTH", "Depth", x.depthVal, `${x.bench.length} bench player${x.bench.length === 1 ? "" : "s"} ranked`, "var(--cream)");
+  }
+
+  /* ---------- League tab: power rankings and team breakdown ---------- */
+  let leagueTeam = null;   // roster id of the open team, or null for the overview
+  function openTeam(rosterId) {
+    leagueTeam = String(rosterId);
+    renderLeague();
+    showTab("league"); history.replaceState(null, "", "#league");
+    window.scrollTo({ top: 0 });
+  }
+  function renderLeague() {
+    const box = $("league-body"), d = activeData();
+    if (!d) { box.innerHTML = ""; leagueTeam = null; return; }
+    const ev = evaluateTeams();
+    if (leagueTeam && ev.byRoster.has(leagueTeam)) { box.innerHTML = teamDetail(ev.byRoster.get(leagueTeam), ev, d); return; }
+    leagueTeam = null;
+    const topScore = Math.max(1, ...ev.list.map(x => x.score));
+    const rows = ev.list.map(x => {
+      const t = x.team, st = t.roster.settings || {}, rec = recordText(st);
+      const meta = [t.name !== t.manager ? t.manager : "", rec, st.pf ? `PF ${pts(st.pf)}` : "", st.pa ? `PA ${pts(st.pa)}` : ""].filter(Boolean).join(" · ");
+      const stars = x.starters.slice().sort((a, b) => dv(b) - dv(a)).slice(0, 3);
+      return `<button class="pr-row${t.mine ? " mine" : ""}" type="button" data-team="${t.rosterId}">
+        <span class="pr-rank">${x.power}</span>
+        <span class="pr-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(meta) || "&nbsp;"}</span></span></span>
+        <span class="pr-strength"><span class="pr-score">${fmt(x.score)}</span><span class="pr-bar"><span style="width:${(100 * x.score / topScore).toFixed(1)}%"></span></span></span>
+        <span class="pr-pos"><span class="pr-pos-item"><span class="pr-pos-label">Best</span><span class="pos ${x.best[0]}">${x.best[0]}</span><span class="pr-place">${ordinal(x.best[1])}</span></span>
+          <span class="pr-pos-item"><span class="pr-pos-label">Weakest</span><span class="pos ${x.worst[0]}">${x.worst[0]}</span><span class="pr-place">${ordinal(x.worst[1])}</span></span></span>
+        <span class="pr-stars" title="${esc(stars.map(p => p.name).join(", "))}">${stars.map(p => face(p.sleeperId, p.name, "sm")).join("")}</span>
+      </button>`;
+    }).join("");
+    box.innerHTML = `
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">Power rankings</h2>
+          <p class="panel-sub">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))} · ${leagueView() ? "League-adjusted" : "Base"} SPMetrics values</p>
+        </div>
+      </div>
+      <p class="method-note">Each team's best lineup in this league's starting slots, plus ${Math.round(VALUE_MODEL.benchWeight * 100)}% of its bench depth. IR and taxi players are left out. Click a team for its position-by-position breakdown.</p>
+      <div class="pr-head"><span>Rk</span><span>Team</span><span>Team score</span><span>Positions</span><span>Top starters</span></div>
+      <div class="pr-list">${rows}</div>`;
+  }
+  function teamDetail(x, ev, d) {
+    const t = x.team, r = t.roster, st = r.settings || {}, map = bySleeper();
+    const rec = recordText(st);
+    const meta = [t.name !== t.manager ? t.manager : "", rec, st.pf ? `PF ${pts(st.pf)}` : "", st.pa ? `PA ${pts(st.pa)}` : ""].filter(Boolean).join(" · ");
+    const prow = (e, tag) => `<tr class="mt-row">
+        <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text"><span class="pl-name">${esc(e.name)}</span>${e.team ? `<span class="pl-team">${esc(e.team)}</span>` : ""}${tag ? `<span class="role-tag role-inline${tag === "Bench" ? " bench" : ""}">${esc(tag)}</span>` : ""}</div></div></td>
+        <td class="role">${tag ? `<span class="role-tag${tag === "Bench" ? " bench" : ""}">${esc(tag)}</span>` : ""}</td>
+        <td class="pos-col">${e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? e.p.posRank : e.pos)}</span>` : ""}</td>
+        <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
+        <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
+    const group = (title, sub, rowsHtml) => rowsHtml ? `<tr class="tier"><td colspan="5"><span>${title}</span>${sub ? `<span class="tier-sub">${sub}</span>` : ""}</td></tr>${rowsHtml}` : "";
+    const out = new Set([...(r.reserve || []), ...(r.taxi || [])]);
+    const healthy = (r.players || []).filter(sid => !out.has(sid)).map(sid => rosterEntry(sid, map));
+    const rooms = EDIT_POS.map(pos => {
+      const list = healthy.filter(e => e.ranked && e.pos === pos).sort((a, b) => dv(b.p) - dv(a.p));
+      const sub = `${fmt(x.room[pos])} · ${ordinal(x.place[pos])} of ${ev.n} · league avg ${fmt(ev.avg[pos])}`;
+      return group(`${pos} room`, sub, list.map(e => prow(e, x.role.get(e.p.id) || "Bench")).join(""));
+    }).join("");
+    const other = healthy.filter(e => !e.ranked).map(e => prow(e, "")).join("");
+    const ir = (r.reserve || []).map(sid => prow(rosterEntry(sid, map), "IR")).join("");
+    const taxi = (r.taxi || []).map(sid => prow(rosterEntry(sid, map), "Taxi")).join("");
+    const lineup = x.starters.map(p => `<span class="lineup-chip"><span class="lc-slot">${esc(x.role.get(p.id))}</span>${face(p.sleeperId, p.name, "xs")}<span class="lc-player">${esc(p.name)}</span></span>`).join("");
+    return `
+      <button class="back-link" type="button" data-back>← Power rankings</button>
+      <div class="team-head">
+        ${teamFace(t, "lg")}
+        <div class="team-head-text">
+          <h2 class="panel-title">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</h2>
+          <p class="panel-sub">${esc(meta)}${meta ? " · " : ""}${esc(d.league.name)}</p>
+        </div>
+        <div class="team-head-rank"><span class="thr-num">${x.power}</span><span class="thr-label">of ${ev.n}<br>power rank</span></div>
+        <div class="team-head-score"><span class="ths-num">${fmt(x.score)}</span><span class="thr-label">team score</span></div>
+      </div>
+      <h3 class="section-label">Position strength vs the league</h3>
+      <div class="strength-grid five">${strengthCards(x, ev)}</div>
+      <h3 class="section-label">Best lineup (SPMetrics)</h3>
+      <div class="lineup-strip">${lineup || `<span class="muted">No ranked starters.</span>`}</div>
+      <h3 class="section-label">Roster by position</h3>
+      <div class="table-scroll"><table class="mt-table team-table">
+        <thead><tr><th scope="col">Player</th><th scope="col" class="role">Role</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col">Value</th></tr></thead>
+        <tbody>${rooms}${group("Other", "kickers, defenses and unranked players", other)}${group("Injured reserve", "", ir)}${group("Taxi squad", "", taxi)}</tbody>
+      </table></div>
+      ${t.mine ? "" : `<div class="team-actions"><button class="btn primary" type="button" data-trade-with="${t.rosterId}"${LG.myRosterId == null ? " disabled" : ""}>Trade with ${esc(t.name)}</button></div>`}`;
+  }
+  $("league-body").addEventListener("click", e => {
+    const row = e.target.closest("[data-team]"), back = e.target.closest("[data-back]"), tw = e.target.closest("[data-trade-with]");
+    if (row) { openTeam(row.dataset.team); return; }
+    if (back) { leagueTeam = null; renderLeague(); window.scrollTo({ top: 0 }); return; }
+    if (tw && LG.myRosterId != null) {
+      $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
+      sides.A = []; sides.B = [];
+      renderTeamRosters(); renderTrade();
+      showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
+    }
   });
 
   /* Free agents */
@@ -2560,10 +2874,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("fa-sub").textContent = `${d.league.name} · sorted by SPMetrics ${leagueView() ? "league-adjusted" : "base"} values`;
     $("fa-body").innerHTML = list.length ? list.map(p => `<tr class="player">
       <td class="rk">${overallRank(p)}</td>
-      <td><span class="pl-name">${esc(p.name)}</span>${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}</td>
+      <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-name">${esc(p.name)}</span>${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span></td>
       <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td>
-      <td><span class="owner fa status">Free agent</span></td></tr>`).join("")
+      <td class="fa-status"><span class="owner fa status">Free agent</span></td></tr>`).join("")
       : `<tr><td class="empty" colspan="5">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
     $("fa-count").textContent = `${list.length} ranked free agent${list.length === 1 ? "" : "s"}`;
   }
@@ -2581,8 +2895,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       box.innerHTML = `<div class="tr-head">${esc(team.mine ? "My Team" : team.name)} roster <span>Click to add</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
           ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s}"${inTrade(e.p.id) ? " disabled" : ""}>
-              <span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(dv(e.p))}</span></button>`
-          : `<div class="tr-player unranked"><span class="pos-plain">${esc(e.pos || "—")}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">Unranked</span></div>`).join("")}</div>`;
+              ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(dv(e.p))}</span></button>`
+          : `<div class="tr-player unranked">${face(e.sid, e.name, "sm")}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">Unranked</span></div>`).join("")}</div>`;
     });
   }
   ["A", "B"].forEach(s => {
@@ -2598,7 +2912,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   // Start-up: restore a saved connection
   sl = readSl();
   if (sl && sl.activeId) {
-    loadStatic().then(() => { renderLeagueAll(); showTab((location.hash || "#rankings").slice(1)); });
+    loadStatic().then(() => {
+      renderLeagueAll(); showTab((location.hash || "#rankings").slice(1));
+      const d = activeData();
+      const stale = !d || Date.now() - d.syncedAt > 6 * 3600 * 1000 || !d.rosters.every(r => r.settings && "pf" in r.settings);
+      if (stale) syncLeague(sl.activeId).catch(() => {});
+    });
   }
 
   rebuild();   // show any edits saved in this browser

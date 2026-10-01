@@ -48,9 +48,12 @@ Data is kept in three separate layers:
 With a league connected:
 - The header shows the league and its format; click it to switch leagues, refresh, change account or disconnect.
 - Rankings get a **Base / League-adjusted** toggle, an owner label on each player (My Team, manager name, FA), and an owner filter. Editing works in the Base view.
-- **My Team:** lineup by slot, bench, IR and taxi with overall rank, position rank and value; roster strength by position (total value and place in the league); **Trade with** buttons that open the trade calculator with both rosters.
+- **My Team:** lineup by slot, bench, IR and taxi with overall rank, position rank and value; roster strength by position and power rank (same calculation as the League tab); **Trade with** buttons that open the trade calculator with both rosters.
+- **League:** power rankings for every team, strongest to weakest. Team score = the best lineup the team's healthy roster can field in the league's starting slots (SPMetrics values) + 25% of its bench depth; IR and taxi are left out. Each row shows manager, record, PF/PA, team score, best and weakest position (place in the league) and top starters. Click a team for its breakdown: position strength vs the league (QB, RB, WR, TE rooms and bench depth, each with total value, place and difference from the league average), its best lineup, and the roster grouped by position with role, overall rank, position rank and value. Uses whichever view (Base or League-adjusted) is on.
 - **Free Agents:** ranked players nobody rosters, sorted by SPMetrics values, filterable by position.
 - **Trade calculator:** pick a team for each side and click players from their rosters (search still works). Uses the league-adjusted values when that view is on.
+
+Player photos come from Sleeper's image CDN by Sleeper ID (initials show when a photo is missing); manager avatars come from Sleeper too. The site refreshes league data in the background when it's more than 6 hours old.
 
 `data/sleeper_players.json` (names for any rostered player) and the `sleeper_id` column in `RANKINGS_CSV` come from `pipeline/build_sleeper_ids.py` (DynastyProcess player IDs) and are refreshed by the weekly workflow.
 
