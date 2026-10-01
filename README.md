@@ -23,22 +23,15 @@ Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-pre
 | `pipeline/stamp_date.py` | Sets the "Updated" date on the site |
 | `.github/workflows/site.yml` | Deploys on every push; every Tuesday it also refreshes projections, commits, and redeploys |
 
-## Editor mode
+## Editor mode (temporary: open to everyone)
 
-Editors can reorder players and set custom values straight from the rankings page; everyone else sees a read-only board.
+While the rankings system is being built, the editing controls are on for every visitor; there is no sign-in to edit. Proper authentication is planned.
 
-**Who can edit:** any GitHub account with write access to this repository. To add Alan: repo **Settings → Collaborators → Add people**.
-
-**Signing in (once per browser):**
-1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
-2. Repository access: **Only select repositories → spmetrics-fantasy**. Permissions: **Contents → Read and write**. Pick an expiration.
-3. On the site, click **Editor sign-in** at the bottom of the page and paste the token. The page checks with GitHub that the account can push to this repo before showing any editing controls. The token is remembered in that browser until you click **Sign out**.
-
-**Editing:**
-- Pick a position (QB, RB, WR, TE), then drag a player by the ⠿ handle or nudge with ▲ ▼. Values recalculate from the new rank; a moved player takes the tier of the spot he moves into.
-- Click any value to type a custom number (marked **Custom** with a striped bar). **Auto** switches it back to the model value for his current rank.
-- Every change shows up in the trade calculator right away, but nothing is live until **Save changes**. **Cancel changes** throws the draft away.
-- **Save changes** commits `index.html` to `main` (the site redeploys in about a minute). Only the fields you changed are written onto the latest version, so the weekly projection refresh and the other editor's saves are kept.
+- **Reorder:** pick a position (QB, RB, WR, TE), then drag a player by the ⠿ handle or nudge with ▲ ▼. Values recalculate from the new rank; a moved player takes the tier of the spot he moves into.
+- **Custom values:** click any value to type a number (marked **Custom** with a striped bar). **Auto** switches back to the model value for his current rank.
+- **Save changes / Cancel changes:** Save keeps your edits in *this browser* (they survive reloads and feed the trade calculator). Cancel throws away unsaved changes. A visitor who edits only changes their own copy, never the live board.
+- **Publish to live site:** writes the browser-saved edits to `index.html` on GitHub so everyone sees them (site redeploys in about a minute). Publishing needs a GitHub fine-grained token for an account with write access (**Contents: Read and write**, this repository only); the page asks once and remembers it in that browser. Only the edited fields are merged onto the latest version, so the weekly projection refresh is kept.
+- **Discard browser edits:** drops everything saved in the browser and shows the live rankings again.
 
 ## Updating
 
