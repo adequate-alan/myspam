@@ -11,6 +11,22 @@ Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-pre
 3. **Value over replacement.** Points above the last starter at the position (full credit) plus points between waiver level and the last starter (25% credit), with replacement and waiver levels set by the league's lineup (1QB 2RB 3WR 1TE 1FLEX 1SF, 6 bench).
 4. **Rank order and tiers.** Values never break the positional ranking; players in a tier are pulled together and each tier drop costs value. Scaled so the top player is 10,000.
 
+## Trade verdicts
+
+The calculator compares the adjusted value each side receives: raw player value plus a small roster adjustment (a capped bonus for getting the best player and for taking on fewer roster spots, applied only when player counts differ). The verdict comes from how much more value the side ahead gets:
+
+| Gap | Verdict |
+|---|---|
+| under 1% | Basically even |
+| 1–3% | Fair trade |
+| 3–7% | Slight edge |
+| 7–12% | Wins the trade |
+| 12–20% | Clearly wins |
+| 20–30% | Getting a steal |
+| 30% and up | Getting robbed |
+
+The exact gap is shown under the verdict, along with the raw player value gap when the roster adjustment changed it. With a Sleeper league connected, verdicts use the team names. Tiers and wording are in `TRADE_VERDICTS` in `index.html`.
+
 ## Repository
 
 | Path | What it does |
@@ -51,7 +67,7 @@ With a league connected:
 - **My Team:** lineup by slot, bench, IR and taxi with overall rank, position rank and value; roster strength by position and power rank (same calculation as the League tab); **Trade with** buttons that open the trade calculator with both rosters.
 - **League:** power rankings for every team, strongest to weakest. Team score = the best lineup the team's healthy roster can field in the league's starting slots (SPMetrics values) + 25% of its bench depth; IR and taxi are left out. Each row shows manager, record, PF/PA, team score, best and weakest position (place in the league) and top starters. Click a team for its breakdown: position strength vs the league (QB, RB, WR, TE rooms and bench depth, each with total value, place and difference from the league average), its best lineup, and the roster grouped by position with role, overall rank, position rank and value. Uses whichever view (Base or League-adjusted) is on.
 - **Free Agents:** ranked players nobody rosters, sorted by SPMetrics values, filterable by position.
-- **Trade calculator:** pick a team for each side and click players from their rosters (search still works). Uses the league-adjusted values when that view is on.
+- **Trade calculator:** pick a team for each side and click players from their rosters: a player clicked on Team A's roster goes to Team B, and the reverse (search still works). Uses the league-adjusted values when that view is on.
 
 Player photos come from Sleeper's image CDN by Sleeper ID (initials show when a photo is missing); manager avatars come from Sleeper too. The site refreshes league data in the background when it's more than 6 hours old.
 

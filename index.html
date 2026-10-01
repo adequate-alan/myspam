@@ -444,8 +444,32 @@ const TIER_NAMES = {
   },
 };
 
-// A trade within this margin (0.05 = 5%) is called "fair".
-const FAIR_MARGIN = 0.05;
+// Trade verdicts. "gap" = how much more adjusted value the side ahead receives, in %
+// (10,000 vs 8,000 = 25% more). A tier covers gaps below its upTo (and at or above the
+// previous tier's). w = the side ahead, l = the side behind, pct = the gap, e.g. "4.5%".
+const TRADE_VERDICTS = [
+  { upTo: 1,        range: "Fair: under 3%",
+    title: (w, l) => "Basically even",
+    text:  (w, l, pct) => `The adjusted values are within ${pct} of each other. This one's a coin flip.` },
+  { upTo: 3,        range: "Fair: under 3%",
+    title: (w, l) => "Fair trade",
+    text:  (w, l, pct) => `The adjusted values are within ${pct} of each other. Neither side has a meaningful advantage.` },
+  { upTo: 7,        range: "Slight edge: 3–7%",
+    title: (w, l) => `Slight edge ${w}`,
+    text:  (w, l, pct) => `This is close, but ${w} comes out about ${pct} ahead. ${l} could take it as is or ask for a small add.` },
+  { upTo: 12,       range: "Wins: 7–12%",
+    title: (w, l) => `${w} wins the trade`,
+    text:  (w, l, pct) => `${w} gets ${pct} more adjusted value. Not lopsided, but ${l} should ask for a sweetener.` },
+  { upTo: 20,       range: "Clearly wins: 12–20%",
+    title: (w, l) => `${w} clearly wins`,
+    text:  (w, l, pct) => `${w} gets ${pct} more adjusted value. ${l} would need a real piece added to make this fair.` },
+  { upTo: 30,       range: "Steal: 20–30%",
+    title: (w, l) => `${w} is getting a steal`,
+    text:  (w, l, pct) => `${w} gets ${pct} more adjusted value. ${l} is giving up a lot here and needs a meaningful add to balance it.` },
+  { upTo: Infinity, range: "Robbery: 30% and up",
+    title: (w, l) => `${l} is getting robbed`,
+    text:  (w, l, pct) => `${w} is robbing ${l}: ${w} gets ${pct} more adjusted value. This would need a major addition to ${l}'s side to become balanced.` },
+];
 </script>
 
 <style>
@@ -774,6 +798,8 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .verdict h2.win-A { color: var(--side-a); }
 .verdict h2.win-B { color: var(--side-b); }
 .verdict-sub { color: var(--ink-2); margin: 6px 0 0; font-size: 0.88rem; }
+.verdict-gap { color: var(--muted); margin: 8px 0 0; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+.verdict-gap b { color: var(--cream); font-weight: 700; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .meter { position: relative; height: 5px; border-radius: 3px; overflow: hidden; display: flex; background: var(--track); }
@@ -1272,6 +1298,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         <div>
           <h2 id="verdict-title">Build a trade</h2>
           <p class="verdict-sub" id="verdict-sub"></p>
+          <p class="verdict-gap" id="verdict-gap" hidden></p>
         </div>
         <div class="actions">
           <button class="btn" id="swap-btn" type="button">Swap sides</button>
@@ -1765,6 +1792,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
   }
 
+  // Name for a side in verdicts: the Sleeper team picked for it, or "Team A" / "Team B"
+  function sideName(side) {
+    const sel = $("team-" + side), id = LG.active && sel && !sel.hidden ? sel.value : "";
+    const t = id ? LG.teams.find(x => String(x.rosterId) === id) : null;
+    return t ? t.name : "Team " + side;
+  }
   function renderTrade() {
     renderRoster("A");
     renderRoster("B");
@@ -1779,6 +1812,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const note = $("model-note");
     note.hidden = !res.note; note.textContent = res.note;
     $("balance").hidden = true;
+    $("verdict-gap").hidden = true;
 
     if (!sides.A.length && !sides.B.length) {
       title.className = ""; title.textContent = "Build a trade";
@@ -1790,16 +1824,32 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const total = res.a + res.b;
     $("meter-a").style.width = (total > 0 ? (res.a / total) * 100 : 50).toFixed(1) + "%";
 
-    const hi = Math.max(res.a, res.b);
-    const gap = hi > 0 ? Math.abs(res.a - res.b) / hi : 0;
-    if (gap <= FAIR_MARGIN) {
-      title.className = "fair"; title.textContent = "Fair trade";
-      sub.textContent = `Within ${Math.round(FAIR_MARGIN * 100)}% on the model (${(gap * 100).toFixed(1)}% apart).`;
+    const hi = Math.max(res.a, res.b), lo = Math.min(res.a, res.b);
+    const gap = hi > 0 ? Math.abs(res.a - res.b) / hi : 0;   // used to rank balancing suggestions
+    const ahead = res.a >= res.b ? "A" : "B", loser = ahead === "A" ? "B" : "A";
+    const names = { A: sideName("A"), B: sideName("B") };
+    if (names.A === names.B) { names.A = "Team A"; names.B = "Team B"; }
+    const w = names[ahead], l = names[loser], gapLine = $("verdict-gap");
+    if (lo <= 0) {
+      title.className = "win-" + ahead; title.textContent = "One-sided so far";
+      sub.textContent = `${l} isn't getting anything back yet. Add what ${l} receives.`;
       return;
     }
-    const winner = res.a > res.b ? "A" : "B", loser = winner === "A" ? "B" : "A";
-    title.className = "win-" + winner; title.textContent = `Team ${winner} wins`;
-    sub.textContent = `Team ${winner} gets ${(gap * 100).toFixed(1)}% more value.`;
+    const more = Math.round(1000 * (hi - lo) / lo) / 10;      // % more for the side ahead, 1 decimal
+    const tier = TRADE_VERDICTS.find(t => more < t.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+    const fair = tier.upTo <= 3, pct = more.toFixed(1) + "%";
+    title.className = fair ? "fair" : "win-" + ahead;
+    title.textContent = tier.title(w, l);
+    sub.textContent = tier.text(w, l, pct);
+    // the exact numbers behind the label; raw player value shown when the roster adjustment moved it
+    let line = `<b>${pct}</b> adjusted value gap · ${esc(tier.range)}`;
+    if (res.rawA != null && res.rawB != null && Math.min(res.rawA, res.rawB) > 0) {
+      const rawMore = Math.round(1000 * Math.abs(res.rawA - res.rawB) / Math.min(res.rawA, res.rawB)) / 10;
+      if (rawMore !== more || (res.rawA >= res.rawB) !== (ahead === "A"))
+        line += ` · Raw player value: ${fmt(res.rawA)} vs ${fmt(res.rawB)} (${rawMore.toFixed(1)}% gap) before the roster adjustment`;
+    }
+    gapLine.innerHTML = line; gapLine.hidden = false;
+    if (fair) return;
 
     // Suggest additions for the trailing side that bring the trade closest to even
     const pool = players.filter(p => !inTrade(p.id));
@@ -2892,9 +2942,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       if (!team) { box.innerHTML = ""; return; }
       const entries = (team.roster.players || []).map(sid => rosterEntry(sid, map))
         .sort((a, b) => (b.ranked ? dv(b.p) : -1) - (a.ranked ? dv(a.p) : -1));
-      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "My Team" : team.name)} roster <span>Click to add</span></div>
+      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "My Team" : team.name)} roster <span>Click to send to Team ${s === "A" ? "B" : "A"}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
-          ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s}"${inTrade(e.p.id) ? " disabled" : ""}>
+          ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s === "A" ? "B" : "A"}"${inTrade(e.p.id) ? " disabled" : ""}>
               ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(dv(e.p))}</span></button>`
           : `<div class="tr-player unranked">${face(e.sid, e.name, "sm")}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">Unranked</span></div>`).join("")}</div>`;
     });
