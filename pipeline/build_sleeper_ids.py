@@ -1,8 +1,10 @@
 """Sleeper player IDs for the site.
 
-1. data/sleeper_players.json: {sleeper_id: [name, position, team]} for every
-   QB/RB/WR/TE/K with a Sleeper ID, so the site can name any rostered player
-   (ranked or not) without calling Sleeper's 5 MB players endpoint.
+1. data/sleeper_players.json: {sleeper_id: [name, position, team, gsis_id, birthdate]}
+   for every QB/RB/WR/TE/K with a Sleeper ID, so the site can name any rostered player
+   (ranked or not) without calling Sleeper's 5 MB players endpoint. This is the
+   player identity table: photos come from Sleeper's CDN by sleeper_id, stats from
+   nflverse by gsis_id (see build_stats.py).
 2. Adds a sleeper_id column to RANKINGS_CSV in index.html so ranked players can
    be matched to Sleeper rosters. Matching: position + normalized name, with
    ALIASES from merge_projections.py for spellings that differ.
@@ -34,7 +36,8 @@ def load_ids(src=IDS_URL):
 
 def write_players(ids, out_path):
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    data = {r.sleeper_id: [r.name, r.pos, r.team] for r in ids.itertuples()}
+    clean = lambda v: "" if pd.isna(v) else str(v)
+    data = {r.sleeper_id: [r.name, r.pos, r.team, clean(r.gsis_id), clean(r.birthdate)] for r in ids.itertuples()}
     with open(out_path, "w") as f:
         json.dump(data, f, separators=(",", ":"))
     return len(data)
