@@ -20,7 +20,9 @@ Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-pre
 | `pipeline/team_ratings.py` | Fits team offense/defense ratings from posted spreads and totals; projects every remaining game |
 | `pipeline/project_players.py` | Rest-of-season projections from usage, actual points and team environment → `projections.csv` |
 | `pipeline/merge_projections.py` | Writes projection columns into `index.html` for every ranked player |
+| `pipeline/build_sleeper_ids.py` | Sleeper player IDs: `data/sleeper_players.json` and the `sleeper_id` column |
 | `pipeline/stamp_date.py` | Sets the "Updated" date on the site |
+| `data/curve_components.json` | Stat breakdown per positional finish (from `build_curves.py`), used for league-adjusted values |
 | `.github/workflows/site.yml` | Deploys on every push; every Tuesday it also refreshes projections, commits, and redeploys |
 
 ## Editor mode (temporary: open to everyone)
@@ -33,6 +35,24 @@ While the rankings system is being built, the editing controls are on for every 
 - **Save changes / Cancel changes:** Save keeps your edits in *this browser* (they survive reloads and feed the trade calculator). Cancel throws away unsaved changes. A visitor who edits only changes their own copy, never the live board.
 - **Publish to live site:** writes the browser-saved edits to `index.html` on GitHub so everyone sees them (site redeploys in about a minute). Publishing needs a GitHub fine-grained token for an account with write access (**Contents: Read and write**, this repository only); the page asks once and remembers it in that browser. Only the edited fields are merged onto the latest version, so the weekly projection refresh is kept.
 - **Discard browser edits:** drops everything saved in the browser and shows the live rankings again.
+
+## Sleeper leagues
+
+**Connect Sleeper** (top right) asks for a Sleeper username, lists that account's leagues for the current season, and imports the one you pick. It uses Sleeper's public API, so no password is needed. Everything is kept in the visitor's browser.
+
+Data is kept in three separate layers:
+1. **Base rankings:** `RANKINGS_CSV` plus editor edits. Sleeper never changes these.
+2. **Sleeper league data:** league settings, scoring, lineup, managers and rosters, saved in the browser (`spm_sleeper`). **Refresh from Sleeper** re-downloads it; rankings and edits are untouched.
+3. **League-adjusted values:** calculated on the fly. `data/curve_components.json` holds the per-game stat breakdown behind each positional finish; the site re-scores it with the league's scoring settings, sets replacement and waiver levels from the league's lineup (teams, starters, flex, superflex, bench), and moves each player's base value by the difference between that league model and the base model at his position rank. A league in the base format gets exactly the base values.
+
+With a league connected:
+- The header shows the league and its format; click it to switch leagues, refresh, change account or disconnect.
+- Rankings get a **Base / League-adjusted** toggle, an owner label on each player (My Team, manager name, FA), and an owner filter. Editing works in the Base view.
+- **My Team:** lineup by slot, bench, IR and taxi with overall rank, position rank and value; roster strength by position (total value and place in the league); **Trade with** buttons that open the trade calculator with both rosters.
+- **Free Agents:** ranked players nobody rosters, sorted by SPMetrics values, filterable by position.
+- **Trade calculator:** pick a team for each side and click players from their rosters (search still works). Uses the league-adjusted values when that view is on.
+
+`data/sleeper_players.json` (names for any rostered player) and the `sleeper_id` column in `RANKINGS_CSV` come from `pipeline/build_sleeper_ids.py` (DynastyProcess player IDs) and are refreshed by the weekly workflow.
 
 ## Updating
 
