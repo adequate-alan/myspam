@@ -26,6 +26,7 @@ const SITE = {
   format: "12-Team · Full PPR · Superflex",
   updated: "Oct 1, 2026",
   author: "@SPMetrics",
+  repo: "stevenp36/spmetrics-fantasy", // editors need write access to this GitHub repo
   sampleData: false,          // set to true to show the work-in-progress banner
   sampleNote: "WR rankings are final. QB, RB and TE are Steven's rankings until Alan's are in."
 };
@@ -562,6 +563,7 @@ main { padding-block: 24px 48px; }
 .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 thead th {
+  white-space: nowrap;
   text-align: left; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2);
 }
@@ -678,6 +680,79 @@ td.val { width: 38%; min-width: 180px; }
 .suggest:hover { border-style: solid; border-color: var(--muted); }
 .suggest .r-val { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); font-weight: 400; }
 
+/* Editor mode */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mono { font-family: var(--font-data); font-size: 0.9em; }
+.editor-bar {
+  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.9rem;
+}
+.eb-left { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; min-width: 0; }
+.eb-left strong { font-family: var(--font-display); font-weight: 700; font-size: 1rem; }
+#eb-who { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); }
+#eb-hint { color: var(--muted); flex-basis: 100%; }
+.eb-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#eb-count { font-weight: 600; font-size: 0.85rem; margin-right: 4px; }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.link { border-color: transparent; background: none; color: var(--muted); padding-inline: 6px; }
+td.edit-col { width: 96px; white-space: nowrap; padding-right: 0; }
+.handle, .arrow {
+  background: none; border: 1px solid transparent; border-radius: 4px; color: var(--muted);
+  cursor: pointer; width: 28px; height: 28px; line-height: 1; font-size: 0.75rem; padding: 0; vertical-align: middle;
+}
+.handle { cursor: grab; touch-action: none; font-size: 1.05rem; }
+.handle:hover:not(:disabled), .arrow:hover:not(:disabled) { border-color: var(--line); color: var(--ink); background: var(--surface); }
+.handle:disabled, .arrow:disabled { opacity: 0.3; cursor: default; }
+tr.dragging td { opacity: 0.4; }
+tr.drop-before td { box-shadow: inset 0 3px 0 var(--accent); }
+tr.drop-after td { box-shadow: inset 0 -3px 0 var(--accent); }
+body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+.num-btn {
+  font-family: var(--font-data); font-size: 0.85rem; background: var(--surface); color: var(--ink);
+  border: 1px dashed var(--line); border-radius: 4px; padding: 2px 6px; cursor: text; min-width: 64px; text-align: right;
+}
+.num-btn:hover { border-color: var(--muted); }
+.val-input {
+  width: 88px; font-family: var(--font-data); font-size: 0.85rem; padding: 2px 6px; text-align: right;
+  border: 1px solid var(--accent); border-radius: 4px; background: var(--surface);
+}
+.val-extra { display: inline-flex; gap: 6px; align-items: center; margin-left: 8px; }
+.custom-pill {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--accent); background: var(--accent-soft); padding: 2px 6px; border-radius: 4px;
+}
+.auto-btn {
+  font-size: 0.75rem; background: none; border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 7px; cursor: pointer; color: var(--muted);
+}
+.auto-btn:hover { color: var(--ink); border-color: var(--muted); }
+.valbar.custom .fill {
+  background: repeating-linear-gradient(135deg, var(--c) 0 5px, color-mix(in srgb, var(--c) 45%, transparent) 5px 10px);
+}
+body.editing td.val { min-width: 300px; }
+.footer-row { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
+.footer-link { background: none; border: 0; padding: 0; color: var(--muted); font-size: 0.8rem; text-decoration: underline; cursor: pointer; }
+.footer-link:hover { color: var(--ink); }
+dialog.signin {
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink);
+  padding: 22px; width: min(460px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+dialog.signin::backdrop { background: rgba(0, 0, 0, 0.45); }
+dialog.signin h2 { margin: 0 0 8px; font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; }
+dialog.signin p { margin: 0 0 10px; font-size: 0.92rem; }
+dialog.signin .hint { color: var(--muted); font-size: 0.85rem; }
+dialog.signin label { display: block; font-weight: 600; font-size: 0.85rem; margin: 12px 0 4px; }
+dialog.signin input { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; background: var(--bg); font-family: var(--font-data); font-size: 0.85rem; }
+.signin-error { color: var(--qb); min-height: 1.2em; margin-top: 8px !important; font-size: 0.85rem !important; }
+.signin-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;
+  z-index: 30; max-width: calc(100vw - 32px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
 footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var(--muted); font-size: 0.85rem; }
 
 @media (max-width: 520px) {
@@ -713,6 +788,18 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
   </div>
 
   <section id="panel-rankings" role="tabpanel" aria-labelledby="tab-rankings">
+    <div class="editor-bar" id="editor-bar" hidden>
+      <div class="eb-left">
+        <strong>Editor mode</strong><span id="eb-who"></span>
+        <span id="eb-hint"></span>
+      </div>
+      <div class="eb-right">
+        <span id="eb-count"></span>
+        <button class="btn" id="eb-cancel" type="button">Cancel changes</button>
+        <button class="btn primary" id="eb-save" type="button">Save changes</button>
+        <button class="btn link" id="eb-signout" type="button">Sign out</button>
+      </div>
+    </div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
       <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
@@ -720,7 +807,7 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
     <div class="table-scroll">
       <table>
         <thead>
-          <tr><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col">Pos</th><th scope="col">Value</th></tr>
+          <tr><th scope="col" id="edit-head" hidden><span class="sr-only">Reorder</span></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col">Pos</th><th scope="col">Value</th></tr>
         </thead>
         <tbody id="rank-body"></tbody>
       </table>
@@ -779,8 +866,27 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
 </main>
 
 <footer>
-  <div class="wrap" id="footer-text"></div>
+  <div class="wrap footer-row">
+    <span id="footer-text"></span>
+    <button class="footer-link" id="editor-signin" type="button">Editor sign-in</button>
+  </div>
 </footer>
+
+<dialog class="signin" id="signin-dialog" aria-labelledby="signin-title">
+  <form id="signin-form" method="dialog">
+    <h2 id="signin-title">Editor sign-in</h2>
+    <p>Editing is limited to GitHub accounts that can write to the <span class="mono" id="signin-repo"></span> repository. Paste a GitHub access token for your account.</p>
+    <p class="hint">Create one at github.com → Settings → Developer settings → Fine-grained tokens. Give it access to only this repository, with <strong>Contents: Read and write</strong>. It stays saved in this browser until you sign out.</p>
+    <label for="signin-token">Access token</label>
+    <input id="signin-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+    <p class="signin-error" id="signin-error" role="alert"></p>
+    <div class="signin-actions">
+      <button class="btn" id="signin-cancel" type="button">Cancel</button>
+      <button class="btn primary" id="signin-submit" type="submit">Sign in</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 (function () {
@@ -811,8 +917,8 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
     return rows;
   }
 
-  function loadPlayers() {
-    const rows = parseCSV(RANKINGS_CSV);
+  function loadPlayers(csvText) {
+    const rows = parseCSV(csvText ?? RANKINGS_CSV);
     if (!rows.length) return [];
     const head = rows.shift().map(h => h.toLowerCase());
     const players = rows.map((r, i) => {
@@ -833,7 +939,8 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
         projScore: isFinite(parseFloat(get("proj_score"))) ? parseFloat(get("proj_score")) : null,
         projRank: null,
         games: parseInt(get("games"), 10) || 0,
-        value: isFinite(value) ? value : null
+        value: isFinite(value) ? value : null,
+        custom: isFinite(value)
       };
     }).filter(p => p.name);
 
@@ -939,10 +1046,12 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
     list.forEach(p => { p.value = Math.round(top > 0 ? p.value * 10000 / top : p.value); });
   }
 
-  const players = loadPlayers();
-  const byId = new Map(players.map(p => [p.id, p]));
-  const maxValue = Math.max(1, ...players.map(p => p.value));
+  let players = loadPlayers(RANKINGS_CSV);
+  let byId = new Map(players.map(p => [p.id, p]));
+  let maxValue = Math.max(1, ...players.map(p => p.value));
   const hasPicks = players.some(p => p.pos === "PICK");
+  const editor = { on: false, token: null, login: "", saving: false };
+  const EDIT_POS = ["QB", "RB", "WR", "TE"];
 
   /* ---------- Header / footer ---------- */
   const nm = esc(SITE.name);
@@ -998,17 +1107,28 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
 
   const POS_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3 };
   const POS_NAMES = { QB: "Quarterbacks", RB: "Running backs", WR: "Wide receivers", TE: "Tight ends" };
-  const hasOverall = players.some(p => p.pos !== "PICK" && p.rank != null);
+  const hasOverall = () => players.some(p => p.pos !== "PICK" && p.rank != null);
   const byPos = (a, b) => (POS_ORDER[a.pos] ?? 9) - (POS_ORDER[b.pos] ?? 9) || (a.posNum ?? 1e9) - (b.posNum ?? 1e9);
+
+  function valueCellEdit(p) {
+    const pct = Math.max(2, (p.value / maxValue) * 100);
+    return `<div class="valbar${p.custom ? " custom" : ""}" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))">
+      <div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div>
+      <button class="num-btn" type="button" data-id="${p.id}" aria-label="Set a custom value for ${esc(p.name)}">${fmt(p.value)}</button>
+      <span class="val-extra">${p.custom
+        ? `<span class="custom-pill" title="Typed in by an editor, not from the model">Custom</span><button class="auto-btn" type="button" data-id="${p.id}">Auto</button>`
+        : ""}</span></div>`;
+  }
 
   function renderRankings() {
     let list, rk, group;
+    const canReorder = editor.on && EDIT_POS.includes(posFilter);
     if (posFilter === "PICK") {
       list = players.filter(p => p.pos === "PICK").sort((a, b) => b.value - a.value);
       rk = () => "–"; group = () => null;
     } else if (posFilter === "ALL") {
       list = players.filter(p => p.pos !== "PICK");
-      if (hasOverall) {
+      if (hasOverall()) {
         list.sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || byPos(a, b));
         rk = p => p.rank ?? "–";
         group = p => p.overallTier ? tierLabel("OVERALL", p.overallTier) : null;
@@ -1023,27 +1143,34 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
       rk = p => p.posNum ?? "–";
       group = p => p.tier ? tierLabel(p.pos, p.tier) : null;
     }
+    const lastNum = canReorder ? Math.max(0, ...list.filter(p => p.posNum != null).map(p => p.posNum)) : 0;
     if (query) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(query));
-    $("rk-head").textContent = posFilter === "ALL" && hasOverall ? "Rk" : posFilter === "PICK" ? "" : "Pos Rk";
+    $("rk-head").textContent = posFilter === "ALL" && hasOverall() ? "Rk" : posFilter === "PICK" ? "" : "Pos Rk";
+    $("edit-head").hidden = !editor.on;
+    document.body.classList.toggle("editing", editor.on);
+    const cols = editor.on ? 5 : 4;
 
     const out = [];
     let lastGroup = null;
     list.forEach(p => {
       const g = group(p);
       if (g && g !== lastGroup && !query) {
-        out.push(`<tr class="tier"><td colspan="4">${esc(g)}</td></tr>`);
+        out.push(`<tr class="tier"><td colspan="${cols}">${esc(g)}</td></tr>`);
       }
       lastGroup = g;
-      out.push(`<tr class="player">
+      const editCol = !editor.on ? "" : `<td class="edit-col">${canReorder && p.posNum != null ? `
+          <button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>⠿</button><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${p.posNum <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${p.posNum >= lastNum ? " disabled" : ""}>▼</button>` : ""}</td>`;
+      out.push(`<tr class="player" data-id="${p.id}">${editCol}
         <td class="rk">${rk(p)}</td>
         <td><span class="pl-name">${esc(p.name)}</span>${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}</td>
         <td><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span></td>
-        <td class="val">${valueCell(p)}</td>
+        <td class="val">${editor.on ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
     $("rank-body").innerHTML = out.length ? out.join("") :
-      `<tr><td class="empty" colspan="4">No players match “${esc(query)}”.</td></tr>`;
+      `<tr><td class="empty" colspan="${cols}">No players match “${esc(query)}”.</td></tr>`;
     $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
+    updateEditorBar();
   }
   renderRankings();
 
@@ -1182,6 +1309,313 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
   });
   $("swap-btn").addEventListener("click", () => { [sides.A, sides.B] = [sides.B, sides.A]; renderTrade(); });
   $("clear-btn").addEventListener("click", () => { sides.A = []; sides.B = []; renderTrade(); });
+
+  /* ---------- Editor mode ----------
+     Editors are GitHub accounts with write access to SITE.repo. Edits live in a
+     draft copy of RANKINGS_CSV until "Save changes", which commits index.html to
+     GitHub (the site redeploys in about a minute). Normal visitors never see any
+     of these controls. */
+  const REPO = SITE.repo, FILE = "index.html", BRANCH = "main", TOKEN_KEY = "spm_editor_token";
+  const CSV_RE = /(const RANKINGS_CSV = `\n)([\s\S]*?)(\n`;)/;
+  const EDIT_COLS = ["pos_rank", "tier", "value"];
+  let savedCsv = RANKINGS_CSV.trim();
+  let draft = csvToTable(savedCsv);
+
+  function csvToTable(csv) { const rows = parseCSV(csv); return { head: rows.shift() || [], rows }; }
+  function csvCell(v) { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function tableToCsv(t) { return [t.head, ...t.rows].map(r => t.head.map((_, i) => csvCell(r[i])).join(",")).join("\n"); }
+  function colOf(t, name) {
+    let i = t.head.findIndex(h => h.toLowerCase() === name);
+    if (i < 0) { t.head.push(name); t.rows.forEach(r => r.push("")); i = t.head.length - 1; }
+    return i;
+  }
+  const keyOf = (t, r) => (r[colOf(t, "player")] + "|" + r[colOf(t, "pos")]).toLowerCase();
+
+  function rebuild() {
+    players = loadPlayers(tableToCsv(draft));
+    byId = new Map(players.map(p => [p.id, p]));
+    maxValue = Math.max(1, ...players.map(p => p.value));
+    renderRankings();
+    renderTrade();
+  }
+
+  // Rows whose rank, tier or value differ from the last saved version
+  function changedRows() {
+    const base = csvToTable(savedCsv);
+    const baseMap = new Map(base.rows.map(r => [keyOf(base, r), r]));
+    return draft.rows.filter(r => {
+      const b = baseMap.get(keyOf(draft, r));
+      return !b || EDIT_COLS.some(c => (r[colOf(draft, c)] ?? "") !== (b[colOf(base, c)] ?? ""));
+    });
+  }
+
+  function updateEditorBar() {
+    $("editor-bar").hidden = !editor.on;
+    $("editor-signin").hidden = editor.on;
+    if (!editor.on) return;
+    const n = changedRows().length;
+    $("eb-who").textContent = editor.login ? "@" + editor.login : "";
+    $("eb-count").textContent = editor.saving ? "Saving…" : n ? `${n} unsaved change${n > 1 ? "s" : ""}` : "No unsaved changes";
+    $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
+    $("eb-signout").disabled = n > 0 || editor.saving;
+    $("eb-signout").title = n > 0 ? "Save or cancel your changes first" : "";
+    $("eb-hint").textContent = EDIT_POS.includes(posFilter)
+      ? "Drag ⠿ or use ▲ ▼ to reorder. Click a value to type a custom one."
+      : "Pick QB, RB, WR or TE to reorder players. Click a value to type a custom one.";
+  }
+
+  // Move a player to a new spot in his position's ranking. He takes the tier of
+  // the player whose spot he moves into, so tiers stay in one piece.
+  function movePlayer(id, targetNum) {
+    const me = byId.get(id);
+    if (!me || me.posNum == null) return;
+    const group = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
+    const from = group.indexOf(me);
+    const to = Math.max(0, Math.min(group.length - 1, targetNum - 1));
+    if (from === to) return;
+    const occupant = group[to];
+    const order = group.filter(p => p !== me);
+    order.splice(to, 0, me);
+    const tagFrom = Number(VALUE_MODEL.tagTierFrom) || Infinity;
+    const isTag = t => t !== "" && Number(t) >= tagFrom;
+    const iRank = colOf(draft, "pos_rank"), iTier = colOf(draft, "tier");
+    if (!isTag(me.tier)) {
+      let tier = occupant.tier;
+      if (tier === "" || isTag(tier)) {
+        const k = order.indexOf(me), near = [];
+        for (let d = 1; d < order.length; d++) near.push(order[k - d], order[k + d]);
+        const pick = near.find(p => p && p.tier !== "" && !isTag(p.tier));
+        tier = pick ? pick.tier : me.tier;
+      }
+      draft.rows[me.id][iTier] = tier;
+    }
+    order.forEach((p, k) => { draft.rows[p.id][iRank] = String(k + 1); });
+    rebuild();
+  }
+
+  function setValue(id, v) {
+    draft.rows[id][colOf(draft, "value")] = v == null ? "" : String(Math.round(v));
+    rebuild();
+  }
+
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => { t.hidden = true; }, 4000);
+  }
+
+  /* Clicks: arrows, value editing, back-to-auto */
+  $("rank-body").addEventListener("click", e => {
+    if (!editor.on) return;
+    const arrow = e.target.closest(".arrow");
+    if (arrow && !arrow.disabled) {
+      const id = Number(arrow.closest("tr").dataset.id), dir = Number(arrow.dataset.dir);
+      movePlayer(id, byId.get(id).posNum + dir);
+      requestAnimationFrame(() => {
+        const again = $("rank-body").querySelector(`tr[data-id="${id}"] .arrow[data-dir="${dir}"]`);
+        if (again && !again.disabled) again.focus();
+      });
+      return;
+    }
+    const auto = e.target.closest(".auto-btn");
+    if (auto) { setValue(Number(auto.dataset.id), null); return; }
+    const num = e.target.closest(".num-btn");
+    if (num) {
+      const id = Number(num.dataset.id), p = byId.get(id);
+      const input = document.createElement("input");
+      input.type = "number"; input.min = "0"; input.step = "1"; input.className = "val-input";
+      input.value = Math.round(p.value);
+      input.setAttribute("aria-label", "Custom value for " + p.name);
+      num.replaceWith(input); input.focus(); input.select();
+      let done = false;
+      const finish = keep => {
+        if (done) return; done = true;
+        const v = parseFloat(input.value);
+        if (keep && isFinite(v) && v >= 0 && Math.round(v) !== Math.round(p.value)) setValue(id, v);
+        else renderRankings();
+      };
+      input.addEventListener("keydown", ev => {
+        if (ev.key === "Enter") { ev.preventDefault(); finish(true); }
+        else if (ev.key === "Escape") { ev.preventDefault(); finish(false); }
+      });
+      input.addEventListener("blur", () => finish(true));
+    }
+  });
+
+  /* Drag and drop (pointer events: works with mouse, pen and touch) */
+  let drag = null;
+  const clearMarks = () => $("rank-body").querySelectorAll(".drop-before, .drop-after").forEach(r => r.classList.remove("drop-before", "drop-after"));
+  function endDrag(commit) {
+    if (!drag) return;
+    const { id, target, after, tr } = drag;
+    drag = null;
+    clearMarks(); tr.classList.remove("dragging"); document.body.classList.remove("is-dragging");
+    if (!commit || !target) return;
+    const me = byId.get(id), tp = byId.get(Number(target.dataset.id));
+    if (!me || !tp) return;
+    let num = tp.posNum + (after ? 1 : 0);
+    if (me.posNum < num) num -= 1;
+    movePlayer(id, num);
+  }
+  $("rank-body").addEventListener("pointerdown", e => {
+    const h = e.target.closest(".handle");
+    if (!h || h.disabled || !editor.on) return;
+    e.preventDefault();
+    h.setPointerCapture(e.pointerId);
+    const tr = h.closest("tr.player");
+    drag = { id: Number(tr.dataset.id), tr, target: null, after: false };
+    tr.classList.add("dragging"); document.body.classList.add("is-dragging");
+  });
+  $("rank-body").addEventListener("pointermove", e => {
+    if (!drag) return;
+    clearMarks(); drag.target = null;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const row = el && el.closest("#rank-body tr.player");
+    if (row && row !== drag.tr) {
+      const r = row.getBoundingClientRect();
+      drag.after = e.clientY > r.top + r.height / 2;
+      drag.target = row;
+      row.classList.add(drag.after ? "drop-after" : "drop-before");
+    }
+    const top = document.querySelector(".masthead").getBoundingClientRect().bottom;
+    if (e.clientY < top + 60) window.scrollBy(0, -14);
+    else if (e.clientY > window.innerHeight - 60) window.scrollBy(0, 14);
+  });
+  $("rank-body").addEventListener("pointerup", () => endDrag(true));
+  $("rank-body").addEventListener("pointercancel", () => endDrag(false));
+
+  /* GitHub: sign-in and saving */
+  async function gh(path, opts = {}) {
+    const res = await fetch("https://api.github.com" + path, {
+      cache: "no-store", ...opts,
+      headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + editor.token, ...(opts.headers || {}) }
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { const err = new Error(body.message || res.statusText); err.status = res.status; throw err; }
+    return body;
+  }
+  const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), c => c.charCodeAt(0)));
+  function b64encode(s) {
+    const bytes = new TextEncoder().encode(s); let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+
+  async function verifyToken(token) {
+    editor.token = token;
+    const repo = await gh(`/repos/${REPO}`);
+    if (!repo.permissions || !repo.permissions.push) throw new Error(`This GitHub account can't edit ${REPO}.`);
+    const user = await gh("/user").catch(() => ({}));
+    editor.login = user.login || "";
+  }
+  function enableEditor() { editor.on = true; renderRankings(); }
+  function signOut() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    Object.assign(editor, { on: false, token: null, login: "" });
+    renderRankings();
+    toast("Signed out of editor mode.");
+  }
+
+  // Apply only the fields this editor changed onto the latest version on GitHub,
+  // so the weekly projection refresh and other editors' saves are never lost.
+  function mergeInto(latestCsv) {
+    const base = csvToTable(savedCsv), latest = csvToTable(latestCsv);
+    const baseMap = new Map(base.rows.map(r => [keyOf(base, r), r]));
+    const latestMap = new Map(latest.rows.map(r => [keyOf(latest, r), r]));
+    let n = 0;
+    for (const r of draft.rows) {
+      const k = keyOf(draft, r), b = baseMap.get(k), l = latestMap.get(k);
+      if (!l) continue;
+      for (const c of EDIT_COLS) {
+        const v = r[colOf(draft, c)] ?? "";
+        if (!b || v !== (b[colOf(base, c)] ?? "")) { l[colOf(latest, c)] = v; n++; }
+      }
+    }
+    return { csv: tableToCsv(latest), n };
+  }
+
+  async function saveChanges() {
+    const count = changedRows().length;
+    if (!count || editor.saving) return;
+    editor.saving = true; updateEditorBar();
+    try {
+      let merged = null;
+      for (let attempt = 0; attempt < 3 && !merged; attempt++) {
+        const file = await gh(`/repos/${REPO}/contents/${FILE}?ref=${BRANCH}`);
+        const text = b64decode(file.content);
+        const m = text.match(CSV_RE);
+        if (!m) throw new Error("Couldn't find the rankings data in index.html.");
+        const result = mergeInto(m[2]);
+        const newText = text.replace(CSV_RE, (_, a, __, c) => a + result.csv + c);
+        try {
+          await gh(`/repos/${REPO}/contents/${FILE}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              message: `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count > 1 ? "s" : ""})`,
+              content: b64encode(newText), sha: file.sha, branch: BRANCH
+            })
+          });
+          merged = result.csv;
+        } catch (err) {
+          if (err.status !== 409) throw err;   // 409: someone else saved first, so merge again
+        }
+      }
+      if (!merged) throw new Error("Someone else kept saving at the same moment. Try again.");
+      savedCsv = merged; draft = csvToTable(merged);
+      editor.saving = false;
+      rebuild();
+      toast("Saved. The live site updates in about a minute.");
+    } catch (err) {
+      editor.saving = false; updateEditorBar();
+      toast(err.status === 401 || err.status === 403
+        ? "Save failed: GitHub didn't accept your token. Sign out and sign in with a token that has Contents: Read and write."
+        : "Save failed: " + err.message);
+    }
+  }
+
+  $("eb-save").addEventListener("click", saveChanges);
+  $("eb-cancel").addEventListener("click", () => {
+    draft = csvToTable(savedCsv); rebuild(); toast("Changes discarded.");
+  });
+  $("eb-signout").addEventListener("click", signOut);
+
+  const dialog = $("signin-dialog");
+  $("signin-repo").textContent = REPO;
+  $("editor-signin").addEventListener("click", () => {
+    $("signin-error").textContent = ""; $("signin-token").value = "";
+    if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+    $("signin-token").focus();
+  });
+  $("signin-cancel").addEventListener("click", () => dialog.close());
+  $("signin-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const token = $("signin-token").value.trim();
+    if (!token) { $("signin-error").textContent = "Paste your GitHub access token first."; return; }
+    $("signin-submit").disabled = true; $("signin-error").textContent = "Checking with GitHub…";
+    try {
+      await verifyToken(token);
+      try { localStorage.setItem(TOKEN_KEY, token); } catch (err) {}
+      dialog.close(); enableEditor();
+      toast(`Editor mode on${editor.login ? " for @" + editor.login : ""}.`);
+    } catch (err) {
+      editor.token = null;
+      $("signin-error").textContent = err.status === 401 ? "GitHub didn't recognize that token." : err.message;
+    } finally { $("signin-submit").disabled = false; }
+  });
+
+  window.addEventListener("beforeunload", e => {
+    if (editor.on && changedRows().length) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  // Returning editors: reuse the saved token quietly
+  (async () => {
+    let token = null;
+    try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+    if (!token) return;
+    try { await verifyToken(token); enableEditor(); }
+    catch (err) { editor.token = null; if (err.status === 401) { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} } }
+  })();
 
   // Open with an example trade so the calculator shows what it does
   const find = n => players.find(p => p.name === n);
