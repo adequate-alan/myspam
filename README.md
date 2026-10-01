@@ -23,8 +23,25 @@ Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-pre
 | `pipeline/stamp_date.py` | Sets the "Updated" date on the site |
 | `.github/workflows/site.yml` | Deploys on every push; every Tuesday it also refreshes projections, commits, and redeploys |
 
+## Editor mode
+
+Editors can reorder players and set custom values straight from the rankings page; everyone else sees a read-only board.
+
+**Who can edit:** any GitHub account with write access to this repository. To add Alan: repo **Settings → Collaborators → Add people**.
+
+**Signing in (once per browser):**
+1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Repository access: **Only select repositories → spmetrics-fantasy**. Permissions: **Contents → Read and write**. Pick an expiration.
+3. On the site, click **Editor sign-in** at the bottom of the page and paste the token. The page checks with GitHub that the account can push to this repo before showing any editing controls. The token is remembered in that browser until you click **Sign out**.
+
+**Editing:**
+- Pick a position (QB, RB, WR, TE), then drag a player by the ⠿ handle or nudge with ▲ ▼. Values recalculate from the new rank; a moved player takes the tier of the spot he moves into.
+- Click any value to type a custom number (marked **Custom** with a striped bar). **Auto** switches it back to the model value for his current rank.
+- Every change shows up in the trade calculator right away, but nothing is live until **Save changes**. **Cancel changes** throws the draft away.
+- **Save changes** commits `index.html` to `main` (the site redeploys in about a minute). Only the fields you changed are written onto the latest version, so the weekly projection refresh and the other editor's saves are kept.
+
 ## Updating
 
-- **Rankings:** edit `RANKINGS_CSV` in `index.html` (columns `player, pos, team, pos_rank, tier`) and push. The site redeploys in about a minute.
+- **Rankings:** use editor mode on the site, or edit `RANKINGS_CSV` in `index.html` (columns `player, pos, team, pos_rank, tier`, optional `value` for a custom value) and push.
 - **Projections:** automatic every Tuesday. To run it now: Actions → *Build and deploy site* → *Run workflow*.
 - **End of season:** after week 17, disable the workflow's schedule (or the whole workflow) under Actions.
