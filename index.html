@@ -26,7 +26,7 @@ const SITE = {
   format: "12-Team · Full PPR · Superflex",
   updated: "Oct 1, 2026",
   author: "@SPMetrics",
-  sampleData: true,           // set to false once your real rankings are in
+  sampleData: false,          // set to true to show the work-in-progress banner
   sampleNote: "WR rankings are final. QB, RB and TE are Steven's rankings until Alan's are in."
 };
 
@@ -58,31 +58,31 @@ const RANKINGS_CSV = `
 player,pos,team,pos_rank,tier,value,proj_ppg,games,proj_score
 Josh Allen,QB,BUF,1,1,,23.07,3,19.04
 Lamar Jackson,QB,BAL,2,2,,15.96,3,14.77
-Brock Purdy,QB,SF,3,2,,17.96,3,15.97
-Patrick Mahomes,QB,KC,4,2,,17.71,3,15.82
-Caleb Williams,QB,CHI,5,2,,17.75,2,15.37
-Joe Burrow,QB,CIN,6,2,,17.37,3,15.62
-Trevor Lawrence,QB,JAX,7,2,,14.67,3,14.00
-Jalen Hurts,QB,PHI,8,2,,15.86,3,14.71
-Tyler Shough,QB,NO,9,3,,22.87,3,18.92
-Dak Prescott,QB,DAL,10,3,,17.86,3,15.91
+Brock Purdy,QB,SF,3,3,,17.96,3,15.97
+Patrick Mahomes II,QB,KC,4,3,,17.71,3,15.82
+Joe Burrow,QB,CIN,5,3,,17.37,3,15.62
+Trevor Lawrence,QB,JAX,6,3,,14.67,3,14.00
+Jalen Hurts,QB,PHI,7,3,,15.86,3,14.71
+Dak Prescott,QB,DAL,8,3,,17.86,3,15.91
+Caleb Williams,QB,CHI,9,3,,17.75,2,15.37
+Tyler Shough,QB,NO,10,3,,22.87,3,18.92
 Jared Goff,QB,DET,11,3,,18.55,3,16.32
-Jayden Daniels,QB,WAS,12,3,,15.43,2,14.21
-Matthew Stafford,QB,LAR,13,3,,17.30,3,15.57
+Jayden Daniels,QB,WAS,12,4,,15.43,2,14.21
+Matthew Stafford,QB,LAR,13,4,,17.30,3,15.57
 Jordan Love,QB,GB,14,4,,17.09,3,15.45
 Bo Nix,QB,DEN,15,4,,15.48,3,14.48
 Drake Maye,QB,NE,16,4,,11.87,3,12.32
-Sam Darnold,QB,SEA,17,4,,11.37,2,12.18
-Bryce Young,QB,CAR,18,4,,19.25,3,16.75
-Justin Herbert,QB,LAC,19,4,,12.31,3,12.58
+Bryce Young,QB,CAR,17,4,,19.25,3,16.75
+Justin Herbert,QB,LAC,18,4,,12.31,3,12.58
+Sam Darnold,QB,SEA,19,5,,11.37,2,12.18
 C.J. Stroud,QB,HOU,20,5,,16.93,3,15.36
-Malik Willis,QB,MIA,21,5,,15.32,3,14.39
-Kyler Murray,QB,MIN,22,5,,7.14,2,10.07
-Michael Penix,QB,ATL,23,5,,13.67,1,13.22
-Jacoby Brissett,QB,ARI,24,5,,19.25,3,16.75
-Geno Smith,QB,NYJ,25,5,,17.62,3,15.77
-Kirk Cousins,QB,LV,26,5,,17.17,3,15.50
-Daniel Jones,QB,IND,27,5,,13.60,3,13.36
+Kyler Murray,QB,MIN,21,5,,7.14,2,10.07
+Malik Willis,QB,MIA,22,5,,15.32,3,14.39
+Jacoby Brissett,QB,ARI,23,5,,19.25,3,16.75
+Geno Smith,QB,NYJ,24,5,,17.62,3,15.77
+Daniel Jones,QB,IND,25,5,,13.60,3,13.36
+Michael Penix Jr.,QB,ATL,26,5,,13.67,1,13.22
+Kirk Cousins,QB,LV,27,5,,17.17,3,15.50
 Baker Mayfield,QB,TB,28,5,,13.33,3,13.20
 Aaron Rodgers,QB,PIT,29,6,,15.74,3,14.64
 Cam Ward,QB,TEN,30,6,,14.54,3,13.92
@@ -94,50 +94,52 @@ Kenneth Walker III,RB,KC,3,2,,23.27,3,18.36
 Jonathan Taylor,RB,IND,4,2,,21.19,3,17.12
 Christian McCaffrey,RB,SF,5,2,,16.33,3,14.20
 Derrick Henry,RB,BAL,6,3,,18.80,3,15.68
-James Cook,RB,BUF,7,3,,15.62,3,13.78
+James Cook III,RB,BUF,7,3,,15.62,3,13.78
 Chase Brown,RB,CIN,8,3,,15.87,3,13.93
 Ashton Jeanty,RB,LV,9,3,,20.55,3,16.73
-Kyren Williams,RB,LAR,10,4,,15.55,3,13.73
+Jeremiyah Love,RB,ARI,10,4,,15.71,3,13.83
 Saquon Barkley,RB,PHI,11,4,,8.46,3,9.48
-Jeremiyah Love,RB,ARI,12,4,,15.71,3,13.83
+Kyren Williams,RB,LAR,12,4,,15.55,3,13.73
 Breece Hall,RB,NYJ,13,5,,15.56,3,13.74
-Bhayshul Tuten,RB,JAX,14,5,,12.24,3,11.75
+Omarion Hampton,RB,LAC,14,5,,10.30,3,10.58
 Javonte Williams,RB,DAL,15,5,,15.22,3,13.54
-Omarion Hampton,RB,LAC,16,6,,10.30,3,10.58
+Bhaysul Tuten,RB,JAX,16,5,,12.24,3,11.75
 Chuba Hubbard,RB,CAR,17,6,,14.63,3,13.19
 D'Andre Swift,RB,CHI,18,6,,16.80,3,14.48
 Cam Skattebo,RB,NYG,19,6,,13.41,3,12.45
 Bucky Irving,RB,TB,20,6,,14.20,3,12.92
-Jaylen Warren,RB,PIT,21,7,,14.63,3,13.19
-David Montgomery,RB,HOU,22,7,,12.10,3,11.66
-Aaron Jones,RB,MIN,23,7,,13.65,3,12.60
-Quinshon Judkins,RB,CLE,24,7,,12.38,3,11.83
-Jacorey Croskey-Merritt,RB,WAS,25,8,,10.60,3,10.76
-Travis Etienne,RB,NO,26,8,,12.25,3,11.76
-TreVeyon Henderson,RB,NE,27,8,,8.44,2,9.73
-Rhamondre Stevenson,RB,NE,28,8,,10.81,3,10.89
+Jaylen Warren,RB,PIT,21,6,,14.63,3,13.19
+David Montgomery,RB,HOU,22,6,,12.10,3,11.66
+Quinshon Judkins,RB,CLE,23,7,,12.38,3,11.83
+TreVeyon Henderson,RB,NE,24,7,,8.44,2,9.73
+Aaron Jones Sr.,RB,MIN,25,7,,13.65,3,12.60
+Travis Ettienne Jr.,RB,NO,26,7,,12.25,3,11.76
+Rhamondre Stevenson,RB,NE,27,7,,10.81,3,10.89
+Jacorey Croskey-Merritt,RB,WAS,28,8,,10.60,3,10.76
 Jadarian Price,RB,SEA,29,8,,7.45,3,8.87
 Josh Jacobs,RB,GB,30,8,,,,
-Tony Pollard,RB,TEN,31,8,,10.63,3,10.78
+RJ Harvey,RB,DEN,31,8,,10.32,2,10.67
 J.K. Dobbins,RB,DEN,32,8,,6.84,3,8.51
-Rachaad White,RB,WAS,33,9,,10.23,3,10.54
-RJ Harvey,RB,DEN,34,9,,10.32,2,10.67
-Braelon Allen,RB,NYJ,35,9,,6.40,3,8.24
-Alvin Kamara,RB,NO,36,9,,9.37,2,10.19
-Blake Corum,RB,LAR,37,9,,7.58,3,8.95
-Kyle Monangai,RB,CHI,38,9,,9.04,3,9.83
-Jaylen Wright,RB,MIA,39,9,,0.79,2,5.90
-Woody Marks,RB,HOU,40,9,,8.22,3,9.34
-Ollie Gordon,RB,MIA,41,9,,8.70,2,9.85
-Zach Charbonnet,RB,SEA,42,9,,,,
-Rico Dowdle,RB,PIT,43,9,,8.09,2,9.55
-Emmet Johnson,RB,KC,44,9,,5.15,3,7.49
-Kaelon Black,RB,SF,45,9,,5.01,3,7.41
-Tyler Allegier,RB,ARI,46,9,,8.50,3,9.51
-Keaton Mitchell,RB,LAC,47,9,,5.43,3,7.66
-Chris Rodriguez,RB,JAX,48,9,,4.21,3,6.93
-Jonathon Brooks,RB,CAR,49,9,,4.79,2,7.90
+Tony Pollard,RB,TEN,33,8,,10.63,3,10.78
+Blake Corum,RB,LAR,34,8,,7.58,3,8.95
+Kyle Monangai,RB,CHI,35,8,,9.04,3,9.83
+Rachaad White,RB,WAS,36,9,,10.23,3,10.54
+Braelon Allen,RB,NYJ,37,9,,6.40,3,8.24
+Woody Marks,RB,HOU,38,9,,8.22,3,9.34
+Rico Dowdle,RB,PIT,39,9,,8.09,2,9.55
+Alvin Kamara,RB,NO,40,9,,9.37,2,10.19
+Ollie Gordon II,RB,MIA,41,9,,8.70,2,9.85
+Jaylen Wright,RB,MIA,42,9,,0.79,2,5.90
+Emmet Johnson,RB,KC,43,9,,5.15,3,7.49
+Kaelon Black,RB,SF,44,9,,5.01,3,7.41
+Zach Charbonnet,RB,SEA,45,9,,,,
+Jordan Mason,RB,MIN,46,9,,10.10,1,10.71
+Tyler Allgeier,RB,ARI,47,9,,8.50,3,9.51
+Mike Washington Jr.,RB,MIN,48,9,,4.42,3,7.05
+Keaton Mitchell,RB,LAC,49,9,,5.43,3,7.66
 Brian Robinson,RB,ATL,50,9,,8.10,3,9.26
+Chris Rodriguez,RB,JAX,51,10,,4.21,3,6.93
+Jonathon Brooks,RB,CAR,52,10,,4.79,2,7.90
 Jaxon Smith-Njigba,WR,SEA,1,1,,26.45,3,20.28
 Ja'Marr Chase,WR,CIN,2,2,,16.58,3,14.35
 Amon-Ra St. Brown,WR,DET,3,2,,21.69,3,17.42
@@ -146,76 +148,97 @@ Puka Nacua,WR,LAR,5,2,,13.95,1,11.99
 Chris Olave,WR,NO,6,3,,22.62,3,17.97
 Drake London,WR,ATL,7,3,,13.89,3,12.74
 Justin Jefferson,WR,MIN,8,3,,12.30,3,11.78
-Zay Flowers,WR,BAL,9,4,,14.11,2,12.56
-Nico Collins,WR,HOU,10,4,,20.00,1,14.01
-Parker Washington,WR,JAX,11,4,,14.43,3,13.06
+Zay Flowers,WR,BAL,9,3,,14.11,2,12.56
+Nico Collins,WR,HOU,10,3,,20.00,1,14.01
+Parker Washington,WR,JAX,11,3,,14.43,3,13.06
 Garrett Wilson,WR,NYJ,12,4,,17.58,3,14.95
-DeVonta Smith,WR,PHI,13,5,,15.14,3,13.49
-Christian Watson,WR,GB,14,5,,18.95,3,15.77
-George Pickens,WR,DAL,15,5,,12.35,3,11.81
-Davante Adams,WR,LAR,16,5,,18.91,3,15.75
-Tee Higgins,WR,CIN,17,6,,14.46,3,13.08
-Rashee Rice,WR,KC,18,6,,10.55,3,10.74
-Malik Nabers,WR,NYG,19,6,,9.38,3,10.03
-Tetairoa McMillan,WR,CAR,20,6,,11.63,3,11.38
-DJ Moore,WR,BUF,21,7,,10.41,3,10.65
-Ladd McConkey,WR,LAC,22,7,,9.18,3,9.91
-Matthew Golden,WR,GB,23,7,,16.25,3,14.16
-Jaylen Waddle,WR,DEN,24,7,,11.21,3,11.13
-Luther Burden III,WR,CHI,25,8,,12.91,3,12.15
-A.J. Brown,WR,NE,26,8,,6.80,1,9.61
-Michael Wilson,WR,ARI,27,8,,17.53,3,14.92
-Mike Evans,WR,SF,28,8,,9.96,3,10.38
-Josh Downs,WR,IND,29,8,,13.40,3,12.44
-Emeka Egbuka,WR,TB,30,8,,10.80,3,10.88
-Jalen Coker,WR,CAR,31,8,,14.30,3,12.98
-Jameson Williams,WR,DET,32,8,,8.69,3,9.62
-Terry McLaurin,WR,WAS,33,9,,12.49,3,11.90
-DK Metcalf,WR,PIT,34,9,,12.04,3,11.63
-Stefon Diggs,WR,WAS,35,9,,14.56,3,13.14
-Deebo Samuel SR.,WR,SF,36,9,,9.21,3,9.93
-Rome Odunze,WR,CHI,37,9,,7.37,3,8.82
-Jordan Addison,WR,MIN,38,9,,9.06,3,9.84
-Carnell Tate,WR,TEN,39,9,,10.68,3,10.81
-Jakobi Meyers,WR,JAX,40,9,,8.64,3,9.59
-KC Concepcion Jr.,WR,CLE,41,9,,10.82,3,10.90
-Devaughn Vele,WR,NO,42,9,,13.14,3,12.29
-Jordyn Tyson,WR,NO,43,10,,,,
-Denzel Boston,WR,CLE,44,10,,11.69,3,11.42
-Chris Godwin Jr.,WR,TB,45,10,,6.73,3,8.44
-Brian Thomas Jr.,WR,JAX,46,10,,6.22,3,8.14
-Adonai Mitchell,WR,NYJ,47,10,,12.70,2,11.85
-Makai Lemon,WR,PHI,48,10,,4.45,3,7.07
-Courtland Sutton,WR,DEN,49,10,,7.84,3,9.11
-Marvin Harrison Jr.,WR,ARI,50,10,,5.03,3,7.42
-Kaliff Raymond,WR,CHI,51,10,,13.37,3,12.42
-Xavier Worthy,WR,KC,52,10,,7.87,3,9.12
-Malik Washington,WR,MIA,53,10,,12.40,3,11.84
-Dontayvion Wicks,WR,PHI,54,10,,9.18,3,9.91
+DeVonta Smith,WR,PHI,13,4,,15.14,3,13.49
+Christian Watson,WR,GB,14,4,,18.95,3,15.77
+George Pickens,WR,DAL,15,4,,12.35,3,11.81
+Davante Adams,WR,LAR,16,4,,18.91,3,15.75
+Tee Higgins,WR,CIN,17,5,,14.46,3,13.08
+Rashee Rice,WR,KC,18,5,,10.55,3,10.74
+Tetairoa McMillan,WR,CAR,19,5,,11.63,3,11.38
+Malik Nabers,WR,NYG,20,5,,9.38,3,10.03
+DJ Moore,WR,BUF,21,5,,10.41,3,10.65
+Ladd McConkey,WR,LAC,22,5,,9.18,3,9.91
+Matthew Golden,WR,GB,23,5,,16.25,3,14.16
+Jaylen Waddle,WR,DEN,24,6,,11.21,3,11.13
+Luther Burden III,WR,CHI,25,6,,12.91,3,12.15
+A.J. Brown,WR,NE,26,15,,6.80,1,9.61
+Michael Wilson,WR,ARI,27,6,,17.53,3,14.92
+Mike Evans,WR,SF,28,6,,9.96,3,10.38
+Josh Downs,WR,IND,29,6,,13.40,3,12.44
+Emeka Egbuka,WR,TB,30,6,,10.80,3,10.88
+Jameson Williams,WR,DET,31,6,,8.69,3,9.62
+Jalen Coker,WR,CAR,32,6,,14.30,3,12.98
+Terry McLaurin,WR,WAS,33,6,,12.49,3,11.90
+DK Metcalf,WR,PIT,34,7,,12.04,3,11.63
+Deebo Samuel SR.,WR,SF,35,7,,9.21,3,9.93
+Stefon Diggs,WR,WAS,36,7,,14.56,3,13.14
+Rome Odunze,WR,CHI,37,7,,7.37,3,8.82
+Jordan Addison,WR,MIN,38,7,,9.06,3,9.84
+Jakobi Meyers,WR,JAX,39,7,,8.64,3,9.59
+Carnell Tate,WR,TEN,40,7,,10.68,3,10.81
+KC Concepcion Jr.,WR,CLE,41,8,,10.82,3,10.90
+Devaughn Vele,WR,NO,42,8,,13.14,3,12.29
+Jordyn Tyson,WR,NO,43,8,,,,
+Denzel Boston,WR,CLE,44,8,,11.69,3,11.42
+Brian Thomas Jr.,WR,JAX,45,8,,6.22,3,8.14
+Chris Godwin Jr.,WR,TB,46,8,,6.73,3,8.44
+Makai Lemon,WR,PHI,47,8,,4.45,3,7.07
+Courtland Sutton,WR,DEN,48,8,,7.84,3,9.11
+Adonai Mitchell,WR,NYJ,49,8,,12.70,2,11.85
+Marvin Harrison Jr.,WR,ARI,50,8,,5.03,3,7.42
+Xavier Worthy,WR,KC,51,8,,7.87,3,9.12
+Malik Washington,WR,MIA,52,8,,12.40,3,11.84
+Kalif Raymond,WR,CHI,53,8,,13.37,3,12.42
+Dontayvion Wicks,WR,PHI,54,8,,9.18,3,9.91
+Chris Bell,WR,MIA,55,8,,5.58,3,7.75
+Romeo Doubs,WR,NE,56,8,,6.70,3,8.43
+Keenan Allen,WR,IND,57,9,,11.43,3,11.26
+Wan'Dale Robinson,WR,TEN,58,9,,10.53,3,10.72
+Quentin Johnston,WR,LAC,59,9,,7.11,3,8.67
+Michael Pittman Jr.,WR,PIT,60,9,,6.49,2,8.75
+Khalil Shakir,WR,BUF,61,9,,7.19,3,8.72
+Tre Tucker,WR,LV,62,9,,10.21,3,10.53
+Pat Bryant,WR,DEN,63,9,,6.63,3,8.38
+Rashod Batemen,WR,BAL,64,9,,7.81,3,9.09
+Caleb Douglas,WR,MIA,65,9,,9.27,2,10.14
+Antonio Williams,WR,WAS,66,9,,7.93,3,9.16
+Alec Pierce,WR,IND,67,9,,6.32,2,8.67
+Tyreek Hill,WR,FA,68,9,,,,
+Mack Hollins,WR,NE,69,9,,9.45,3,10.07
+Keon Coleman,WR,BUF,70,9,,5.30,3,7.58
+De'Zhaun Stribling,WR,SF,71,9,,,,
+Ja'Kobi Lane,WR,BAL,72,9,,3.91,1,8.64
+Ted Hurst,WR,TB,73,9,,7.05,3,8.63
+Travis Hunter,WR,JAX,74,9,,,,
 Brock Bowers,TE,LV,1,1,,30.39,1,17.25
 Trey Mcbride,TE,ARI,2,1,,26.20,3,19.99
 Tyler Warren,TE,IND,3,2,,17.04,3,14.49
 George Kittle,TE,SF,4,2,,13.13,3,12.15
 Dalton Kincaid,TE,BUF,5,2,,13.48,3,12.36
-Juwan Johnson,TE,NO,6,3,,16.05,3,13.90
-Sam LaPorta,TE,DET,7,3,,13.26,3,12.23
-Travis Kelce,TE,KC,8,3,,14.58,3,13.02
-Colston Loveland,TE,CHI,9,3,,5.24,3,7.41
-Isaiah Likely,TE,NYG,10,3,,15.91,3,13.82
-Harold Fannin,TE,CLE,11,3,,14.77,3,13.13
-Dalton Schultz,TE,HOU,12,4,,17.19,3,14.58
-Tucker Kraft,TE,GB,13,4,,10.24,3,10.41
-Dallas Goedert,TE,PHI,14,4,,9.47,2,10.07
-Mark Andrews,TE,BAL,15,4,,11.35,3,11.08
-Kenyon Sadiq,TE,NYJ,16,4,,12.46,3,11.75
-Jake Ferguson,TE,DAL,17,4,,9.25,3,9.82
-Darren Waller,TE,CAR,18,5,,10.41,3,10.52
-Kyle Pitts,TE,ATL,19,5,,3.54,3,6.39
-Brenton Strange,TE,JAX,20,5,,7.37,3,8.69
-Terrance Ferguson,TE,LAR,21,5,,8.18,3,9.18
-Oronde Gasden,TE,LAC,22,5,,4.79,3,7.15
-T.J. Hockenson,TE,MIN,23,5,,9.46,3,9.95
-Pat Freiermuth,TE,PIT,24,5,,10.86,3,10.79
+Sam LaPorta,TE,DET,6,3,,13.26,3,12.23
+Juwan Johnson,TE,NO,7,4,,16.05,3,13.90
+Travis Kelce,TE,KC,8,4,,14.58,3,13.02
+Colston Loveland,TE,CHI,9,4,,5.24,3,7.41
+Tucker Kraft,TE,GB,10,4,,10.24,3,10.41
+Harold Fannin Jr.,TE,CLE,11,4,,14.77,3,13.13
+Isaiah Likely,TE,NYG,12,4,,15.91,3,13.82
+Dalton Schultz,TE,HOU,13,5,,17.19,3,14.58
+Kenyon Sadiq,TE,NYJ,14,5,,12.46,3,11.75
+Mark Andrews,TE,BAL,15,5,,11.35,3,11.08
+Dallas Goedert,TE,PHI,16,5,,9.47,2,10.07
+Jake Ferguson,TE,DAL,17,5,,9.25,3,9.82
+Kyle Pitts Sr.,TE,ATL,18,5,,3.54,3,6.39
+Darren Waller,TE,CAR,19,6,,10.41,3,10.52
+Terrance Ferguson,TE,LAR,20,6,,8.18,3,9.18
+Oronde Gadsden II,TE,LAC,21,6,,4.79,3,7.15
+Brenton Strange,TE,JAX,22,6,,7.37,3,8.69
+Tyler Higbee,TE,LAR,23,6,,14.18,2,12.43
+T.J. Hockenson,TE,MIN,24,6,,9.46,3,9.95
+Pat Freiermuth,TE,PIT,25,6,,10.86,3,10.79
 `;
 
 /* =====================================================================
@@ -265,6 +288,7 @@ const VALUE_MODEL = {
   benchWeight: 0.25, // share of bench-level points that count (bye/injury fill-ins)
   tierBlend: 0.35,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value
   tierMinDrop: 0.06, // minimum drop from one tier to the next (6%)
+  tagTierFrom: 15,   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
   keepRankOrder: true, // values never break your positional order (see step 7)
   projection: {
     maxWeight: 0.7,     // the most a projection can ever count
@@ -346,6 +370,62 @@ function tradeModel(sideA, sideB) {
   }
   return { scoreA, scoreB, rawA: raw(sideA), rawB: raw(sideB), note };
 }
+
+/* =====================================================================
+   TIER NAMES
+   Your CSV keeps tier NUMBERS; the site shows the name for each number.
+   ALL applies to every position. A position block (QB, RB, WR, TE)
+   overrides ALL for that position only. OVERALL names the tiers on the
+   overall board (the overall_tier column). Any tier without a name
+   shows as "Tier 3", etc.
+   ===================================================================== */
+const TIER_NAMES = {
+  ALL: {
+    // 1: "Elite",
+    // 2: "Weekly Starters",
+  },
+  QB: {
+    1: "Josh Allen",
+    2: "Great QB1",
+    3: "QB1",
+    4: "Low QB1",
+    5: "QB2",
+    6: "Dead"
+  },
+  RB: {
+    1: "Gibbs",
+    2: "Elite RB1",
+    3: "RB1",
+    4: "Low RB1",
+    5: "Elite RB2",
+    6: "RB2",
+    7: "Low RB2",
+    8: "RB3/Flex",
+    9: "Bench/Handcuff",
+    10: "Dead"
+  },
+  TE: {
+    1: "Elite Elite",
+    2: "High TE1",
+    3: "TE1",
+    4: "Low TE1",
+    5: "TE2",
+    6: "Low TE2"
+  },
+  WR: {
+    1: "JSN",
+    2: "Elite WR1",
+    3: "WR1",
+    4: "Low WR1",
+    5: "Elite WR2",
+    6: "WR2",
+    7: "Low WR2",
+    8: "WR3",
+    9: "Flex",
+    10: "Bench/Stash",
+    15: "Hurt/WR1-2 When Healthy"
+  },
+};
 
 // A trade within this margin (0.05 = 5%) is called "fair".
 const FAIR_MARGIN = 0.05;
@@ -762,6 +842,8 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
     });
     if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrder(players.filter(p => p.modelValued));
     applyTiers(players.filter(p => p.modelValued));
+    if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrder(players.filter(p => p.modelValued));
+    players.forEach(p => { if (p.modelValued) p.value = Math.round(p.value); });
 
     // Overall order: hand-set ranks first, then everyone else by value
     const ranked = players.filter(p => isPlayer(p) && p.rank != null).sort((a, b) => a.rank - b.rank);
@@ -813,6 +895,7 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
   function applyTiers(list) {
     const m = typeof VALUE_MODEL === "object" ? VALUE_MODEL : {};
     const blend = Number(m.tierBlend) || 0, minDrop = Number(m.tierMinDrop) || 0;
+    const isTag = p => Number(p.tier) >= (Number(m.tagTierFrom) || Infinity);
     const byPos = {};
     list.filter(p => p.tier !== "").forEach(p => (byPos[p.pos] = byPos[p.pos] || []).push(p));
     for (const group of Object.values(byPos)) {
@@ -820,11 +903,13 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
       const tiers = {};
       group.forEach(p => (tiers[p.tier] = tiers[p.tier] || []).push(p));
       for (const t of Object.values(tiers)) {
+        if (isTag(t[0])) continue;
         const mean = t.reduce((sum, p) => sum + p.value, 0) / t.length;
         t.forEach(p => { p.value = mean + (p.value - mean) * (1 - blend); });
       }
       let scale = 1, prev = null;
       group.forEach(p => {
+        if (isTag(p)) { p.value *= scale; return; }
         let v = p.value * scale;
         if (prev && p.tier !== prev.tier && v > prev.value * (1 - minDrop)) {
           const cap = prev.value * (1 - minDrop);

@@ -10,6 +10,9 @@ ALIASES = {
     "Emmet Johnson": "Emmett Johnson",
     "Tyler Allegier": "Tyler Allgeier",
     "Oronde Gasden": "Oronde Gadsden II",
+    "Bhaysul Tuten": "Bhayshul Tuten",
+    "Travis Ettienne Jr.": "Travis Etienne",
+    "Rashod Batemen": "Rashod Bateman",
 }
 
 def merge(site_path, proj_path="projections.csv"):
