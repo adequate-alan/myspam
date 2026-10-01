@@ -27,6 +27,39 @@ The calculator compares the adjusted value each side receives: raw player value 
 
 The exact gap is shown under the verdict, along with the raw player value gap when the roster adjustment changed it. With a Sleeper league connected, verdicts use the team names. Tiers and wording are in `TRADE_VERDICTS` in `index.html`.
 
+## Player pages
+
+Every player name on the site links to a player page (`#player/<sleeper id>`), with a photo, team, position, age, SPMetrics rank and value, league ownership and this season's points per game. Sections:
+- **Overview:** season points, points per game, recent games, season trend, next opponent, ownership, the SPMetrics projection and a weekly points chart.
+- **Game log:** every week of 2026, 2025 or 2024 with position-specific stats, byes and missed games. Gold rows are big weeks (1.75× the position's starter line), dim rows are under half of it.
+- **Stats:** season totals and usage/efficiency (target share, catch rate, yards per touch/carry/catch, completion %, yards per attempt).
+- **Fantasy performance:** weekly points chart by season, with Season / Last 10 / Last 5, average and starter lines.
+- **Ranking history:** overall rank and value over time from the published snapshots.
+- **Trade value:** current value, movement since the last snapshot, the players closest in value (with owners when a league is connected) and **Find trades for this player**.
+
+Fantasy points are calculated in the browser from the raw stats, using the connected league's scoring (including yardage bonuses and first downs) or the site's format otherwise.
+
+### Data layers
+
+| Layer | Where | Updated by |
+|---|---|---|
+| Player identity (Sleeper ID, nflverse ID, name, position, team, birthdate) | `data/sleeper_players.json` | weekly workflow |
+| Photos | Sleeper's CDN by Sleeper ID (initials when missing) | – |
+| Stats (weekly game logs, schedules) | `data/stats/<season>.json` | weekly workflow (current season) |
+| Rankings (rank, position rank, value) | `RANKINGS_CSV` in `index.html` | you (editor) |
+| Ranking history | `data/rank_history.json` | each publish |
+| League (ownership, scoring, rosters) | Sleeper data in the browser | Connect / Refresh |
+
+The stats refresh never writes to the rankings, and nothing from Sleeper or stats changes your ranks or custom values. Each new season: add it to `STATS_SEASONS` in `index.html` and run `python build_stats.py <season>`.
+
+## Trade finder
+
+With a Sleeper league connected, **Trade Finder** searches every other roster for trades around one of your players (or, from another team's player page, ways to get him):
+- 1-for-1, 2-for-1, 1-for-2 and 2-for-2 within the chosen value difference, using the trade calculator's adjusted values and verdicts. A second player in a package must be worth at least 20% of the first, so there are no filler add-ons.
+- Value closeness comes first. Among close trades, the ones that make both teams' best lineups better rank higher: it fills each team's lineup in this league's slots (superflex, flex, TE premium through league values), counts bench depth, and charges for roster spots when a team takes back more players.
+- Each idea shows what you give and get, raw and adjusted values, the difference, the verdict, whether incoming players would start for you, and why it works (position-room ranks before → after for both teams).
+- Filters: position wanted, team, max value difference, 1-for-1 only / packages allowed, fair trades only. **Open in trade calculator** loads the idea into the calculator.
+
 ## Repository
 
 | Path | What it does |
@@ -37,9 +70,12 @@ The exact gap is shown under the verdict, along with the raw player value gap wh
 | `pipeline/project_players.py` | Rest-of-season projections from usage, actual points and team environment → `projections.csv` |
 | `pipeline/merge_projections.py` | Writes projection columns into `index.html` for every ranked player |
 | `pipeline/build_sleeper_ids.py` | Sleeper player IDs: `data/sleeper_players.json` and the `sleeper_id` column |
+| `pipeline/build_stats.py` | Weekly game logs and schedules → `data/stats/<season>.json` (stats only; never touches rankings) |
 | `pipeline/stamp_date.py` | Sets the "Updated" date on the site |
+| `data/stats/<season>.json` | Weekly stat lines (Sleeper scoring keys) and team schedules for 2024–2026 |
+| `data/rank_history.json` | Ranking snapshots, one per publish day: `{sleeper_id: [overall rank, position rank, base value]}` |
 | `data/curve_components.json` | Stat breakdown per positional finish (from `build_curves.py`), used for league-adjusted values |
-| `.github/workflows/site.yml` | Deploys on every push; every Tuesday it also refreshes projections, commits, and redeploys |
+| `.github/workflows/site.yml` | Deploys on every push; every Tuesday it also refreshes projections, player IDs and this season's stats, commits, and redeploys |
 
 ## Editor mode (temporary: open to everyone)
 
@@ -49,6 +85,7 @@ While the rankings system is being built, the editing controls are on for every 
 - **Values** come from each player's position rank (the value model), then are kept in order down the All rankings: if you put a player above someone with a higher value, their values meet in the middle.
 - **Custom values:** click any value to type a number (marked **Custom** with a striped bar). **Auto** switches back to the model value for his current rank.
 - **Save changes / Cancel changes:** Save keeps your edits in *this browser* (they survive reloads and feed the trade calculator). Cancel throws away unsaved changes. A visitor who edits only changes their own copy, never the live board.
+- **Ranking history:** every publish also saves a snapshot of the published board (rank, position rank and base value per player) to `data/rank_history.json`, one per day. Player pages chart it.
 - **Publish to live site:** writes the browser-saved edits to `index.html` on GitHub so everyone sees them (site redeploys in about a minute). Publishing needs a GitHub fine-grained token for an account with write access (**Contents: Read and write**, this repository only); the page asks once and remembers it in that browser. Only the edited fields are merged onto the latest version, so the weekly projection refresh is kept.
 - **Discard browser edits:** drops everything saved in the browser and shows the live rankings again.
 

@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh projections (weekly / manual runs only)
+      - name: Refresh projections and stats (weekly / manual runs only)
         if: github.event_name != 'push'
         working-directory: pipeline
         run: |
@@ -36,6 +36,7 @@ jobs:
           python project_players.py
           python merge_projections.py ../index.html
           python build_sleeper_ids.py ../index.html
+          python build_stats.py 2026
           python stamp_date.py ../index.html
 
       - name: Commit refreshed site
@@ -43,8 +44,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html data/sleeper_players.json
-          git diff --cached --quiet || git commit -m "Weekly projections refresh"
+          git add index.html data/sleeper_players.json data/stats/2026.json
+          git diff --cached --quiet || git commit -m "Weekly projections and stats refresh"
           git push
 
       - uses: actions/configure-pages@v5
