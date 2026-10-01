@@ -286,8 +286,9 @@ const VALUE_MODEL = {
   replacement: { QB: 12.99, RB: 11.01, WR: 11.01, TE: 10.68 },
   waiver: { QB: 3.94, RB: 5.66, WR: 7.88, TE: 8.39 },
   benchWeight: 0.25, // share of bench-level points that count (bye/injury fill-ins)
-  tierBlend: 0.25,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value
-  tierMinDrop: 0.04, // minimum drop from one tier to the next (4%)
+  tierBlend: 0.10,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value
+  tierMinDrop: 0.02, // minimum drop from one tier to the next (2%)
+  topSpotSoften: { WR: 0.5 }, // move a position's #1 curve spot this share of the way toward #2
   tagTierFrom: 15,   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
   keepRankOrder: true, // values never break your positional order (see step 7)
   projection: {
@@ -301,6 +302,12 @@ const VALUE_MODEL = {
     TE: [19.89, 18.51, 17.35, 16.4, 15.54, 14.87, 14.27, 13.71, 13.25, 12.99, 12.73, 12.44, 12.08, 11.75, 11.36, 11.03, 10.68, 10.42, 10.19, 9.97, 9.79, 9.59, 9.47, 9.28, 9.11, 8.93, 8.81, 8.67, 8.39, 8.02, 7.72, 7.44, 7.24, 6.93, 6.71, 6.49, 6.34, 6.21, 6.1, 6.06]
   }
 };
+
+// Soften the #1 spot of a curve (season-leading finishes run hot)
+for (const [pos, k] of Object.entries(VALUE_MODEL.topSpotSoften || {})) {
+  const c = VALUE_MODEL.curves[pos];
+  if (c && c.length > 1) c[0] = c[0] - k * (c[0] - c[1]);
+}
 
 // Weight a player's projection gets, based on games played this season
 function projectionWeight(games) {
