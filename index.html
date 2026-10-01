@@ -286,8 +286,8 @@ const VALUE_MODEL = {
   replacement: { QB: 12.99, RB: 11.01, WR: 11.01, TE: 10.68 },
   waiver: { QB: 3.94, RB: 5.66, WR: 7.88, TE: 8.39 },
   benchWeight: 0.25, // share of bench-level points that count (bye/injury fill-ins)
-  tierBlend: 0.35,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value
-  tierMinDrop: 0.06, // minimum drop from one tier to the next (6%)
+  tierBlend: 0.25,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value
+  tierMinDrop: 0.04, // minimum drop from one tier to the next (4%)
   tagTierFrom: 15,   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
   keepRankOrder: true, // values never break your positional order (see step 7)
   projection: {
@@ -346,10 +346,16 @@ function modelValue(pos, posRank, projRank = null, games = 0) {
       each extra player, roughly a fringe bench / waiver-level player
       (ROSTER_SPOT_VALUE, about what RB50 / WR54 / TE24 are worth).
       That cost is subtracted from the side getting more bodies.
-   1-for-1 trades are never changed by either part.
+   3. Best player boost: the side getting the single most valuable player
+      gets BEST_PLAYER_BONUS x the gap between the two sides' best players
+      (star-premium values). A big gap at the top = a big boost; two
+      top players of similar value = almost none.
+   In a 1-for-1, whoever gets the more valuable player still wins; the
+   boost only widens the margin.
    ===================================================================== */
 const STAR_POWER = 1.3;
 const ROSTER_SPOT_VALUE = 250;
+const BEST_PLAYER_BONUS = 0.25;
 
 function tradeModel(sideA, sideB) {
   const adj = v => 10000 * Math.pow(Math.max(v, 0) / 10000, STAR_POWER);
@@ -358,15 +364,19 @@ function tradeModel(sideA, sideB) {
   const extra = sideA.length - sideB.length;
   const spotA = extra > 0 ? extra * ROSTER_SPOT_VALUE : 0;
   const spotB = extra < 0 ? -extra * ROSTER_SPOT_VALUE : 0;
-  const scoreA = starred(sideA) - spotA, scoreB = starred(sideB) - spotB;
+  const top = side => Math.max(0, ...side.map(p => adj(p.value)));
+  const gap = sideA.length && sideB.length ? top(sideA) - top(sideB) : 0;
+  const boostA = gap > 0 ? BEST_PLAYER_BONUS * gap : 0;
+  const boostB = gap < 0 ? BEST_PLAYER_BONUS * -gap : 0;
+  const scoreA = starred(sideA) - spotA + boostA, scoreB = starred(sideB) - spotB + boostB;
   // Net swing the adjustment creates, shown in the same units as the totals
   const swing = Math.round((scoreA - scoreB) - (raw(sideA) - raw(sideB)));
   let note = "";
   if (sideA.length && sideB.length && (sideA.length > 1 || sideB.length > 1) && swing !== 0) {
     const toward = swing > 0 ? "A" : "B", more = extra > 0 ? "A" : "B";
     note = `Waiver adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${toward}`
-      + (extra ? ` (Team ${more} takes on ${Math.abs(extra)} extra player${Math.abs(extra) > 1 ? "s" : ""} and has to cut ${Math.abs(extra) > 1 ? "them" : "one"} elsewhere).`
-               : " (better top-end talent).");
+      + (extra ? ` (Team ${toward} gets the best player in the deal; Team ${more} takes on ${Math.abs(extra)} extra player${Math.abs(extra) > 1 ? "s" : ""} and has to cut ${Math.abs(extra) > 1 ? "them" : "one"}).`
+               : ` (Team ${toward} gets the best player in the deal).`);
   }
   return { scoreA, scoreB, rawA: raw(sideA), rawB: raw(sideB), note };
 }
