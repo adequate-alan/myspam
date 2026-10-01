@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="SPMetrics fantasy football rankings and trade calculator for 12-team full PPR superflex redraft leagues.">
+<style>
+  /* base reset (the claude.ai host used to add this) */
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>SPMetrics Fantasy Rankings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<script>
+/* =====================================================================
+   SITE SETTINGS
+   ===================================================================== */
+const SITE = {
+  name: "SPMetrics",
+  tagline: "Fantasy Football Rankings",
+  format: "12-Team · Full PPR · Superflex",
+  updated: "Sep 30, 2026",
+  author: "@SPMetrics",
+  sampleData: true,           // set to false once your real rankings are in
+  sampleNote: "WR rankings are final. QB, RB and TE are Steven's rankings until Alan's are in."
+};
+
+/* =====================================================================
+   SLOT 1 — YOUR RANKINGS
+   Build this in stages; the site adapts to whatever columns you fill in.
+   Header row required, column order doesn't matter.
+
+   Stage 1 · Positional rankings
+     player, pos, team, pos_rank, tier
+     - pos: QB, RB, WR, or TE
+     - tier: your positional tier (QB tier 1, RB tier 1, ...)
+
+   Stage 2 · Values
+     add a  value  column (any scale). The overall rankings are then
+     built automatically by sorting every player on value.
+
+   Projections: proj_ppg, proj_score and games are filled in by merge_projections.py
+   from this season's stats and betting lines. Leave them blank to go
+   rank-only for a player.
+
+   Stage 3 · Overall rankings (optional overrides)
+     add  rank  to hand-set overall order, and  overall_tier  for tier
+     breaks on the overall board. Blank rank = order by value.
+
+   Tip: export straight from Google Sheets / Excel as CSV and paste here.
+   ===================================================================== */
+const RANKINGS_CSV = `
+player,pos,team,pos_rank,tier,value,proj_ppg,games,proj_score
+Josh Allen,QB,BUF,1,1,,23.07,3,19.04
+Lamar Jackson,QB,BAL,2,2,,15.96,3,14.77
+Brock Purdy,QB,SF,3,2,,17.96,3,15.97
+Patrick Mahomes,QB,KC,4,2,,17.71,3,15.82
+Caleb Williams,QB,CHI,5,2,,17.75,2,15.37
+Joe Burrow,QB,CIN,6,2,,17.37,3,15.62
+Trevor Lawrence,QB,JAX,7,2,,14.67,3,14.00
+Jalen Hurts,QB,PHI,8,2,,15.86,3,14.71
+Tyler Shough,QB,NO,9,3,,22.87,3,18.92
+Dak Prescott,QB,DAL,10,3,,17.86,3,15.91
+Jared Goff,QB,DET,11,3,,18.55,3,16.32
+Jayden Daniels,QB,WAS,12,3,,15.43,2,14.21
+Matthew Stafford,QB,LAR,13,3,,17.30,3,15.57
+Jordan Love,QB,GB,14,4,,17.09,3,15.45
+Bo Nix,QB,DEN,15,4,,15.48,3,14.48
+Drake Maye,QB,NE,16,4,,11.87,3,12.32
+Sam Darnold,QB,SEA,17,4,,11.37,2,12.18
+Bryce Young,QB,CAR,18,4,,19.25,3,16.75
+Justin Herbert,QB,LAC,19,4,,12.31,3,12.58
+C.J. Stroud,QB,HOU,20,5,,16.93,3,15.36
+Malik Willis,QB,MIA,21,5,,15.32,3,14.39
+Kyler Murray,QB,MIN,22,5,,7.14,2,10.07
+Michael Penix,QB,ATL,23,5,,13.67,1,13.22
+Jacoby Brissett,QB,ARI,24,5,,19.25,3,16.75
+Geno Smith,QB,NYJ,25,5,,17.62,3,15.77
+Kirk Cousins,QB,LV,26,5,,17.17,3,15.50
+Daniel Jones,QB,IND,27,5,,13.60,3,13.36
+Baker Mayfield,QB,TB,28,5,,13.33,3,13.20
+Aaron Rodgers,QB,PIT,29,6,,15.74,3,14.64
+Cam Ward,QB,TEN,30,6,,14.54,3,13.92
+Deshaun Watson,QB,CLE,31,6,,18.66,3,16.39
+Jameis Winston,QB,NYG,32,6,,8.78,2,10.88
+Jahmyr Gibbs,RB,DET,1,1,,26.96,3,20.58
+Bijan Robinson,RB,ATL,2,2,,25.85,3,19.91
+Kenneth Walker III,RB,KC,3,2,,23.27,3,18.36
+Jonathan Taylor,RB,IND,4,2,,21.19,3,17.12
+Christian McCaffrey,RB,SF,5,2,,16.33,3,14.20
+Derrick Henry,RB,BAL,6,3,,18.80,3,15.68
+James Cook,RB,BUF,7,3,,15.62,3,13.78
+Chase Brown,RB,CIN,8,3,,15.87,3,13.93
+Ashton Jeanty,RB,LV,9,3,,20.55,3,16.73
+Kyren Williams,RB,LAR,10,4,,15.55,3,13.73
+Saquon Barkley,RB,PHI,11,4,,8.46,3,9.48
+Jeremiyah Love,RB,ARI,12,4,,15.71,3,13.83
+Breece Hall,RB,NYJ,13,5,,15.56,3,13.74
+Bhayshul Tuten,RB,JAX,14,5,,12.24,3,11.75
+Javonte Williams,RB,DAL,15,5,,15.22,3,13.54
+Omarion Hampton,RB,LAC,16,6,,10.30,3,10.58
+Chuba Hubbard,RB,CAR,17,6,,14.63,3,13.19
+D'Andre Swift,RB,CHI,18,6,,16.80,3,14.48
+Cam Skattebo,RB,NYG,19,6,,13.41,3,12.45
+Bucky Irving,RB,TB,20,6,,14.20,3,12.92
+Jaylen Warren,RB,PIT,21,7,,14.63,3,13.19
+David Montgomery,RB,HOU,22,7,,12.10,3,11.66
+Aaron Jones,RB,MIN,23,7,,13.65,3,12.60
+Quinshon Judkins,RB,CLE,24,7,,12.38,3,11.83
+Jacorey Croskey-Merritt,RB,WAS,25,8,,10.60,3,10.76
+Travis Etienne,RB,NO,26,8,,12.25,3,11.76
+TreVeyon Henderson,RB,NE,27,8,,8.44,2,9.73
+Rhamondre Stevenson,RB,NE,28,8,,10.81,3,10.89
+Jadarian Price,RB,SEA,29,8,,7.45,3,8.87
+Josh Jacobs,RB,GB,30,8,,,,
+Tony Pollard,RB,TEN,31,8,,10.63,3,10.78
+J.K. Dobbins,RB,DEN,32,8,,6.84,3,8.51
+Rachaad White,RB,WAS,33,9,,10.23,3,10.54
+RJ Harvey,RB,DEN,34,9,,10.32,2,10.67
+Braelon Allen,RB,NYJ,35,9,,6.40,3,8.24
+Alvin Kamara,RB,NO,36,9,,9.37,2,10.19
+Blake Corum,RB,LAR,37,9,,7.58,3,8.95
+Kyle Monangai,RB,CHI,38,9,,9.04,3,9.83
+Jaylen Wright,RB,MIA,39,9,,0.79,2,5.90
+Woody Marks,RB,HOU,40,9,,8.22,3,9.34
+Ollie Gordon,RB,MIA,41,9,,8.70,2,9.85
+Zach Charbonnet,RB,SEA,42,9,,,,
+Rico Dowdle,RB,PIT,43,9,,8.09,2,9.55
+Emmet Johnson,RB,KC,44,9,,5.15,3,7.49
+Kaelon Black,RB,SF,45,9,,5.01,3,7.41
+Tyler Allegier,RB,ARI,46,9,,8.50,3,9.51
+Keaton Mitchell,RB,LAC,47,9,,5.43,3,7.66
+Chris Rodriguez,RB,JAX,48,9,,4.21,3,6.93
+Jonathon Brooks,RB,CAR,49,9,,4.79,2,7.90
+Brian Robinson,RB,ATL,50,9,,8.10,3,9.26
+Jaxon Smith-Njigba,WR,SEA,1,1,,26.45,3,20.28
+Ja'Marr Chase,WR,CIN,2,2,,16.58,3,14.35
+Amon-Ra St. Brown,WR,DET,3,2,,21.69,3,17.42
+CeeDee Lamb,WR,DAL,4,2,,17.66,3,15.00
+Puka Nacua,WR,LAR,5,2,,13.95,1,11.99
+Chris Olave,WR,NO,6,3,,22.62,3,17.97
+Drake London,WR,ATL,7,3,,13.89,3,12.74
+Justin Jefferson,WR,MIN,8,3,,12.30,3,11.78
+Zay Flowers,WR,BAL,9,4,,14.11,2,12.56
+Nico Collins,WR,HOU,10,4,,20.00,1,14.01
+Parker Washington,WR,JAX,11,4,,14.43,3,13.06
+Garrett Wilson,WR,NYJ,12,4,,17.58,3,14.95
+DeVonta Smith,WR,PHI,13,5,,15.14,3,13.49
+Christian Watson,WR,GB,14,5,,18.95,3,15.77
+George Pickens,WR,DAL,15,5,,12.35,3,11.81
+Davante Adams,WR,LAR,16,5,,18.91,3,15.75
+Tee Higgins,WR,CIN,17,6,,14.46,3,13.08
+Rashee Rice,WR,KC,18,6,,10.55,3,10.74
+Malik Nabers,WR,NYG,19,6,,9.38,3,10.03
+Tetairoa McMillan,WR,CAR,20,6,,11.63,3,11.38
+DJ Moore,WR,BUF,21,7,,10.41,3,10.65
+Ladd McConkey,WR,LAC,22,7,,9.18,3,9.91
+Matthew Golden,WR,GB,23,7,,16.25,3,14.16
+Jaylen Waddle,WR,DEN,24,7,,11.21,3,11.13
+Luther Burden III,WR,CHI,25,8,,12.91,3,12.15
+A.J. Brown,WR,NE,26,8,,6.80,1,9.61
+Michael Wilson,WR,ARI,27,8,,17.53,3,14.92
+Mike Evans,WR,SF,28,8,,9.96,3,10.38
+Josh Downs,WR,IND,29,8,,13.40,3,12.44
+Emeka Egbuka,WR,TB,30,8,,10.80,3,10.88
+Jalen Coker,WR,CAR,31,8,,14.30,3,12.98
+Jameson Williams,WR,DET,32,8,,8.69,3,9.62
+Terry McLaurin,WR,WAS,33,9,,12.49,3,11.90
+DK Metcalf,WR,PIT,34,9,,12.04,3,11.63
+Stefon Diggs,WR,WAS,35,9,,14.56,3,13.14
+Deebo Samuel SR.,WR,SF,36,9,,9.21,3,9.93
+Rome Odunze,WR,CHI,37,9,,7.37,3,8.82
+Jordan Addison,WR,MIN,38,9,,9.06,3,9.84
+Carnell Tate,WR,TEN,39,9,,10.68,3,10.81
+Jakobi Meyers,WR,JAX,40,9,,8.64,3,9.59
+KC Concepcion Jr.,WR,CLE,41,9,,10.82,3,10.90
+Devaughn Vele,WR,NO,42,9,,13.14,3,12.29
+Jordyn Tyson,WR,NO,43,10,,,,
+Denzel Boston,WR,CLE,44,10,,11.69,3,11.42
+Chris Godwin Jr.,WR,TB,45,10,,6.73,3,8.44
+Brian Thomas Jr.,WR,JAX,46,10,,6.22,3,8.14
+Adonai Mitchell,WR,NYJ,47,10,,12.70,2,11.85
+Makai Lemon,WR,PHI,48,10,,4.45,3,7.07
+Courtland Sutton,WR,DEN,49,10,,7.84,3,9.11
+Marvin Harrison Jr.,WR,ARI,50,10,,5.03,3,7.42
+Kaliff Raymond,WR,CHI,51,10,,13.37,3,12.42
+Xavier Worthy,WR,KC,52,10,,7.87,3,9.12
+Malik Washington,WR,MIA,53,10,,12.40,3,11.84
+Dontayvion Wicks,WR,PHI,54,10,,9.18,3,9.91
+Brock Bowers,TE,LV,1,1,,30.39,1,17.25
+Trey Mcbride,TE,ARI,2,1,,26.20,3,19.99
+Tyler Warren,TE,IND,3,2,,17.04,3,14.49
+George Kittle,TE,SF,4,2,,13.13,3,12.15
+Dalton Kincaid,TE,BUF,5,2,,13.48,3,12.36
+Juwan Johnson,TE,NO,6,3,,16.05,3,13.90
+Sam LaPorta,TE,DET,7,3,,13.26,3,12.23
+Travis Kelce,TE,KC,8,3,,14.58,3,13.02
+Colston Loveland,TE,CHI,9,3,,5.24,3,7.41
+Isaiah Likely,TE,NYG,10,3,,15.91,3,13.82
+Harold Fannin,TE,CLE,11,3,,14.77,3,13.13
+Dalton Schultz,TE,HOU,12,4,,17.19,3,14.58
+Tucker Kraft,TE,GB,13,4,,10.24,3,10.41
+Dallas Goedert,TE,PHI,14,4,,9.47,2,10.07
+Mark Andrews,TE,BAL,15,4,,11.35,3,11.08
+Kenyon Sadiq,TE,NYJ,16,4,,12.46,3,11.75
+Jake Ferguson,TE,DAL,17,4,,9.25,3,9.82
+Darren Waller,TE,CAR,18,5,,10.41,3,10.52
+Kyle Pitts,TE,ATL,19,5,,3.54,3,6.39
+Brenton Strange,TE,JAX,20,5,,7.37,3,8.69
+Terrance Ferguson,TE,LAR,21,5,,8.18,3,9.18
+Oronde Gasden,TE,LAC,22,5,,4.79,3,7.15
+T.J. Hockenson,TE,MIN,23,5,,9.46,3,9.95
+Pat Freiermuth,TE,PIT,24,5,,10.86,3,10.79
+`;
+
+/* =====================================================================
+   SLOT 3 — VALUE MODEL (redraft, 12-team, full PPR, TE premium, superflex)
+   Any player without a number in the CSV "value" column gets a value
+   from his positional rank here. Type a value in the CSV to override.
+
+   How it works:
+   1. curves: average points per game by positional finish (QB1, QB2, ...)
+      under this league's scoring: pass yd 0.04, pass TD 4, INT -2,
+      rush/rec yd 0.1, rush/rec TD 6, reception 1, 2-pt 2, TE reception
+      +0.5, fumble lost -2. Regular season weeks 1-17, 2023-2025,
+      players with 8+ games. Source: nflverse.
+   2. replacement: PPG of the first non-starter at each position once
+      every lineup slot is filled (1QB 2RB 3WR 1TE 1FLEX 1SF x 12 teams
+      -> 24 QB, 29 RB, 39 WR, 16 TE starting).
+   3. waiver: PPG of the first unrostered player at each position, with
+      6 bench spots per team assumed as 1 QB, 2 RB, 2 WR, 1 TE
+      -> 36 QB, 53 RB, 63 WR, 28 TE rostered league-wide.
+   4. value = PPG above replacement (full credit)
+            + PPG between waiver and replacement x benchWeight
+      scaled so the best player is 10,000. At or below waiver = 0.
+   5. tiers: within each positional tier, values are pulled toward the
+      tier's average (tierBlend), so players in a tier sit close together
+      and dropping a tier costs real value. tierMinDrop guarantees the
+      first player of a tier is at least that much below the last
+      player of the tier above.
+   6. projections: project_players.py projects every player from this
+      season's usage + betting-line team environment (proj_score). The
+      site re-orders your ranked players at each position by that score,
+      keeping the same rank spots, so the projection gives a second
+      opinion on your order. Both ranks are read off the same curve, then
+      blended before step 4:
+        PPG used = (1 - w) x curve[your rank] + w x curve[projected rank]
+        w = maxWeight x games / (games + halfWeightGames)
+      So rankings lead early in the season and projections gain weight
+      as games pile up. Players with no games this season are rank-only.
+   7. rank order: within a position, a player can never be worth more
+      than someone you ranked above him. Where the projection would flip
+      two players, their values meet in the middle (isotonic regression),
+      and your higher-ranked player keeps a slight edge. Projections still
+      shape the size of gaps and how positions compare.
+   ===================================================================== */
+const VALUE_MODEL = {
+  replacement: { QB: 12.99, RB: 11.01, WR: 11.01, TE: 10.68 },
+  waiver: { QB: 3.94, RB: 5.66, WR: 7.88, TE: 8.39 },
+  benchWeight: 0.25, // share of bench-level points that count (bye/injury fill-ins)
+  tierBlend: 0.35,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value
+  tierMinDrop: 0.06, // minimum drop from one tier to the next (6%)
+  keepRankOrder: true, // values never break your positional order (see step 7)
+  projection: {
+    maxWeight: 0.7,     // the most a projection can ever count
+    halfWeightGames: 4  // games played at which it counts half of maxWeight
+  },
+  curves: {
+    QB: [23.78, 22.56, 21.55, 20.77, 20.24, 19.74, 19.25, 18.75, 18.34, 18.01, 17.65, 17.27, 16.95, 16.64, 16.42, 16.13, 15.89, 15.63, 15.34, 15, 14.66, 14.27, 13.91, 13.38, 12.99, 12.64, 12.32, 11.89, 11.47, 11.19, 10.74, 10.26, 9.68, 8.99, 7.61, 5.55, 3.94, 3.11, 3.11, 3.11],
+    RB: [23.99, 21.7, 20.23, 19.46, 18.81, 17.96, 17.24, 16.71, 16.4, 16.13, 15.92, 15.73, 15.44, 15.19, 14.97, 14.79, 14.57, 14.24, 13.97, 13.6, 13.31, 12.96, 12.67, 12.42, 12.2, 11.97, 11.72, 11.51, 11.34, 11.01, 10.65, 10.3, 10.03, 9.82, 9.6, 9.42, 9.1, 8.81, 8.56, 8.46, 8.32, 8.14, 7.75, 7.39, 7.08, 6.91, 6.74, 6.56, 6.44, 6.3, 6.16, 5.98, 5.83, 5.66, 5.5, 5.34, 5.23, 4.99, 4.75, 4.52, 4.4, 4.28, 4.16, 4.02, 3.89, 3.71, 3.56, 3.42, 3.33, 3.2, 3.07, 2.94, 2.84, 2.71, 2.56, 2.4, 2.28, 2.14, 2.03, 1.98],
+    WR: [23.51, 21.62, 20.21, 19.33, 18.71, 18.09, 17.61, 17.22, 16.96, 16.64, 16.3, 15.8, 15.41, 15.1, 15.01, 14.87, 14.68, 14.47, 14.26, 14.04, 13.87, 13.76, 13.67, 13.53, 13.36, 13.17, 13.02, 12.89, 12.76, 12.62, 12.45, 12.35, 12.22, 12.09, 11.96, 11.83, 11.68, 11.49, 11.27, 11.01, 10.78, 10.62, 10.53, 10.46, 10.36, 10.26, 10.1, 9.9, 9.69, 9.55, 9.44, 9.3, 9.1, 8.91, 8.72, 8.53, 8.37, 8.26, 8.21, 8.16, 8.11, 8.06, 7.98, 7.88, 7.73, 7.61, 7.46, 7.33, 7.13, 6.97, 6.81, 6.74, 6.68, 6.63, 6.58, 6.54, 6.46, 6.39, 6.31, 6.25, 6.2, 6.13, 6.05, 5.97, 5.92, 5.88, 5.83, 5.73, 5.57, 5.37, 5.21, 5.08, 4.93, 4.79, 4.68, 4.64, 4.57, 4.47, 4.36, 4.32],
+    TE: [19.89, 18.51, 17.35, 16.4, 15.54, 14.87, 14.27, 13.71, 13.25, 12.99, 12.73, 12.44, 12.08, 11.75, 11.36, 11.03, 10.68, 10.42, 10.19, 9.97, 9.79, 9.59, 9.47, 9.28, 9.11, 8.93, 8.81, 8.67, 8.39, 8.02, 7.72, 7.44, 7.24, 6.93, 6.71, 6.49, 6.34, 6.21, 6.1, 6.06]
+  }
+};
+
+// Weight a player's projection gets, based on games played this season
+function projectionWeight(games) {
+  const pr = VALUE_MODEL.projection || {};
+  if (!(games > 0)) return 0;
+  return (pr.maxWeight ?? 0) * games / (games + (pr.halfWeightGames ?? 4));
+}
+
+// PPG the value model uses: your rank on the curve, blended with the projected rank
+function blendedPPG(pos, posRank, projRank, games) {
+  const c = VALUE_MODEL.curves[pos];
+  const at = r => c[Math.min(r, c.length) - 1];
+  const w = projRank >= 1 ? projectionWeight(games) : 0;
+  return (1 - w) * at(posRank) + w * (projRank >= 1 ? at(projRank) : 0);
+}
+
+function modelValue(pos, posRank, projRank = null, games = 0) {
+  const m = VALUE_MODEL;
+  if (!m.curves[pos] || !(posRank >= 1)) return null;
+  const raw = (p, ppg) => {
+    const starter = Math.max(0, ppg - m.replacement[p]);
+    const bench = Math.max(0, Math.min(ppg, m.replacement[p]) - m.waiver[p]);
+    return starter + bench * m.benchWeight;
+  };
+  const top = Math.max(...Object.keys(m.curves).map(p => raw(p, m.curves[p][0])));
+  return Math.round(10000 * raw(pos, blendedPPG(pos, posRank, projRank, games)) / top);
+}
+
+/* =====================================================================
+   SLOT 2 — YOUR TRADE MODEL
+   Receives the players each team GETS (arrays of objects:
+     { name, pos, team, rank, tier, value, posRank })
+   Must return { scoreA, scoreB } — higher score = more value received.
+   Optional: return a `note` string to show under the verdict.
+
+   Placeholder logic below: sums values with a depth discount so that
+   several mid-tier players don't automatically beat one star
+   ("consolidation premium"). Replace with your own model.
+   ===================================================================== */
+function tradeModel(sideA, sideB) {
+  const DEPTH_WEIGHTS = [1, 0.85, 0.72, 0.6, 0.5, 0.42];
+  const score = side => side
+    .map(p => p.value)
+    .sort((a, b) => b - a)
+    .reduce((sum, v, i) => sum + v * (DEPTH_WEIGHTS[i] ?? 0.35), 0);
+  return { scoreA: score(sideA), scoreB: score(sideB) };
+}
+
+/* =====================================================================
+   TIER NAMES
+   Your CSV keeps tier NUMBERS; the site shows the name for each number.
+   ALL applies to every position. A position block (QB, RB, WR, TE)
+   overrides ALL for that position only. OVERALL names the tiers on the
+   overall board (the overall_tier column). Any tier without a name
+   shows as "Tier 3", etc.
+   ===================================================================== */
+const TIER_NAMES = {
+  ALL: {
+    // 1: "Elite",
+    // 2: "Weekly Starters",
+  },
+  QB: {
+    1: "Josh Allen",
+    2: "Great QB1",
+    3: "QB1",
+    4: "Low QB1",
+    5: "QB2",
+    6: "Dead"
+  },
+  RB: {
+    1: "Gibbs",
+    2: "Elite RB1",
+    3: "RB1",
+    4: "Low RB1",
+    5: "Elite RB2",
+    6: "RB2",
+    7: "Low RB2",
+    8: "RB3/Flex",
+    9: "Bench/Handcuff"
+  },
+  TE: {
+    1: "Elite Elite",
+    2: "High TE1",
+    3: "TE1",
+    4: "Low TE1",
+    5: "TE2"
+  },
+  WR: {
+    1: "JSN",
+    2: "Elite WR1",
+    3: "WR1",
+    4: "Low-End WR1",
+    5: "High-End WR2",
+    6: "WR2",
+    7: "Low-End WR2",
+    8: "WR3",
+    9: "Flex",
+    10: "Bench/Stash"
+  },
+};
+
+// A trade within this margin (0.05 = 5%) is called "fair".
+const FAIR_MARGIN = 0.05;
+</script>
+
+<style>
+/* Layout: analyst's draft board — sticky masthead, tabbed board below, position-colored tags carry the color */
+:root {
+  --bg: #F3F5F1;
+  --surface: #FFFFFF;
+  --surface-2: #EBEFEA;
+  --ink: #141B17;
+  --muted: #5B675F;
+  --line: #D9DFD9;
+  --accent: #A8750F;
+  --accent-soft: #F4E7C9;
+  --qb: #CC3149;
+  --rb: #14855A;
+  --wr: #2A62C4;
+  --te: #7B4CCB;
+  --pick: #66706A;
+  --side-a: #2A62C4;
+  --side-b: #A8750F;
+  --good: #14855A;
+  --focus: #2A62C4;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1310; --surface: #151D18; --surface-2: #1C2620; --ink: #E5ECE7; --muted: #92A097;
+    --line: #26322B; --accent: #E2AC45; --accent-soft: #3A2E14;
+    --qb: #F2687C; --rb: #3DC58A; --wr: #6497F0; --te: #AA85F1; --pick: #9AA49E;
+    --side-a: #6497F0; --side-b: #E2AC45; --good: #3DC58A; --focus: #6497F0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1310; --surface: #151D18; --surface-2: #1C2620; --ink: #E5ECE7; --muted: #92A097;
+  --line: #26322B; --accent: #E2AC45; --accent-soft: #3A2E14;
+  --qb: #F2687C; --rb: #3DC58A; --wr: #6497F0; --te: #AA85F1; --pick: #9AA49E;
+  --side-a: #6497F0; --side-b: #E2AC45; --good: #3DC58A; --focus: #6497F0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; }
+
+/* Masthead */
+.masthead {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.masthead-top {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: 4px 24px; padding-block: 18px 10px;
+}
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 2.1rem; line-height: 1;
+  letter-spacing: -0.01em; margin: 0;
+}
+.brand-name span { color: var(--accent); }
+.brand-tag {
+  font-family: var(--font-display); font-weight: 500; font-size: 1.05rem;
+  color: var(--muted);
+}
+.meta { font-family: var(--font-data); font-size: 0.75rem; color: var(--muted); letter-spacing: 0.02em; }
+
+.tabs { display: flex; gap: 28px; }
+.tab {
+  background: none; border: 0; padding: 8px 0 10px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 600; font-size: 1.05rem;
+  color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px;
+}
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+main { padding-block: 24px 48px; }
+
+.notice {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline;
+  background: var(--accent-soft); color: var(--ink);
+  border-radius: 6px; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 18px;
+}
+.notice strong { font-weight: 600; }
+
+/* Rankings controls */
+.controls { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 5px 14px; cursor: pointer; font-weight: 500; font-size: 0.85rem;
+}
+.chip-btn:hover { border-color: var(--muted); }
+.chip-btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.search {
+  width: min(280px, 100%);
+  border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 12px;
+}
+.search::placeholder { color: var(--muted); }
+
+/* Board table */
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+thead th {
+  text-align: left; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+}
+tbody td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr.player:hover td { background: var(--surface-2); }
+td.rk { font-family: var(--font-data); font-weight: 500; width: 56px; color: var(--muted); }
+.pl-name { font-weight: 500; }
+.pl-team { font-family: var(--font-data); font-size: 0.75rem; color: var(--muted); margin-left: 8px; }
+tr.tier td {
+  background: var(--bg); padding: 6px 14px;
+  font-family: var(--font-display); font-weight: 600; font-size: 0.88rem; letter-spacing: 0.02em;
+  color: var(--accent);
+}
+.pos {
+  display: inline-block; min-width: 48px; text-align: center;
+  font-family: var(--font-data); font-size: 0.75rem; font-weight: 500;
+  padding: 2px 8px; border-radius: 4px;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+.pos.QB { --c: var(--qb); } .pos.RB { --c: var(--rb); } .pos.WR { --c: var(--wr); } .pos.TE { --c: var(--te); } .pos.PICK { --c: var(--pick); }
+td.val { width: 38%; min-width: 180px; }
+.valbar { display: flex; align-items: center; gap: 10px; }
+.valbar .track { flex: 1; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.valbar .fill { height: 100%; background: var(--c, var(--ink)); border-radius: 3px; }
+.valbar .num { font-family: var(--font-data); font-size: 0.85rem; min-width: 52px; text-align: right; }
+.num-empty { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+.empty { padding: 28px 14px; text-align: center; color: var(--muted); }
+.count { font-size: 0.8rem; color: var(--muted); margin-top: 10px; }
+
+/* Trade calculator */
+.trade-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 760px) { .trade-grid { grid-template-columns: 1fr 1fr; } }
+.side {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0;
+  border-top: 4px solid var(--side-color);
+}
+.side.A { --side-color: var(--side-a); } .side.B { --side-color: var(--side-b); }
+.side-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.side-title { font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; margin: 0; }
+.side-title small { font-size: 0.95rem; color: var(--muted); font-weight: 500; margin-left: 6px; }
+.side-total { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); text-align: right; }
+.side-total b { display: block; font-size: 1.15rem; color: var(--ink); font-weight: 600; }
+
+.picker { position: relative; }
+.picker input { width: 100%; }
+.results {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5;
+  list-style: none; margin: 0; padding: 4px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  max-height: 300px; overflow-y: auto;
+}
+.results button {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  background: none; border: 0; padding: 7px 8px; border-radius: 4px; cursor: pointer;
+}
+.results button:hover, .results button.hl { background: var(--surface-2); }
+.results .r-name { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results .r-val { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); }
+
+.roster { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.roster li {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  background: var(--surface-2); border-radius: 6px;
+}
+.roster .n { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roster .v { font-family: var(--font-data); font-size: 0.85rem; }
+.remove {
+  background: none; border: 0; cursor: pointer; color: var(--muted); font-size: 1.1rem; line-height: 1;
+  width: 28px; height: 28px; border-radius: 4px;
+}
+.remove:hover { background: var(--line); color: var(--ink); }
+.roster-empty { color: var(--muted); font-size: 0.9rem; padding: 10px 2px; }
+
+.verdict {
+  margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.verdict-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px 20px; }
+.verdict h2 {
+  margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.9rem; line-height: 1.1;
+  text-wrap: balance;
+}
+.verdict h2.fair { color: var(--good); }
+.verdict h2.win-A { color: var(--side-a); }
+.verdict h2.win-B { color: var(--side-b); }
+.verdict-sub { color: var(--muted); margin: 2px 0 0; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 7px 14px;
+  cursor: pointer; font-weight: 500; font-size: 0.9rem;
+}
+.btn:hover { border-color: var(--muted); }
+
+.meter { position: relative; height: 14px; border-radius: 7px; overflow: hidden; display: flex; background: var(--surface-2); }
+.meter .ma { background: var(--side-a); transition: width 0.3s ease; }
+.meter .mb { background: var(--side-b); flex: 1; }
+.meter.idle .ma, .meter.idle .mb { opacity: 0.25; }
+.meter::after {
+  content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--bg); transform: translateX(-1px);
+}
+.meter-labels { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); }
+.model-note { font-size: 0.9rem; color: var(--muted); margin: 0; }
+
+.balance h3 {
+  margin: 4px 0 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.balance-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.suggest {
+  display: flex; align-items: center; gap: 8px; border: 1px dashed var(--line); background: none;
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-weight: 500;
+}
+.suggest:hover { border-style: solid; border-color: var(--muted); }
+.suggest .r-val { font-family: var(--font-data); font-size: 0.8rem; color: var(--muted); font-weight: 400; }
+
+footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var(--muted); font-size: 0.85rem; }
+
+@media (max-width: 520px) {
+  .brand-name { font-size: 1.8rem; }
+  .tabs { gap: 20px; }
+  td.val { min-width: 130px; }
+  tbody td, thead th { padding-inline: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .meter .ma { transition: none; } }
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <div class="masthead-top">
+      <div class="brand">
+        <h1 class="brand-name" id="brand-name"></h1>
+        <span class="brand-tag" id="brand-tag"></span>
+      </div>
+      <div class="meta" id="meta"></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-rankings" aria-controls="panel-rankings" aria-selected="true">Rankings</button>
+      <button class="tab" role="tab" id="tab-trade" aria-controls="panel-trade" aria-selected="false">Trade Calculator</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice" id="sample-notice" hidden>
+    <strong>Work in progress.</strong>
+    <span id="sample-note">These rankings and trade values are placeholders until the real ones are added.</span>
+  </div>
+
+  <section id="panel-rankings" role="tabpanel" aria-labelledby="tab-rankings">
+    <div class="controls">
+      <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
+      <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col">Pos</th><th scope="col">Value</th></tr>
+        </thead>
+        <tbody id="rank-body"></tbody>
+      </table>
+    </div>
+    <p class="count" id="rank-count"></p>
+  </section>
+
+  <section id="panel-trade" role="tabpanel" aria-labelledby="tab-trade" hidden>
+    <div class="trade-grid">
+      <div class="side A">
+        <div class="side-head">
+          <h2 class="side-title">Team A <small>gets</small></h2>
+          <div class="side-total">Total<b id="total-A">0</b></div>
+        </div>
+        <div class="picker">
+          <input class="search" id="search-A" type="search" placeholder="Add a player" autocomplete="off" aria-label="Add to Team A" style="width:100%">
+          <ul class="results" id="results-A" hidden></ul>
+        </div>
+        <ul class="roster" id="roster-A"></ul>
+      </div>
+      <div class="side B">
+        <div class="side-head">
+          <h2 class="side-title">Team B <small>gets</small></h2>
+          <div class="side-total">Total<b id="total-B">0</b></div>
+        </div>
+        <div class="picker">
+          <input class="search" id="search-B" type="search" placeholder="Add a player" autocomplete="off" aria-label="Add to Team B" style="width:100%">
+          <ul class="results" id="results-B" hidden></ul>
+        </div>
+        <ul class="roster" id="roster-B"></ul>
+      </div>
+    </div>
+
+    <div class="verdict" aria-live="polite">
+      <div class="verdict-top">
+        <div>
+          <h2 id="verdict-title">Build a trade</h2>
+          <p class="verdict-sub" id="verdict-sub"></p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="swap-btn" type="button">Swap sides</button>
+          <button class="btn" id="clear-btn" type="button">Clear</button>
+        </div>
+      </div>
+      <div>
+        <div class="meter idle" id="meter"><div class="ma" id="meter-a" style="width:50%"></div><div class="mb"></div></div>
+        <div class="meter-labels"><span id="score-A">Team A</span><span id="score-B">Team B</span></div>
+      </div>
+      <p class="model-note" id="model-note" hidden></p>
+      <div class="balance" id="balance" hidden>
+        <h3 id="balance-title">To even it out</h3>
+        <div class="balance-list" id="balance-list"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap" id="footer-text"></div>
+</footer>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = n => Math.round(n).toLocaleString("en-US");
+
+  /* ---------- Load data ---------- */
+  function parseCSV(text) {
+    const rows = [];
+    for (const raw of text.trim().split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      const cells = []; let cur = "", q = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (q) {
+          if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+          else if (ch === '"') q = false;
+          else cur += ch;
+        } else if (ch === '"') q = true;
+        else if (ch === ",") { cells.push(cur.trim()); cur = ""; }
+        else cur += ch;
+      }
+      cells.push(cur.trim());
+      rows.push(cells);
+    }
+    return rows;
+  }
+
+  function loadPlayers() {
+    const rows = parseCSV(RANKINGS_CSV);
+    if (!rows.length) return [];
+    const head = rows.shift().map(h => h.toLowerCase());
+    const players = rows.map((r, i) => {
+      const get = n => { const c = head.indexOf(n); return c < 0 ? "" : (r[c] ?? ""); };
+      const rank = parseInt(get("rank"), 10);
+      const posNum = parseInt(get("pos_rank"), 10);
+      const value = parseFloat(String(get("value")).replace(/,/g, ""));
+      return {
+        id: i,
+        rank: isFinite(rank) ? rank : null,
+        posNum: isFinite(posNum) ? posNum : null,
+        name: get("player"),
+        pos: get("pos").toUpperCase(),
+        team: get("team").toUpperCase(),
+        tier: get("tier"),
+        overallTier: get("overall_tier"),
+        projPPG: isFinite(parseFloat(get("proj_ppg"))) ? parseFloat(get("proj_ppg")) : null,
+        projScore: isFinite(parseFloat(get("proj_score"))) ? parseFloat(get("proj_score")) : null,
+        projRank: null,
+        games: parseInt(get("games"), 10) || 0,
+        value: isFinite(value) ? value : null
+      };
+    }).filter(p => p.name);
+
+    const isPlayer = p => p.pos !== "PICK";
+
+    // Projection rank: re-order the board's own rank spots by projection score,
+    // so the projection can disagree with your order without shifting everyone down
+    const posGroups = {};
+    players.filter(p => isPlayer(p) && p.posNum != null && p.projScore != null)
+      .forEach(p => (posGroups[p.pos] = posGroups[p.pos] || []).push(p));
+    for (const g of Object.values(posGroups)) {
+      const slots = g.map(p => p.posNum).sort((a, b) => a - b);
+      [...g].sort((a, b) => b.projScore - a.projScore).forEach((p, i) => { p.projRank = slots[i]; });
+    }
+
+    // Value model: players without a typed value get one from positional rank
+    players.forEach(p => {
+      if (p.value == null && p.posNum != null && typeof modelValue === "function") {
+        p.value = modelValue(p.pos, p.posNum, p.projRank, p.games);
+        p.modelValued = true;
+      }
+    });
+    if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrder(players.filter(p => p.modelValued));
+    applyTiers(players.filter(p => p.modelValued));
+
+    // Overall order: hand-set ranks first, then everyone else by value
+    const ranked = players.filter(p => isPlayer(p) && p.rank != null).sort((a, b) => a.rank - b.rank);
+    const byValue = players.filter(p => isPlayer(p) && p.rank == null && p.value != null).sort((a, b) => b.value - a.value);
+    let next = ranked.length ? Math.max(...ranked.map(p => p.rank)) : 0;
+    byValue.forEach(p => { p.rank = ++next; });
+
+    // No value yet: derive one from overall rank so the trade calculator still works
+    players.forEach(p => {
+      p.hasValue = p.value != null;
+      if (p.value == null) p.value = p.rank != null ? Math.round(10000 * Math.pow(0.965, p.rank - 1)) : 0;
+    });
+
+    // Positional rank: use yours if given, otherwise count down the overall board
+    const counts = {};
+    players.filter(p => isPlayer(p) && p.posNum == null && p.rank != null)
+      .sort((a, b) => a.rank - b.rank)
+      .forEach(p => { counts[p.pos] = (counts[p.pos] || 0) + 1; p.posNum = counts[p.pos]; });
+    players.forEach(p => { p.posRank = p.pos + (p.posNum ?? ""); });
+    return players;
+  }
+
+  // Rank order: closest values to the model's that never increase down your
+  // positional ranking (pool-adjacent-violators), then a 0.5% step inside each
+  // pooled group so the player you ranked higher stays ahead.
+  function keepRankOrder(list) {
+    const byPos = {};
+    list.filter(p => p.posNum != null).forEach(p => (byPos[p.pos] = byPos[p.pos] || []).push(p));
+    for (const g of Object.values(byPos)) {
+      g.sort((a, b) => a.posNum - b.posNum);
+      const blocks = [];
+      g.forEach(p => {
+        blocks.push({ sum: p.value, n: 1, members: [p] });
+        while (blocks.length > 1) {
+          const b = blocks[blocks.length - 1], a = blocks[blocks.length - 2];
+          if (a.sum / a.n >= b.sum / b.n) break;
+          a.sum += b.sum; a.n += b.n; a.members.push(...b.members); blocks.pop();
+        }
+      });
+      blocks.forEach(b => {
+        const mean = b.sum / b.n;
+        b.members.forEach((p, k) => { p.value = mean * (1 + 0.005 * ((b.n - 1) / 2 - k)); });
+      });
+    }
+  }
+
+  // Tier adjustment for model values: pull each tier toward its average,
+  // then make sure every tier starts at least tierMinDrop below the one above.
+  function applyTiers(list) {
+    const m = typeof VALUE_MODEL === "object" ? VALUE_MODEL : {};
+    const blend = Number(m.tierBlend) || 0, minDrop = Number(m.tierMinDrop) || 0;
+    const byPos = {};
+    list.filter(p => p.tier !== "").forEach(p => (byPos[p.pos] = byPos[p.pos] || []).push(p));
+    for (const group of Object.values(byPos)) {
+      group.sort((a, b) => a.posNum - b.posNum);
+      const tiers = {};
+      group.forEach(p => (tiers[p.tier] = tiers[p.tier] || []).push(p));
+      for (const t of Object.values(tiers)) {
+        const mean = t.reduce((sum, p) => sum + p.value, 0) / t.length;
+        t.forEach(p => { p.value = mean + (p.value - mean) * (1 - blend); });
+      }
+      let scale = 1, prev = null;
+      group.forEach(p => {
+        let v = p.value * scale;
+        if (prev && p.tier !== prev.tier && v > prev.value * (1 - minDrop)) {
+          const cap = prev.value * (1 - minDrop);
+          scale *= cap / v; v = cap;
+        }
+        p.value = v; prev = p;
+      });
+    }
+    // Rescale so the most valuable model-valued player is back at 10,000
+    const top = Math.max(0, ...list.map(p => p.value));
+    list.forEach(p => { p.value = Math.round(top > 0 ? p.value * 10000 / top : p.value); });
+  }
+
+  const players = loadPlayers();
+  const byId = new Map(players.map(p => [p.id, p]));
+  const maxValue = Math.max(1, ...players.map(p => p.value));
+  const hasPicks = players.some(p => p.pos === "PICK");
+
+  /* ---------- Header / footer ---------- */
+  const nm = esc(SITE.name);
+  $("brand-name").innerHTML = nm.length > 2 ? nm.slice(0, 2) + "<span>" + nm.slice(2) + "</span>" : nm;
+  $("brand-tag").textContent = SITE.tagline;
+  $("meta").textContent = [SITE.format, "Updated " + SITE.updated].filter(Boolean).join("  ·  ");
+  $("footer-text").textContent = "Rankings and trade model by " + SITE.author + ". Values reflect " + SITE.format + " scoring.";
+  $("sample-notice").hidden = !SITE.sampleData;
+  if (SITE.sampleNote) $("sample-note").textContent = SITE.sampleNote;
+
+  /* ---------- Tabs ---------- */
+  const tabs = { rankings: $("tab-rankings"), trade: $("tab-trade") };
+  function showTab(name) {
+    for (const [k, btn] of Object.entries(tabs)) {
+      const on = k === name;
+      btn.setAttribute("aria-selected", on);
+      $("panel-" + k).hidden = !on;
+    }
+  }
+  tabs.rankings.addEventListener("click", () => { showTab("rankings"); history.replaceState(null, "", "#rankings"); });
+  tabs.trade.addEventListener("click", () => { showTab("trade"); history.replaceState(null, "", "#trade"); });
+  showTab(location.hash === "#trade" ? "trade" : "rankings");
+
+  /* ---------- Rankings ---------- */
+  const filters = ["ALL", "QB", "RB", "WR", "TE"].concat(hasPicks ? ["PICK"] : []);
+  let posFilter = "ALL", query = "";
+
+  $("pos-chips").innerHTML = filters.map(f =>
+    `<button class="chip-btn" type="button" data-pos="${f}" aria-pressed="${f === posFilter}">${f === "ALL" ? "All" : f === "PICK" ? "Picks" : f}</button>`
+  ).join("");
+  $("pos-chips").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    posFilter = b.dataset.pos;
+    $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    renderRankings();
+  });
+  $("rank-search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderRankings(); });
+
+  function valueCell(p) {
+    if (!p.hasValue) return `<span class="num-empty">Value pending</span>`;
+    const pct = Math.max(2, (p.value / maxValue) * 100);
+    return `<div class="valbar pos-${p.pos}" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))">
+      <div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div>
+      <span class="num">${fmt(p.value)}</span></div>`;
+  }
+
+  function tierLabel(pos, tier) {
+    const names = typeof TIER_NAMES === "object" && TIER_NAMES ? TIER_NAMES : {};
+    const own = pos === "OVERALL" ? names.OVERALL : names[pos];
+    const name = (own && own[tier]) || (pos !== "OVERALL" && names.ALL && names.ALL[tier]) || "";
+    return name ? `Tier ${tier} · ${name}` : `Tier ${tier}`;
+  }
+
+  const POS_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3 };
+  const POS_NAMES = { QB: "Quarterbacks", RB: "Running backs", WR: "Wide receivers", TE: "Tight ends" };
+  const hasOverall = players.some(p => p.pos !== "PICK" && p.rank != null);
+  const byPos = (a, b) => (POS_ORDER[a.pos] ?? 9) - (POS_ORDER[b.pos] ?? 9) || (a.posNum ?? 1e9) - (b.posNum ?? 1e9);
+
+  function renderRankings() {
+    let list, rk, group;
+    if (posFilter === "PICK") {
+      list = players.filter(p => p.pos === "PICK").sort((a, b) => b.value - a.value);
+      rk = () => "–"; group = () => null;
+    } else if (posFilter === "ALL") {
+      list = players.filter(p => p.pos !== "PICK");
+      if (hasOverall) {
+        list.sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || byPos(a, b));
+        rk = p => p.rank ?? "–";
+        group = p => p.overallTier ? tierLabel("OVERALL", p.overallTier) : null;
+      } else {
+        // Positional stage: no overall board yet, so show each position in turn
+        list.sort(byPos);
+        rk = p => p.posNum ?? "–";
+        group = p => POS_NAMES[p.pos] || p.pos;
+      }
+    } else {
+      list = players.filter(p => p.pos === posFilter).sort(byPos);
+      rk = p => p.posNum ?? "–";
+      group = p => p.tier ? tierLabel(p.pos, p.tier) : null;
+    }
+    if (query) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(query));
+    $("rk-head").textContent = posFilter === "ALL" && hasOverall ? "Rk" : posFilter === "PICK" ? "" : "Pos Rk";
+
+    const out = [];
+    let lastGroup = null;
+    list.forEach(p => {
+      const g = group(p);
+      if (g && g !== lastGroup && !query) {
+        out.push(`<tr class="tier"><td colspan="4">${esc(g)}</td></tr>`);
+      }
+      lastGroup = g;
+      out.push(`<tr class="player">
+        <td class="rk">${rk(p)}</td>
+        <td><span class="pl-name">${esc(p.name)}</span>${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}</td>
+        <td><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span></td>
+        <td class="val">${valueCell(p)}</td>
+      </tr>`);
+    });
+    $("rank-body").innerHTML = out.length ? out.join("") :
+      `<tr><td class="empty" colspan="4">No players match “${esc(query)}”.</td></tr>`;
+    $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
+  }
+  renderRankings();
+
+  /* ---------- Trade calculator ---------- */
+  const sides = { A: [], B: [] };
+  const inTrade = id => sides.A.includes(id) || sides.B.includes(id);
+
+  function matches(q) {
+    q = q.toLowerCase();
+    return players
+      .filter(p => !inTrade(p.id) && (p.name + " " + p.team + " " + p.pos).toLowerCase().includes(q))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }
+
+  function setupPicker(side) {
+    const input = $("search-" + side), list = $("results-" + side);
+    let hl = 0, current = [];
+    const close = () => { list.hidden = true; list.innerHTML = ""; current = []; };
+    const draw = () => {
+      const q = input.value.trim();
+      if (!q) return close();
+      current = matches(q);
+      hl = 0;
+      list.innerHTML = current.length ? current.map((p, i) =>
+        `<li><button type="button" data-id="${p.id}" class="${i === hl ? "hl" : ""}">
+          <span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+          <span class="r-name">${esc(p.name)}</span>
+          <span class="r-val">${fmt(p.value)}</span></button></li>`).join("")
+        : `<li class="empty" style="padding:10px">No match</li>`;
+      list.hidden = false;
+    };
+    const highlight = () => list.querySelectorAll("button").forEach((b, i) => b.classList.toggle("hl", i === hl));
+    const add = id => { sides[side].push(id); input.value = ""; close(); renderTrade(); input.focus(); };
+
+    input.addEventListener("input", draw);
+    input.addEventListener("focus", draw);
+    input.addEventListener("blur", () => setTimeout(close, 120));
+    input.addEventListener("keydown", e => {
+      if (e.key === "ArrowDown" && current.length) { hl = (hl + 1) % current.length; highlight(); e.preventDefault(); }
+      else if (e.key === "ArrowUp" && current.length) { hl = (hl - 1 + current.length) % current.length; highlight(); e.preventDefault(); }
+      else if (e.key === "Enter" && current[hl]) { add(current[hl].id); e.preventDefault(); }
+      else if (e.key === "Escape") { input.value = ""; close(); }
+    });
+    list.addEventListener("mousedown", e => e.preventDefault());
+    list.addEventListener("click", e => { const b = e.target.closest("button"); if (b) add(Number(b.dataset.id)); });
+
+    $("roster-" + side).addEventListener("click", e => {
+      const b = e.target.closest("button.remove"); if (!b) return;
+      sides[side] = sides[side].filter(id => id !== Number(b.dataset.id));
+      renderTrade();
+    });
+  }
+  setupPicker("A");
+  setupPicker("B");
+
+  function runModel(aIds, bIds) {
+    try {
+      const r = tradeModel(aIds.map(id => byId.get(id)), bIds.map(id => byId.get(id))) || {};
+      return { a: Number(r.scoreA) || 0, b: Number(r.scoreB) || 0, note: r.note || "" };
+    } catch (err) {
+      console.error(err);
+      return { a: 0, b: 0, note: "The trade model threw an error: " + err.message, error: true };
+    }
+  }
+
+  function renderRoster(side) {
+    const ids = sides[side];
+    $("roster-" + side).innerHTML = ids.length ? ids.map(id => {
+      const p = byId.get(id);
+      return `<li><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+        <span class="n">${esc(p.name)}</span><span class="v">${fmt(p.value)}</span>
+        <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
+    }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
+  }
+
+  function renderTrade() {
+    renderRoster("A");
+    renderRoster("B");
+    const res = runModel(sides.A, sides.B);
+    $("total-A").textContent = fmt(res.a);
+    $("total-B").textContent = fmt(res.b);
+    $("score-A").textContent = "Team A · " + fmt(res.a);
+    $("score-B").textContent = fmt(res.b) + " · Team B";
+
+    const title = $("verdict-title"), sub = $("verdict-sub"), meter = $("meter");
+    const note = $("model-note");
+    note.hidden = !res.note; note.textContent = res.note;
+    $("balance").hidden = true;
+
+    if (!sides.A.length && !sides.B.length) {
+      title.className = ""; title.textContent = "Build a trade";
+      sub.textContent = "Add what each team gets to see who wins.";
+      meter.classList.add("idle"); $("meter-a").style.width = "50%";
+      return;
+    }
+    meter.classList.remove("idle");
+    const total = res.a + res.b;
+    $("meter-a").style.width = (total > 0 ? (res.a / total) * 100 : 50).toFixed(1) + "%";
+
+    const hi = Math.max(res.a, res.b);
+    const gap = hi > 0 ? Math.abs(res.a - res.b) / hi : 0;
+    if (gap <= FAIR_MARGIN) {
+      title.className = "fair"; title.textContent = "Fair trade";
+      sub.textContent = `Within ${Math.round(FAIR_MARGIN * 100)}% on the model (${(gap * 100).toFixed(1)}% apart).`;
+      return;
+    }
+    const winner = res.a > res.b ? "A" : "B", loser = winner === "A" ? "B" : "A";
+    title.className = "win-" + winner; title.textContent = `Team ${winner} wins`;
+    sub.textContent = `Team ${winner} gets ${(gap * 100).toFixed(1)}% more value.`;
+
+    // Suggest additions for the trailing side that bring the trade closest to even
+    const pool = players.filter(p => !inTrade(p.id));
+    const scored = pool.map(p => {
+      const a = loser === "A" ? sides.A.concat(p.id) : sides.A;
+      const b = loser === "B" ? sides.B.concat(p.id) : sides.B;
+      const r = runModel(a, b);
+      const m = Math.max(r.a, r.b);
+      return { p, gap: m > 0 ? Math.abs(r.a - r.b) / m : 1 };
+    }).filter(s => s.gap < gap).sort((x, y) => x.gap - y.gap).slice(0, 4);
+
+    if (scored.length) {
+      $("balance-title").textContent = `To even it out, add to Team ${loser}`;
+      $("balance-list").innerHTML = scored.map(s =>
+        `<button class="suggest" type="button" data-id="${s.p.id}" data-side="${loser}">
+          <span class="pos ${esc(s.p.pos)}">${esc(s.p.posRank)}</span>${esc(s.p.name)}
+          <span class="r-val">${fmt(s.p.value)}</span></button>`).join("");
+      $("balance").hidden = false;
+    }
+  }
+
+  $("balance-list").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    sides[b.dataset.side].push(Number(b.dataset.id));
+    renderTrade();
+  });
+  $("swap-btn").addEventListener("click", () => { [sides.A, sides.B] = [sides.B, sides.A]; renderTrade(); });
+  $("clear-btn").addEventListener("click", () => { sides.A = []; sides.B = []; renderTrade(); });
+
+  // Open with an example trade so the calculator shows what it does
+  const find = n => players.find(p => p.name === n);
+  const ex = [find("Jahmyr Gibbs")], exB = [find("Ashton Jeanty"), find("Kyren Williams")];
+  if (ex.every(Boolean) && exB.every(Boolean)) { sides.A = ex.map(p => p.id); sides.B = exB.map(p => p.id); }
+  renderTrade();
+})();
+</script>
+</body>
+</html>
