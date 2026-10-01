@@ -694,6 +694,11 @@ td.val { width: 38%; min-width: 180px; }
 #eb-hint { color: var(--muted); flex-basis: 100%; }
 .eb-right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 #eb-count { font-weight: 600; font-size: 0.85rem; margin-right: 4px; }
+.eb-local {
+  flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); padding-top: 10px;
+}
+#eb-local-text { font-size: 0.85rem; }
 .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .btn:disabled { opacity: 0.45; cursor: default; }
 .btn.link { border-color: transparent; background: none; color: var(--muted); padding-inline: 6px; }
@@ -797,7 +802,14 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
         <span id="eb-count"></span>
         <button class="btn" id="eb-cancel" type="button">Cancel changes</button>
         <button class="btn primary" id="eb-save" type="button">Save changes</button>
-        <button class="btn link" id="eb-signout" type="button">Sign out</button>
+      </div>
+      <div class="eb-local" id="eb-local" hidden>
+        <span id="eb-local-text"></span>
+        <div class="eb-right">
+          <button class="btn" id="eb-discard" type="button">Discard browser edits</button>
+          <button class="btn primary" id="eb-publish" type="button">Publish to live site</button>
+          <button class="btn link" id="eb-signout" type="button" hidden>Forget GitHub token</button>
+        </div>
       </div>
     </div>
     <div class="controls">
@@ -868,14 +880,14 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
 <footer>
   <div class="wrap footer-row">
     <span id="footer-text"></span>
-    <button class="footer-link" id="editor-signin" type="button">Editor sign-in</button>
+    <button class="footer-link" id="editor-signin" type="button" hidden>Editor sign-in</button>
   </div>
 </footer>
 
 <dialog class="signin" id="signin-dialog" aria-labelledby="signin-title">
   <form id="signin-form" method="dialog">
-    <h2 id="signin-title">Editor sign-in</h2>
-    <p>Editing is limited to GitHub accounts that can write to the <span class="mono" id="signin-repo"></span> repository. Paste a GitHub access token for your account.</p>
+    <h2 id="signin-title">Publish to the live site</h2>
+    <p>Publishing writes your edits to the <span class="mono" id="signin-repo"></span> repository on GitHub, so it needs a GitHub access token for an account that can write to it. You only do this once per browser.</p>
     <p class="hint">Create one at github.com → Settings → Developer settings → Fine-grained tokens. Give it access to only this repository, with <strong>Contents: Read and write</strong>. It stays saved in this browser until you sign out.</p>
     <label for="signin-token">Access token</label>
     <input id="signin-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
@@ -1050,7 +1062,8 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
   let byId = new Map(players.map(p => [p.id, p]));
   let maxValue = Math.max(1, ...players.map(p => p.value));
   const hasPicks = players.some(p => p.pos === "PICK");
-  const editor = { on: false, token: null, login: "", saving: false };
+  const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
+  let savedCsv = null, draft = null, localEdits = {};   // set up in the editor section below
   const EDIT_POS = ["QB", "RB", "WR", "TE"];
 
   /* ---------- Header / footer ---------- */
@@ -1318,8 +1331,9 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
   const REPO = SITE.repo, FILE = "index.html", BRANCH = "main", TOKEN_KEY = "spm_editor_token";
   const CSV_RE = /(const RANKINGS_CSV = `\n)([\s\S]*?)(\n`;)/;
   const EDIT_COLS = ["pos_rank", "tier", "value"];
-  let savedCsv = RANKINGS_CSV.trim();
-  let draft = csvToTable(savedCsv);
+  const LOCAL_KEY = "spm_local_edits";
+  let publishedCsv = RANKINGS_CSV.trim();   // what everyone sees on the live site
+  // savedCsv = published + edits saved in this browser; draft = unsaved work on top of that
 
   function csvToTable(csv) { const rows = parseCSV(csv); return { head: rows.shift() || [], rows }; }
   function csvCell(v) { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
@@ -1351,17 +1365,20 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
 
   function updateEditorBar() {
     $("editor-bar").hidden = !editor.on;
-    $("editor-signin").hidden = editor.on;
-    if (!editor.on) return;
-    const n = changedRows().length;
+    if (!editor.on || savedCsv == null) return;
+    const n = changedRows().length, local = Object.keys(localEdits).length;
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
-    $("eb-count").textContent = editor.saving ? "Saving…" : n ? `${n} unsaved change${n > 1 ? "s" : ""}` : "No unsaved changes";
+    $("eb-count").textContent = n ? `${n} unsaved change${n > 1 ? "s" : ""}` : "No unsaved changes";
     $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
-    $("eb-signout").disabled = n > 0 || editor.saving;
-    $("eb-signout").title = n > 0 ? "Save or cancel your changes first" : "";
     $("eb-hint").textContent = EDIT_POS.includes(posFilter)
       ? "Drag ⠿ or use ▲ ▼ to reorder. Click a value to type a custom one."
       : "Pick QB, RB, WR or TE to reorder players. Click a value to type a custom one.";
+    $("eb-local").hidden = local === 0 && !editor.saving;
+    $("eb-local-text").textContent = editor.saving ? "Publishing…"
+      : `${local} player${local > 1 ? "s" : ""} edited in this browser. Not on the live site yet.`;
+    $("eb-publish").disabled = $("eb-discard").disabled = editor.saving || n > 0 || local === 0;
+    $("eb-publish").title = n > 0 ? "Save or cancel your changes first" : "";
+    $("eb-signout").hidden = !editor.token;
   }
 
   // Move a player to a new spot in his position's ranking. He takes the tier of
@@ -1509,35 +1526,80 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
     const user = await gh("/user").catch(() => ({}));
     editor.login = user.login || "";
   }
-  function enableEditor() { editor.on = true; renderRankings(); }
-  function signOut() {
-    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
-    Object.assign(editor, { on: false, token: null, login: "" });
-    renderRankings();
-    toast("Signed out of editor mode.");
+  /* Edits saved in this browser are stored as just the changed fields, keyed by
+     player, and laid over the live rankings on load. The weekly projection
+     refresh keeps flowing in underneath them. */
+  function readLocal() { try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function applyEdits(csv, edits) {
+    const t = csvToTable(csv);
+    for (const r of t.rows) {
+      const e = edits[keyOf(t, r)];
+      if (e) for (const c of EDIT_COLS) if (c in e) r[colOf(t, c)] = e[c];
+    }
+    return t;
+  }
+  function diffEdits(baseCsv, t) {
+    const base = csvToTable(baseCsv), out = {};
+    const bm = new Map(base.rows.map(r => [keyOf(base, r), r]));
+    for (const r of t.rows) {
+      const k = keyOf(t, r), b = bm.get(k);
+      if (!b) continue;
+      const e = {};
+      for (const c of EDIT_COLS) { const v = r[colOf(t, c)] ?? ""; if (v !== (b[colOf(base, c)] ?? "")) e[c] = v; }
+      if (Object.keys(e).length) out[k] = e;
+    }
+    return out;
+  }
+  localEdits = readLocal();
+  savedCsv = tableToCsv(applyEdits(publishedCsv, localEdits));
+  draft = csvToTable(savedCsv);
+  localEdits = diffEdits(publishedCsv, draft);   // drop edits for players no longer on the board
+
+  function saveLocal() {
+    const edits = diffEdits(publishedCsv, draft);
+    try {
+      if (Object.keys(edits).length) localStorage.setItem(LOCAL_KEY, JSON.stringify(edits));
+      else localStorage.removeItem(LOCAL_KEY);
+    } catch (e) { toast("Couldn't save: this browser is blocking site storage."); return; }
+    localEdits = edits; savedCsv = tableToCsv(draft);
+    updateEditorBar();
+    toast("Saved in this browser. Use Publish to live site when you want everyone to see it.");
   }
 
-  // Apply only the fields this editor changed onto the latest version on GitHub,
-  // so the weekly projection refresh and other editors' saves are never lost.
+  let discardArmed = false;
+  function discardLocal() {
+    if (!discardArmed) {
+      discardArmed = true; $("eb-discard").textContent = "Click again to discard";
+      setTimeout(() => { discardArmed = false; $("eb-discard").textContent = "Discard browser edits"; }, 4000);
+      return;
+    }
+    discardArmed = false; $("eb-discard").textContent = "Discard browser edits";
+    try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
+    localEdits = {}; savedCsv = publishedCsv; draft = csvToTable(savedCsv);
+    rebuild(); toast("Browser edits discarded. Showing the live rankings.");
+  }
+
+  // Apply only the fields edited in this browser onto the latest version on GitHub,
+  // so the weekly projection refresh and anyone else's published edits are kept.
   function mergeInto(latestCsv) {
-    const base = csvToTable(savedCsv), latest = csvToTable(latestCsv);
+    const base = csvToTable(publishedCsv), src = csvToTable(savedCsv), latest = csvToTable(latestCsv);
     const baseMap = new Map(base.rows.map(r => [keyOf(base, r), r]));
     const latestMap = new Map(latest.rows.map(r => [keyOf(latest, r), r]));
-    let n = 0;
-    for (const r of draft.rows) {
-      const k = keyOf(draft, r), b = baseMap.get(k), l = latestMap.get(k);
+    for (const r of src.rows) {
+      const k = keyOf(src, r), b = baseMap.get(k), l = latestMap.get(k);
       if (!l) continue;
       for (const c of EDIT_COLS) {
-        const v = r[colOf(draft, c)] ?? "";
-        if (!b || v !== (b[colOf(base, c)] ?? "")) { l[colOf(latest, c)] = v; n++; }
+        const v = r[colOf(src, c)] ?? "";
+        if (!b || v !== (b[colOf(base, c)] ?? "")) l[colOf(latest, c)] = v;
       }
     }
-    return { csv: tableToCsv(latest), n };
+    return tableToCsv(latest);
   }
 
-  async function saveChanges() {
-    const count = changedRows().length;
+  async function publishLive() {
+    const count = Object.keys(localEdits).length;
     if (!count || editor.saving) return;
+    if (!editor.token) { openSignin(); return; }
     editor.saving = true; updateEditorBar();
     try {
       let merged = null;
@@ -1546,8 +1608,8 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
         const text = b64decode(file.content);
         const m = text.match(CSV_RE);
         if (!m) throw new Error("Couldn't find the rankings data in index.html.");
-        const result = mergeInto(m[2]);
-        const newText = text.replace(CSV_RE, (_, a, __, c) => a + result.csv + c);
+        const csv = mergeInto(m[2]);
+        const newText = text.replace(CSV_RE, (_, a, __, c) => a + csv + c);
         try {
           await gh(`/repos/${REPO}/contents/${FILE}`, {
             method: "PUT",
@@ -1556,37 +1618,46 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
               content: b64encode(newText), sha: file.sha, branch: BRANCH
             })
           });
-          merged = result.csv;
+          merged = csv;
         } catch (err) {
-          if (err.status !== 409) throw err;   // 409: someone else saved first, so merge again
+          if (err.status !== 409) throw err;   // 409: the file changed underneath us, so merge again
         }
       }
-      if (!merged) throw new Error("Someone else kept saving at the same moment. Try again.");
-      savedCsv = merged; draft = csvToTable(merged);
+      if (!merged) throw new Error("The site kept changing while publishing. Try again.");
+      try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
+      publishedCsv = merged; localEdits = {}; savedCsv = merged; draft = csvToTable(merged);
       editor.saving = false;
       rebuild();
-      toast("Saved. The live site updates in about a minute.");
+      toast("Published. The live site updates in about a minute.");
     } catch (err) {
       editor.saving = false; updateEditorBar();
       toast(err.status === 401 || err.status === 403
-        ? "Save failed: GitHub didn't accept your token. Sign out and sign in with a token that has Contents: Read and write."
-        : "Save failed: " + err.message);
+        ? "Publish failed: GitHub didn't accept your token. Use Forget GitHub token, then publish again with a token that has Contents: Read and write."
+        : "Publish failed: " + err.message);
     }
   }
 
-  $("eb-save").addEventListener("click", saveChanges);
+  function forgetToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    Object.assign(editor, { token: null, login: "" });
+    updateEditorBar(); toast("GitHub token removed from this browser.");
+  }
+
+  $("eb-save").addEventListener("click", saveLocal);
   $("eb-cancel").addEventListener("click", () => {
     draft = csvToTable(savedCsv); rebuild(); toast("Changes discarded.");
   });
-  $("eb-signout").addEventListener("click", signOut);
+  $("eb-publish").addEventListener("click", publishLive);
+  $("eb-discard").addEventListener("click", discardLocal);
+  $("eb-signout").addEventListener("click", forgetToken);
 
   const dialog = $("signin-dialog");
   $("signin-repo").textContent = REPO;
-  $("editor-signin").addEventListener("click", () => {
+  function openSignin() {
     $("signin-error").textContent = ""; $("signin-token").value = "";
     if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
     $("signin-token").focus();
-  });
+  }
   $("signin-cancel").addEventListener("click", () => dialog.close());
   $("signin-form").addEventListener("submit", async e => {
     e.preventDefault();
@@ -1596,8 +1667,8 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
     try {
       await verifyToken(token);
       try { localStorage.setItem(TOKEN_KEY, token); } catch (err) {}
-      dialog.close(); enableEditor();
-      toast(`Editor mode on${editor.login ? " for @" + editor.login : ""}.`);
+      dialog.close();
+      publishLive();
     } catch (err) {
       editor.token = null;
       $("signin-error").textContent = err.status === 401 ? "GitHub didn't recognize that token." : err.message;
@@ -1608,14 +1679,16 @@ footer { border-top: 1px solid var(--line); padding-block: 18px 28px; color: var
     if (editor.on && changedRows().length) { e.preventDefault(); e.returnValue = ""; }
   });
 
-  // Returning editors: reuse the saved token quietly
+  // A remembered token is reused for publishing
   (async () => {
     let token = null;
     try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
     if (!token) return;
-    try { await verifyToken(token); enableEditor(); }
+    try { await verifyToken(token); updateEditorBar(); }
     catch (err) { editor.token = null; if (err.status === 401) { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} } }
   })();
+
+  rebuild();   // show any edits saved in this browser
 
   // Open with an example trade so the calculator shows what it does
   const find = n => players.find(p => p.name === n);
