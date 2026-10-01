@@ -337,55 +337,54 @@ function modelValue(pos, posRank, projRank = null, games = 0) {
 }
 
 /* =====================================================================
-   SLOT 2 — TRADE MODEL (with waiver adjustment)
+   SLOT 2 — TRADE MODEL
    Receives the players each team GETS ({ name, pos, value, ... }).
-   Returns { scoreA, scoreB, note } — higher score = more value received.
+   Returns { scoreA, scoreB, rawA, rawB, note }.
 
-   Why adjust: a lineup only has so many slots, so two good players are
-   usually worth less than one great one, and every extra player you take
-   back costs you a roster spot. Two parts:
+   The trade is decided by raw player value (the numbers on the board).
+   When the teams get a different number of players, two small
+   tiebreakers apply, both as a percentage of the deal's size:
 
-   1. Star premium: each player counts as 10,000 x (value / 10,000) ^ STAR_POWER.
-      Stars keep nearly all their value; depth players shrink. With 1.3,
-      a 10,000 player = 10,000 but a 5,000 player counts as about 4,060,
-      so two 5,000s (about 8,120) no longer beat one 10,000.
-   2. Roster spots: the team receiving MORE players has to cut someone for
-      each extra player, roughly a fringe bench / waiver-level player
-      (ROSTER_SPOT_VALUE, about what RB50 / WR54 / TE24 are worth).
-      That cost is subtracted from the side getting more bodies.
-   3. Best player boost: the side getting the single most valuable player
-      gets BEST_PLAYER_BONUS x the gap between the two sides' best players
-      (star-premium values). A big gap at the top = a big boost; two
-      top players of similar value = almost none.
-   In a 1-for-1, whoever gets the more valuable player still wins; the
-   boost only widens the margin.
+   1. Consolidation bonus: the side getting the best player in the deal
+      gets CONSOLIDATION_RATE x how much better its best player is
+      (as a share), capped at CONSOLIDATION_MAX. Typical 2-for-1: 2-5%.
+   2. Roster spot: the side taking on extra players loses ROSTER_SPOT_PCT
+      per extra player (it has to cut someone), capped at ROSTER_SPOT_MAX.
+
+   1-for-1 and even-count trades are pure raw value. The two adjustments
+   together can never move a trade by more than about 7% of its size.
    ===================================================================== */
-const STAR_POWER = 1.3;
-const ROSTER_SPOT_VALUE = 250;
-const BEST_PLAYER_BONUS = 0.25;
+const CONSOLIDATION_RATE = 0.15;  // bonus % per 100% gap between the two best players
+const CONSOLIDATION_MAX = 0.05;   // consolidation bonus never exceeds 5% of the deal
+const ROSTER_SPOT_PCT = 0.01;     // 1% of the deal per extra player taken on
+const ROSTER_SPOT_MAX = 0.02;     // roster cost never exceeds 2% of the deal
 
 function tradeModel(sideA, sideB) {
-  const adj = v => 10000 * Math.pow(Math.max(v, 0) / 10000, STAR_POWER);
   const raw = side => side.reduce((sum, p) => sum + p.value, 0);
-  const starred = side => side.reduce((sum, p) => sum + adj(p.value), 0);
+  const rawA = raw(sideA), rawB = raw(sideB);
   const extra = sideA.length - sideB.length;
-  const spotA = extra > 0 ? extra * ROSTER_SPOT_VALUE : 0;
-  const spotB = extra < 0 ? -extra * ROSTER_SPOT_VALUE : 0;
-  const top = side => Math.max(0, ...side.map(p => adj(p.value)));
-  const gap = sideA.length && sideB.length ? top(sideA) - top(sideB) : 0;
-  const boostA = gap > 0 ? BEST_PLAYER_BONUS * gap : 0;
-  const boostB = gap < 0 ? BEST_PLAYER_BONUS * -gap : 0;
-  const scoreA = starred(sideA) - spotA + boostA, scoreB = starred(sideB) - spotB + boostB;
-  // Net swing the adjustment creates, shown in the same units as the totals
-  const swing = Math.round((scoreA - scoreB) - (raw(sideA) - raw(sideB)));
-  let note = "";
-  if (sideA.length && sideB.length && (sideA.length > 1 || sideB.length > 1) && swing !== 0) {
-    const toward = swing > 0 ? "A" : "B", more = extra > 0 ? "A" : "B";
-    note = `Waiver adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${toward}`
-      + (extra ? ` (Team ${toward} gets the best player in the deal; Team ${more} takes on ${Math.abs(extra)} extra player${Math.abs(extra) > 1 ? "s" : ""} and has to cut ${Math.abs(extra) > 1 ? "them" : "one"}).`
-               : ` (Team ${toward} gets the best player in the deal).`);
-  }
-  return { scoreA, scoreB, rawA: raw(sideA), rawB: raw(sideB), note };
+  if (!sideA.length || !sideB.length || extra === 0) return { scoreA: rawA, scoreB: rawB, rawA, rawB, note: "" };
+
+  const deal = (rawA + rawB) / 2;
+  const top = side => Math.max(0, ...side.map(p => p.value));
+  const tA = top(sideA), tB = top(sideB);
+  const share = Math.abs(tA - tB) / Math.max(tA, tB, 1);
+  const bonus = deal * Math.min(CONSOLIDATION_MAX, CONSOLIDATION_RATE * share);
+  const spot = deal * Math.min(ROSTER_SPOT_MAX, ROSTER_SPOT_PCT * Math.abs(extra));
+
+  let scoreA = rawA, scoreB = rawB;
+  if (tA > tB) scoreA += bonus; else if (tB > tA) scoreB += bonus;
+  if (extra > 0) scoreA -= spot; else scoreB -= spot;
+
+  const swing = Math.round((scoreA - scoreB) - (rawA - rawB));
+  const more = extra > 0 ? "A" : "B", n = Math.abs(extra);
+  const best = tA > tB ? "A" : tB > tA ? "B" : null;
+  const note = swing === 0 ? "" :
+    `Waiver adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${swing > 0 ? "A" : "B"} `
+    + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal`
+    + (best ? `; Team ${best} gets the best player` : "")
+    + `; Team ${more} takes on ${n} extra player${n > 1 ? "s" : ""}).`;
+  return { scoreA, scoreB, rawA, rawB, note };
 }
 
 /* =====================================================================
