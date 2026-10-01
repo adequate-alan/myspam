@@ -27,7 +27,8 @@ Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-pre
 
 While the rankings system is being built, the editing controls are on for every visitor; there is no sign-in to edit. Proper authentication is planned.
 
-- **Reorder:** pick a position (QB, RB, WR, TE), then drag a player by the ⠿ handle or nudge with ▲ ▼. Values recalculate from the new rank; a moved player takes the tier of the spot he moves into.
+- **Reorder:** drag a player by the ⠿ handle or nudge with ▲ ▼, in the **All** view or any position tab. The All rankings (the `rank` column) are the source of truth: position ranks are each player's place among same-position players in the overall order. Moving someone in a position tab swaps him with players at his position, keeping the same overall spots. A player who lands in a new position spot takes that spot's tier.
+- **Values** come from each player's position rank (the value model), then are kept in order down the All rankings: if you put a player above someone with a higher value, their values meet in the middle.
 - **Custom values:** click any value to type a number (marked **Custom** with a striped bar). **Auto** switches back to the model value for his current rank.
 - **Save changes / Cancel changes:** Save keeps your edits in *this browser* (they survive reloads and feed the trade calculator). Cancel throws away unsaved changes. A visitor who edits only changes their own copy, never the live board.
 - **Publish to live site:** writes the browser-saved edits to `index.html` on GitHub so everyone sees them (site redeploys in about a minute). Publishing needs a GitHub fine-grained token for an account with write access (**Contents: Read and write**, this repository only); the page asks once and remembers it in that browser. Only the edited fields are merged onto the latest version, so the weekly projection refresh is kept.
@@ -35,6 +36,6 @@ While the rankings system is being built, the editing controls are on for every 
 
 ## Updating
 
-- **Rankings:** use editor mode on the site, or edit `RANKINGS_CSV` in `index.html` (columns `player, pos, team, pos_rank, tier`, optional `value` for a custom value) and push.
+- **Rankings:** use editor mode on the site, or edit `RANKINGS_CSV` in `index.html` (columns `player, pos, team, rank, pos_rank, tier`, optional `value` for a custom value; `rank` is the overall order) and push.
 - **Projections:** automatic every Tuesday. To run it now: Actions → *Build and deploy site* → *Run workflow*.
 - **End of season:** after week 17, disable the workflow's schedule (or the whole workflow) under Actions.
