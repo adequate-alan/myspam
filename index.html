@@ -393,7 +393,7 @@ function tradeModel(sideA, sideB) {
     + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal`
     + (best ? `; Team ${best} gets the best player` : "")
     + `; Team ${more} takes on ${n} extra player${n > 1 ? "s" : ""}).`;
-  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n } };
+  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: best ? bonus : 0, spot } };
 }
 
 /* =====================================================================
@@ -752,11 +752,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 body.editing #panel-rankings td.val { min-width: 330px; }
 
 /* ---------- Trade calculator ---------- */
-.trade-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.trade-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
 @media (min-width: 760px) { .trade-grid { grid-template-columns: 1fr 1fr; } }
 .side {
   background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius);
-  padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;
   box-shadow: inset 0 2px 0 var(--side-color);
 }
 .side.A { --side-color: var(--side-a); } .side.B { --side-color: var(--side-b); }
@@ -811,9 +811,10 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .verdict h2.fair { color: var(--cream); }
 .verdict h2.win-A { color: var(--side-a); }
 .verdict h2.win-B { color: var(--side-b); }
-.verdict-sub { color: var(--ink-2); margin: 6px 0 0; font-size: 0.88rem; }
-.verdict-gap { color: var(--muted); margin: 8px 0 0; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
-.verdict-gap b { color: var(--cream); font-weight: 700; }
+.verdict-main { min-width: 0; }
+.verdict-gap { color: var(--ink-2); margin: 8px 0 0; font-size: 0.98rem; font-variant-numeric: tabular-nums; }
+.verdict-gap b { color: var(--cream); font-weight: 750; }
+.verdict-sub { color: var(--muted); margin: 6px 0 0; font-size: 0.86rem; max-width: 70ch; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .meter { position: relative; height: 5px; border-radius: 3px; overflow: hidden; display: flex; background: var(--track); }
@@ -845,6 +846,67 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .bal-plus { color: var(--muted); font-weight: 500; }
 .bal-result { font-size: 0.72rem; font-weight: 600; color: var(--gold); letter-spacing: 0.02em; }
 .bal-or { align-self: center; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
+
+/* ---------- Trade calculator: toolbar, cards, progressive disclosure ---------- */
+.tc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 18px; }
+.tc-sel { height: 34px; max-width: 240px; }
+.tc-teams { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.tc-vs { font-size: 0.64rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.tc-badge { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-size: 0.66rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.tc-badge.on { color: var(--ink-2); }
+.tc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 20%, transparent); }
+.info {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; vertical-align: middle;
+  width: 15px; height: 15px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: none;
+  color: var(--muted); font: 700 0.56rem/1 Georgia, serif; font-style: italic; letter-spacing: 0; text-transform: none; cursor: help;
+}
+.info:hover, .info:focus-visible { color: var(--cream); border-color: var(--gold); outline: none; }
+.info:hover::after, .info:focus-visible::after {
+  content: attr(data-info); position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  width: max-content; max-width: min(260px, 70vw); padding: 8px 10px; border-radius: 6px; white-space: normal; text-align: left;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.9);
+  font: 500 0.76rem/1.4 "Archivo", "Inter", system-ui, sans-serif; font-style: normal; letter-spacing: 0;
+}
+.side-needs { margin: -6px 0 0; font-size: 0.76rem; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.side-needs b { color: var(--ink-2); font-weight: 650; }
+.roster-toggle {
+  align-self: flex-start; background: none; border: 0; padding: 2px 0; cursor: pointer;
+  font-size: 0.7rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.roster-toggle::before { content: "+ "; color: var(--gold); }
+.roster-toggle[aria-expanded="true"]::before { content: "– "; }
+.roster-toggle:hover { color: var(--cream); }
+.team-roster .tr-list { max-height: 260px; }
+.btn.balance-btn { align-self: flex-start; border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); color: var(--gold-bright); }
+.btn.balance-btn[aria-expanded="true"] { background: color-mix(in srgb, var(--gold) 10%, var(--control)); }
+.balance { margin-top: -4px; }
+.tc-more { border-top: 1px solid var(--line-soft); }
+.tc-more details { border-bottom: 1px solid var(--line-soft); }
+.tc-more details:last-child { border-bottom: 0; }
+.tc-more summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 13px 0;
+  font-size: 0.7rem; font-weight: 650; letter-spacing: 0.11em; text-transform: uppercase; color: var(--ink-2);
+}
+.tc-more summary::-webkit-details-marker { display: none; }
+.tc-more summary::after { content: "+"; margin-left: auto; font-size: 1rem; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.tc-more details[open] > summary::after { content: "–"; }
+.tc-more summary:hover { color: var(--cream); }
+.sum-hint { font-size: 0.78rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.sum-hint b { font-weight: 700; color: var(--cream); }
+.sum-hint b.win-A { color: var(--side-a); } .sum-hint b.win-B { color: var(--side-b); }
+.tc-more-body { padding: 0 0 18px; }
+.tc-more-body .ri-story { margin-top: 0; }
+.tc-more .needs { background: none; border: 0; padding: 0; margin: 18px 0 0; }
+.tc-more .tc-analysis { border-top: 0; padding-top: 0; }
+.tc-more .tc-analysis + .needs { border-top: 1px solid var(--line-soft); padding-top: 16px; }
+.needs-head { align-items: center; }
+.sub-label { margin: 16px 0 8px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.bd-table { width: 100%; max-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.bd-table th, .bd-table td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); text-align: right; font-size: 0.86rem; }
+.bd-table thead th { font-size: 0.62rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: none; }
+.bd-table tbody th { text-align: left; font-weight: 550; color: var(--ink-2); white-space: nowrap; }
+.bd-table td { color: var(--ink); width: 30%; }
+.bd-table tr.bd-total th, .bd-table tr.bd-total td { border-bottom: 0; color: var(--cream); font-weight: 750; }
 
 /* ---------- Trade calculator: roster needs ---------- */
 .needs { margin-bottom: 16px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
@@ -1395,7 +1457,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   .pm-head { padding: 16px 16px 0; }
   .pm-body { padding: 16px 16px 24px; }
   .pm-close { top: 12px; right: 12px; }
-  .tc-league, .tc-league .select { width: 100%; }
+  .tc-bar > .tc-sel { flex: 1 1 100%; max-width: none; }
+  .tc-teams { flex: 1 1 100%; }
+  .tc-teams .tc-sel { flex: 1 1 0; min-width: 0; max-width: none; }
+  .tc-badge { margin-left: 0; }
+  .side { padding: 18px; }
   .ri-row { grid-template-columns: 1fr auto; }
   .ri-row .ri-bar { grid-column: 1 / -1; }
   .ri-verdicts, .lc-cols { grid-template-columns: 1fr; }
@@ -1594,31 +1660,30 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   </section>
 
   <section id="panel-trade" role="tabpanel" aria-labelledby="tab-trade" hidden>
-    <div class="tc-context">
-      <label class="tc-league"><span class="ctl-label">League context</span><select class="select" id="tc-league" aria-label="League context"></select></label>
-      <p class="tc-mode" id="tc-mode"></p>
+    <div class="tc-bar">
+      <select class="select tc-sel" id="tc-league" aria-label="League context"></select>
+      <span class="tc-teams" id="tc-teams" hidden>
+        <select class="select tc-sel" id="team-A" aria-label="Left team"></select>
+        <span class="tc-vs">vs</span>
+        <select class="select tc-sel" id="team-B" aria-label="Right team"></select>
+      </span>
+      <span class="tc-badge" id="tc-badge"></span>
     </div>
     <div class="tc-warn" id="tc-warn" role="status" hidden></div>
-    <div class="needs">
-      <div class="needs-head">
-        <span class="ctl-label">Roster needs</span>
-        <span class="needs-hint">Your team's situation at each position. Positions you need count for more in the trade, positions you're set at count for less.</span>
-        <button class="footer-link" id="needs-reset" type="button" hidden>Reset to average</button>
-      </div>
-      <div class="needs-grid" id="needs-grid"></div>
-    </div>
+
     <div class="trade-grid">
       <div class="side A">
         <div class="side-head">
           <h2 class="side-title" id="side-title-A">You <small>get</small></h2>
           <div class="side-total">Total<b id="total-A">0</b></div>
         </div>
-        <select class="select team-select" id="team-A" aria-label="Team A roster" hidden></select>
+        <p class="side-needs" id="needs-A" hidden></p>
+        <ul class="roster" id="roster-A"></ul>
         <div class="picker">
-          <input class="search" id="search-A" type="search" placeholder="Add a player" autocomplete="off" aria-label="Add to Team A" style="width:100%">
+          <input class="search" id="search-A" type="search" placeholder="Search players" autocomplete="off" aria-label="Add a player to the left side" style="width:100%">
           <ul class="results" id="results-A" hidden></ul>
         </div>
-        <ul class="roster" id="roster-A"></ul>
+        <button class="roster-toggle" type="button" id="rtoggle-A" aria-expanded="false" aria-controls="teamroster-A" hidden>Add from roster</button>
         <div class="team-roster" id="teamroster-A" hidden></div>
       </div>
       <div class="side B">
@@ -1626,24 +1691,23 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           <h2 class="side-title" id="side-title-B">They <small>get</small></h2>
           <div class="side-total">Total<b id="total-B">0</b></div>
         </div>
-        <select class="select team-select" id="team-B" aria-label="Team B roster" hidden></select>
+        <p class="side-needs" id="needs-B" hidden></p>
+        <ul class="roster" id="roster-B"></ul>
         <div class="picker">
-          <input class="search" id="search-B" type="search" placeholder="Add a player" autocomplete="off" aria-label="Add to Team B" style="width:100%">
+          <input class="search" id="search-B" type="search" placeholder="Search players" autocomplete="off" aria-label="Add a player to the right side" style="width:100%">
           <ul class="results" id="results-B" hidden></ul>
         </div>
-        <ul class="roster" id="roster-B"></ul>
+        <button class="roster-toggle" type="button" id="rtoggle-B" aria-expanded="false" aria-controls="teamroster-B" hidden>Add from roster</button>
         <div class="team-roster" id="teamroster-B" hidden></div>
       </div>
     </div>
 
     <div class="verdict" aria-live="polite">
       <div class="verdict-top">
-        <div>
-          <span class="verdict-eyebrow" id="verdict-eyebrow" hidden>Value verdict</span>
+        <div class="verdict-main">
           <h2 id="verdict-title">Build a trade</h2>
-          <p class="verdict-sub" id="verdict-sub"></p>
           <p class="verdict-gap" id="verdict-gap" hidden></p>
-          <p class="verdict-ctx" id="verdict-ctx" hidden></p>
+          <p class="verdict-sub" id="verdict-sub"></p>
         </div>
         <div class="actions">
           <button class="btn" id="swap-btn" type="button">Swap sides</button>
@@ -1652,14 +1716,29 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       </div>
       <div>
         <div class="meter idle" id="meter"><div class="ma" id="meter-a" style="width:50%"></div><div class="mb"></div></div>
-        <div class="meter-labels"><span id="score-A">Team A</span><span id="score-B">Team B</span></div>
+        <div class="meter-labels"><span id="score-A">You</span><span id="score-B">They</span></div>
       </div>
-      <p class="model-note" id="model-note" hidden></p>
-      <div class="tc-analysis" id="tc-analysis" hidden></div>
+      <button class="btn balance-btn" id="balance-btn" type="button" aria-expanded="false" aria-controls="balance" hidden>Balance this trade</button>
       <div class="balance" id="balance" hidden>
-        <h3 id="balance-title">To even it out</h3>
         <p class="balance-sub" id="balance-sub"></p>
         <div class="balance-list" id="balance-list"></div>
+      </div>
+      <div class="tc-more">
+        <details id="tc-why"><summary>Why?</summary><div class="tc-more-body" id="tc-why-body"></div></details>
+        <details id="tc-impact"><summary>Roster impact <span class="sum-hint" id="tc-impact-hint"></span></summary>
+          <div class="tc-more-body">
+            <div class="tc-analysis" id="tc-analysis" hidden></div>
+            <div class="needs">
+              <div class="needs-head">
+                <span class="ctl-label">Your roster needs</span>
+                <button class="info" type="button" aria-label="About roster needs" data-info="Each position's players count ×1.08 (desperately need) down to ×0.92 (set), on both sides of the trade. Average changes nothing.">i</button>
+                <button class="footer-link" id="needs-reset" type="button" hidden>Reset</button>
+              </div>
+              <div class="needs-grid" id="needs-grid"></div>
+            </div>
+          </div>
+        </details>
+        <details id="tc-breakdown"><summary>Value breakdown</summary><div class="tc-more-body" id="tc-breakdown-body"></div></details>
       </div>
     </div>
   </section>
@@ -2161,7 +2240,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         needSwing = Math.round(nA - nB);
         needUsed = uniq(A.concat(B).map(p => p.pos)).filter(pos => needMult(pos) !== 1).map(pos => `${pos} ×${needMult(pos).toFixed(2)}`);
       }
-      return { a, b, rawA: r.rawA, rawB: r.rawB, note: adjustmentNotes(r, needSwing, needUsed) };
+      return { a, b, rawA: r.rawA, rawB: r.rawB, adj: r.adj, needA: a - (Number(r.scoreA) || 0), needB: b - (Number(r.scoreB) || 0), needUsed, note: adjustmentNotes(r, needSwing, needUsed) };
     } catch (err) {
       console.error(err);
       return { a: 0, b: 0, note: "The trade model threw an error: " + err.message, error: true };
@@ -2226,34 +2305,56 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 
   /* League context bar: universal mode (any players, base SPMetrics values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
+  const infoIcon = (text, label = "More info") => `<button class="info" type="button" aria-label="${esc(label)}" data-info="${esc(text)}">i</button>`;
+  const TC_UI = { open: { A: false, B: false }, balance: false };
   function renderTradeContext() {
     const sel = $("tc-league"), on = tcLeague();
     const leagues = sl && sl.leagues ? sl.leagues : [];
-    sel.innerHTML = `<option value="none">No league context</option>` +
-      (leagues.length ? `<optgroup label="Synced Sleeper leagues">${leagues.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</optgroup>` : "") +
-      (!sl ? `<option value="connect">Connect a Sleeper league…</option>` : "");
+    sel.innerHTML = `<option value="none">No league</option>` +
+      (leagues.length ? `<optgroup label="Sleeper leagues">${leagues.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</optgroup>` : "") +
+      (!sl ? `<option value="connect">Connect Sleeper…</option>` : "");
     sel.value = on ? sl.activeId : "none";
-    // first time in league mode for this league: Team A starts as your team
+    // first time in league mode for this league: the left side starts as your team
     if (on && TC.defaulted !== sl.activeId) {
       TC.defaulted = sl.activeId;
       if (!$("team-A").value && LG.myRosterId != null && !$("team-B").value) $("team-A").value = String(LG.myRosterId);
     }
-    const d = activeData();
-    $("tc-mode").innerHTML = on
-      ? `<b>League mode</b> · ${esc(formatParts(d.league).join(" · "))} · ${leagueView() ? "league-adjusted" : "base"} values. Pick both teams to see how the trade fits each roster.`
-      : `<b>Universal mode</b> · search any players · SPMetrics ${SITE.format ? esc(SITE.format) + " " : ""}values.`;
+    $("tc-teams").hidden = !on;
+    $("tc-badge").innerHTML = on
+      ? `<span class="tc-dot" aria-hidden="true"></span>League context ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
+      : `SPMetrics values ${infoIcon("Base SPMetrics values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick a Sleeper league to use its rosters and scoring.", "About values")}`;
+    $("tc-badge").classList.toggle("on", on);
     ["A", "B"].forEach(s => {
-      $("team-" + s).hidden = !on;
-      $("search-" + s).placeholder = on ? "Search any player" : "Add a player";
-      if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; }
+      $("search-" + s).placeholder = on ? "Search any player" : "Search players";
+      if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; $("rtoggle-" + s).hidden = true; }
     });
     // players in the trade who aren't on the roster they're supposedly coming from (kept as hypothetical)
     const warn = $("tc-warn"), stray = tcStray();
     warn.hidden = !stray.length;
     if (stray.length) {
-      warn.innerHTML = `<span>${stray.map(x => `<b>${esc(x.p.name)}</b>`).join(", ")} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster. ${stray.length === 1 ? "He stays" : "They stay"} in the trade as hypothetical.</span>
-        <button class="btn" type="button" data-tc-remove>Remove ${stray.length === 1 ? "him" : "them"}</button>`;
+      warn.innerHTML = `<span>${stray.map(x => `<b>${esc(x.p.name)}</b>`).join(", ")} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
+        <button class="btn" type="button" data-tc-remove>Remove</button>`;
     }
+    renderCardNeeds();
+  }
+  // Subtle needs line in each card: league position ranks, or your roster-needs settings
+  function renderCardNeeds() {
+    const ev = tcLeague() ? evaluateTeams() : null;
+    ["A", "B"].forEach(s => {
+      const el = $("needs-" + s), t = sideTeam(s);
+      let needs = [], strong = [], tip = "";
+      if (t && ev && ev.byRoster.has(String(t.rosterId))) {
+        const x = ev.byRoster.get(String(t.rosterId)), n = ev.n, third = Math.max(1, Math.floor(n / 3));
+        needs = EDIT_POS.filter(pos => x.place[pos] > n - third);
+        strong = EDIT_POS.filter(pos => x.place[pos] <= third);
+        tip = `From ${t.name}'s position ranks in the league: ${EDIT_POS.map(pos => `${pos} ${ordinal(x.place[pos])}`).join(", ")}.`;
+      } else if (!tcLeague() && s === "A") {
+        needs = EDIT_POS.filter(pos => NEEDS[pos] <= 2); strong = EDIT_POS.filter(pos => NEEDS[pos] >= 4);
+        tip = "From your roster needs (Roster impact, below).";
+      }
+      el.hidden = !needs.length && !strong.length;
+      el.innerHTML = el.hidden ? "" : [needs.length ? `Needs <b>${needs.join(", ")}</b>` : "", strong.length ? `Strong <b>${strong.join(", ")}</b>` : ""].filter(Boolean).join(" · ") + " " + infoIcon(tip, "Where this comes from");
+    });
   }
   const uniq = list => [...new Set(list)];
   function tcStray() {
@@ -2461,29 +2562,29 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     renderTradeContext();
     if (typeof renderTeamRosters === "function") renderTeamRosters();
     const res = runModel(sides.A, sides.B);
-    $("total-A").textContent = fmt(res.rawA ?? res.a);
-    $("total-B").textContent = fmt(res.rawB ?? res.b);
     ["A", "B"].forEach(s => {
       const n = sideName(s), t = $("side-title-" + s);
       t.innerHTML = `<span class="st-name">${esc(n)}</span> <small>${isYouThey(n) ? "get" : "gets"}</small>`;
       t.title = n;
     });
+    $("total-A").textContent = fmt(res.rawA ?? res.a);
+    $("total-B").textContent = fmt(res.rawB ?? res.b);
     $("score-A").textContent = sideName("A") + " · " + fmt(res.a);
     $("score-B").textContent = fmt(res.b) + " · " + sideName("B");
-
-    const title = $("verdict-title"), sub = $("verdict-sub"), meter = $("meter");
-    const note = $("model-note");
-    note.hidden = !res.note; note.textContent = res.note;
     if (!skipNeedsRender) renderNeeds();
-    $("balance").hidden = true;
-    $("verdict-gap").hidden = true;
-    $("verdict-ctx").hidden = true;
-    $("tc-analysis").hidden = true;
-    $("verdict-eyebrow").hidden = !tcLeague();
 
+    const title = $("verdict-title"), sub = $("verdict-sub"), meter = $("meter"), gapLine = $("verdict-gap");
+    const hide = () => {
+      $("balance-btn").hidden = true; $("balance").hidden = true; gapLine.hidden = true;
+      $("tc-why-body").innerHTML = `<p class="pp-note">Add players to both sides to see the reasoning.</p>`;
+      $("tc-breakdown-body").innerHTML = `<p class="pp-note">Add players to both sides to see the numbers.</p>`;
+      $("tc-analysis").hidden = true;
+      $("tc-impact-hint").textContent = needsActive() ? "Needs set" : "";
+    };
     if (!sides.A.length && !sides.B.length) {
+      hide();
       title.className = ""; title.textContent = "Build a trade";
-      sub.textContent = tcLeague() ? "Pick both teams, then click players from their rosters (or search any player)." : "Add what each team gets to see who wins.";
+      sub.textContent = tcLeague() ? "Pick the teams above, then add players from their rosters or search anyone." : "Add what each side gets.";
       meter.classList.add("idle"); $("meter-a").style.width = "50%";
       return;
     }
@@ -2496,92 +2597,127 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const ahead = res.a >= res.b ? "A" : "B", loser = ahead === "A" ? "B" : "A";
     const names = { A: sideName("A"), B: sideName("B") };
     if (names.A === names.B) { names.A = "Team A"; names.B = "Team B"; }
-    const w = names[ahead], l = names[loser], gapLine = $("verdict-gap");
+    const w = names[ahead], l = names[loser];
     if (lo <= 0) {
+      hide();
       title.className = "win-" + ahead; title.textContent = "One-sided so far";
-      sub.textContent = isYouThey(l) ? `${l} aren't getting anything back yet. Add what ${l.toLowerCase()}'d get.` : `${l} isn't getting anything back yet. Add what ${l} receives.`;
+      sub.textContent = isYouThey(l) ? `${l} aren't getting anything back yet.` : `${l} isn't getting anything back yet.`;
       return;
     }
-    const more = pctMore(res.a, res.b);      // % more for the side ahead, 1 decimal
+    const more = pctMore(res.a, res.b);
     const tierIdx = Math.max(0, TRADE_VERDICTS.findIndex(t => more < t.upTo));
     const tier = TRADE_VERDICTS[tierIdx] || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
     const fair = tier.upTo <= 3, pct = more.toFixed(1) + "%";
+    const afterFirst = t => { const i = t.indexOf(". "); return i > 0 ? t.slice(i + 2) : t; };
+    let advice;
     title.className = fair ? "fair" : "win-" + ahead;
-    if (youMode()) { const v = youVerdictText(tierIdx, ahead, pct); title.textContent = v.title; sub.textContent = v.text; }
-    else { title.textContent = tier.title(w, l); sub.textContent = tier.text(w, l, pct); }
-    // the exact numbers behind the label; raw player value shown when the roster adjustment moved it
-    let line = `<b>${pct}</b> adjusted value gap · ${esc(tier.range)}`;
-    if (res.rawA != null && res.rawB != null && Math.min(res.rawA, res.rawB) > 0) {
-      const rawMore = pctMore(res.rawA, res.rawB);
-      if (needsActive()) line += " · Roster needs applied";
-      if (rawMore !== more || (res.rawA >= res.rawB) !== (ahead === "A"))
-        line += ` · Raw player value: ${fmt(res.rawA)} vs ${fmt(res.rawB)} (${rawMore.toFixed(1)}% gap) before the roster adjustment`;
-    }
-    gapLine.innerHTML = line; gapLine.hidden = false;
+    if (youMode()) { const v = youVerdictText(tierIdx, ahead, pct); title.textContent = v.title; advice = afterFirst(v.text); }
+    else { title.textContent = tier.title(w, l); advice = afterFirst(tier.text(w, l, pct)); }
+    const forWhom = side => (youMode() ? (side === "A" ? "you" : "them") : names[side]);
+    gapLine.innerHTML = fair ? `<b>${pct}</b> apart in adjusted value` : `<b>${pct}</b> more adjusted value for ${esc(forWhom(ahead))}`;
+    gapLine.hidden = false;
 
     // League mode: does the trade make sense for these two rosters?
     const ctx = tcLeague() ? rosterContext() : null;
+    const fit = ctx ? fitLine(ctx, names) : "";
+    sub.textContent = fit || advice;
+    $("tc-why-body").innerHTML = `<p class="ri-story">${esc(ctx ? contextStory(ctx, contextVerdict(res, ctx), names) : tradeWhyText(res, names, ahead, pct, fair))}</p>`;
+    renderBreakdown(res, names, pct, tier);
     if (ctx) renderContext(res, ctx, names);
-    else if (tcLeague()) {
+    else {
       const box = $("tc-analysis");
-      box.innerHTML = `<h3 class="section-label">Roster context</h3><p class="pp-note">Pick ${!sideTeam("A") && !sideTeam("B") ? "both teams" : "the other team"} above to see how this trade changes each lineup in ${esc(activeData().league.name)}.</p>`;
-      box.hidden = false;
+      box.hidden = !tcLeague();
+      box.innerHTML = tcLeague() ? `<p class="pp-note">Pick both teams above to see how this trade changes each lineup.</p>` : "";
+      $("tc-impact-hint").textContent = tcLeague() ? "Pick both teams" : needsActive() ? "Needs set" : "";
     }
-    if (fair) return;
 
+    // Balance suggestions: computed now, shown only when asked for
+    $("balance-btn").hidden = fair; $("balance").hidden = true;
+    if (fair) return;
+    let shown = false;
     if (ctx) {
       const lb = leagueBalance(res, ctx);
-      if (lb && lb.picks.length) { renderLeagueBalance(lb, res, names); return; }
+      if (lb && lb.picks.length) { renderLeagueBalance(lb, res, names); shown = true; }
     }
-    // Universal suggestions: anyone in the player pool, added to the trailing side
-    const pool = players.filter(p => !inTrade(p.id));
-    const scored = pool.map(p => {
-      const a = loser === "A" ? sides.A.concat(p.id) : sides.A;
-      const b = loser === "B" ? sides.B.concat(p.id) : sides.B;
-      const r = runModel(a, b);
-      const m = Math.max(r.a, r.b);
-      return { p, gap: m > 0 ? Math.abs(r.a - r.b) / m : 1 };
-    }).filter(s => s.gap < gap).sort((x, y) => x.gap - y.gap).slice(0, 4);
-
-    if (scored.length) {
-      $("balance-title").textContent = `To even it out, add to ${possessive(loser)} side`;
-      $("balance-sub").textContent = "";
-      $("balance-list").innerHTML = scored.map(s =>
-        `<button class="suggest" type="button" data-ids="${s.p.id}" data-side="${loser}">
-          ${face(s.p.sleeperId, s.p.name, "xs")}<span class="pos ${esc(s.p.pos)}">${esc(s.p.posRank)}</span>${esc(s.p.name)}
-          <span class="r-val">${fmt(tv(s.p))}</span></button>`).join("");
-      $("balance").hidden = false;
+    if (!shown) {
+      const pool = players.filter(p => !inTrade(p.id));
+      const scored = pool.map(p => {
+        const a = loser === "A" ? sides.A.concat(p.id) : sides.A;
+        const b = loser === "B" ? sides.B.concat(p.id) : sides.B;
+        const r = runModel(a, b);
+        return { p, r, gap: Math.max(r.a, r.b) > 0 ? Math.abs(r.a - r.b) / Math.max(r.a, r.b) : 1 };
+      }).filter(x => x.gap < gap).sort((x, y) => x.gap - y.gap).slice(0, 4);
+      if (scored.length) {
+        $("balance-sub").textContent = `Add one to ${possessive(loser)} side:`;
+        $("balance-list").innerHTML = scored.map(x => {
+          const g = pctMore(x.r.a, x.r.b), t = TRADE_VERDICTS.find(v => g < v.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+          return `<button class="suggest bal" type="button" data-ids="${x.p.id}" data-side="${loser}">
+            <span class="bal-players"><span class="bal-p">${face(x.p.sleeperId, x.p.name, "xs")}<span class="pos ${esc(x.p.pos)}">${esc(x.p.posRank)}</span><span class="bal-n">${esc(x.p.name)}</span><span class="r-val">+${fmt(tv(x.p))}</span></span></span>
+            <span class="bal-result">→ ${g.toFixed(1)}% · ${esc(t.upTo <= 3 ? "Fair" : t.range.split(":")[0])}</span></button>`;
+        }).join("");
+        shown = true;
+      }
     }
+    $("balance-btn").hidden = !shown;
+    $("balance").hidden = !(shown && TC_UI.balance);
+    $("balance-btn").setAttribute("aria-expanded", shown && TC_UI.balance);
+    $("balance-btn").textContent = TC_UI.balance ? "Hide suggestions" : "Balance this trade";
   }
-
+  function fitLine(ctx, names) {
+    const diff = ctx.A.impact - ctx.B.impact;
+    if (Math.abs(diff) < 2) return "";
+    const W = diff > 0 ? "A" : "B", X = ctx[W];
+    const star = X.incoming.filter(p => X.after.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
+    return star ? `Fits ${names[W]}'s roster better: ${star.name} becomes their ${X.after.labels.get(star.id)}.` : `Fits ${names[W]}'s roster better.`;
+  }
+  // Plain-English reasoning for universal mode
+  function tradeWhyText(res, names, ahead, pct, fair) {
+    const cap = t => t.charAt(0).toUpperCase() + t.slice(1), a = res.adj, out = [];
+    out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in SPMetrics value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
+    if (a && a.bonus) out.push(`${cap(subj(a.best))} ${verb(a.best, "land", "lands")} the best player in an uneven trade, worth a small bonus (+${fmt(a.bonus)}).`);
+    if (a && a.spot) out.push(`${cap(subj(a.more))} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, which costs a roster spot (−${fmt(a.spot)}).`);
+    const ns = Math.round((res.needA || 0) - (res.needB || 0));
+    if (ns) out.push(`Your roster needs move ${fmt(Math.abs(ns))} toward ${subj(ns > 0 ? "A" : "B")}.`);
+    out.push(fair ? `After adjustments the two sides are within ${pct} of each other.` : `After adjustments, ${subj(ahead)} ${verb(ahead, "come", "comes")} out ${pct} ahead.`);
+    return out.join(" ");
+  }
+  function renderBreakdown(res, names, pct, tier) {
+    const a = res.adj || {}, row = (label, va, vb, info, cls = "") => `<tr class="${cls}"><th scope="row">${label}${info ? " " + infoIcon(info, "About " + label) : ""}</th><td>${va}</td><td>${vb}</td></tr>`;
+    const sign = v => (Math.round(v) === 0 ? "–" : `${v > 0 ? "+" : "−"}${fmt(Math.abs(v))}`);
+    const bonusA = a.bonus && a.best === "A" ? a.bonus : 0, bonusB = a.bonus && a.best === "B" ? a.bonus : 0;
+    const spotA = a.spot && a.more === "A" ? -a.spot : 0, spotB = a.spot && a.more === "B" ? -a.spot : 0;
+    $("tc-breakdown-body").innerHTML = `<table class="bd-table">
+        <thead><tr><th scope="col"></th><th scope="col">${esc(names.A)}</th><th scope="col">${esc(names.B)}</th></tr></thead>
+        <tbody>
+          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), tcLeague() ? "League-adjusted SPMetrics values for the players each side gets." : "Base SPMetrics values for the players each side gets.")}
+          ${row("Best-player bonus", sign(bonusA), sign(bonusB), "In an uneven trade (2-for-1 etc.), the side getting the best player gets up to 5% of the deal.")}
+          ${row("Waiver adjustment", sign(spotA), sign(spotB), "The side taking on more players has to cut someone: 1% of the deal per extra player, up to 2%.")}
+          ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
+          ${row("Adjusted value", fmt(res.a), fmt(res.b), "", "bd-total")}
+        </tbody></table>
+      <p class="pp-note">${pct} gap · ${esc(tier.range)}</p>`;
+  }
   function renderContext(res, ctx, names) {
     const cv = contextVerdict(res, ctx), A = ctx.A, B = ctx.B;
     const imp = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
-    const word = v => (v >= 0.5 ? "gains" : v <= -0.5 ? "loses" : "holds steady at");
+    const word = v => (v >= 0.5 ? "gains" : v <= -0.5 ? "loses" : "holds at");
     const label = cv.tier.title(names[cv.ahead], names[cv.loser]);
-    // short line under the main verdict
-    const fitTxt = Math.abs(A.impact - B.impact) < 2 ? "Roster fit is about even for both teams" : `Roster fit favors ${names[A.impact >= B.impact ? "A" : "B"]} (${imp(A.impact)} vs ${imp(B.impact)})`;
-    const vc = $("verdict-ctx");
-    vc.innerHTML = `${esc(fitTxt)} · In ${esc(ctx.league.name)}: <b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>`;
-    vc.hidden = false;
+    $("tc-impact-hint").innerHTML = `· In ${esc(ctx.league.name)}: <b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>`;
     const maxAbs = Math.max(4, Math.abs(A.impact), Math.abs(B.impact));
     const bar = v => `<span class="ri-bar"><span class="${v >= 0 ? "ri-up" : "ri-down"}" style="width:${(50 * Math.min(1, Math.abs(v) / maxAbs)).toFixed(1)}%"></span></span>`;
     const changeList = (X, nm) => `<div class="lc-col"><h4>${esc(nm)}</h4>${X.changes.length
       ? `<ul>${X.changes.map(c => `<li class="lc-${c.kind}">${esc(c.text)}</li>`).join("")}</ul>` : `<p class="pp-note">No lineup changes.</p>`}</div>`;
     const box = $("tc-analysis");
     box.innerHTML = `
-      <h3 class="section-label">Roster context<span class="tier-sub">${esc(ctx.league.name)} lineups: ${esc(lineupText(ctx.league))}</span></h3>
       <div class="ri">
         ${[["A", A], ["B", B]].map(([s, X]) => `<div class="ri-row"><span class="ri-name side-${s}">${esc(names[s])}</span>
           <span class="ri-txt">${word(X.impact)} <b>${imp(X.impact)}</b> roster impact</span>${bar(X.impact)}</div>`).join("")}
       </div>
       <div class="ri-verdicts">
-        <div><span class="ctl-label">Value verdict</span><b>${esc($("verdict-title").textContent)}</b><span class="ri-note">${(Math.abs(cv.valueMargin)).toFixed(1)}% value gap</span></div>
-        <div><span class="ctl-label">League-adjusted verdict</span><b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>
-          <span class="ri-note">Value ${cv.valueMargin >= 0 ? "+" : "−"}${Math.abs(cv.valueMargin).toFixed(1)}% to ${esc(names[cv.valueMargin >= 0 ? "A" : "B"])}, roster fit ${cv.fit >= 0 ? "+" : "−"}${Math.abs(cv.fit).toFixed(1)} to ${esc(names[cv.fit >= 0 ? "A" : "B"])} (capped at ${FIT_CAP})</span></div>
+        <div><span class="ctl-label">Value verdict</span><b>${esc($("verdict-title").textContent)}</b></div>
+        <div><span class="ctl-label">With roster fit ${infoIcon(`Value gap plus 0.4 × the difference in roster impact, capped at ${FIT_CAP} points, so need never overrides a clearly lopsided trade.`, "How roster fit is weighed")}</span><b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b></div>
       </div>
-      <p class="ri-story">${esc(contextStory(ctx, cv, names))}</p>
-      <h3 class="section-label">Lineup changes</h3>
+      <h4 class="sub-label">Lineup changes</h4>
       <div class="lc-cols">${changeList(A, names.A)}${changeList(B, names.B)}</div>`;
     box.hidden = false;
   }
@@ -2594,8 +2730,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
   function renderLeagueBalance(lb, res, names) {
     const giverName = names[lb.giverSide], recvName = names[lb.receiverSide];
-    $("balance-title").textContent = "Best fits to balance the trade";
-    $("balance-sub").textContent = `To even it out, ${giverName} could add (from their roster, to ${recvName}):`;
+    $("balance-sub").textContent = `Best fits from ${giverName}'s roster:`;
     const role = p => (lb.X.after.labels.has(p.id) ? `Starts at ${lb.X.after.labels.get(p.id)}` : "Bench depth");
     $("balance-list").innerHTML = lb.picks.map((x, i) => {
       const t = TRADE_VERDICTS.find(v => x.gapAfter < v.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
@@ -2606,6 +2741,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("balance").hidden = false;
   }
 
+  $("balance-btn").addEventListener("click", () => { TC_UI.balance = !TC_UI.balance; renderTrade(); });
   $("balance-list").addEventListener("click", e => {
     const b = e.target.closest("button[data-ids]"); if (!b) return;
     b.dataset.ids.split(",").forEach(id => sides[b.dataset.side].push(Number(id)));
@@ -3223,7 +3359,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     of.value = LG.ownerFilter;
     ["A", "B"].forEach(s => {
       const sel = $("team-" + s), cur = sel.value;
-      sel.innerHTML = `<option value="">Search any player</option>` + LG.teams.map(t =>
+      sel.innerHTML = `<option value="">Pick a team</option>` + LG.teams.map(t =>
         `<option value="${t.rosterId}">${esc(t.mine ? "My Team · " + t.name : t.name)}</option>`).join("");
       sel.value = [...sel.options].some(o => o.value === cur) ? cur : "";
     });
@@ -3694,13 +3830,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function renderTeamRosters() {
     const map = bySleeper();
     ["A", "B"].forEach(s => {
-      const box = $("teamroster-" + s), id = $("team-" + s).value;
+      const box = $("teamroster-" + s), tog = $("rtoggle-" + s), id = $("team-" + s).value;
       const team = tcLeague() && id ? LG.teams.find(t => String(t.rosterId) === id) : null;
-      box.hidden = !team;
-      if (!team) { box.innerHTML = ""; return; }
+      const open = !!team && TC_UI.open[s];
+      tog.hidden = !team;
+      tog.setAttribute("aria-expanded", open);
+      tog.textContent = open ? "Hide roster" : "Add from roster";
+      box.hidden = !open;
+      if (!open) { box.innerHTML = ""; return; }
       const entries = (team.roster.players || []).map(sid => rosterEntry(sid, map))
         .sort((a, b) => (b.ranked ? tv(b.p) : -1) - (a.ranked ? tv(a.p) : -1));
-      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "My Team" : team.name)} roster <span>Click to send to ${esc(sideName(s === "A" ? "B" : "A"))}</span></div>
+      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Sends to ${esc(sideName(s === "A" ? "B" : "A"))}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
           ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s === "A" ? "B" : "A"}"${inTrade(e.p.id) ? " disabled" : ""}>
               ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span></button>`
@@ -3708,6 +3848,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     });
   }
   ["A", "B"].forEach(s => {
+    $("rtoggle-" + s).addEventListener("click", () => { TC_UI.open[s] = !TC_UI.open[s]; renderTeamRosters(); });
     $("team-" + s).addEventListener("change", () => renderTrade());
     $("teamroster-" + s).addEventListener("click", e => {
       const b = e.target.closest("button[data-id]");
