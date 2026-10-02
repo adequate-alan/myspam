@@ -54,6 +54,19 @@ Fantasy points are calculated in the browser from the raw stats, using the conne
 
 The stats refresh never writes to the rankings, and nothing from Sleeper or stats changes your ranks or custom values. Each new season: add it to `STATS_SEASONS` in `index.html` and run `python build_stats.py <season>`.
 
+## Trade calculator modes
+
+**League context** at the top of the calculator picks the mode. Changing it never clears the trade.
+
+- **Universal mode** (*No league context*): search any players; base SPMetrics values and the small roster adjustment. Works without Sleeper.
+- **League mode** (a synced Sleeper league): pick Team A and Team B, then click players straight from their real rosters (a player clicked on Team A's roster goes to Team B, and the reverse). *Search any player* still works for hypothetical trades. Values are league-adjusted. Choosing a different league switches the site's active league; players in the trade who aren't on the selected rosters are flagged and kept as hypothetical until you remove them.
+
+In league mode with both teams picked, the calculator answers two questions separately:
+1. **Value verdict:** is it fair in SPMetrics value? (the same descriptive verdicts as always)
+2. **Roster context:** does it make sense for these two teams? Each team's best lineup is rebuilt before and after the trade in this league's slots (superflex, flex count, TE premium through league values, bench depth, roster spots), giving each a **roster impact** %. The **league-adjusted verdict** is the value margin plus 0.4 × the difference in roster impact, capped at ±4 points, so need can push a fair trade to a slight edge but never overrides a clearly lopsided one. A short written explanation covers positional needs, starters gained or lost, holes and consolidation, and **Lineup changes** lists who becomes RB1, who moves to FLEX or the bench, who gets cut and which starters each team loses.
+
+**Best fits to balance the trade** come from the real roster of the team that's getting more value: closest to fair first, then expendable depth over starters, never a player whose loss leaves a starting spot empty, and at most two-player packages (only when a single player can't do the job about as well).
+
 ## Trade finder
 
 With a Sleeper league connected, **Trade Finder** searches every other roster for trades around one of your players (or, from another team's player page, ways to get him):
@@ -106,7 +119,7 @@ With a league connected:
 - **My Team:** lineup by slot, bench, IR and taxi with overall rank, position rank and value; roster strength by position and power rank (same calculation as the League tab); **Trade with** buttons that open the trade calculator with both rosters.
 - **League:** power rankings for every team, strongest to weakest. Team score = the best lineup the team's healthy roster can field in the league's starting slots (SPMetrics values) + 25% of its bench depth; IR and taxi are left out. Each row shows manager, record, PF/PA, team score, best and weakest position (place in the league) and top starters. Click a team for its breakdown: position strength vs the league (QB, RB, WR, TE rooms and bench depth, each with total value, place and difference from the league average), its best lineup, and the roster grouped by position with role, overall rank, position rank and value. Uses whichever view (Base or League-adjusted) is on.
 - **Free Agents:** ranked players nobody rosters, sorted by SPMetrics values, filterable by position.
-- **Trade calculator:** pick a team for each side and click players from their rosters: a player clicked on Team A's roster goes to Team B, and the reverse (search still works). Uses the league-adjusted values when that view is on.
+- **Trade calculator:** see *Trade calculator modes* below. Uses the league-adjusted values when that view is on.
 
 Player photos come from Sleeper's image CDN by Sleeper ID (initials show when a photo is missing); manager avatars come from Sleeper too. The site refreshes league data in the background when it's more than 6 hours old.
 
