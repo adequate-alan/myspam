@@ -4,6 +4,12 @@ Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-pre
 
 **Live site:** https://stevenp36.github.io/spmetrics-fantasy/
 
+## Light and dark themes
+
+The sun/moon button in the header switches between light mode (warm cream + burgundy) and dark mode (near-black + burgundy surfaces + cream + warm gold). The choice is saved in the browser (`spm_theme`) and applied before the page draws, so every tab, dialog, dropdown, table, chart and the editor match on every load; with no saved choice the device's light/dark setting decides.
+
+All colors come from one set of theme tokens at the top of the stylesheet (`:root` for dark, `:root[data-theme="light"]` for light): page background, header, surface, raised surface (modals and dropdowns), table header, row hover, tier rows, controls, text (primary, strong, secondary, muted), headings, borders, primary and secondary accents, hover and active states, buttons, danger, editor panels, the QB/RB/WR/TE colors, shadows and the modal backdrop. Older names used across the stylesheet (`--bg`, `--surface`, `--gold`, `--cream`…) are aliases of those tokens. Charts draw with the same variables, so they switch with the theme. To adjust a color, change it in the token block for that theme.
+
 ## How player values work
 
 1. **Positional rank → points per game.** Each rank (WR1, WR2, …) maps to the average points per game that finish produced in 2023–2025 under this league's scoring (pass yd 0.04, pass TD 4, INT −2, rush/rec yd 0.1, TD 6, reception 1, TE reception +0.5, fumble lost −2). Source: [nflverse](https://github.com/nflverse/nflverse-data).
