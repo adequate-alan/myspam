@@ -144,6 +144,16 @@ How values and order change for any non-base settings (league or hand-picked), t
 2. **A personal nudge** per player: his last 17 games are scored with the league's settings and with the site's, compared with his position's average, shrunk toward zero for small samples and capped at ±10%. A back who gets most of his points from catches loses a little in standard scoring, etc.
 3. **Order stays the SPMetrics board** unless a player's adjusted value passes the player above him by more than 3%, and nobody moves more than 2 spots within his position. Across positions the same 3% rule applies, so in a 1QB league quarterbacks slide down the overall board. ▲/▼ next to the rank shows each move; the **SPMetrics board** toggle shows the unadjusted board.
 
+### League depth (shallow vs deep leagues)
+
+Shallow leagues (few teams and/or few starters, e.g. 10 teams starting 7, or any 8-team league) have good players on waivers and strong lineups everywhere, so depth is worth less and high-end talent more. Depth = (teams × starting QB/RB/WR/TE/FLEX/SF spots) ÷ 108 (the site's 12 × 9), softened and capped (`DEPTH_ADJUST`): 12×9 = 1.00, 12×8 (1QB) ≈ 0.92, 10×7 ≈ 0.72, 8×9 ≈ 0.74, 8×7 ≈ 0.61, 14×9 ≈ 1.12. It scales:
+- **Values:** the bench share of a player's value is benchWeight × depth (on top of replacement levels already rising in shallow leagues). In 10 teams × 7 starters, RB24 is worth 7% of RB1 (18% in the base format).
+- **Lineup scores, power rankings and position rooms:** bench depth counts benchWeight × depth.
+- **Trade model:** the consolidation bonus and roster-spot cost are divided by depth, so getting the best player in a 2-for-1 counts more.
+- **Team-specific value:** a bench player's discount is divided by depth.
+
+Leagues with depth under 0.85 are labeled "shallow league", and over 1.05 "deep league".
+
 ## Connecting a league: Sleeper, ESPN, Yahoo, other sites
 
 **Connect league** offers four sources. Each import is converted to the same shape as a Sleeper league, so everything below works the same for all of them. Everything stays in the visitor's browser.

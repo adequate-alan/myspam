@@ -353,7 +353,8 @@ function modelValue(pos, posRank, projRank = null, games = 0) {
       per extra player (it has to cut someone), capped at ROSTER_SPOT_MAX.
 
    1-for-1 and even-count trades are pure raw value. The two adjustments
-   together can never move a trade by more than about 7% of its size.
+   together can never move a trade by more than about 7% of its size
+   (more in shallow leagues: both are divided by the league depth, see DEPTH_ADJUST).
    ===================================================================== */
 const CONSOLIDATION_RATE = 0.15;  // bonus % per 100% gap between the two best players
 const CONSOLIDATION_MAX = 0.05;   // consolidation bonus never exceeds 5% of the deal
@@ -384,6 +385,22 @@ const TEAM_FIT = {
   loseNextUp: 0.85, loseNoPath: 0.75, loseDeep: 0.65,
   min: 0.60, max: 1.10,
 };
+/* League depth. In shallow leagues (few teams and/or few starters, e.g. 10 teams starting 7, or any
+   8-team league) good players sit on waivers and every team's lineup is strong, so depth is worth
+   less and high-end talent is worth more. Depth = (teams x starting QB/RB/WR/TE/FLEX/SF spots) /
+   baseStarters, softened by `power` and capped. 1.00 = the site's format (12 teams x 9 = 108).
+     12 x 9 = 1.00   10 x 7 = 0.72   8 x 9 = 0.74   8 x 7 = 0.61   14 x 9 = 1.12
+   It scales everything that pays for depth:
+   - values: the bench share of a player's value (benchWeight x depth); replacement levels already
+     rise in shallow leagues, so only true starters hold value
+   - lineup scores, power rankings and position rooms: bench depth counts benchWeight x depth
+   - trade model: consolidation bonus and the roster-spot cost are divided by depth
+     (getting the best player in a 2-for-1 matters more; extra bodies matter less)
+   - team-specific value: the discount for a bench player is divided by depth
+   Deeper leagues (14+ teams, more starters) get the reverse, capped at `max`. */
+const DEPTH_ADJUST = { baseStarters: 108, power: 0.75, min: 0.55, max: 1.15 };
+let LEAGUE_DEPTH = 1;   // set by the site for the league or settings in use
+
 const NEED_LEVELS = ["Desperately need", "Need", "Average at", "Good at", "Set at"];
 const NEED_MULTIPLIERS = [1.08, 1.04, 1.00, 0.96, 0.92];
 
@@ -397,8 +414,9 @@ function tradeModel(sideA, sideB) {
   const top = side => Math.max(0, ...side.map(p => p.value));
   const tA = top(sideA), tB = top(sideB);
   const share = Math.abs(tA - tB) / Math.max(tA, tB, 1);
-  const bonus = deal * Math.min(CONSOLIDATION_MAX, CONSOLIDATION_RATE * share);
-  const spot = deal * Math.min(ROSTER_SPOT_MAX, ROSTER_SPOT_PCT * Math.abs(extra));
+  const d = LEAGUE_DEPTH > 0 ? LEAGUE_DEPTH : 1;   // shallow leagues: stars matter more, extra bodies less
+  const bonus = deal * Math.min(CONSOLIDATION_MAX / d, CONSOLIDATION_RATE / d * share);
+  const spot = deal * Math.min(ROSTER_SPOT_MAX / d, ROSTER_SPOT_PCT / d * Math.abs(extra));
 
   let scoreA = rawA, scoreB = rawB;
   if (tA > tB) scoreA += bonus; else if (tB > tA) scoreB += bonus;
@@ -2650,7 +2668,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     try {
       const pick = id => { const p = byId.get(id); return { ...p, value: val(p) }; };
       const A = aIds.map(pick), B = bIds.map(pick);
+      // league depth applies whenever the values are the league's (or your settings'), not base values
+      const adjusted = val === tv ? tcLeague() || (!LG.active && leagueView()) : val === dv ? leagueView() : false;
+      LEAGUE_DEPTH = adjusted ? LG.depth || 1 : 1;
       const r = tradeModel(A, B) || {};
+      if (r.adj) r.adj.depth = LEAGUE_DEPTH;
       let a = Number(r.scoreA) || 0, b = Number(r.scoreB) || 0;
       let needSwing = 0, needUsed = [];
       // roster needs: each position's players count as multiplier x value (both sides)
@@ -2718,7 +2740,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       const to = a.swing > 0 ? "A" : "B";
       out.push(`Waiver adjustment: ${Math.abs(a.swing).toLocaleString("en-US")} toward ${subj(to)} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal`
         + (a.best ? `; ${subj(a.best)} ${verb(a.best, "get", "gets")} the best player` : "")
-        + `; ${subj(a.more)} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}).`);
+        + `; ${subj(a.more)} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}`
+        + (a.depth && Math.abs(a.depth - 1) > 0.02 ? `; ×${(1 / a.depth).toFixed(2)} for ${depthWord(a.depth) ? "a " + depthWord(a.depth) + " league" : "league depth"}` : "") + `).`);
     } else if (r.note && !a) out.push(r.note);
     if (needSwing) out.push(`Need adjustment: ${Math.abs(needSwing).toLocaleString("en-US")} toward ${subj(needSwing > 0 ? "A" : "B")} (${needUsed.join(", ")}).`);
     return out.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join("\n");
@@ -2883,15 +2906,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   // Team-specific value for every player moving in or out of one roster (see TEAM_FIT)
   function fitValues(o) {   // { before, after, incoming, outgoing, places, n, league, without(list) -> lineup }
     const F = TEAM_FIT, sc = o.league.scoring_settings || {}, rp = o.league.roster_positions || [];
+    // shallow leagues: a bench player's discount is bigger (waivers are full of comparable players)
+    const D = leagueDepth(o.league), benchF = f => 1 - (1 - f) / D, minF = Math.min(F.min, benchF(F.min));
     const te = Number(sc.bonus_rec_te) > 0, superflex = rp.includes("SUPER_FLEX") || rp.filter(x => x === "QB").length >= 2;
-    const third = Math.max(1, Math.floor(o.n / 3)), clampF = f => Math.max(F.min, Math.min(F.max, f));
+    const third = Math.max(1, Math.floor(o.n / 3)), clampF = f => Math.max(minF, Math.min(F.max, f));
     const all = L => L.starters.concat(L.bench, L.cut || []);
     const depthOf = (L, p) => 1 + all(L).filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
     const isFlex = r => /FLEX|W\/R|W\/T/.test(r);
     const inc = o.incoming.map(p => {
       const L = o.after, role = L.labels.get(p.id), v = dv(p);
       let f, why;
-      if ((L.cut || []).includes(p)) { f = F.cut; why = "No roster spot, he'd be cut"; }
+      if ((L.cut || []).includes(p)) { f = benchF(F.cut); why = "No roster spot, he'd be cut"; }
       else if (role) {
         const W = o.without([p]), gain = L.startVal - W.startVal, ratio = v > 0 ? gain / v : 0;
         const bumped = W.starters.filter(x => !L.starters.includes(x)).sort((a, b) => dv(b) - dv(a))[0];
@@ -2906,6 +2931,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         const ahead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
         if (p.pos === "QB") f = superflex ? (ahead === 0 ? F.qbBackupSuperflex : F.deep) : F.qbBackup1QB;
         else f = ahead === 0 ? F.nextUp : ahead === 1 ? F.noPath : F.deep;
+        f = benchF(f);
         why = `Would be ${p.pos}${depthOf(L, p)} and wouldn't start` + (ahead >= 2 ? ", buried on the depth chart" : ahead === 0 && p.pos !== "QB" ? ", first in line" : "");
       }
       f = clampF(f);
@@ -2920,7 +2946,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         why = `Starter (${role})` + (hole ? `, leaves a hole at ${p.pos}` : "");
       } else {
         const ahead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
-        f = ahead === 0 ? F.loseNextUp : ahead === 1 ? F.loseNoPath : F.loseDeep;
+        f = benchF(ahead === 0 ? F.loseNextUp : ahead === 1 ? F.loseNoPath : F.loseDeep);
         why = ahead === 0 ? `Top ${p.pos} backup` : "Bench depth";
       }
       f = clampF(f);
@@ -4021,9 +4047,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     }
     return { repl, waiver };
   }
-  function modelTable(curves, lu) {
+  function modelTable(curves, lu, bw = VALUE_MODEL.benchWeight) {
     const { repl, waiver } = replLevels(curves, lu);
-    const raw = (p, ppg) => Math.max(0, ppg - repl[p]) + VALUE_MODEL.benchWeight * Math.max(0, Math.min(ppg, repl[p]) - waiver[p]);
+    const raw = (p, ppg) => Math.max(0, ppg - repl[p]) + bw * Math.max(0, Math.min(ppg, repl[p]) - waiver[p]);
     const top = Math.max(...EDIT_POS.map(p => raw(p, curves[p][0])));
     const out = {};
     for (const p of EDIT_POS) out[p] = curves[p].map(v => (top > 0 ? 10000 * raw(p, v) / top : 0));
@@ -4038,10 +4064,27 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function activeData() { return sl && sl.activeId && sl.data ? sl.data[sl.activeId] : null; }
 
   // Recompute layer 3 and ownership from the current players (called after every rebuild)
+  // League depth (see DEPTH_ADJUST): 1 for the site's format, lower for shallow leagues
+  function leagueDepth(league) {
+    if (!league) return 1;
+    const D = DEPTH_ADJUST, skill = ["QB", "RB", "WR", "TE", "FLEX", "WRRB_FLEX", "REC_FLEX", "SUPER_FLEX"];
+    const starters = (league.roster_positions || []).filter(x => skill.includes(x)).length, teams = lineupOf(league).teams;
+    if (!starters || !teams) return 1;
+    const r = Math.pow(teams * starters / D.baseStarters, D.power);
+    return Math.round(Math.max(D.min, Math.min(D.max, r)) * 100) / 100;
+  }
+  const benchW = () => VALUE_MODEL.benchWeight * (LG.depth || 1);
+  // depth always applies; "shallow"/"deep" labels are only for leagues clearly off the usual 12-team shape
+  const depthWord = d => (d < 0.85 ? "shallow" : d > 1.05 ? "deep" : "");
+  const depthTag = d => (depthWord(d) ? ` · <b>${depthWord(d)} league</b>` : "");
+  const depthText = d => (d < 0.98
+    ? `Shallow league (depth ×${d.toFixed(2)}): with good players on waivers, bench depth counts less and high-end starters more, in values, lineup scores, team-specific value and the 2-for-1 adjustments. `
+    : d > 1.02 ? `Deep league (depth ×${d.toFixed(2)}): bench depth counts a little more. ` : "");
   function leagueRecalc() {
     const d = activeData(), vl = valueLeague();
     LG.active = !!(d && sl);
     LG.fmtOn = !!vl;
+    LG.depth = leagueDepth(vl);
     LG.adj = new Map(); LG.adjRank = new Map(); LG.adjPos = new Map(); LG.factor = new Map();
     LG.ownerOf = new Map(); LG.teams = []; LG.myRosterId = null;
     LG.mode = LG.active ? (sl.view === "base" ? "base" : "league") : fmtView;
@@ -4068,7 +4111,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const FA = FORMAT_ADJUST, raw = new Map();
     if (comps) {
       const base = modelTable(curvesFor(comps.base_scoring), BASE_LINEUP());
-      const lg = modelTable(curvesFor(vl.scoring_settings || {}), lineupOf(vl));
+      const lg = modelTable(curvesFor(vl.scoring_settings || {}), lineupOf(vl), VALUE_MODEL.benchWeight * LG.depth);   // shallow leagues: depth counts less
       const delta = (pos, num) => { const i = Math.min(num, base[pos].length) - 1; return lg[pos][i] - base[pos][i]; };
       const fac = playerFactors(vl.scoring_settings || {});
       players.forEach(p => raw.set(p.id, EDIT_POS.includes(p.pos) && p.posNum != null ? Math.max(0, p.value + delta(p.pos, p.posNum)) : p.value));
@@ -4190,7 +4233,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span>Adjusted for <b>${esc(formatParts(vl).join(" · "))}</b></span>${infoIcon("Values move with these settings. The order is the SPMetrics board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}${d ? "" : `<button class="btn link inline" type="button" data-open-fmt>Change</button>`}`
+      ? `<span>Adjusted for <b>${esc(formatParts(vl).join(" · "))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPMetrics board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}${d ? "" : `<button class="btn link inline" type="button" data-open-fmt>Change</button>`}`
       : `<span>Showing the SPMetrics board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).join(" · "))}</b></span>`;
     if (!d) {
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
@@ -4420,7 +4463,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     }).join("")}</div>`).join("");
     $("fmt-grid").innerHTML = groups;
     const lg = fmtLeague(cur);
-    $("fmt-summary").textContent = formatParts(lg).join(" · ") + " · " + lineupText(lg).replace(/ · TE premium$/, "");
+    const dep = leagueDepth(lg);
+    $("fmt-summary").textContent = formatParts(lg).join(" · ") + " · " + lineupText(lg).replace(/ · TE premium$/, "")
+      + (depthWord(dep) ? ` · ${depthWord(dep) === "shallow" ? "Shallow" : "Deep"} league: depth counts ×${dep.toFixed(2)}` : Math.abs(dep - 1) > 0.02 ? ` · Depth counts ×${dep.toFixed(2)}` : "");
   }
   $("fmt-grid").addEventListener("click", e => {
     const b = e.target.closest("button[data-fmt]"); if (!b) return;
@@ -5025,7 +5070,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
                        SUPER_FLEX: { QB: 0.9, RB: 0.04, WR: 0.04, TE: 0.02 } };
   const roomCache = new Map();
   function roomWeights(slots, benchN) {
-    const key = slots.join(",") + "|" + benchN;
+    const bw = benchW(), key = slots.join(",") + "|" + benchN + "|" + bw;
     if (roomCache.has(key)) return roomCache.get(key);
     const w = { QB: [], RB: [], WR: [], TE: [] };
     slots.forEach(s => { if (w[s]) w[s].push(1); });
@@ -5034,7 +5079,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const share = { QB: sf ? 1 : 0.5, RB: 2, WR: 2, TE: 1 }, tot = share.QB + share.RB + share.WR + share.TE;
     for (const pos of EDIT_POS) {
       const n = Math.max(1, Math.round(benchN * share[pos] / tot));
-      for (let i = 0; i < n; i++) w[pos].push(VALUE_MODEL.benchWeight);
+      for (let i = 0; i < n; i++) w[pos].push(bw);
       w[pos].sort((a, b) => b - a);
     }
     roomCache.set(key, w);
@@ -5049,7 +5094,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     return room;
   }
   function bestLineup(players, slots, benchN, roomPool = players) {
-    const bw = VALUE_MODEL.benchWeight;
+    const bw = benchW();   // bench depth counts less in shallow leagues
     const pool = players.slice().sort((a, b) => dv(b) - dv(a));
     const role = new Map(), starters = [];
     for (const slot of slots) {
@@ -5140,7 +5185,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           <p class="panel-sub">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))} · ${leagueView() ? "League-adjusted" : "Base"} SPMetrics values</p>
         </div>
       </div>
-      <p class="method-note">Each team's best lineup in this league's starting slots, plus ${Math.round(VALUE_MODEL.benchWeight * 100)}% of its bench depth. IR and taxi players are left out. Click a team for its position-by-position breakdown.</p>
+      <p class="method-note">Each team's best lineup in this league's starting slots, plus ${Math.round(benchW() * 100)}% of its bench depth${depthWord(LG.depth) === "shallow" ? " (less than usual: in a league this shallow, depth matters less than high-end starters)" : depthWord(LG.depth) === "deep" ? " (more than usual: deep league)" : ""}. IR and taxi players are left out. Click a team for its position-by-position breakdown.</p>
       <div class="pr-head"><span>Rk</span><span>Team</span><span>Team score</span><span>Positions</span><span>Top starters</span></div>
       <div class="pr-list">${rows}</div>`;
   }
