@@ -1,0 +1,11 @@
+{
+  "name": "SPAM Fantasy Rankings",
+  "short_name": "SPAM",
+  "description": "SPAM fantasy football rankings, trade calculator and Trade Finder.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1A1314",
+  "theme_color": "#1A1314",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
