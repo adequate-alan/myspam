@@ -58,8 +58,8 @@ The stats refresh never writes to the rankings, and nothing from Sleeper or stat
 
 **League context** at the top of the calculator picks the mode. Changing it never clears the trade.
 
-- **Universal mode** (*No league context*): search any players; base SPMetrics values and the small roster adjustment. Works without Sleeper.
-- **League mode** (a synced Sleeper league): pick Team A and Team B, then click players straight from their real rosters (a player clicked on Team A's roster goes to Team B, and the reverse). *Search any player* still works for hypothetical trades. Values are league-adjusted. Choosing a different league switches the site's active league; players in the trade who aren't on the selected rosters are flagged and kept as hypothetical until you remove them.
+- **Universal mode** (*No league context*): the two sides are **You get** and **They get**, and verdicts read from your point of view ("Slight edge to you", "You're getting robbed"). Search any players; base SPMetrics values and the small roster adjustment. Works without Sleeper.
+- **League mode** (a synced Sleeper league): pick the two teams (the sides, verdicts and notes then use their Sleeper team names), then click players straight from their real rosters (a player clicked on Team A's roster goes to Team B, and the reverse). *Search any player* still works for hypothetical trades. Values are league-adjusted. Choosing a different league switches the site's active league; players in the trade who aren't on the selected rosters are flagged and kept as hypothetical until you remove them.
 
 In league mode with both teams picked, the calculator answers two questions separately:
 1. **Value verdict:** is it fair in SPMetrics value? (the same descriptive verdicts as always)
