@@ -2986,7 +2986,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-02T23:50Z";
+  const BUILD_ID = "2026-10-03T00:05Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4427,8 +4427,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     } catch (e) { toast("Couldn't save: this browser is blocking site storage."); return; }
     localEdits = edits; savedCsv = tableToCsv(draft);
     updateEditorBar();
-    toast("Saved in this browser. Use Publish to live site when you want everyone to see it.");
-    recordSave().catch(() => {});   // one ranking-history update per changed player (published with the rankings)
+    // one ranking-history update per changed player, then (when this browser is connected to GitHub)
+    // straight to the live site: a save becomes the new master rankings for everyone
+    recordSave().catch(() => {}).then(() => {
+      if (editor.token && Object.keys(localEdits).length) publishLive();
+      else toast("Saved in this browser. Click Publish to live site once (it asks for your GitHub token); after that, every save publishes automatically.");
+    });
   }
 
   let discardArmed = false;
