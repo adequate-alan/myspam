@@ -262,11 +262,15 @@ Pat Freiermuth,TE,PIT,158,25,6,,10.86,3,10.79,7600
    4. value = PPG above replacement (full credit)
             + PPG between waiver and replacement x benchWeight
       scaled so the best player is 10,000. At or below waiver = 0.
-   5. tiers: within each positional tier, values are pulled toward the
-      tier's average (tierBlend), so players in a tier sit close together
-      and dropping a tier costs real value. tierMinDrop guarantees the
-      first player of a tier is at least that much below the last
-      player of the tier above.
+   5. tiers come first: within each positional tier, values are pulled
+      most of the way toward the tier's average (tierBlend), so players in
+      a tier stay close together however many rank spots apart they are,
+      and the real value drops happen where a tier ends. Rank order inside
+      a tier only sets the order and the small gaps. tierMinDrop
+      guarantees the first player of a tier is at least that much below
+      the last player of the tier above. Other league formats use the same
+      tiers (see FORMAT_ADJUST): the format changes how much each tier is
+      worth, not where the drops are.
    6. projections: project_players.py projects every player from this
       season's usage + betting-line team environment (proj_score). The
       site re-orders your ranked players at each position by that score,
@@ -287,8 +291,10 @@ const VALUE_MODEL = {
   replacement: { QB: 12.99, RB: 11.01, WR: 11.01, TE: 10.68 },
   waiver: { QB: 3.94, RB: 5.66, WR: 7.88, TE: 8.39 },
   benchWeight: 0.25, // share of bench-level points that count (bye/injury fill-ins)
-  tierBlend: 0.10,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value
-  tierMinDrop: 0.02, // minimum drop from one tier to the next (2%)
+  tierBlend: 0.80,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value (0.80: a tier keeps 20% of its rank-by-rank spread)
+  tierMaxSpread: 0.15, // a tier's top player is at most 15% above its bottom player (tiermates stay close)
+  tierMinDrop: 0.05, // minimum drop from one tier to the next (5%)
+  overallMaxShift: 0.02, // the overall board's order can move a value at most 2% away from its tier value
   topSpotSoften: { WR: 0.5 }, // move a position's #1 curve spot this share of the way toward #2
   tagTierFrom: 15,   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
   keepRankOrder: true, // values never break your positional order (see step 7)
@@ -2236,6 +2242,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     players.forEach(p => {
       if (p.value == null && p.posNum != null && typeof modelValue === "function") {
         p.value = modelValue(p.pos, p.posNum, p.projRank, p.games);
+        p.rawValue = p.value;   // before tiers and order passes (used to re-tier other formats)
         p.modelValued = true;
       }
     });
@@ -2292,11 +2299,14 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
 
   // Overall order: where an editor has placed a player above someone with a higher
-  // value, their values meet in the middle (same method as keepRankOrder), so values
-  // always read high-to-low down the All rankings. Custom values are left alone.
+  // value, their values meet in the middle (same method as keepRankOrder). Tiers come
+  // first, so this can move a value at most overallMaxShift from its tier value: small
+  // disagreements are smoothed out, but the overall board can't break up a tier.
+  // Custom values are left alone.
   function keepOverallOrder(list) {
     if (!(typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) || list.length < 2) return;
     list.sort((a, b) => a.rank - b.rank);
+    const tierV = new Map(list.map(p => [p, p.value])), cap = Number(VALUE_MODEL.overallMaxShift);
     const blocks = [];
     list.forEach(p => {
       blocks.push({ sum: p.value, n: 1, members: [p] });
@@ -2312,6 +2322,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       b.members.forEach((p, k) => { p.value = mean * (1 + 0.005 * ((b.n - 1) / 2 - k)); });
     });
     for (let k = 1; k < list.length; k++) list[k].value = Math.min(list[k].value, list[k - 1].value);
+    if (cap >= 0) list.forEach(p => { const t = tierV.get(p); p.value = Math.max(t * (1 - cap), Math.min(t * (1 + cap), p.value)); });
   }
 
   // Tier adjustment for model values: pull each tier toward its average,
@@ -2330,6 +2341,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         if (isTag(t[0])) continue;
         const mean = t.reduce((sum, p) => sum + p.value, 0) / t.length;
         t.forEach(p => { p.value = mean + (p.value - mean) * (1 - blend); });
+        // tiermates stay close: squeeze a tier whose top is more than tierMaxSpread above its bottom
+        const maxSpread = Number(m.tierMaxSpread), hi = Math.max(...t.map(p => p.value)), lo = Math.min(...t.map(p => p.value));
+        if (maxSpread > 0 && lo > 0 && hi / lo - 1 > maxSpread) {
+          let f = 1;
+          for (let it = 0; it < 40; it++) {   // shrink deviations around the mean until the spread fits
+            const h = mean + (hi - mean) * f, l = mean + (lo - mean) * f;
+            if (h / l - 1 <= maxSpread) break;
+            f *= 0.9;
+          }
+          t.forEach(p => { p.value = mean + (p.value - mean) * f; });
+        }
       }
       let scale = 1, prev = null;
       group.forEach(p => {
@@ -4121,7 +4143,27 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         return Math.max(0, l0 + (value - b0) * scale);
       };
       const fac = playerFactors(vl.scoring_settings || {});
-      players.forEach(p => raw.set(p.id, EDIT_POS.includes(p.pos) && p.posNum != null ? shifted(p.pos, p.posNum, p.value) : p.value));
+      // Tiers first in every format: the format re-prices each positional TIER as a block (the average of
+      // what its rank spots are worth here vs on the base board), and every player in the tier moves by
+      // that same factor. Your tiers decide where the value drops are and how close tiermates stay; the
+      // format only decides how much each tier is worth. A league in the base format gets exactly the base values.
+      const mv = players.filter(p => p.modelValued && p.rawValue != null && p.posNum != null && EDIT_POS.includes(p.pos));
+      const rawF = p => {
+        const i = Math.min(p.posNum, base[p.pos].length) - 1, b0 = base[p.pos][i], l0 = lg[p.pos][i];
+        return l0 >= b0 ? p.rawValue + (l0 - b0) : b0 > 0 ? p.rawValue * l0 / b0 : 0;
+      };
+      const isTag = p => Number(p.tier) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+      const tierKey = p => (p.tier !== "" && p.tier != null && !isTag(p) ? p.pos + "|" + p.tier : null);
+      const tierMove = new Map();   // tier -> { b: base raw average, f: this format's raw average }
+      mv.forEach(p => { const k = tierKey(p); if (!k) return; const t = tierMove.get(k) || { b: 0, f: 0, n: 0 }; t.b += p.rawValue; t.f += rawF(p); t.n++; tierMove.set(k, t); });
+      const moveBy = (value, b, f) => (b > 0 ? value * f / b : value + f);
+      players.forEach(p => {
+        let v = p.value;
+        const t = EDIT_POS.includes(p.pos) && p.posNum != null ? tierMove.get(tierKey(p)) : null;
+        if (t) v = moveBy(p.value, t.b / t.n, t.f / t.n);
+        else if (EDIT_POS.includes(p.pos) && p.posNum != null) v = shifted(p.pos, p.posNum, p.value);   // untiered, tagged (e.g. Hurt)
+        raw.set(p.id, Math.max(0, v));
+      });
       // the position curve alone never reorders a position: keep it in your order first…
       for (const pos of EDIT_POS) {
         let prev = Infinity;
@@ -4154,13 +4196,16 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const rest = ranked.filter(p => p.rank == null).sort((a, b) => LG.adj.get(b.id) - LG.adj.get(a.id));
     stickyOrder(seq.concat(rest), p => LG.adj.get(p.id), FA.margin, Infinity).forEach((p, k) => LG.adjRank.set(p.id, k + 1));
   }
-  // Keeps the given order; a player moves up only past someone his value beats by more than `margin`
+  // Keeps the given order; a player moves up only past someone his value beats by more than `margin`,
+  // beyond any edge he already had on the base board (tiers can put a value above an overall rank there;
+  // only what the format changes may reorder)
   function stickyOrder(list, val, margin, maxMove) {
     const seq = list.slice(), home = new Map(list.map((p, i) => [p, i]));
+    const edge = (x, y) => (y.value > 0 ? Math.max(1, x.value / y.value) : 1);
     for (let i = 1; i < seq.length; i++) {
       for (let j = i; j > 0; j--) {
         const x = seq[j], y = seq[j - 1];
-        if (!(val(x) > val(y) * (1 + margin))) break;
+        if (!(val(x) > val(y) * (1 + margin) * edge(x, y))) break;
         if (home.get(x) - (j - 1) > maxMove || j - home.get(y) > maxMove) break;
         seq[j] = y; seq[j - 1] = x;
       }
