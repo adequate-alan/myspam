@@ -1362,6 +1362,83 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tf-why span { display: block; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
 .tf-foot { display: flex; justify-content: flex-end; margin-top: auto; }
 
+/* ---------- 3-team trades ---------- */
+.side.C { --side-color: var(--cream); }
+@media (min-width: 1000px) { .trade-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 760px) and (max-width: 999px) { .trade-grid.three { grid-template-columns: 1fr 1fr; } }
+.add-third, .remove-third { align-self: flex-start; }
+.add-third {
+  display: block; margin: 10px 0 0 auto; background: none; border: 0; padding: 4px 0; cursor: pointer;
+  font-size: 0.7rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.add-third:hover { color: var(--cream); }
+.remove-third { font-size: 0.72rem; }
+.roster .n:has(.from-menu) { white-space: normal; }
+.roster .n .n-link { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.from-menu { display: flex; align-items: center; gap: 4px; margin: 3px 0 0; font-size: 0.66rem; color: var(--muted); font-weight: 550; }
+.from-menu select { background: var(--control); color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; font-size: 0.7rem; padding: 1px 4px; max-width: 120px; }
+.tr-player.tr3 { cursor: default; }
+.tr-send { flex: none; border: 1px solid var(--line); background: var(--control); color: var(--ink-2); border-radius: 4px; padding: 2px 7px; font-size: 0.66rem; font-weight: 650; cursor: pointer; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-send:hover:not(:disabled) { border-color: var(--gold); color: var(--cream); }
+.tr-send:disabled { opacity: 0.4; cursor: default; }
+.three-verdicts { display: flex; flex-direction: column; gap: 10px; }
+.tv3-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(130px, auto) minmax(0, 1.4fr); align-items: baseline; gap: 6px 16px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+.tv3-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.tv3-name { font-weight: 750; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv3-name.side-A { color: var(--side-a); } .tv3-name.side-B { color: var(--side-b); } .tv3-name.side-C { color: var(--cream); }
+.tv3-verdict { font-weight: 850; font-stretch: 110%; font-size: 1.15rem; text-transform: uppercase; color: var(--cream); }
+.tv3-verdict.up { color: var(--gold-bright); } .tv3-verdict.down { color: var(--rose); }
+.tv3-nums { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lc-cols.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bd-table.three { max-width: 720px; }
+.bd-table.three td { width: 22%; }
+.why3 { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--ink); line-height: 1.5; }
+
+/* ---------- Trade finder (league-wide) ---------- */
+.tf-src { margin-bottom: 8px; }
+.tf-src .chip-btn { height: 28px; font-size: 0.68rem; }
+.tf-pick-two { display: flex; gap: 8px; }
+.tf-pick-two .select { flex: 1 1 0; min-width: 0; }
+.tf-search { position: relative; }
+.tf-search .search { width: 100%; margin: 0; }
+.tf-search .results { z-index: 6; }
+.tf-search .results .r-name { display: flex; flex-direction: column; }
+.tf-search .results .owner { margin-left: 0; display: block; }
+.tf-chosen { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.86rem; }
+.tf-chosen .pos { min-width: 34px; height: 19px; font-size: 0.62rem; }
+.tf-check.sm { height: auto; margin-top: 8px; font-size: 0.78rem; }
+.tf-more { flex-basis: 100%; }
+.tf-more summary { cursor: pointer; list-style: none; font-size: 0.66rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.tf-more summary::-webkit-details-marker { display: none; }
+.tf-more summary::before { content: "+ "; color: var(--gold); }
+.tf-more[open] summary::before { content: "– "; }
+.tf-more-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 18px; margin-top: 10px; }
+.tf-results-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; margin-bottom: 14px; }
+.tf-lead { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.tf-target { display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; }
+.tf-target b { color: var(--cream); }
+.tf-target .owner { margin-left: 4px; }
+.tf-persp { font-size: 0.82rem; color: var(--muted); }
+.tf-sort { display: inline-flex; align-items: center; gap: 8px; }
+.tf-size { flex: none; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tf-vline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.tf-verdict-big { font-weight: 850; font-stretch: 110%; font-size: 1.25rem; line-height: 1.1; text-transform: uppercase; color: var(--cream); }
+.tf-verdict-big.you { color: var(--gold-bright); } .tf-verdict-big.them { color: var(--rose); }
+.tf-verdict-big.sm { font-size: 0.95rem; }
+.tf-diff { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tf-own { color: var(--muted); } .tf-own.mine { color: var(--gold); }
+.tf-full { border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.tf-full ul { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--ink-2); }
+.tf-full .tf-nums { border-top: 0; padding-top: 0; }
+.tf-foot { justify-content: space-between; align-items: center; gap: 10px; }
+.tf-card.tf3 { grid-column: 1 / -1; }
+.tf3-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.tf3-team { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-2); border-radius: var(--radius-sm); min-width: 0; }
+.tf3-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tf3-name b { color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tf3-line { display: flex; flex-direction: column; gap: 4px; }
+.tf3-ul { list-style: none; margin: 0; padding: 0; }
+
 /* ---------- Footer, dialog, toast ---------- */
 footer { border-top: 1px solid var(--line-soft); padding-block: 22px 40px; color: var(--muted); font-size: 0.8rem; }
 .footer-row { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
@@ -1464,7 +1541,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   .side { padding: 18px; }
   .ri-row { grid-template-columns: 1fr auto; }
   .ri-row .ri-bar { grid-column: 1 / -1; }
-  .ri-verdicts, .lc-cols { grid-template-columns: 1fr; }
+  .ri-verdicts, .lc-cols, .lc-cols.three { grid-template-columns: 1fr; }
+  .tv3-row { grid-template-columns: 1fr auto; }
+  .tv3-nums { grid-column: 1 / -1; }
+  .tf3-grid { grid-template-columns: 1fr; }
+  .tf-controls .tf-player { flex: 1 1 100%; }
+  .tf-results-head { align-items: flex-start; }
   .needs { padding: 12px 14px; }
   .needs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
   .pm-id { gap: 14px; padding-right: 44px; }
@@ -1624,17 +1706,34 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       </div>
     </div>
     <div class="tf-controls">
-      <label class="tf-field tf-player"><span class="ctl-label">Player</span><select class="select" id="tf-player"></select></label>
+      <div class="tf-field tf-player"><span class="ctl-label">Player</span>
+        <div class="view-toggle tf-src" id="tf-src" role="group" aria-label="Player source">
+          <button class="chip-btn" type="button" data-src="mine" aria-pressed="true">My team</button><button class="chip-btn" type="button" data-src="any" aria-pressed="false">Any player</button><button class="chip-btn" type="button" data-src="team" aria-pressed="false">By team</button>
+        </div>
+        <div id="tf-pick"></div>
+      </div>
+      <label class="tf-field"><span class="ctl-label">From team</span><select class="select" id="tf-from"></select></label>
+      <label class="tf-field"><span class="ctl-label">Against</span><select class="select" id="tf-against"></select></label>
       <label class="tf-field"><span class="ctl-label" id="tf-pos-label">Position wanted</span><select class="select" id="tf-pos">
         <option value="ANY">Any position</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option></select></label>
-      <label class="tf-field"><span class="ctl-label">Team</span><select class="select" id="tf-team"></select></label>
-      <label class="tf-field"><span class="ctl-label">Max value difference</span><select class="select" id="tf-gap">
-        <option value="5">5%</option><option value="10" selected>10%</option><option value="15">15%</option><option value="20">20%</option></select></label>
-      <div class="tf-field"><span class="ctl-label">Trade size</span>
-        <div class="view-toggle" id="tf-size" role="group" aria-label="Trade size">
-          <button class="chip-btn" type="button" data-size="1" aria-pressed="false">1-for-1 only</button><button class="chip-btn" type="button" data-size="pkg" aria-pressed="true">Packages allowed</button>
-        </div></div>
-      <label class="tf-check"><input type="checkbox" id="tf-fair"> Fair trades only</label>
+      <div class="tf-field"><span class="ctl-label">Trade type</span>
+        <div class="view-toggle" id="tf-size" role="group" aria-label="Trade type">
+          <button class="chip-btn" type="button" data-size="1" aria-pressed="false">1-for-1</button><button class="chip-btn" type="button" data-size="pkg" aria-pressed="true">Packages</button>
+        </div>
+        <label class="tf-check sm"><input type="checkbox" id="tf-three"> Include 3-team trades</label>
+      </div>
+      <details class="tf-more">
+        <summary>More filters</summary>
+        <div class="tf-more-row">
+          <label class="tf-field"><span class="ctl-label">Max value difference</span><select class="select" id="tf-gap">
+            <option value="5">5%</option><option value="10" selected>10%</option><option value="15">15%</option><option value="20">20%</option></select></label>
+          <label class="tf-check"><input type="checkbox" id="tf-fair"> Fair trades only</label>
+        </div>
+      </details>
+    </div>
+    <div class="tf-results-head">
+      <div class="tf-lead" id="tf-lead"></div>
+      <label class="tf-sort"><span class="ctl-label">Sort</span><select class="select" id="tf-sort"></select></label>
     </div>
     <div id="tf-body"></div>
   </section>
@@ -1666,6 +1765,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         <select class="select tc-sel" id="team-A" aria-label="Left team"></select>
         <span class="tc-vs">vs</span>
         <select class="select tc-sel" id="team-B" aria-label="Right team"></select>
+        <span class="tc-teamC" id="tc-teamC" hidden><span class="tc-vs">+</span><select class="select tc-sel" id="team-C" aria-label="Third team"></select></span>
       </span>
       <span class="tc-badge" id="tc-badge"></span>
     </div>
@@ -1700,11 +1800,28 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         <button class="roster-toggle" type="button" id="rtoggle-B" aria-expanded="false" aria-controls="teamroster-B" hidden>Add from roster</button>
         <div class="team-roster" id="teamroster-B" hidden></div>
       </div>
+      <div class="side C" id="side-C" hidden>
+        <div class="side-head">
+          <h2 class="side-title" id="side-title-C">Team C <small>gets</small></h2>
+          <div class="side-total">Total<b id="total-C">0</b></div>
+        </div>
+        <p class="side-needs" id="needs-C" hidden></p>
+        <ul class="roster" id="roster-C"></ul>
+        <div class="picker">
+          <input class="search" id="search-C" type="search" placeholder="Search players" autocomplete="off" aria-label="Add a player to the third team" style="width:100%">
+          <ul class="results" id="results-C" hidden></ul>
+        </div>
+        <button class="roster-toggle" type="button" id="rtoggle-C" aria-expanded="false" aria-controls="teamroster-C" hidden>Add from roster</button>
+        <div class="team-roster" id="teamroster-C" hidden></div>
+        <button class="footer-link remove-third" type="button" id="remove-third">Remove third team</button>
+      </div>
     </div>
+    <button class="add-third" type="button" id="add-third">+ Add third team</button>
 
     <div class="verdict" aria-live="polite">
       <div class="verdict-top">
         <div class="verdict-main">
+          <div class="three-verdicts" id="three-verdicts" hidden></div>
           <h2 id="verdict-title">Build a trade</h2>
           <p class="verdict-gap" id="verdict-gap" hidden></p>
           <p class="verdict-sub" id="verdict-sub"></p>
@@ -1714,7 +1831,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           <button class="btn" id="clear-btn" type="button">Clear</button>
         </div>
       </div>
-      <div>
+      <div id="meter-wrap">
         <div class="meter idle" id="meter"><div class="ma" id="meter-a" style="width:50%"></div><div class="mb"></div></div>
         <div class="meter-labels"><span id="score-A">You</span><span id="score-B">They</span></div>
       </div>
@@ -2153,7 +2270,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 
   /* ---------- Trade calculator ---------- */
   const sides = { A: [], B: [] };
-  const inTrade = id => sides.A.includes(id) || sides.B.includes(id);
+  sides.C = [];
+  const origin = new Map();   // 3-team trades: player id -> side that sends him
+  const TC3 = { on: false };
+  const inTrade = id => sides.A.includes(id) || sides.B.includes(id) || sides.C.includes(id);
   // Universal mode (no league): base SPMetrics values, any players. League mode: a synced Sleeper league.
   const TC = { mode: (() => { try { return localStorage.getItem("spm_tc_mode") || "league"; } catch (e) { return "league"; } })() };
   const saveTc = () => { try { localStorage.setItem("spm_tc_mode", TC.mode); } catch (e) {} };
@@ -2224,6 +2344,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
   setupPicker("A");
   setupPicker("B");
+  setupPicker("C");
 
   function runModel(aIds, bIds, val = tv, withNeeds = val === tv) {
     try {
@@ -2253,11 +2374,15 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("roster-" + side).innerHTML = ids.length ? ids.map(id => {
       const p = byId.get(id);
       return `<li>${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
-        <span class="n">${nameLink(p.sleeperId, p.name, "n-link")}${ownerTag(p)}</span><span class="v">${fmt(tv(p))}</span>
+        <span class="n">${nameLink(p.sleeperId, p.name, "n-link")}${TC3.on ? fromMenu(id, side) : ownerTag(p)}</span><span class="v">${fmt(tv(p))}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
     }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
   }
 
+  function fromMenu(id, recv) {
+    const o = originOf(id, recv);
+    return `<label class="from-menu">from <select data-from="${id}" data-recv="${recv}" aria-label="Who sends this player">${others3(recv).map(x => `<option value="${x}"${x === o ? " selected" : ""}>${esc(sideName(x))}</option>`).join("")}</select></label>`;
+  }
   // Name for a side in verdicts: the Sleeper team picked for it (league mode), or "Team A" / "Team B"
   function sideTeam(side) {
     if (!tcLeague()) return null;
@@ -2268,6 +2393,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function sideName(side) {
     const t = sideTeam(side);
     if (t) return t.name;
+    if (TC3.on) return side === "A" ? (tcLeague() ? "Team A" : "You") : "Team " + side;
     if (!tcLeague()) return side === "A" ? "You" : "They";
     return side === "A" ? "Team A" : "Other team";
   }
@@ -2306,7 +2432,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* League context bar: universal mode (any players, base SPMetrics values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
   const infoIcon = (text, label = "More info") => `<button class="info" type="button" aria-label="${esc(label)}" data-info="${esc(text)}">i</button>`;
-  const TC_UI = { open: { A: false, B: false }, balance: false };
+  const TC_UI = { open: { A: false, B: false, C: false }, balance: false };
   function renderTradeContext() {
     const sel = $("tc-league"), on = tcLeague();
     const leagues = sl && sl.leagues ? sl.leagues : [];
@@ -2320,11 +2446,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       if (!$("team-A").value && LG.myRosterId != null && !$("team-B").value) $("team-A").value = String(LG.myRosterId);
     }
     $("tc-teams").hidden = !on;
+    $("tc-teamC").hidden = !(on && TC3.on);
     $("tc-badge").innerHTML = on
       ? `<span class="tc-dot" aria-hidden="true"></span>League context ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
       : `SPMetrics values ${infoIcon("Base SPMetrics values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick a Sleeper league to use its rosters and scoring.", "About values")}`;
     $("tc-badge").classList.toggle("on", on);
-    ["A", "B"].forEach(s => {
+    ["A", "B", "C"].forEach(s => {
       $("search-" + s).placeholder = on ? "Search any player" : "Search players";
       if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; $("rtoggle-" + s).hidden = true; }
     });
@@ -2340,7 +2467,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   // Subtle needs line in each card: league position ranks, or your roster-needs settings
   function renderCardNeeds() {
     const ev = tcLeague() ? evaluateTeams() : null;
-    ["A", "B"].forEach(s => {
+    (TC3.on ? ["A", "B", "C"] : ["A", "B"]).forEach(s => {
       const el = $("needs-" + s), t = sideTeam(s);
       let needs = [], strong = [], tip = "";
       if (t && ev && ev.byRoster.has(String(t.rosterId))) {
@@ -2360,6 +2487,13 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function tcStray() {
     if (!tcLeague()) return [];
     const out = [];
+    if (TC3.on) {
+      SIDES3.forEach(r => sides[r].forEach(id => {
+        const g = originOf(id, r), t = sideTeam(g), p = byId.get(id);
+        if (t && p && !(t.roster.players || []).map(String).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
+      }));
+      return out;
+    }
     [["A", "B"], ["B", "A"]].forEach(([getter, giver]) => {
       const t = sideTeam(giver); if (!t) return;
       const ids = new Set((t.roster.players || []).map(String));
@@ -2557,6 +2691,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
 
   function renderTrade() {
+    const three = TC3.on;
+    document.querySelector(".trade-grid").classList.toggle("three", three);
+    $("side-C").hidden = !three; $("add-third").hidden = three;
+    $("three-verdicts").hidden = !three;
+    ["verdict-title", "verdict-gap", "verdict-sub", "meter-wrap", "swap-btn"].forEach(id => { $(id).hidden = three; });
+    if (three) { renderTrade3(); return; }
     renderRoster("A");
     renderRoster("B");
     renderTradeContext();
@@ -2663,6 +2803,171 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("balance-btn").setAttribute("aria-expanded", shown && TC_UI.balance);
     $("balance-btn").textContent = TC_UI.balance ? "Hide suggestions" : "Balance this trade";
   }
+  /* ---------- 3-team trades (off by default) ----------
+     sides.X = players team X receives; origin tells which team sends each player. Every team
+     is judged on its own: value received vs value sent, roster impact and lineup changes. */
+  const SIDES3 = ["A", "B", "C"];
+  const others3 = s => SIDES3.filter(x => x !== s);
+  function setThree(on) {
+    TC3.on = !!on;
+    if (!TC3.on) {
+      sides.A = sides.A.filter(id => origin.get(id) !== "C");
+      sides.B = sides.B.filter(id => origin.get(id) !== "C");
+      sides.C = []; origin.clear(); TC_UI.open.C = false;
+    }
+  }
+  // Which team sends a player: chosen in the card, else his owner among the other two teams, else the next team
+  function originOf(id, recv) {
+    const o = origin.get(id);
+    if (o && o !== recv) return o;
+    const p = byId.get(id), ow = p && tcLeague() ? LG.ownerOf.get(p.id) : null;
+    if (ow) { const s = others3(recv).find(x => { const t = sideTeam(x); return t && t.rosterId === ow.rosterId; }); if (s) return s; }
+    return { A: "B", B: "C", C: "A" }[recv];
+  }
+  const sentBy = s => SIDES3.flatMap(r => (r === s ? [] : sides[r].filter(id => originOf(id, r) === s)));
+
+  function threeResults() {
+    const out = {};
+    for (const s of SIDES3) {
+      const recv = sides[s], sent = sentBy(s);
+      const m = runModel(recv, sent);
+      const more = recv.length && sent.length ? pctMore(m.a, m.b) : null;
+      out[s] = { s, recv, sent, m, more, outcome: more == null ? null : teamOutcome(more, m.a >= m.b) };
+    }
+    return out;
+  }
+  function rosterContext3() {
+    const d = activeData(), T = Object.fromEntries(SIDES3.map(s => [s, sideTeam(s)]));
+    if (!d || SIDES3.some(s => !T[s]) || new Set(SIDES3.map(s => T[s].rosterId)).size < 3) return null;
+    const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
+    const byVal = (a, b) => dv(b) - dv(a);
+    const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
+    const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(x => !o.has(x)).map(x => map.get(x)).filter(Boolean); };
+    const strength = pool => { const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench); L.cut = sorted.slice(limit); L.labels = slotLabels(L); L.filled = L.starters.length; return L; };
+    const R = {};
+    for (const s of SIDES3) {
+      const t = T[s], before = healthy(t), inc = sides[s].map(id => byId.get(id)), out = sentBy(s).map(id => byId.get(id));
+      const incOk = inc.filter(p => !outSet(T[originOf(p.id, s)]).has(String(p.sleeperId)));
+      const B = strength(before), A = strength(before.filter(p => !out.includes(p)).concat(incOk));
+      R[s] = { t, before: B, after: A, incoming: inc, outgoing: out.filter(p => before.includes(p)), impact: B.score > 0 ? 100 * (A.score - B.score) / B.score : 0 };
+    }
+    const ev = evaluateTeams(), rest = ev.list.filter(x => !SIDES3.some(s => x.team === T[s]));
+    for (const s of SIDES3) {
+      const X = R[s]; X.places = {};
+      for (const pos of EDIT_POS) {
+        const place = (val, key) => 1 + rest.filter(x => x.room[pos] > val).length + others3(s).filter(o => R[o][key].room[pos] > val).length;
+        X.places[pos] = [place(X.before.room[pos], "before"), place(X.after.room[pos], "after")];
+      }
+      X.changes = lineupChanges(X);
+    }
+    return { R, n: ev.n, league: d.league };
+  }
+
+  function renderTrade3() {
+    SIDES3.forEach(s => renderRoster(s));
+    renderTradeContext();
+    renderTeamRosters();
+    if (!skipNeedsRender) renderNeeds();
+    const names = Object.fromEntries(SIDES3.map(s => [s, sideName(s)]));
+    SIDES3.forEach(s => {
+      const t = $("side-title-" + s), n = names[s];
+      t.innerHTML = `<span class="st-name">${esc(n)}</span> <small>${isYouThey(n) ? "get" : "gets"}</small>`;
+      $("total-" + s).textContent = fmt(sides[s].reduce((a, id) => a + tv(byId.get(id)), 0));
+    });
+    const res = threeResults(), box = $("three-verdicts");
+    const any = SIDES3.some(s => sides[s].length);
+    if (!any) {
+      box.innerHTML = `<p class="verdict-sub">Add what each of the three teams gets. Pick who sends each player with the “from” menu.</p>`;
+      ["tc-why-body", "tc-breakdown-body"].forEach(id => { $(id).innerHTML = `<p class="pp-note">Add players to see this.</p>`; });
+      $("tc-analysis").hidden = true; $("balance-btn").hidden = true; $("balance").hidden = true; $("tc-impact-hint").textContent = "";
+      return;
+    }
+    const ctx = tcLeague() ? rosterContext3() : null;
+    const short = s => {
+      const r = res[s];
+      if (!r.recv.length) return "Receives nothing yet";
+      if (!r.sent.length) return "Sends nothing yet";
+      return `Receives ${fmt(r.m.a)} · sends ${fmt(r.m.b)} · ${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}%`;
+    };
+    box.innerHTML = SIDES3.map(s => {
+      const o = res[s].outcome;
+      return `<div class="tv3-row"><span class="tv3-name side-${s}">${esc(names[s])}</span>
+        <span class="tv3-verdict${o ? (o.fair ? " fair" : o.ahead ? " up" : " down") : ""}">${esc(o ? o.label : "–")}</span>
+        <span class="tv3-nums">${esc(short(s))}</span></div>`;
+    }).join("");
+    // Why: what each team accomplished
+    const why = SIDES3.map(s => {
+      const r = res[s], who = names[s], you = who === "You";
+      const recvN = r.recv.map(id => byId.get(id).name).join(" + ") || "nothing", sentN = r.sent.map(id => byId.get(id).name).join(" + ") || "nothing";
+      let line = `${who} ${you ? "get" : "gets"} ${recvN} for ${sentN}`;
+      if (ctx) {
+        const X = ctx.R[s], ms = EDIT_POS.map(pos => ({ pos, b: X.places[pos][0], a: X.places[pos][1] })), up = bestUp(ms), down = worstDown(ms);
+        const st = X.incoming.filter(p => X.after.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
+        line += up ? `: ${up.pos} room ${ordinal(up.b)} → ${ordinal(up.a)}${down ? `, ${down.pos} room ${ordinal(down.b)} → ${ordinal(down.a)}` : ""}` : "";
+        if (st) line += `; ${st.name} starts at ${X.after.labels.get(st.id)}`;
+        line += ` (${X.impact >= 0 ? "+" : "−"}${Math.abs(X.impact).toFixed(1)}% roster impact).`;
+      } else line += r.outcome ? ` (${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}% in value).` : ".";
+      return `<li>${esc(line)}</li>`;
+    }).join("");
+    $("tc-why-body").innerHTML = `<ul class="why3">${why}</ul><p class="pp-note">Each team is judged on its own: what it receives against what it sends.</p>`;
+    // Roster impact
+    if (ctx) {
+      const maxAbs = Math.max(4, ...SIDES3.map(s => Math.abs(ctx.R[s].impact)));
+      const bar = v => `<span class="ri-bar"><span class="${v >= 0 ? "ri-up" : "ri-down"}" style="width:${(50 * Math.min(1, Math.abs(v) / maxAbs)).toFixed(1)}%"></span></span>`;
+      const imp = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+      $("tc-analysis").innerHTML = `<div class="ri">${SIDES3.map(s => `<div class="ri-row"><span class="ri-name side-${s}">${esc(names[s])}</span>
+          <span class="ri-txt"><b>${imp(ctx.R[s].impact)}</b> roster impact</span>${bar(ctx.R[s].impact)}</div>`).join("")}</div>
+        <h4 class="sub-label">Lineup changes</h4>
+        <div class="lc-cols three">${SIDES3.map(s => `<div class="lc-col"><h4>${esc(names[s])}</h4>${ctx.R[s].changes.length ? `<ul>${ctx.R[s].changes.map(c => `<li class="lc-${c.kind}">${esc(c.text)}</li>`).join("")}</ul>` : `<p class="pp-note">No lineup changes.</p>`}</div>`).join("")}</div>`;
+      $("tc-analysis").hidden = false;
+      const best = SIDES3.slice().sort((a, b) => ctx.R[b].impact - ctx.R[a].impact)[0];
+      $("tc-impact-hint").textContent = `· Biggest lineup gain: ${names[best]}`;
+    } else {
+      $("tc-analysis").hidden = !tcLeague();
+      $("tc-analysis").innerHTML = tcLeague() ? `<p class="pp-note">Pick all three teams above to see each lineup change.</p>` : "";
+      $("tc-impact-hint").textContent = tcLeague() ? "Pick all three teams" : needsActive() ? "Needs set" : "";
+    }
+    // Value breakdown
+    const raw = list => list.reduce((a, id) => a + tv(byId.get(id)), 0);
+    const cell = (s, f) => `<td>${f(res[s])}</td>`;
+    const sign = v => (Math.round(v) === 0 ? "–" : `${v > 0 ? "+" : "−"}${fmt(Math.abs(v))}`);
+    $("tc-breakdown-body").innerHTML = `<table class="bd-table three"><thead><tr><th scope="col"></th>${SIDES3.map(s => `<th scope="col">${esc(names[s])}</th>`).join("")}</tr></thead><tbody>
+      <tr><th scope="row">Received (raw)</th>${SIDES3.map(s => cell(s, r => fmt(raw(r.recv)))).join("")}</tr>
+      <tr><th scope="row">Sent (raw)</th>${SIDES3.map(s => cell(s, r => fmt(raw(r.sent)))).join("")}</tr>
+      <tr><th scope="row">Adjustments ${infoIcon("Best-player bonus and waiver adjustment when a team receives a different number of players than it sends, plus your roster needs.", "About adjustments")}</th>${SIDES3.map(s => cell(s, r => sign((r.m.a - raw(r.recv)) - (r.m.b - raw(r.sent))))).join("")}</tr>
+      <tr class="bd-total"><th scope="row">Net</th>${SIDES3.map(s => cell(s, r => (r.recv.length && r.sent.length ? sign(r.m.a - r.m.b) : "–"))).join("")}</tr>
+      </tbody></table>`;
+    // Balance: help the team that's losing the most, with players from the other two teams
+    const losers = SIDES3.filter(s => res[s].outcome && !res[s].outcome.ahead && !res[s].outcome.fair).sort((a, b) => res[b].more - res[a].more);
+    $("balance-btn").hidden = true; $("balance").hidden = true;
+    if (!losers.length) return;
+    // objective: the sum of squared gaps across the three teams (helping the loser without hurting the others)
+    const W = losers[0], worst = state => SIDES3.reduce((a, s) => a + (state[s].more == null ? 0 : state[s].more ** 2), 0);
+    const need = res[W].m.b - res[W].m.a, cand = [];
+    const tryAdd = (p, o) => {
+      sides[W].push(p.id); origin.set(p.id, o);
+      const st = threeResults(); sides[W].pop(); origin.delete(p.id);
+      return { p, o, worst: worst(st), st };
+    };
+    for (const o of others3(W)) {
+      const t = sideTeam(o);
+      const pool = t ? (t.roster.players || []).map(String).map(x => bySleeper().get(x)).filter(p => p && !inTrade(p.id))
+        : players.filter(p => p.pos !== "PICK" && !inTrade(p.id) && tv(p) >= 0.3 * need && tv(p) <= 1.6 * need).slice(0, 40);
+      pool.filter(p => tv(p) <= need * 1.8).forEach(p => cand.push(tryAdd(p, o)));
+    }
+    const nowWorst = worst(res);
+    const picks = cand.filter(c => c.worst < nowWorst).sort((a, b) => a.worst - b.worst).slice(0, 4);
+    if (!picks.length) return;
+    $("balance-sub").textContent = `${names[W]} gives up the most. Redirect one of these to ${isYouThey(names[W]) ? "you" : names[W]}:`;
+    $("balance-list").innerHTML = picks.map(c => `<button class="suggest bal" type="button" data-ids="${c.p.id}" data-side="${W}" data-origin="${c.o}">
+      <span class="bal-players"><span class="bal-p">${face(c.p.sleeperId, c.p.name, "xs")}<span class="pos ${esc(c.p.pos)}">${esc(c.p.posRank)}</span><span class="bal-n">${esc(c.p.name)}<small>from ${esc(names[c.o])}</small></span><span class="r-val">+${fmt(tv(c.p))}</span></span></span>
+      <span class="bal-result">→ ${esc(names[W])} ${c.st[W].m.a >= c.st[W].m.b ? "+" : "−"}${c.st[W].more.toFixed(1)}% · ${esc(c.st[W].outcome.label)}</span></button>`).join("");
+    $("balance-btn").hidden = false;
+    $("balance").hidden = !TC_UI.balance;
+    $("balance-btn").setAttribute("aria-expanded", TC_UI.balance);
+    $("balance-btn").textContent = TC_UI.balance ? "Hide suggestions" : "Balance this trade";
+  }
+
   function fitLine(ctx, names) {
     const diff = ctx.A.impact - ctx.B.impact;
     if (Math.abs(diff) < 2) return "";
@@ -2744,7 +3049,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   $("balance-btn").addEventListener("click", () => { TC_UI.balance = !TC_UI.balance; renderTrade(); });
   $("balance-list").addEventListener("click", e => {
     const b = e.target.closest("button[data-ids]"); if (!b) return;
-    b.dataset.ids.split(",").forEach(id => sides[b.dataset.side].push(Number(id)));
+    b.dataset.ids.split(",").forEach(id => { sides[b.dataset.side].push(Number(id)); if (b.dataset.origin) origin.set(Number(id), b.dataset.origin); });
     renderTrade();
   });
   $("swap-btn").addEventListener("click", () => {
@@ -2752,7 +3057,13 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const a = $("team-A").value; $("team-A").value = $("team-B").value; $("team-B").value = a;   // teams follow their players
     renderTrade();
   });
-  $("clear-btn").addEventListener("click", () => { sides.A = []; sides.B = []; renderTrade(); });
+  $("clear-btn").addEventListener("click", () => { sides.A = []; sides.B = []; sides.C = []; origin.clear(); renderTrade(); });
+  $("add-third").addEventListener("click", () => { setThree(true); renderTrade(); });
+  $("remove-third").addEventListener("click", () => { setThree(false); renderTrade(); });
+  ["A", "B", "C"].forEach(s => $("roster-" + s).addEventListener("change", e => {
+    const sel = e.target.closest("[data-from]"); if (!sel) return;
+    origin.set(Number(sel.dataset.from), sel.value); renderTrade();
+  }));
 
   /* ---------- Editor mode ----------
      Editors are GitHub accounts with write access to SITE.repo. Edits live in a
@@ -3341,7 +3652,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     document.body.classList.toggle("has-league", !!d);
     $("league-controls").hidden = !d;
     if (!d) {
-      ["A", "B"].forEach(s => { $("teamroster-" + s).hidden = true; });
+      ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
       if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
       return;
     }
@@ -3357,7 +3668,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     of.innerHTML = opts.join("");
     if (![...of.options].some(o => o.value === LG.ownerFilter)) LG.ownerFilter = "all";
     of.value = LG.ownerFilter;
-    ["A", "B"].forEach(s => {
+    ["A", "B", "C"].forEach(s => {
       const sel = $("team-" + s), cur = sel.value;
       sel.innerHTML = `<option value="">Pick a team</option>` + LG.teams.map(t =>
         `<option value="${t.rosterId}">${esc(t.mine ? "My Team · " + t.name : t.name)}</option>`).join("");
@@ -3600,7 +3911,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (ot) { openTeam(ot.dataset.openTeam); return; }
     const b = e.target.closest("[data-roster]");
     if (!b || LG.myRosterId == null) return;
-    TC.mode = "league"; saveTc(); $("team-A").value = String(LG.myRosterId); $("team-B").value = b.dataset.roster;
+    TC.mode = "league"; saveTc(); setThree(false); $("team-A").value = String(LG.myRosterId); $("team-B").value = b.dataset.roster;
     sides.A = []; sides.B = [];
     renderTeamRosters(); renderTrade();
     showTab("trade"); history.replaceState(null, "", "#trade");
@@ -3789,7 +4100,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (row) { openTeam(row.dataset.team); return; }
     if (back) { leagueTeam = null; renderLeague(); window.scrollTo({ top: 0 }); return; }
     if (tw && LG.myRosterId != null) {
-      TC.mode = "league"; saveTc(); $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
+      TC.mode = "league"; saveTc(); setThree(false); $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
       sides.A = []; sides.B = [];
       renderTeamRosters(); renderTrade();
       showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
@@ -3829,7 +4140,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* Trade calculator: pick teams and click players from their rosters */
   function renderTeamRosters() {
     const map = bySleeper();
-    ["A", "B"].forEach(s => {
+    (TC3.on ? ["A", "B", "C"] : ["A", "B"]).forEach(s => {
       const box = $("teamroster-" + s), tog = $("rtoggle-" + s), id = $("team-" + s).value;
       const team = tcLeague() && id ? LG.teams.find(t => String(t.rosterId) === id) : null;
       const open = !!team && TC_UI.open[s];
@@ -3840,6 +4151,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       if (!open) { box.innerHTML = ""; return; }
       const entries = (team.roster.players || []).map(sid => rosterEntry(sid, map))
         .sort((a, b) => (b.ranked ? tv(b.p) : -1) - (a.ranked ? tv(a.p) : -1));
+      if (TC3.on) {
+        box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Send to</span></div>
+          <div class="tr-list">${entries.filter(e => e.ranked).map(e => `<div class="tr-player tr3${inTrade(e.p.id) ? " in" : ""}">${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span>
+            ${others3(s).map(x => `<button class="tr-send" type="button" data-id="${e.p.id}" data-side="${x}" data-origin="${s}"${inTrade(e.p.id) ? " disabled" : ""} title="Send to ${esc(sideName(x))}">${esc(shortName(sideName(x)))}</button>`).join("")}</div>`).join("")}</div>`;
+        return;
+      }
       box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Sends to ${esc(sideName(s === "A" ? "B" : "A"))}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
           ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s === "A" ? "B" : "A"}"${inTrade(e.p.id) ? " disabled" : ""}>
@@ -3847,13 +4164,15 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           : `<div class="tr-player unranked">${face(e.sid, e.name, "sm")}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">Unranked</span></div>`).join("")}</div>`;
     });
   }
-  ["A", "B"].forEach(s => {
+  const shortName = n => (n.length > 10 ? n.split(/\s+/)[0].slice(0, 10) : n);
+  ["A", "B", "C"].forEach(s => {
     $("rtoggle-" + s).addEventListener("click", () => { TC_UI.open[s] = !TC_UI.open[s]; renderTeamRosters(); });
     $("team-" + s).addEventListener("change", () => renderTrade());
     $("teamroster-" + s).addEventListener("click", e => {
       const b = e.target.closest("button[data-id]");
       if (!b) return;
       sides[b.dataset.side].push(Number(b.dataset.id));
+      if (b.dataset.origin) origin.set(Number(b.dataset.id), b.dataset.origin);
       renderTrade();
     });
   });
@@ -4542,14 +4861,20 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
 
   /* ---------- Trade finder ----------
-     Searches every other roster in the connected league for trades around one player:
-     1-for-1, 2-for-1, 1-for-2 and 2-for-2, within the chosen value gap (adjusted values from
-     the trade model). Raw value closeness is the main factor; how each team's best lineup and
-     position rooms change (league slots, superflex, TE premium via league values, bench
-     depth and roster spots) decides which value-matched ideas are shown first. */
-  const TF = { sid: null, pos: "ANY", team: "ANY", gap: 10, size: "pkg", fair: false, ideas: [] };
+     League-wide trade discovery around one player. The "starting team" is whoever owns him
+     (or a team you pick): if it owns him, the finder looks for trades sending him out; if not,
+     for ways that team could get him from his owner. 1-for-1, 2-for-1, 1-for-2 and 2-for-2
+     within the chosen value gap (the trade calculator's adjusted values). Value closeness comes
+     first; how each team's best lineup and position rooms change (league slots, superflex, TE
+     premium via league values, bench depth, roster spots) ranks the value-matched ideas.
+     Optional 3-team ideas only appear when every team improves its lineup and the direct
+     2-team swap wouldn't work for the partner. */
+  const TF = { src: "mine", sid: null, srcTeam: "", from: "auto", against: "ANY", pos: "ANY", size: "pkg", three: false,
+               gap: 10, fair: false, sort: "best", q: "", ideas: [], ideas3: [], openFull: new Set() };
   function openFinder(sid) {
-    TF.sid = sid; TF.team = "ANY"; TF.pos = "ANY";
+    TF.sid = String(sid); TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
+    const p = bySleeper().get(TF.sid), o = p ? LG.ownerOf.get(p.id) : null;
+    TF.src = o && o.mine ? "mine" : "any";
     showTab("finder"); history.replaceState(null, "", "#finder"); window.scrollTo({ top: 0 });
   }
   const youVerdict = (more, youAhead, team) => {
@@ -4563,20 +4888,43 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       () => (y ? `You're robbing ${team}` : "You're getting robbed")];
     return { label: (L[i] || L[L.length - 1])(), fair: i <= 1 };
   };
+  // Verdict for the starting team S against partner T (S may be you or any team)
+  function finderVerdict(more, sAhead, S, T) {
+    if (S.mine) return youVerdict(more, sAhead, T.name);
+    const i = Math.max(0, TRADE_VERDICTS.findIndex(t => more < t.upTo)), tier = TRADE_VERDICTS[i] || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+    return { label: tier.title(sAhead ? S.name : T.name, sAhead ? T.name : S.name), fair: tier.upTo <= 3 };
+  }
+  // One team's outcome in a 3-team deal, from its own side
+  function teamOutcome(more, ahead) {
+    const i = Math.max(0, TRADE_VERDICTS.findIndex(t => more < t.upTo));
+    const up = ["Basically even", "Fair", "Slight win", "Wins", "Clear win", "Getting a steal", "Robbing the others"];
+    const down = ["Basically even", "Fair", "Slight loss", "Loses", "Clear loss", "Overpaying", "Getting robbed"];
+    return { label: (ahead ? up : down)[Math.min(i, 6)], fair: i <= 1, ahead };
+  }
 
-  function findTrades(target, mode, opts) {
+  // Shared league math for the finder: best lineups, position-room places, roster limits
+  function leagueKit() {
     const d = activeData(), map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league);
-    const me = LG.teams.find(t => t.mine), V = p => dv(p), byVal = (a, b) => V(b) - V(a);
-    const sum = list => list.reduce((a, p) => a + V(p), 0);
-    const limit = slots.length + lu.bench;   // healthy roster spots
+    const V = p => dv(p), byVal = (a, b) => V(b) - V(a), limit = slots.length + lu.bench;
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
     const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(s => !o.has(s)).map(s => map.get(s)).filter(Boolean); };
     const tradable = t => { const taxi = new Set((t.roster.taxi || []).map(String)); return (t.roster.players || []).map(String).filter(s => !taxi.has(s)).map(s => map.get(s)).filter(Boolean).sort(byVal); };
-    // roster spot cost: a team over its healthy roster limit cuts its lowest-valued players
-    const strength = pool => bestLineup(pool.slice().sort(byVal).slice(0, limit), slots, lu.bench);
+    const strength = pool => bestLineup(pool.slice().sort(byVal).slice(0, limit), slots, lu.bench);   // over the limit = cut
     const base = new Map(LG.teams.map(t => [t.rosterId, strength(healthy(t))]));
-    const placeOf = (pos, val, skip, extra) => 1 + LG.teams.filter(t => !skip.includes(t.rosterId) && base.get(t.rosterId).room[pos] > val).length + extra.filter(v => v > val).length;
-    const xv = V(target), myPool = tradable(me), myHealthy = healthy(me), myOut = outSet(me);
+    // a team's roster after it sends `out` and receives `inc` (injured incoming players don't help now)
+    const after = (t, out, inc, incFrom) => strength(healthy(t).filter(p => !out.includes(p)).concat(inc.filter((p, i) => !outSet(incFrom[i] || t).has(String(p.sleeperId)))));
+    const placeIn = (rid, pos, room) => 1 + LG.teams.filter(t => t.rosterId !== rid && room(t.rosterId)[pos] > room(rid)[pos]).length;
+    function placeMoves(afterMap) {   // Map rosterId -> lineup after the trade
+      const rb = rid => base.get(rid).room, ra = rid => (afterMap.get(rid) || base.get(rid)).room, out = {};
+      for (const rid of afterMap.keys()) { out[rid] = {}; for (const pos of EDIT_POS) out[rid][pos] = [placeIn(rid, pos, rb), placeIn(rid, pos, ra)]; }
+      return out;
+    }
+    return { d, map, V, byVal, healthy, tradable, outSet, strength, base, after, placeMoves };
+  }
+
+  function findTrades(target, mode, S, opts) {
+    const K = leagueKit(), V = K.V, byVal = K.byVal, sum = list => list.reduce((a, p) => a + V(p), 0);
+    const xv = V(target), sPool = K.tradable(S), owner = LG.ownerOf.get(target.id);
     const ideas = [];
     const pairs = (pool, anchor, maxV) => {
       const out = [];
@@ -4587,82 +4935,178 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       return out;
     };
     for (const T of LG.teams) {
-      if (T.mine || (opts.team !== "ANY" && String(T.rosterId) !== opts.team)) continue;
-      const theirPool = tradable(T), thHealthy = healthy(T), thOut = outSet(T);
-      if (mode === "get" && !theirPool.includes(target)) continue;
+      if (T === S) continue;
+      if (mode === "get" && T !== owner) continue;
+      if (mode === "give" && opts.against !== "ANY" && String(T.rosterId) !== opts.against) continue;
+      const tPool = K.tradable(T);
       let giveSets, getSets;
       if (mode === "give") {
-        giveSets = [[target]].concat(opts.packages ? pairs(myPool, target) : []);
-        getSets = theirPool.filter(p => V(p) >= 0.3 * xv && V(p) <= 1.4 * xv).map(p => [p]).concat(opts.packages ? pairs(theirPool, null, 1.15 * xv) : []);
+        giveSets = [[target]].concat(opts.packages ? pairs(sPool, target) : []);
+        getSets = tPool.filter(p => V(p) >= 0.3 * xv && V(p) <= 1.4 * xv).map(p => [p]).concat(opts.packages ? pairs(tPool, null, 1.15 * xv) : []);
       } else {
-        getSets = [[target]].concat(opts.packages ? pairs(theirPool, target) : []);
-        giveSets = myPool.filter(p => V(p) >= 0.3 * xv && V(p) <= 1.4 * xv).map(p => [p]).concat(opts.packages ? pairs(myPool, null, 1.15 * xv) : []);
+        getSets = [[target]].concat(opts.packages ? pairs(tPool, target) : []);
+        giveSets = sPool.filter(p => V(p) >= 0.3 * xv && V(p) <= 1.4 * xv).map(p => [p]).concat(opts.packages ? pairs(sPool, null, 1.15 * xv) : []);
       }
       for (const give of giveSets) for (const get of getSets) {
         const rawGive = sum(give), rawGet = sum(get), lo = Math.min(rawGive, rawGet), hi = Math.max(rawGive, rawGet);
-        if (give.length === 2 && get.length === 2 && Math.min(V(give[1]), V(get[1])) < 0.3 * Math.min(V(give[0]), V(get[0]))) continue;
         if (lo <= 0 || (hi - lo) / lo * 100 > opts.gap + 9) continue;   // the roster adjustment is capped well under 9%
+        if (give.length === 2 && get.length === 2 && Math.min(V(give[1]), V(get[1])) < 0.3 * Math.min(V(give[0]), V(get[0]))) continue;
         if (opts.pos !== "ANY") {
           const side = mode === "give" ? get : give, main = side.slice().sort(byVal)[0];
           if (main.pos !== opts.pos) continue;
         }
-        const m = runModel(get.map(p => p.id), give.map(p => p.id), dv);   // A = what you receive, B = what they receive
+        const m = runModel(get.map(p => p.id), give.map(p => p.id), dv);   // A = what S receives, B = what T receives
         if (m.error || !(m.a > 0 && m.b > 0)) continue;
         const more = Math.round(1000 * Math.abs(m.a - m.b) / Math.min(m.a, m.b)) / 10;
         if (more > opts.gap) continue;
-        const myAfter = strength(myHealthy.filter(p => !give.includes(p)).concat(get.filter(p => !thOut.has(p.sleeperId))));
-        const thAfter = strength(thHealthy.filter(p => !get.includes(p)).concat(give.filter(p => !myOut.has(p.sleeperId))));
-        const dMe = myAfter.score - base.get(me.rosterId).score, dThem = thAfter.score - base.get(T.rosterId).score;
+        const sAfter = K.after(S, give, get, get.map(() => T)), tAfter = K.after(T, get, give, give.map(() => S));
+        const dS = sAfter.score - K.base.get(S.rosterId).score, dT = tAfter.score - K.base.get(T.rosterId).score;
         const scale = Math.max(1000, xv), clamp = v => Math.max(-1, Math.min(1, v));
-        const fit = 0.5 * clamp((dMe + dThem) / scale) + 0.5 * clamp(Math.min(dMe, dThem) / scale);   // both teams better = best
-        // inside the fair range every trade counts as equally fair, so fit and simplicity decide
-        const fair = more < 3 ? 1 : 1 - (more - 3) / Math.max(opts.gap - 3, 1);
+        const fit = 0.5 * clamp((dS + dT) / scale) + 0.5 * clamp(Math.min(dS, dT) / scale);   // both teams better = best
+        const fair = more < 3 ? 1 : 1 - (more - 3) / Math.max(opts.gap - 3, 1);   // inside the fair range every trade is equally fair
         const score = 0.6 * fair + 0.4 * (fit + 1) / 2 - 0.05 * (give.length + get.length - 2);
-        ideas.push({ team: T, give, get, m, more, dMe, dThem, myAfter, thAfter, score });
+        ideas.push({ team: T, S, give, get, m, more, dS, dT, sAfter, tAfter, score, scale });
       }
     }
-    // room places before and after, for the "why" text
-    ideas.forEach(it => {
-      const skip = [me.rosterId, it.team.rosterId];
-      it.places = {};
-      for (const pos of EDIT_POS) {
-        const mb = base.get(me.rosterId).room[pos], tb = base.get(it.team.rosterId).room[pos];
-        const ma = it.myAfter.room[pos], ta = it.thAfter.room[pos];
-        it.places[pos] = {
-          me: [placeOf(pos, mb, skip, [tb]), placeOf(pos, ma, skip, [ta])],
-          them: [placeOf(pos, tb, skip, [mb]), placeOf(pos, ta, skip, [ma])] };
-      }
-    });
+    ideas.forEach(it => { it.places = K.placeMoves(new Map([[S.rosterId, it.sAfter], [it.team.rosterId, it.tAfter]])); });
     ideas.sort((a, b) => b.score - a.score);
-    const out = [], perTeam = new Map(), seen = new Set();
+    const out = [], perTeam = new Map(), seen = new Set(), one = mode === "get" || opts.against !== "ANY";
     for (const it of ideas) {
       const key = (mode === "give" ? it.get : it.give).map(p => p.id).sort().join("+");   // each package once
       const tk = it.team.rosterId, n = perTeam.get(tk) || { all: 0, big: 0 }, big = it.give.length + it.get.length === 4;
-      const one = opts.team !== "ANY";   // a single team gets a longer list
-      if (seen.has(key) || n.all >= (one ? 10 : 3) || (big && n.big >= (one ? 3 : 1))) continue;   // otherwise 3 ideas and one 2-for-2 per team
+      if (seen.has(key) || n.all >= (one ? 12 : 3) || (big && n.big >= (one ? 3 : 1))) continue;   // otherwise 3 ideas and one 2-for-2 per team
       seen.add(key); perTeam.set(tk, { all: n.all + 1, big: n.big + (big ? 1 : 0) });
       out.push(it);
-      if (out.length >= 20) break;
+      if (out.length >= 30) break;
     }
     return out;
   }
 
-  function whyText(it) {
-    const T = it.team.name, moves = side => EDIT_POS.map(pos => ({ pos, b: it.places[pos][side][0], a: it.places[pos][side][1] }));
-    const up = list => list.filter(x => x.a < x.b).sort((x, y) => (y.b - y.a) - (x.b - x.a))[0];
-    const down = list => list.filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
-    const me = moves("me"), th = moves("them"), mu = up(me), md = down(me), tu = up(th), td = down(th);
+  // 3-team ideas (1-for-1-for-1 cycles): S sends P1 to C, C sends P2 to B, B sends P3 to S.
+  // Shown only when all three teams' best lineups improve and the direct S-B swap wouldn't work for B.
+  function findThree(target, mode, S, opts) {
+    const K = leagueKit(), V = K.V, owner = LG.ownerOf.get(target.id);
+    const within = (a, b) => Math.round(1000 * Math.abs(a - b) / Math.min(a, b)) / 10;
+    const ok = (a, b) => Math.min(a, b) > 0 && within(a, b) <= opts.gap;
+    const gain = (t, out, inc, from) => K.after(t, [out], [inc], [from]).score - K.base.get(t.rosterId).score;
+    const found = [];
+    const Bs = mode === "get" ? [owner] : LG.teams.filter(t => t !== S && (opts.against === "ANY" || String(t.rosterId) === opts.against));
+    for (const B of Bs) {
+      const p3s = mode === "get" ? [target] : K.tradable(B).filter(p => ok(V(p), V(target)) && (opts.pos === "ANY" || p.pos === opts.pos));
+      const p1s = mode === "give" ? [target] : K.tradable(S).filter(p => ok(V(p), V(target)) && (opts.pos === "ANY" || p.pos === opts.pos));
+      for (const P3 of p3s) for (const P1 of p1s) {
+        const dS = gain(S, P1, P3, B);
+        if (dS <= 0) continue;
+        const direct = gain(B, P3, P1, S);   // would B take P1 straight up?
+        for (const C of LG.teams) {
+          if (C === S || C === B) continue;
+          for (const P2 of K.tradable(C)) {
+            if (!ok(V(P2), V(P3)) || !ok(V(P1), V(P2))) continue;
+            const dB = gain(B, P3, P2, C), dC = gain(C, P2, P1, S);
+            if (dB <= 0 || dC <= 0 || dB <= direct + 0.02 * V(P3)) continue;   // B must prefer P2 clearly over P1
+            const gaps = [within(V(P3), V(P1)), within(V(P2), V(P3)), within(V(P1), V(P2))];
+            const minGain = Math.min(dS, dB, dC) / Math.max(1000, V(target));
+            found.push({ S, B, C, P1, P2, P3, dS, dB, dC, direct, gaps, score: minGain - Math.max(...gaps) / 100 });
+          }
+        }
+      }
+    }
+    found.sort((a, b) => b.score - a.score);
+    const out = [], used = new Set();
+    for (const f of found) {
+      const k = [f.P1.id, f.P2.id, f.P3.id].join("-"), kc = f.C.rosterId + "-" + f.B.rosterId;
+      if (used.has(k) || used.has(kc)) continue;
+      used.add(k); used.add(kc);
+      const after = new Map([[f.S.rosterId, K.after(f.S, [f.P1], [f.P3], [f.B])], [f.B.rosterId, K.after(f.B, [f.P3], [f.P2], [f.C])], [f.C.rosterId, K.after(f.C, [f.P2], [f.P1], [f.S])]]);
+      f.after = after; f.places = K.placeMoves(after);
+      out.push(f);
+      if (out.length >= 4) break;
+    }
+    return out;
+  }
+
+  /* Short, plain reasons */
+  const moveList = (places, rid) => EDIT_POS.map(pos => ({ pos, b: places[rid][pos][0], a: places[rid][pos][1] }));
+  const bestUp = list => list.filter(x => x.a < x.b).sort((x, y) => (y.b - y.a) - (x.b - x.a))[0];
+  const worstDown = list => list.filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
+  function gainPhrase(person2, places, rid, incoming, afterL, outgoing = []) {
+    const v = (base, third) => (person2 ? base : third);
+    const ms = moveList(places, rid), up = bestUp(ms), down = worstDown(ms);
+    const starter = incoming.filter(p => afterL.role.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
+    if (up && down) return `${v("turn", "turns")} ${down.pos} depth into ${starter && starter.pos === up.pos ? "an immediate" : "a"} ${up.pos} upgrade`;
+    if (up) return `${v("upgrade", "upgrades")} at ${up.pos}${starter && starter.pos === up.pos ? ` with a new starter` : ""}`;
+    if (down) return `${v("take", "takes")} a small step back at ${down.pos} for the value`;
+    if (starter && outgoing.some(p => p.pos === starter.pos)) return `${v("swap", "swaps")} starting ${starter.pos}s`;
+    if (starter) return `${v("get", "receives")} a new starting ${starter.pos}`;
+    return `${v("add", "adds")} depth`;
+  }
+  function shortWhy(it) {
+    const S = it.S, T = it.team, sub = S.mine ? "You" : S.name;
+    return `${sub} ${gainPhrase(S.mine, it.places, S.rosterId, it.get, it.sAfter, it.give)} while ${T.name} ${gainPhrase(false, it.places, T.rosterId, it.give, it.tAfter, it.get)}.`;
+  }
+  function fullWhy(it) {
+    const S = it.S, T = it.team.name, you = S.mine, sN = you ? "you" : S.name, sPoss = you ? "your" : S.name + "'s";
     const arrow = x => `${ordinal(x.b)} → ${ordinal(x.a)}`;
-    let a = mu ? `You improve your ${mu.pos} room (${arrow(mu)})` : it.dMe > 0 ? "Your starting lineup gets stronger" : "You keep your lineup about level";
-    if (md) a += `, spending ${md.pos} depth (${arrow(md)})`;
-    let b = tu ? (td ? `${T} turns ${td.pos} depth into a better ${tu.pos} room (${arrow(tu)})` : `${T} upgrades its ${tu.pos} room (${arrow(tu)})`)
-      : it.dThem > 0 ? `${T}'s lineup gets stronger` : `${T} gets the value but not a lineup upgrade, so they may need convincing`;
-    const starts = it.get.filter(p => it.myAfter.role.has(p.id)).map(p => `${p.name} would start at ${it.myAfter.role.get(p.id)} for you`);
-    const benchOnly = it.get.filter(p => !it.myAfter.role.has(p.id)).map(p => p.name);
-    let c = starts.length ? starts.join("; ") + "." : `${benchOnly.join(" and ")} wouldn't crack your starting lineup right now.`;
-    if (it.give.length > it.get.length) c += " You consolidate into one stronger piece and open a roster spot.";
-    else if (it.get.length > it.give.length) c += " Taking two players costs you a bench spot.";
-    return `${a}, while ${b}. ${c}`;
+    const sm = moveList(it.places, S.rosterId), tm = moveList(it.places, it.team.rosterId);
+    const mu = bestUp(sm), md = worstDown(sm), tu = bestUp(tm), td = worstDown(tm);
+    const lines = [];
+    lines.push(mu ? `${you ? "Your" : S.name + "'s"} ${mu.pos} room goes ${arrow(mu)}${md ? `, while ${sPoss} ${md.pos} room goes ${arrow(md)}` : ""}.` : it.dS > 0 ? `${you ? "Your" : S.name + "'s"} starting lineup gets stronger.` : `${you ? "Your" : S.name + "'s"} lineup stays about level.`);
+    lines.push(tu ? `${T}'s ${tu.pos} room goes ${arrow(tu)}${td ? ` and its ${td.pos} room ${arrow(td)}` : ""}.` : it.dT > 0 ? `${T}'s lineup gets stronger.` : `${T} gets the value but not a lineup upgrade, so they may need convincing.`);
+    it.get.forEach(p => lines.push(it.sAfter.role.has(p.id) ? `${p.name} would start at ${it.sAfter.role.get(p.id)} for ${sN}.` : `${p.name} would sit on ${sPoss} bench for now.`));
+    if (it.give.length > it.get.length) lines.push(`${you ? "You consolidate" : S.name + " consolidates"} into one stronger piece and ${you ? "open" : "opens"} a roster spot.`);
+    else if (it.get.length > it.give.length) lines.push(`Taking ${it.get.length} players costs ${sPoss} bench a spot.`);
+    return lines;
+  }
+  function threeWhy(f) {
+    const nm = t => (t.mine ? "You" : t.name);
+    const part = (t, inc, L) => `${nm(t)} ${gainPhrase(t.mine, f.places, t.rosterId, [inc], L)}`;
+    return `${part(f.S, f.P3, f.after.get(f.S.rosterId))}, ${part(f.B, f.P2, f.after.get(f.B.rosterId))}, and ${part(f.C, f.P1, f.after.get(f.C.rosterId))}. A straight swap wouldn't work: ${f.B.name} has no use for ${f.P1.name}, but ${f.C.name} does.`;
+  }
+
+  /* Controls */
+  function finderTarget() {
+    const map = bySleeper(), X = TF.sid ? map.get(TF.sid) : null;
+    const owner = X ? LG.ownerOf.get(X.id) || null : null;
+    const S = TF.from !== "auto" ? LG.teams.find(t => String(t.rosterId) === TF.from) || null : owner;
+    const mode = X && S ? (owner && owner === S ? "give" : "get") : null;
+    return { X, owner, S, mode };
+  }
+  function renderFinderPick() {
+    const map = bySleeper(), me = LG.teams.find(t => t.mine), box = $("tf-pick");
+    $("tf-src").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.src === TF.src));
+    const opt = p => `<option value="${esc(p.sleeperId)}">${esc(p.name)} · ${esc(p.posRank)} · ${fmt(dv(p))}</option>`;
+    const teamPlayers = t => (t.roster.players || []).map(String).map(s => map.get(s)).filter(Boolean).sort((a, b) => dv(b) - dv(a));
+    if (TF.src === "mine") {
+      if (!me) { box.innerHTML = `<p class="pp-note">You don't have a team in this league. Use Any player.</p>`; return; }
+      const list = teamPlayers(me);
+      if (!list.some(p => p.sleeperId === TF.sid)) TF.sid = list[0] ? list[0].sleeperId : null;
+      box.innerHTML = `<select class="select" id="tf-player" aria-label="Your player">${list.map(opt).join("")}</select>`;
+      if (TF.sid) $("tf-player").value = TF.sid;
+    } else if (TF.src === "team") {
+      const teams = LG.teams;
+      if (!teams.some(t => String(t.rosterId) === TF.srcTeam)) TF.srcTeam = String((teams.find(t => !t.mine) || teams[0]).rosterId);
+      const t = teams.find(x => String(x.rosterId) === TF.srcTeam), list = teamPlayers(t);
+      if (!list.some(p => p.sleeperId === TF.sid)) TF.sid = list[0] ? list[0].sleeperId : null;
+      box.innerHTML = `<div class="tf-pick-two"><select class="select" id="tf-src-team" aria-label="Team">${teams.map(x => `<option value="${x.rosterId}">${esc(x.mine ? x.name + " (you)" : x.name)}</option>`).join("")}</select>
+        <select class="select" id="tf-player" aria-label="Player">${list.map(opt).join("")}</select></div>`;
+      $("tf-src-team").value = TF.srcTeam; if (TF.sid) $("tf-player").value = TF.sid;
+    } else {
+      const X = TF.sid ? map.get(TF.sid) : null;
+      box.innerHTML = `<div class="tf-search"><input class="search" id="tf-q" type="search" placeholder="Search any player" autocomplete="off" value="${esc(TF.q)}" aria-label="Search any player"><ul class="results" id="tf-results" hidden></ul></div>
+        ${X ? `<div class="tf-chosen">${face(X.sleeperId, X.name, "xs")}${nameLink(X.sleeperId, X.name, "tf-name")}<span class="pos ${esc(X.pos)}">${esc(X.posRank)}</span><span class="tf-v">${fmt(dv(X))}</span></div>` : ""}`;
+    }
+  }
+  function tfResults() {
+    const q = TF.q.trim().toLowerCase(), list = $("tf-results");
+    if (!list) return;
+    if (!q) { list.hidden = true; list.innerHTML = ""; return; }
+    const hits = players.filter(p => p.pos !== "PICK" && p.sleeperId && (p.name + " " + p.team).toLowerCase().includes(q)).sort((a, b) => dv(b) - dv(a)).slice(0, 8);
+    list.innerHTML = hits.length ? hits.map(p => {
+      const o = LG.ownerOf.get(p.id);
+      return `<li><button type="button" data-tf-pick="${esc(p.sleeperId)}">${face(p.sleeperId, p.name, "sm", false)}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+        <span class="r-name">${esc(p.name)}<span class="owner${o && o.mine ? " mine" : !o ? " fa" : ""}">${esc(o ? (o.mine ? "Your team" : o.name) : "Free agent")}</span></span><span class="r-val">${fmt(dv(p))}</span></button></li>`;
+    }).join("") : `<li class="empty" style="padding:10px">No match</li>`;
+    list.hidden = false;
   }
 
   function renderFinder() {
@@ -4670,75 +5114,137 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (!d) { body.innerHTML = ""; return; }
     if ($("panel-finder").hidden) { TF.dirty = true; return; }
     TF.dirty = false;
-    const map = bySleeper(), me = LG.teams.find(t => t.mine);
     $("tf-sub").textContent = `${d.league.name} · ${formatParts(d.league).join(" · ")} · ${leagueView() ? "League-adjusted" : "Base"} SPMetrics values`;
-    if (!me) { body.innerHTML = `<p class="empty-note">Your Sleeper account doesn't have a team in this league, so there's no roster to trade from.</p>`; return; }
-    const mine = (me.roster.players || []).map(String).filter(s => !(me.roster.taxi || []).map(String).includes(s)).map(s => map.get(s)).filter(Boolean).sort((a, b) => dv(b) - dv(a));
-    let target = TF.sid ? map.get(TF.sid) : null;
-    const owner = target ? LG.ownerOf.get(target.id) : null;
-    const mode = target && owner && !owner.mine ? "get" : "give";
-    if (mode === "give" && (!target || !mine.includes(target))) target = mine[0] || null;
-    TF.sid = target ? target.sleeperId : null;
-    const opt = p => `<option value="${esc(p.sleeperId)}">${esc(p.name)} · ${esc(p.posRank)} · ${fmt(dv(p))}</option>`;
-    $("tf-player").innerHTML = (mode === "get" ? `<optgroup label="Get from ${esc(owner.name)}">${opt(target)}</optgroup>` : "") +
-      `<optgroup label="Trade away from your roster">${mine.map(opt).join("")}</optgroup>`;
-    if (TF.sid) $("tf-player").value = TF.sid;
-    $("tf-pos-label").textContent = mode === "get" ? "Position you give" : "Position wanted";
+    renderFinderPick();
+    const { X, owner, S, mode } = finderTarget();
+    const others = LG.teams;
+    $("tf-from").innerHTML = `<option value="auto">${owner ? "Owner · " + esc(owner.mine ? "your team" : owner.name) : "Owner"}</option>` +
+      others.map(t => `<option value="${t.rosterId}">${esc(t.mine ? t.name + " (you)" : t.name)}</option>`).join("");
+    $("tf-from").value = TF.from;
+    $("tf-against").innerHTML = `<option value="ANY">Every team</option>` + others.filter(t => t !== S).map(t => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
+    if (![...$("tf-against").options].some(o => o.value === TF.against)) TF.against = "ANY";
+    $("tf-against").value = mode === "get" && owner ? String(owner.rosterId) : TF.against;
+    $("tf-against").disabled = mode === "get";
+    $("tf-pos-label").textContent = mode === "get" ? "Position given" : "Position wanted";
     $("tf-pos").value = TF.pos;
-    const others = LG.teams.filter(t => !t.mine);
-    $("tf-team").innerHTML = `<option value="ANY">Every team</option>` + others.map(t => `<option value="${t.rosterId}">${esc(t.name)}</option>`).join("");
-    $("tf-team").value = mode === "get" ? String(owner.rosterId) : TF.team;
-    $("tf-team").disabled = mode === "get";
     $("tf-gap").value = String(TF.gap); $("tf-gap").disabled = TF.fair;
-    $("tf-fair").checked = TF.fair;
+    $("tf-fair").checked = TF.fair; $("tf-three").checked = TF.three;
     $("tf-size").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.size === TF.size));
-    if (!target) { body.innerHTML = `<p class="empty-note">No ranked players on your roster yet.</p>`; return; }
+    const sName = S ? (S.mine ? "me" : S.name) : "starting team";
+    $("tf-sort").innerHTML = [["best", "Best match"], ["fair", "Fairest"], ["start", `Best for ${sName}`], ["roster", "Biggest roster improvement"], ["oneone", "1-for-1 first"], ["fewest", "Fewest players"]]
+      .map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
+    $("tf-sort").value = TF.sort;
+
+    const lead = $("tf-lead");
+    if (!X) { lead.innerHTML = ""; body.innerHTML = `<p class="empty-note">${TF.src === "any" ? "Search for any player to find trades involving him." : "Pick a player."}</p>`; return; }
+    const ownerTxt = owner ? (owner.mine ? "Your team" : owner.name) : "Free agent";
+    lead.innerHTML = `<span class="tf-target">${face(X.sleeperId, X.name, "sm")}<b>${nameLink(X.sleeperId, X.name)}</b> <span class="muted">${esc(X.posRank)} · ${fmt(dv(X))}</span> <span class="owner status${owner && owner.mine ? " mine" : ""}">${esc(ownerTxt)}</span></span>`;
+    if (!S) {
+      body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent in ${esc(d.league.name)}. Pick a <b>From team</b> to see what trades would look like if a team owned him, or pick him up off waivers.</p>`;
+      return;
+    }
+    if (mode === "get" && !owner) { body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent, so there's no one to trade with. ${esc(S.mine ? "You" : S.name)} can pick him up off waivers.</p>`; return; }
     const gap = TF.fair ? 2.99 : TF.gap;
-    const ideas = findTrades(target, mode, { pos: TF.pos, team: mode === "get" ? String(owner.rosterId) : TF.team, gap, packages: TF.size === "pkg" });
+    const opts = { pos: TF.pos, against: TF.against, gap, packages: TF.size === "pkg" };
+    let ideas = findTrades(X, mode, S, opts);
+    const sortKey = {
+      best: (a, b) => b.score - a.score,
+      fair: (a, b) => a.more - b.more || b.score - a.score,
+      start: (a, b) => (b.m.a - b.m.b) / Math.min(b.m.a, b.m.b) - (a.m.a - a.m.b) / Math.min(a.m.a, a.m.b),
+      roster: (a, b) => b.dS - a.dS,
+      oneone: (a, b) => (a.give.length + a.get.length) - (b.give.length + b.get.length) || b.score - a.score,
+      fewest: (a, b) => (a.give.length + a.get.length) - (b.give.length + b.get.length) || a.more - b.more,
+    }[TF.sort] || ((a, b) => b.score - a.score);
+    ideas = ideas.slice().sort(sortKey).slice(0, 20);
     TF.ideas = ideas;
-    const lead = mode === "give"
-      ? `Trades for <b>${esc(target.name)}</b> (${esc(target.posRank)}, ${fmt(dv(target))})`
-      : `Ways to get <b>${esc(target.name)}</b> (${esc(target.posRank)}, ${fmt(dv(target))}) from ${esc(owner.name)}`;
-    const prow = (p, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
-      <span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}${tag ? `<span class="tf-tag">${esc(tag)}</span>` : ""}</span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+    TF.ideas3 = TF.three ? findThree(X, mode, S, opts) : [];
+
+    const you = S.mine, sLabel = you ? "You" : S.name;
+    lead.innerHTML += `<span class="tf-persp">${mode === "give" ? `Trades ${esc(you ? "you" : S.name)} could make with him` : `Ways ${esc(you ? "you" : S.name)} could get him from ${esc(owner.name)}`} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} within ${TF.fair ? "the fair range" : TF.gap + "%"}</span>`;
+    const ownerTag = t => `<span class="tf-own${t.mine ? " mine" : ""}">${esc(t.mine ? "Your team" : t.name)}</span>`;
+    const prow = (p, from, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+      <span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag">${ownerTag(from)}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     const cards = ideas.map((it, i) => {
-      const youAhead = it.m.a >= it.m.b, v = youVerdict(it.more, youAhead, it.team.name);
-      const sizeTxt = `${it.give.length}-for-${it.get.length}`;
+      const sAhead = it.m.a >= it.m.b, v = finderVerdict(it.more, sAhead, S, it.team);
+      const full = TF.openFull.has(i), fw = fullWhy(it);
       return `<article class="tf-card">
-        <header class="tf-head">${teamFace(it.team, "sm")}<div class="tf-team"><span class="tf-with">Trade with · ${sizeTxt}</span><b>${esc(it.team.name)}</b></div>
-          <span class="tf-verdict${v.fair ? " fair" : youAhead ? " you" : " them"}">${esc(v.label)}</span></header>
+        <header class="tf-head">${teamFace(it.team, "sm")}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size">${it.give.length}-for-${it.get.length}</span></header>
+        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}">${esc(v.label)}</span><span class="tf-diff">${it.more.toFixed(1)}% value difference</span></div>
         <div class="tf-sides">
-          <div class="tf-side"><h4>You give</h4><ul>${it.give.map(p => prow(p, "")).join("")}</ul></div>
-          <div class="tf-side"><h4>You receive</h4><ul>${it.get.map(p => prow(p, it.myAfter.role.has(p.id) ? "Starts at " + it.myAfter.role.get(p.id) : "Bench")).join("")}</ul></div>
+          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => prow(p, S, "")).join("")}</ul></div>
+          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "receive" : "receives"}</h4><ul>${it.get.map(p => prow(p, it.team, it.sAfter.role.has(p.id) ? "starts at " + it.sAfter.role.get(p.id) : "bench")).join("")}</ul></div>
         </div>
-        <dl class="tf-nums">
-          <div><dt>Raw value · give vs get</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
-          <div><dt>Adjusted · give vs get</dt><dd>${fmt(it.m.b)} <span>vs</span> ${fmt(it.m.a)}</dd></div>
-          <div><dt>Difference</dt><dd>${it.more.toFixed(1)}%</dd></div>
-        </dl>
-        <p class="tf-why"><span>Why it works</span>${esc(whyText(it))}</p>
-        <div class="tf-foot"><button class="btn" type="button" data-tf-open="${i}">Open in trade calculator</button></div>
+        <p class="tf-why"><span>Why it works</span>${esc(shortWhy(it))}</p>
+        ${full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
+          <dl class="tf-nums"><div><dt>Raw · give vs get</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
+          <div><dt>Adjusted · give vs get</dt><dd>${fmt(it.m.b)} <span>vs</span> ${fmt(it.m.a)}</dd></div></dl></div>` : ""}
+        <div class="tf-foot"><button class="footer-link" type="button" data-tf-full="${i}">${full ? "Hide analysis" : "View full analysis"}</button><button class="btn" type="button" data-tf-open="${i}">Open in trade calculator</button></div>
       </article>`;
     }).join("");
-    body.innerHTML = `<p class="tf-lead">${lead} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} within ${TF.fair ? "fair range (under 3%)" : TF.gap + "%"}</p>` +
-      (ideas.length ? `<div class="tf-list">${cards}</div>`
-        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(target.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${TF.size === "1" ? " or allow packages" : ""}.</p>`) +
-      `<p class="pp-note">Values are shown raw and after the small roster adjustment (the same one the trade calculator uses). Ideas that make both teams' best lineups better rank first.</p>`;
+    const cards3 = TF.ideas3.map((f, i) => {
+      const rows = [[f.S, f.P3, f.B, f.P1], [f.B, f.P2, f.C, f.P3], [f.C, f.P1, f.S, f.P2]];
+      return `<article class="tf-card tf3">
+        <header class="tf-head"><div class="tf-team"><span class="tf-with">3-team trade</span><b>${esc([f.S, f.B, f.C].map(t => t.mine ? "You" : t.name).join(" · "))}</b></div><span class="tf-size">1-for-1-for-1</span></header>
+        <div class="tf3-grid">${rows.map(([t, inc, fromT, out]) => {
+          const g = Math.round(1000 * Math.abs(dv(inc) - dv(out)) / Math.min(dv(inc), dv(out))) / 10, o = teamOutcome(g, dv(inc) >= dv(out));
+          return `<div class="tf3-team"><div class="tf3-name">${teamFace(t, "xs")}<b>${esc(t.mine ? "You" : t.name)}</b></div>
+            <span class="tf-verdict-big sm${o.fair ? " fair" : o.ahead ? " you" : " them"}">${esc(o.label)}</span>
+            <div class="tf3-line"><span class="ctl-label">Receives</span><ul class="tf3-ul">${prow(inc, fromT, "")}</ul></div>
+            <div class="tf3-line"><span class="ctl-label">Gives</span><ul class="tf3-ul">${prow(out, t, "")}</ul></div></div>`;
+        }).join("")}</div>
+        <p class="tf-why"><span>Why it works</span>${esc(threeWhy(f))}</p>
+        <div class="tf-foot"><button class="btn" type="button" data-tf-open3="${i}">Open in trade calculator</button></div>
+      </article>`;
+    }).join("");
+    body.innerHTML = (ideas.length ? `<div class="tf-list">${cards}</div>`
+        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${TF.size === "1" ? " or allow packages" : ""}.</p>`) +
+      (TF.three ? `<h3 class="section-label">3-team ideas</h3>` + (cards3 ? `<div class="tf-list">${cards3}</div>` : `<p class="pp-note">No 3-team deal solves something a 2-team trade can't here.</p>`) : "");
   }
-  $("tf-player").addEventListener("change", e => { TF.sid = e.target.value; renderFinder(); });
+  $("tf-src").addEventListener("click", e => { const b = e.target.closest("button[data-src]"); if (!b) return; TF.src = b.dataset.src; TF.from = "auto"; TF.openFull = new Set(); renderFinder(); });
+  $("tf-pick").addEventListener("change", e => {
+    if (e.target.id === "tf-player") { TF.sid = e.target.value; TF.from = "auto"; }
+    if (e.target.id === "tf-src-team") { TF.srcTeam = e.target.value; TF.sid = null; TF.from = "auto"; }
+    TF.openFull = new Set(); renderFinder();
+  });
+  $("tf-pick").addEventListener("input", e => { if (e.target.id === "tf-q") { TF.q = e.target.value; tfResults(); } });
+  $("tf-pick").addEventListener("focusin", e => { if (e.target.id === "tf-q") tfResults(); });
+  $("tf-pick").addEventListener("mousedown", e => { if (e.target.closest("#tf-results")) e.preventDefault(); });
+  $("tf-pick").addEventListener("click", e => {
+    const b = e.target.closest("[data-tf-pick]"); if (!b) return;
+    TF.sid = b.dataset.tfPick; TF.q = ""; TF.from = "auto"; TF.openFull = new Set(); renderFinder();
+  });
+  $("tf-pick").addEventListener("keydown", e => {
+    if (e.target.id === "tf-q" && e.key === "Enter") { const first = $("tf-results") && $("tf-results").querySelector("[data-tf-pick]"); if (first) first.click(); e.preventDefault(); }
+  });
+  $("tf-from").addEventListener("change", e => { TF.from = e.target.value; TF.openFull = new Set(); renderFinder(); });
+  $("tf-against").addEventListener("change", e => { TF.against = e.target.value; renderFinder(); });
   $("tf-pos").addEventListener("change", e => { TF.pos = e.target.value; renderFinder(); });
-  $("tf-team").addEventListener("change", e => { TF.team = e.target.value; renderFinder(); });
   $("tf-gap").addEventListener("change", e => { TF.gap = Number(e.target.value); renderFinder(); });
   $("tf-fair").addEventListener("change", e => { TF.fair = e.target.checked; renderFinder(); });
+  $("tf-three").addEventListener("change", e => { TF.three = e.target.checked; renderFinder(); });
+  $("tf-sort").addEventListener("change", e => { TF.sort = e.target.value; TF.openFull = new Set(); renderFinder(); });
   $("tf-size").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { TF.size = b.dataset.size; renderFinder(); } });
   $("tf-body").addEventListener("click", e => {
+    const fb = e.target.closest("[data-tf-full]");
+    if (fb) { const i = Number(fb.dataset.tfFull); TF.openFull.has(i) ? TF.openFull.delete(i) : TF.openFull.add(i); renderFinder(); return; }
+    const b3 = e.target.closest("[data-tf-open3]");
+    if (b3) { const f = TF.ideas3[Number(b3.dataset.tfOpen3)]; if (f) openThreeInCalc(f); return; }
     const b = e.target.closest("[data-tf-open]"); if (!b) return;
     const it = TF.ideas[Number(b.dataset.tfOpen)]; if (!it) return;
-    TC.mode = "league"; saveTc(); $("team-A").value = String(LG.myRosterId); $("team-B").value = String(it.team.rosterId);
+    TC.mode = "league"; saveTc(); setThree(false);
+    $("team-A").value = String(it.S.rosterId); $("team-B").value = String(it.team.rosterId);
     sides.A = it.get.map(p => p.id); sides.B = it.give.map(p => p.id);
     renderTeamRosters(); renderTrade();
     showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
   });
+  function openThreeInCalc(f) {
+    TC.mode = "league"; saveTc(); setThree(true);
+    $("team-A").value = String(f.S.rosterId); $("team-B").value = String(f.B.rosterId); $("team-C").value = String(f.C.rosterId);
+    sides.A = [f.P3.id]; sides.B = [f.P2.id]; sides.C = [f.P1.id];
+    origin.clear(); origin.set(f.P3.id, "B"); origin.set(f.P2.id, "C"); origin.set(f.P1.id, "A");
+    renderTrade();
+    showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
+  }
 
   /* ---------- Ranking snapshots ----------
      Each publish saves the published board (base values) to data/rank_history.json,

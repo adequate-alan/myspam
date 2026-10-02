@@ -75,11 +75,19 @@ Four sliders under **Roster impact** (QB, RB, WR, TE) say how your team stands a
 
 ## Trade finder
 
-With a Sleeper league connected, **Trade Finder** searches every other roster for trades around one of your players (or, from another team's player page, ways to get him):
-- 1-for-1, 2-for-1, 1-for-2 and 2-for-2 within the chosen value difference, using the trade calculator's adjusted values and verdicts. A second player in a package must be worth at least 20% of the first, so there are no filler add-ons.
-- Value closeness comes first. Among close trades, the ones that make both teams' best lineups better rank higher: it fills each team's lineup in this league's slots (superflex, flex, TE premium through league values), counts bench depth, and charges for roster spots when a team takes back more players.
-- Each idea shows what you give and get, raw and adjusted values, the difference, the verdict, whether incoming players would start for you, and why it works (position-room ranks before → after for both teams).
-- Filters: position wanted, team, max value difference, 1-for-1 only / packages allowed, fair trades only. **Open in trade calculator** loads the idea into the calculator.
+A league-wide trade discovery tool (needs a connected Sleeper league).
+
+- **Player:** *My team* (your roster), *Any player* (search the whole SPMetrics database; each result shows who owns him) or *By team* (pick a team, then a player).
+- **From team** is the team whose side the finder takes. It defaults to the player's owner, so picking a player on Gabriel's team finds trades *Gabriel* could make with him. Pick a different team to find ways that team could get him from his owner. **Against** limits the partner to one team.
+- **Position wanted** and **Trade type** (1-for-1 or packages: 2-for-1, 1-for-2, 2-for-2). **More filters:** max value difference and fair trades only.
+- **Sort:** best match, fairest, best for the starting team, biggest roster improvement, 1-for-1 first, fewest players.
+- Value closeness comes first; among close trades, the ones that make both teams' best lineups better rank higher (league slots, superflex, flex count, TE premium through league values, bench depth, roster spots). A second player in a package must be worth at least 20% of the first.
+- Each card leads with the partner, what each side gives and receives (with the owner of every player), the verdict, the value difference and a one-line reason. **View full analysis** shows position-room ranks before → after, lineup roles and raw/adjusted values. **Open in trade calculator** loads the idea.
+- **Include 3-team trades** (off by default) adds 1-for-1-for-1 ideas below the normal ones, only when every team's lineup improves and a straight 2-team swap wouldn't work for the partner (it has no use for what the starting team sends, but a third team does).
+
+## 3-team trades in the calculator
+
+**+ Add third team** (under the two cards) adds Team C; **Remove third team** goes back to two. Each player's row gets a **from** menu for the team sending him (in league mode it defaults to his owner), and roster pickers have a button for each destination. Every team is judged on its own: value received vs value sent, its own verdict (Slight win, Fair, Clear loss…), roster impact and lineup changes in league mode, and balancing suggestions redirect players from the other two teams to the team giving up the most.
 
 ## Repository
 
