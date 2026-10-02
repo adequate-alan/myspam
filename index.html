@@ -372,7 +372,7 @@ function tradeModel(sideA, sideB) {
   const raw = side => side.reduce((sum, p) => sum + p.value, 0);
   const rawA = raw(sideA), rawB = raw(sideB);
   const extra = sideA.length - sideB.length;
-  if (!sideA.length || !sideB.length || extra === 0) return { scoreA: rawA, scoreB: rawB, rawA, rawB, note: "" };
+  if (!sideA.length || !sideB.length || extra === 0) return { scoreA: rawA, scoreB: rawB, rawA, rawB, note: "", adj: null };
 
   const deal = (rawA + rawB) / 2;
   const top = side => Math.max(0, ...side.map(p => p.value));
@@ -393,7 +393,7 @@ function tradeModel(sideA, sideB) {
     + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal`
     + (best ? `; Team ${best} gets the best player` : "")
     + `; Team ${more} takes on ${n} extra player${n > 1 ? "s" : ""}).`;
-  return { scoreA, scoreB, rawA, rawB, note };
+  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n } };
 }
 
 /* =====================================================================
@@ -765,7 +765,9 @@ body.editing #panel-rankings td.val { min-width: 330px; }
   font-weight: 800; font-stretch: 110%; font-size: 1.05rem; letter-spacing: 0.02em; text-transform: uppercase;
   margin: 0; color: var(--cream);
 }
-.side-title small { font-size: 0.64rem; color: var(--muted); font-weight: 600; margin-left: 8px; letter-spacing: 0.12em; }
+.side-title { display: flex; align-items: baseline; min-width: 0; }
+.side-title .st-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-title small { flex: none; font-size: 0.64rem; color: var(--muted); font-weight: 600; margin-left: 8px; letter-spacing: 0.12em; }
 .side-total { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); text-align: right; }
 .side-total b { display: block; font-size: 1.25rem; color: var(--cream); font-weight: 750; letter-spacing: -0.01em; text-transform: none; margin-top: 1px; font-variant-numeric: tabular-nums; }
 
@@ -1608,7 +1610,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     <div class="trade-grid">
       <div class="side A">
         <div class="side-head">
-          <h2 class="side-title">Team A <small>gets</small></h2>
+          <h2 class="side-title" id="side-title-A">You <small>get</small></h2>
           <div class="side-total">Total<b id="total-A">0</b></div>
         </div>
         <select class="select team-select" id="team-A" aria-label="Team A roster" hidden></select>
@@ -1621,7 +1623,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       </div>
       <div class="side B">
         <div class="side-head">
-          <h2 class="side-title">Team B <small>gets</small></h2>
+          <h2 class="side-title" id="side-title-B">They <small>get</small></h2>
           <div class="side-total">Total<b id="total-B">0</b></div>
         </div>
         <select class="select team-select" id="team-B" aria-label="Team B roster" hidden></select>
@@ -2150,18 +2152,16 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       const A = aIds.map(pick), B = bIds.map(pick);
       const r = tradeModel(A, B) || {};
       let a = Number(r.scoreA) || 0, b = Number(r.scoreB) || 0;
-      const notes = r.note ? [r.note] : [];
+      let needSwing = 0, needUsed = [];
       // roster needs: each position's players count as multiplier x value (both sides)
       if (withNeeds && A.length && B.length) {
         const extra = side => side.reduce((sum, p) => sum + p.value * (needMult(p.pos) - 1), 0);
-        const nA = extra(A), nB = extra(B), swing = Math.round(nA - nB);
+        const nA = extra(A), nB = extra(B);
         a += nA; b += nB;
-        if (swing !== 0) {
-          const used = uniq(A.concat(B).map(p => p.pos)).filter(pos => needMult(pos) !== 1).map(pos => `${pos} ×${needMult(pos).toFixed(2)}`);
-          notes.push(`Need adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${swing > 0 ? "A" : "B"} (${used.join(", ")}).`);
-        }
+        needSwing = Math.round(nA - nB);
+        needUsed = uniq(A.concat(B).map(p => p.pos)).filter(pos => needMult(pos) !== 1).map(pos => `${pos} ×${needMult(pos).toFixed(2)}`);
       }
-      return { a, b, rawA: r.rawA, rawB: r.rawB, note: notes.join("\n") };
+      return { a, b, rawA: r.rawA, rawB: r.rawB, note: adjustmentNotes(r, needSwing, needUsed) };
     } catch (err) {
       console.error(err);
       return { a: 0, b: 0, note: "The trade model threw an error: " + err.message, error: true };
@@ -2185,7 +2185,44 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const id = $("team-" + side).value;
     return id ? LG.teams.find(x => String(x.rosterId) === id) || null : null;
   }
-  function sideName(side) { const t = sideTeam(side); return t ? t.name : "Team " + side; }
+  // Universal mode: "You" (side A) and "They" (side B). League mode: the Sleeper team names.
+  function sideName(side) {
+    const t = sideTeam(side);
+    if (t) return t.name;
+    if (!tcLeague()) return side === "A" ? "You" : "They";
+    return side === "A" ? "Team A" : "Other team";
+  }
+  const youMode = () => sideName("A") === "You" && sideName("B") === "They";
+  const isYouThey = n => n === "You" || n === "They";
+  const subj = side => { const n = sideName(side); return isYouThey(n) ? n.toLowerCase() : n; };   // mid-sentence subject
+  const verb = (side, plural, singular) => (isYouThey(sideName(side)) ? plural : singular);
+  const getsLabel = side => (isYouThey(sideName(side)) ? `${sideName(side)} get` : `${sideName(side)} gets`);
+  const possessive = side => { const n = sideName(side); return n === "You" ? "your" : n === "They" ? "their" : n + "'s"; };
+  function adjustmentNotes(r, needSwing, needUsed) {
+    const out = [], a = r.adj;
+    if (a && a.swing !== 0) {
+      const to = a.swing > 0 ? "A" : "B";
+      out.push(`Waiver adjustment: ${Math.abs(a.swing).toLocaleString("en-US")} toward ${subj(to)} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal`
+        + (a.best ? `; ${subj(a.best)} ${verb(a.best, "get", "gets")} the best player` : "")
+        + `; ${subj(a.more)} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}).`);
+    } else if (r.note && !a) out.push(r.note);
+    if (needSwing) out.push(`Need adjustment: ${Math.abs(needSwing).toLocaleString("en-US")} toward ${subj(needSwing > 0 ? "A" : "B")} (${needUsed.join(", ")}).`);
+    return out.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join("\n");
+  }
+  // Verdict wording from your point of view (universal mode)
+  function youVerdictText(tierIdx, ahead, pct) {
+    const you = ahead === "A";
+    const T = [
+      [() => "Basically even", () => `The adjusted values are within ${pct} of each other. This one's a coin flip.`],
+      [() => "Fair trade", () => `The adjusted values are within ${pct} of each other. Neither side has a meaningful advantage.`],
+      [() => (you ? "Slight edge to you" : "Slight edge to them"), () => `This is close, but ${you ? "you come" : "they come"} out about ${pct} ahead. ${you ? "They" : "You"} could take it as is or ask for a small add.`],
+      [() => (you ? "You win the trade" : "They win the trade"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. Not lopsided, but ${you ? "they" : "you"} should ask for a sweetener.`],
+      [() => (you ? "You clearly win" : "They clearly win"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. ${you ? "They'd" : "You'd"} need a real piece added to make this fair.`],
+      [() => (you ? "You're getting a steal" : "They're getting a steal"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. ${you ? "They're" : "You're"} giving up a lot here and ${you ? "need" : "need"} a meaningful add to balance it.`],
+      [() => (you ? "You're robbing them" : "You're getting robbed"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. This would need a major addition to ${you ? "their" : "your"} side to become balanced.`]];
+    const row = T[Math.min(tierIdx, T.length - 1)];
+    return { title: row[0](), text: row[1]() };
+  }
 
   /* League context bar: universal mode (any players, base SPMetrics values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
@@ -2421,11 +2458,16 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function renderTrade() {
     renderRoster("A");
     renderRoster("B");
-    if (typeof renderTeamRosters === "function") renderTeamRosters();
     renderTradeContext();
+    if (typeof renderTeamRosters === "function") renderTeamRosters();
     const res = runModel(sides.A, sides.B);
     $("total-A").textContent = fmt(res.rawA ?? res.a);
     $("total-B").textContent = fmt(res.rawB ?? res.b);
+    ["A", "B"].forEach(s => {
+      const n = sideName(s), t = $("side-title-" + s);
+      t.innerHTML = `<span class="st-name">${esc(n)}</span> <small>${isYouThey(n) ? "get" : "gets"}</small>`;
+      t.title = n;
+    });
     $("score-A").textContent = sideName("A") + " · " + fmt(res.a);
     $("score-B").textContent = fmt(res.b) + " · " + sideName("B");
 
@@ -2457,15 +2499,16 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const w = names[ahead], l = names[loser], gapLine = $("verdict-gap");
     if (lo <= 0) {
       title.className = "win-" + ahead; title.textContent = "One-sided so far";
-      sub.textContent = `${l} isn't getting anything back yet. Add what ${l} receives.`;
+      sub.textContent = isYouThey(l) ? `${l} aren't getting anything back yet. Add what ${l.toLowerCase()}'d get.` : `${l} isn't getting anything back yet. Add what ${l} receives.`;
       return;
     }
     const more = pctMore(res.a, res.b);      // % more for the side ahead, 1 decimal
-    const tier = TRADE_VERDICTS.find(t => more < t.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+    const tierIdx = Math.max(0, TRADE_VERDICTS.findIndex(t => more < t.upTo));
+    const tier = TRADE_VERDICTS[tierIdx] || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
     const fair = tier.upTo <= 3, pct = more.toFixed(1) + "%";
     title.className = fair ? "fair" : "win-" + ahead;
-    title.textContent = tier.title(w, l);
-    sub.textContent = tier.text(w, l, pct);
+    if (youMode()) { const v = youVerdictText(tierIdx, ahead, pct); title.textContent = v.title; sub.textContent = v.text; }
+    else { title.textContent = tier.title(w, l); sub.textContent = tier.text(w, l, pct); }
     // the exact numbers behind the label; raw player value shown when the roster adjustment moved it
     let line = `<b>${pct}</b> adjusted value gap · ${esc(tier.range)}`;
     if (res.rawA != null && res.rawB != null && Math.min(res.rawA, res.rawB) > 0) {
@@ -2501,7 +2544,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     }).filter(s => s.gap < gap).sort((x, y) => x.gap - y.gap).slice(0, 4);
 
     if (scored.length) {
-      $("balance-title").textContent = `To even it out, add to ${names[loser]}`;
+      $("balance-title").textContent = `To even it out, add to ${possessive(loser)} side`;
       $("balance-sub").textContent = "";
       $("balance-list").innerHTML = scored.map(s =>
         `<button class="suggest" type="button" data-ids="${s.p.id}" data-side="${loser}">
@@ -3657,7 +3700,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       if (!team) { box.innerHTML = ""; return; }
       const entries = (team.roster.players || []).map(sid => rosterEntry(sid, map))
         .sort((a, b) => (b.ranked ? tv(b.p) : -1) - (a.ranked ? tv(a.p) : -1));
-      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "My Team" : team.name)} roster <span>Click to send to Team ${s === "A" ? "B" : "A"}</span></div>
+      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "My Team" : team.name)} roster <span>Click to send to ${esc(sideName(s === "A" ? "B" : "A"))}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
           ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s === "A" ? "B" : "A"}"${inTrade(e.p.id) ? " disabled" : ""}>
               ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span></button>`
@@ -3897,7 +3940,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           ${LG.active ? stat("Owner", esc(own === "fa" ? "Free agent" : own.mine ? "You" : own.name), "") : ""}
         </div>
         <div class="pm-actions">
-          <button class="btn primary" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · Team ${p ? tradeSideFor(sid) : "A"}`}</button>
+          <button class="btn primary" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
           <button class="btn" type="button" data-find-trades="${esc(sid)}"${findHint ? ` disabled title="${esc(findHint)}"` : ""}>Find trades</button>
           <button class="btn" type="button" data-pm-compare aria-pressed="${PP.picking}">${PP.compare ? "Compare: change" : "Compare player"}</button>
           ${findHint ? `<span class="pp-hint">${esc(findHint)}</span>` : ""}
@@ -4320,7 +4363,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       const info = playerInfo(PP.sid); if (!info.p || inTrade(info.p.id)) return;
       const side = tradeSideFor(PP.sid);
       sides[side].push(info.p.id); renderTrade();
-      toast(`${info.name} added to Team ${side}'s side of the trade calculator.`);
+      toast(`${info.name} added to "${getsLabel(side)}" in the trade calculator.`);
       renderPlayer(); return;
     }
     if (t.closest("[data-pm-compare]")) { PP.picking = !PP.picking; PP.pickQuery = ""; renderPlayer(); return; }
