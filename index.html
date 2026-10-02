@@ -1545,6 +1545,16 @@ dialog.signin label.im-mine input { width: auto; height: auto; accent-color: var
 .th-total b { font-size: 0.92rem; color: var(--cream); font-variant-numeric: tabular-nums; }
 .th-sidev { font-size: 0.74rem; font-weight: 750; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .th-sidev.up { color: var(--gold); } .th-sidev.down { color: var(--rose-ink); }
+.th-meter { margin-top: 14px; }
+.th-meter .meter { height: 6px; }
+.th-meter .meter .ma, .th-meter .meter .mb, .th-meter .meter .mc { flex: none; transition: none; }
+.th-meter .meter .mc { background: var(--muted); }
+.th-meter .meter.three::after { display: none; }
+.th-meter .meter.three > div + div { box-shadow: inset 2px 0 0 var(--surface); }
+.th-meter .meter-labels { margin-top: 7px; }
+.th-meter .meter-labels small { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
+.th-meter .ml-a { color: var(--side-a); } .th-meter .ml-b { color: var(--side-b); }
+.th-meter .meter.three ~ .meter-labels span:nth-child(2) { text-align: center; }
 .th-diff { margin: 12px 0 0; font-size: 0.8rem; color: var(--ink-2); }
 .th-diff b { color: var(--cream); }
 .th-basis { color: var(--muted); }
@@ -5767,6 +5777,13 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         <div class="th-total"><span>Total value</span><b>${fmt(s.total)}</b></div>
         ${P.length > 2 ? `<div class="th-sidev ${s.label === "Fair" ? "fair" : s.up ? "up" : "down"}">${esc(s.label)}${isFinite(s.more) ? ` · ${s.up ? "+" : "−"}${s.more.toFixed(1)}%` : ""}</div>` : ""}
       </div>`;
+    // value meter: each team's share of the value in the deal (2-team: adjusted scores, like the calculator)
+    const shares = P.length === 2 ? [r.a || 0, r.b || 0] : P.map(s => s.total);
+    const tot = shares.reduce((a, v) => a + v, 0);
+    const meter = tot > 0 ? `<div class="th-meter">
+        <div class="meter${P.length > 2 ? " three" : ""}">${shares.map((v, i) => `<div class="m${"abc"[i] || "c"}" style="width:${(100 * v / tot).toFixed(1)}%"></div>`).join("")}</div>
+        <div class="meter-labels">${P.map((s, i) => `<span class="ml-${"abc"[i] || "c"}">${esc(s.team.name)} · ${fmt(shares[i])}${Math.round(shares[i]) !== Math.round(s.total) ? ` <small title="Includes the calculator's best-player bonus and roster-spot adjustment">adjusted</small>` : ""}</span>`).join("")}</div>
+      </div>` : "";
     const basis = r.historical ? `SPAM values from ${esc(longWhen(r.basisTs))} (base values)` : "Evaluated using current SPAM values";
     const anyPicks = P.some(s => s.picks.length);
     const diff = P.length === 2 && r.a > 0 && r.b > 0 ? `<b>Difference ${r.more.toFixed(1)}%</b> · ` : "";
@@ -5780,6 +5797,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     return `<article class="th-card">
       <header class="th-head"><span class="th-date">${esc(when)}${t.week ? ` · Week ${t.week}` : ""}</span>${verdict}</header>
       <div class="th-sides n${Math.min(P.length, 3)}">${P.map(side).join("")}</div>
+      ${meter}
       <p class="th-diff">${diff}<span class="th-basis${r.historical ? "" : " current"}">${basis}</span>${anyPicks ? ` · <span class="muted">picks not valued</span>` : ""}</p>
       <p class="th-note">${esc(tradeNote(r))}</p>
       <div class="th-actions"><button class="btn link" type="button" data-th-full="${esc(t.id)}" aria-expanded="${full}">${full ? "Hide analysis" : "Full analysis"}</button>
