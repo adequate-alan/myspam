@@ -580,11 +580,11 @@ const TRADE_VERDICTS = [
   /* surfaces */
   --page-bg: #1B1615;            /* near-black warm page */
   --nav-bg: #1E1918;             /* header */
-  --surface-bg: #221C1C;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
+  --surface-bg: #211D1C;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
   --surface-raised: #2A141D;     /* modals, dropdowns, menus, elevated sections */
-  --table-head: #2A141D;
-  --row-hover: #331C25;
-  --tier-row: #1E1819;           /* tier divider rows inside tables */
+  --table-head: #2A2524;
+  --row-hover: #2E1E24;
+  --tier-row: #2A1820;           /* tier divider rows inside tables */
   --control-bg: #1E1919;         /* inputs, selects, buttons */
   --track: #352D2D;              /* value bars, slider tracks */
   /* text */
@@ -638,6 +638,11 @@ const TRADE_VERDICTS = [
   --backdrop: rgba(12, 6, 8, 0.72);
   --hero-tint: color-mix(in srgb, #7A2E43 28%, #221C1C);
   --theme-scheme: dark;
+  --tier-line: #56303D;
+  --tier-text: #F4B979;
+  --disabled-bg: #2A2524;
+  --disabled-text: #968884;
+  --disabled-border: #3A3231;
 }
 :root[data-theme="light"] {
   --page-bg: #F7F2EB;            /* warm cream */
@@ -645,8 +650,8 @@ const TRADE_VERDICTS = [
   --surface-bg: #F0E8DE;         /* cards and tables: a step darker than the page (never white) */
   --surface-raised: #F6F0E8;     /* modals, dropdowns */
   --table-head: #E8DED2;
-  --row-hover: #E8DCCF;
-  --tier-row: #EDE4D9;
+  --row-hover: #EBDDD5;
+  --tier-row: #EEE3D8;
   --control-bg: #FAF6F0;
   --track: #E2D6CA;
   --text-primary: #2E2A28;
@@ -691,6 +696,11 @@ const TRADE_VERDICTS = [
   --backdrop: rgba(74, 40, 36, 0.28);
   --hero-tint: #EEDDD6;
   --theme-scheme: light;
+  --tier-line: #D3C2B3;
+  --tier-text: #5A1F32;
+  --disabled-bg: #EBE3D9;
+  --disabled-text: #776A62;
+  --disabled-border: #DCD0C4;
 }
 /* Aliases used throughout the stylesheet (they follow the tokens above) */
 :root {
@@ -776,7 +786,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 850; font-stretch: 112%; font-size: 1.75rem; line-height: 1; letter-spacing: -0.035em;
   margin: 0; color: var(--brand);
 }
-.brand-name::after {   /* small accent square: gold in dark mode, coral in light mode */
+.brand-name::after {   /* the brand's period: gold in dark mode, coral in light mode (part of the SPAM. wordmark) */
   content: ""; display: inline-block; width: 0.2em; height: 0.2em; margin-left: 0.07em; background: var(--brand-accent);
   vertical-align: baseline; border-radius: 1px;
 }
@@ -829,7 +839,11 @@ main { padding-block: 32px 72px; }
 .btn.danger:hover:not(:disabled) { background: var(--danger-hover); border-color: var(--danger-hover); color: var(--danger-text); }
 .btn.link { border-color: transparent; background: none; color: var(--muted); padding-inline: 6px; }
 .btn.link:hover:not(:disabled) { color: var(--cream); background: none; border-color: transparent; }
-.btn:disabled { opacity: 0.35; cursor: default; }
+/* disabled: muted but still readable, same treatment for every button style */
+.btn:disabled, .btn.primary:disabled, .btn.danger:disabled, .btn.publish:disabled {
+  opacity: 1; cursor: default; background: var(--disabled-bg); border-color: var(--disabled-border); color: var(--disabled-text);
+}
+.btn.link:disabled { background: none; border-color: transparent; color: var(--disabled-text); }
 
 .search {
   width: min(280px, 100%); height: 36px;
@@ -869,11 +883,12 @@ td.rk { font-size: 0.9rem; font-weight: 600; width: 70px; color: var(--rank); fo
   font-size: 0.64rem; font-weight: 600; color: var(--muted); letter-spacing: 0.1em;
   margin-left: 9px; text-transform: uppercase;
 }
-tr.tier td {
-  background: var(--tier-row); padding: 12px 22px 8px;
-  font-size: 0.66rem; font-weight: 700; font-stretch: 108%; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--gold); border-bottom: 1px solid var(--line-soft);
+tr.tier td {   /* tier breaks: a clear divider above and a bolder label */
+  background: var(--tier-row); padding: 13px 22px 9px;
+  font-size: 0.72rem; font-weight: 800; font-stretch: 110%; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--tier-text); border-top: 2px solid var(--tier-line); border-bottom: 1px solid var(--tier-line);
 }
+tbody tr.tier:first-child td { border-top: 0; }
 .pos-col { width: 1%; white-space: nowrap; padding-right: 8px !important; }
 .pos {
   display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 22px;
@@ -1394,8 +1409,8 @@ dialog.signin label.im-mine input { width: auto; height: auto; accent-color: var
 .im-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: 999px; background: var(--control); border: 1px solid var(--line); color: var(--ink-2); }
 .im-chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0 3px; }
 .im-chip button:hover { color: var(--rose-ink); }
-.fmt-note { font-size: 0.74rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.fmt-note b { color: var(--ink-2); font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.68rem; }
+.fmt-note { font-size: 0.68rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fmt-note b { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.64rem; }
 .bm { display: inline-block; margin-left: 5px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: 1px; }
 .bm-up { color: var(--rb); }
 .bm-down { color: var(--rose); }
