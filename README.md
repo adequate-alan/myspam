@@ -27,15 +27,17 @@ The calculator compares the adjusted value each side receives: raw player value 
 
 The exact gap is shown under the verdict, along with the raw player value gap when the roster adjustment changed it. With a Sleeper league connected, verdicts use the team names. Tiers and wording are in `TRADE_VERDICTS` in `index.html`.
 
-## Player pages
+## Player details
 
-Every player name on the site links to a player page (`#player/<sleeper id>`), with a photo, team, position, age, SPMetrics rank and value, league ownership and this season's points per game. Sections:
-- **Overview:** season points, points per game, recent games, season trend, next opponent, ownership, the SPMetrics projection and a weekly points chart.
-- **Game log:** every week of 2026, 2025 or 2024 with position-specific stats, byes and missed games. Gold rows are big weeks (1.75× the position's starter line), dim rows are under half of it.
+Click any player's name or photo anywhere on the site (rankings, My Team, team pages, free agents, trade calculator, Trade Finder) to open his details in a pop-up over the current page. Nothing underneath changes: your place in the rankings and any trade you're building stay exactly as they were. Close it with ×, Escape or a click outside. Clicking another player inside the pop-up switches to him (← goes back). On phones it opens as a nearly full-screen panel.
+
+- **Top:** photo, team, position, age, overall rank, position rank, SPMetrics value, points per game, Sleeper owner. Actions: **Add to trade** (goes to the side away from the team that owns him), **Find trades**, **Compare player** (side-by-side, better number in gold) and close.
+- **Overview:** ranks, value, season points, PPG, recent games, last 3 and last 5 averages, season trend, next opponent, Sleeper owner and roster status (starting, bench, IR, taxi), plus a weekly points chart.
+- **Game log:** each week of 2026, 2025 or 2024 with position-specific columns, byes and missed games. Gold rows are big weeks (1.75× the position's starter line), dim rows are under half of it.
 - **Stats:** season totals and usage/efficiency (target share, catch rate, yards per touch/carry/catch, completion %, yards per attempt).
-- **Fantasy performance:** weekly points chart by season, with Season / Last 10 / Last 5, average and starter lines.
-- **Ranking history:** overall rank and value over time from the published snapshots.
-- **Trade value:** current value, movement since the last snapshot, the players closest in value (with owners when a league is connected) and **Find trades for this player**.
+- **Fantasy performance:** weekly points chart for Last 5, Last 10, 2026, 2025 or 2024, with average and starter lines.
+- **Ranking history:** overall rank, position rank and value over time from the published snapshots.
+- **Trade value:** current value, movement since the last snapshot, similar-value players, trade-up and trade-down targets (players on other teams when a league is connected, with owners) and **Find trades for this player**.
 
 Fantasy points are calculated in the browser from the raw stats, using the connected league's scoring (including yardage bonuses and first downs) or the site's format otherwise.
 
