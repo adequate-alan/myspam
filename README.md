@@ -1,8 +1,12 @@
-# SPMetrics Fantasy Rankings
+# SPAM Fantasy Rankings
 
-Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-premium, superflex redraft league. Rankings by Steven ([@SPMetrics](https://github.com/stevenp36)) and Alan; player values come from a model that blends those rankings with this season's usage and betting-market team outlooks.
+Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-premium, superflex redraft league. Rankings by Steven ([stevenp36](https://github.com/stevenp36)) and Alan; player values come from a model that blends those rankings with this season's usage and betting-market team outlooks.
 
 **Live site:** https://stevenp36.github.io/spmetrics-fantasy/
+
+## Brand
+
+The product name is **SPAM** (SPAM Rankings, SPAM Values, SPAM Board). The wordmark is one word in the brand color (deep burgundy in light mode, cream in dark mode) with a small accent square (coral / warm gold). `SITE.name` and `SITE.author` at the top of `index.html` set it; the favicon is `favicon.svg` and the install name comes from `manifest.webmanifest`. The repository and URL keep their original names (`spmetrics-fantasy`).
 
 ## Light and dark themes
 
@@ -38,7 +42,7 @@ The exact gap is shown under the verdict, along with the raw player value gap wh
 
 Click any player's name or photo anywhere on the site (rankings, My Team, team pages, free agents, trade calculator, Trade Finder) to open his details in a pop-up over the current page. Nothing underneath changes: your place in the rankings and any trade you're building stay exactly as they were. Close it with ×, Escape or a click outside. Clicking another player inside the pop-up switches to him (← goes back). On phones it opens as a nearly full-screen panel.
 
-- **Top:** photo, team, position, age, overall rank, position rank, SPMetrics value, points per game, Sleeper owner. Actions: **Add to trade** (goes to the side away from the team that owns him), **Find trades**, **Compare player** (side-by-side, better number in gold) and close.
+- **Top:** photo, team, position, age, overall rank, position rank, SPAM Value, points per game, Sleeper owner. Actions: **Add to trade** (goes to the side away from the team that owns him), **Find trades**, **Compare player** (side-by-side, better number in gold) and close.
 - **Overview:** ranks, value, season points, PPG, recent games, last 3 and last 5 averages, season trend, next opponent, Sleeper owner and roster status (starting, bench, IR, taxi), plus a weekly points chart.
 - **Game log:** each week of 2026, 2025 or 2024 with position-specific columns, byes and missed games. Gold rows are big weeks (1.75× the position's starter line), dim rows are under half of it.
 - **Stats:** season totals and usage/efficiency (target share, catch rate, yards per touch/carry/catch, completion %, yards per attempt).
@@ -67,18 +71,18 @@ The toolbar at the top holds the league picker and, in league mode, the two team
 
 Layout, in order: the two sides (team name, total, players, search, a collapsed **Add from roster** picker and a subtle *Needs / Strong* line), then the verdict (label, value difference, one-line explanation, balance bar). **Balance this trade** opens 3–4 suggestions on request. Three collapsed sections hold the details: **Why?** (plain-English reasoning), **Roster impact** (roster fit, lineup changes and your roster-need sliders) and **Value breakdown** (raw values, best-player bonus, waiver adjustment, roster needs, adjusted totals). Small ⓘ icons explain the math.
 
-- **Universal mode** (*No league context*): the two sides are **You get** and **They get**, and verdicts read from your point of view ("Slight edge to you", "You're getting robbed"). Search any players; base SPMetrics values and the small roster adjustment. Works without Sleeper.
+- **Universal mode** (*No league context*): the two sides are **You get** and **They get**, and verdicts read from your point of view ("Slight edge to you", "You're getting robbed"). Search any players; base SPAM Values and the small roster adjustment. Works without Sleeper.
 - **League mode** (a synced Sleeper league): pick the two teams (the sides, verdicts and notes then use their Sleeper team names), then click players straight from their real rosters (a player clicked on Team A's roster goes to Team B, and the reverse). *Search any player* still works for hypothetical trades. Values are league-adjusted. Choosing a different league switches the site's active league; players in the trade who aren't on the selected rosters are flagged and kept as hypothetical until you remove them.
 
 In league mode with both teams picked, the calculator answers two questions separately:
-1. **Value verdict:** is it fair in SPMetrics value? (the same descriptive verdicts as always)
+1. **Value verdict:** is it fair in SPAM Value? (the same descriptive verdicts as always)
 2. **Roster context:** does it make sense for these two teams? Each team's best lineup is rebuilt before and after the trade in this league's slots (superflex, flex count, TE premium through league values, bench depth, roster spots), giving each a **roster impact** %. The **league-adjusted verdict** is the value margin plus 0.4 × the difference in roster impact, capped at ±4 points, so need can push a fair trade to a slight edge but never overrides a clearly lopsided one. A short written explanation covers positional needs, starters gained or lost, holes and consolidation, and **Lineup changes** lists who becomes RB1, who moves to FLEX or the bench, who gets cut and which starters each team loses.
 
 **Best fits to balance the trade** come from the real roster of the team that's getting more value: closest to fair first, then expendable depth over starters, never a player whose loss leaves a starting spot empty, and at most two-player packages (only when a single player can't do the job about as well).
 
 ### Team-specific value (league mode)
 
-A player's SPMetrics value never changes, but what he's worth **to a roster** depends on whether he'd start there. With a league and both teams picked, every incoming player gets a team-specific value from his role in the new lineup, and every outgoing player a cost from his role before the trade (`TEAM_FIT` in `index.html`, capped at 0.60–1.10 so a good player never becomes worthless):
+A player's SPAM Value never changes, but what he's worth **to a roster** depends on whether he'd start there. With a league and both teams picked, every incoming player gets a team-specific value from his role in the new lineup, and every outgoing player a cost from his role before the trade (`TEAM_FIT` in `index.html`, capped at 0.60–1.10 so a good player never becomes worthless):
 
 | Role | Incoming | Outgoing |
 |---|---|---|
@@ -101,7 +105,7 @@ Four sliders under **Roster impact** (QB, RB, WR, TE) say how your team stands a
 
 A league-wide trade discovery tool (needs a connected Sleeper league).
 
-- **Player:** *My team* (your roster), *Any player* (search the whole SPMetrics database; each result shows who owns him) or *By team* (pick a team, then a player).
+- **Player:** *My team* (your roster), *Any player* (search the whole SPAM database; each result shows who owns him) or *By team* (pick a team, then a player).
 - **From team** is the team whose side the finder takes. It defaults to the player's owner, so picking a player on Gabriel's team finds trades *Gabriel* could make with him. Pick a different team to find ways that team could get him from his owner. **Against** limits the partner to one team.
 - **Position wanted** and **Trade type** (1-for-1 or packages: 2-for-1, 1-for-2, 2-for-2). **More filters:** max value difference and fair trades only.
 - **Sort:** best match, fairest, best for the starting team, biggest roster improvement, 1-for-1 first, fewest players.
@@ -149,7 +153,7 @@ While the rankings system is being built, the editing controls are on for every 
 How values and order change for any non-base settings (league or hand-picked), tunable in `FORMAT_ADJUST` at the top of `index.html`:
 1. **Tier values** move with the scoring and lineup (re-scored value curves, replacement and waiver levels), one tier at a time: every player in a tier moves by the same factor, so tiermates stay as close as on the board and the drops stay at the tier breaks. This step never reorders players within a position.
 2. **A personal nudge** per player: his last 17 games are scored with the league's settings and with the site's, compared with his position's average, shrunk toward zero for small samples and capped at ±10%. A back who gets most of his points from catches loses a little in standard scoring, etc.
-3. **Order stays the SPMetrics board** unless a player's adjusted value passes the player above him by more than 3%, and nobody moves more than 2 spots within his position. Across positions the same 3% rule applies, so in a 1QB league quarterbacks slide down the overall board. ▲/▼ next to the rank shows each move; the **SPMetrics board** toggle shows the unadjusted board.
+3. **Order stays the SPAM Board** unless a player's adjusted value passes the player above him by more than 3%, and nobody moves more than 2 spots within his position. Across positions the same 3% rule applies, so in a 1QB league quarterbacks slide down the overall board. ▲/▼ next to the rank shows each move; the **SPAM Board** toggle shows the unadjusted board.
 
 ### League depth (shallow vs deep leagues)
 
@@ -184,10 +188,10 @@ Data is kept in three separate layers:
 
 With a league connected:
 - The header shows the league and its format; click it to switch leagues, refresh, change account or disconnect.
-- Rankings get a **SPMetrics board / League-adjusted** toggle, an owner label on each player (My Team, manager name, FA), and an owner filter. Editing works in the Base view.
+- Rankings get a **SPAM Board / League-adjusted** toggle, an owner label on each player (My Team, manager name, FA), and an owner filter. Editing works in the Base view.
 - **My Team:** lineup by slot, bench, IR and taxi with overall rank, position rank and value; roster strength by position and power rank (same calculation as the League tab); **Trade with** buttons that open the trade calculator with both rosters.
-- **League:** power rankings for every team, strongest to weakest. Team score = the best lineup the team's healthy roster can field in the league's starting slots (SPMetrics values) + 25% of its bench depth; IR and taxi are left out. Each row shows manager, record, PF/PA, team score, best and weakest position (place in the league) and top starters. Click a team for its breakdown: position strength vs the league (QB, RB, WR, TE rooms and bench depth, each with total value, place and difference from the league average), its best lineup, and the roster grouped by position with role, overall rank, position rank and value. Uses whichever view (Base or League-adjusted) is on.
-- **Free Agents:** ranked players nobody rosters, sorted by SPMetrics values, filterable by position.
+- **League:** power rankings for every team, strongest to weakest. Team score = the best lineup the team's healthy roster can field in the league's starting slots (SPAM Values) + 25% of its bench depth; IR and taxi are left out. Each row shows manager, record, PF/PA, team score, best and weakest position (place in the league) and top starters. Click a team for its breakdown: position strength vs the league (QB, RB, WR, TE rooms and bench depth, each with total value, place and difference from the league average), its best lineup, and the roster grouped by position with role, overall rank, position rank and value. Uses whichever view (Base or League-adjusted) is on.
+- **Free Agents:** ranked players nobody rosters, sorted by SPAM Values, filterable by position.
 - **Trade calculator:** see *Trade calculator modes* below. Uses the league-adjusted values when that view is on.
 
 Player photos come from Sleeper's image CDN by Sleeper ID (initials show when a photo is missing); manager avatars come from Sleeper too. The site refreshes league data in the background when it's more than 6 hours old.

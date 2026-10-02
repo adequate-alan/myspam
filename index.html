@@ -14,7 +14,19 @@
     var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F7F2EB" : "#1A1314";
   })();
 </script>
-<meta name="description" content="SPMetrics fantasy football rankings and trade calculator for 12-team full PPR superflex redraft leagues.">
+<meta name="description" content="SPAM fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
+<meta name="application-name" content="SPAM">
+<meta name="apple-mobile-web-app-title" content="SPAM">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SPAM">
+<meta property="og:title" content="SPAM Fantasy Rankings">
+<meta property="og:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football. Connect Sleeper, ESPN or Yahoo, or pick your league settings.">
+<meta property="og:url" content="https://stevenp36.github.io/spmetrics-fantasy/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SPAM Fantasy Rankings">
+<meta name="twitter:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
   /* base reset (the claude.ai host used to add this) */
   html { -webkit-text-size-adjust: 100%; }
@@ -22,7 +34,7 @@
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>SPMetrics Fantasy Rankings</title>
+<title>SPAM Fantasy Rankings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Inter:wght@400..800&display=swap">
@@ -32,11 +44,11 @@
    SITE SETTINGS
    ===================================================================== */
 const SITE = {
-  name: "SPMetrics",
+  name: "SPAM",
   tagline: "Fantasy Football Rankings",
   format: "12-Team · Full PPR · Superflex",
   updated: "Oct 1, 2026",
-  author: "@SPMetrics",
+  author: "SPAM",
   repo: "stevenp36/spmetrics-fantasy", // editors need write access to this GitHub repo
   sampleData: false,          // set to true to show the work-in-progress banner
   sampleNote: "WR rankings are final. QB, RB and TE are Steven's rankings until Alan's are in."
@@ -383,7 +395,7 @@ const ROSTER_SPOT_MAX = 0.02;     // roster cost never exceeds 2% of the deal
    position in the trade (on either side) counts as NEED_MULTIPLIERS[level - 1] x his value,
    so a position you need helps whichever side receives it, and a position you're set at
    counts for less. Level 3 (average) changes nothing. Applied after the waiver adjustment. */
-/* Team-specific value (league mode). A player's SPMetrics value never changes, but what he is worth
+/* Team-specific value (league mode). A player's SPAM Value never changes, but what he is worth
    TO A ROSTER depends on whether he'd start there. Incoming players are multiplied by the factor
    for their role in the new lineup; outgoing players by what losing them costs. Capped 0.60-1.10. */
 const TEAM_FIT = {
@@ -566,44 +578,44 @@ const TRADE_VERDICTS = [
    aliases of these tokens, so every rule follows the active theme. */
 :root, :root[data-theme="dark"] {
   /* surfaces */
-  --page-bg: #1A1314;            /* near-black warm page */
-  --nav-bg: #1F1418;             /* header */
-  --surface-bg: #2A141D;         /* cards, tables, panels (burgundy surface) */
-  --surface-raised: #331A25;     /* modals, dropdowns, menus, elevated sections */
-  --table-head: #331B26;
-  --row-hover: #351C28;
-  --tier-row: #211519;           /* tier divider rows inside tables */
-  --control-bg: #22161C;         /* inputs, selects, buttons */
-  --track: #3D2530;              /* value bars, slider tracks */
+  --page-bg: #1B1615;            /* near-black warm page */
+  --nav-bg: #1E1918;             /* header */
+  --surface-bg: #221C1C;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
+  --surface-raised: #2A141D;     /* modals, dropdowns, menus, elevated sections */
+  --table-head: #2A141D;
+  --row-hover: #331C25;
+  --tier-row: #1E1819;           /* tier divider rows inside tables */
+  --control-bg: #1E1919;         /* inputs, selects, buttons */
+  --track: #352D2D;              /* value bars, slider tracks */
   /* text */
   --text-primary: #F3EDE4;
   --text-strong: #F3EDE4;        /* names, numbers, emphasis */
   --text-secondary: #CDBFB7;
-  --text-muted: #A08D8F;
+  --text-muted: #AE9C98;
   --text-rank: #E2D5CC;
   --heading: #F3EDE4;            /* page and dialog titles */
   /* lines */
-  --border: #4A2C38;
-  --border-soft: #3A222C;
-  --border-strong: #6E4152;
+  --border: #3A3030;
+  --border-soft: #2C2525;
+  --border-strong: #5C4A4C;
   /* brand + accents */
   --brand: #F3EDE4;
   --brand-accent: #F4B979;
   --accent-primary: #F4B979;     /* CTAs, active tabs, selected states */
   --accent-hover: #F8CA96;
   --accent-text: #1A1314;        /* text on the accent */
-  --accent-secondary: #B96473;   /* muted rose */
+  --accent-secondary: #C66F7E;   /* muted rose */
   --accent-secondary-text: #EDBAC3;
   --burgundy-1: #7A2E43;
   --burgundy-2-t: #8E3851;
   --coral: #E07B61;
   --peach: #F4B979;
   /* interaction */
-  --hover-bg: #3A2130;
+  --hover-bg: #331C25;
   --active-bg: color-mix(in srgb, var(--accent-primary) 14%, transparent);
   --btn-bg: var(--control-bg);
   --btn-text: #F3EDE4;
-  --btn-hover-bg: #3A2130;
+  --btn-hover-bg: #331C25;
   --danger-bg: #7A2E43;
   --danger-hover: #8E3851;
   --danger-text: #F4CBD2;
@@ -624,60 +636,60 @@ const TRADE_VERDICTS = [
   --shadow-color: rgba(8, 3, 5, 0.85);
   --shadow-soft: rgba(8, 3, 5, 0.6);
   --backdrop: rgba(12, 6, 8, 0.72);
-  --hero-tint: color-mix(in srgb, #7A2E43 30%, #2A141D);
+  --hero-tint: color-mix(in srgb, #7A2E43 28%, #221C1C);
   --theme-scheme: dark;
 }
 :root[data-theme="light"] {
   --page-bg: #F7F2EB;            /* warm cream */
   --nav-bg: #F7F2EB;
-  --surface-bg: #FBF7F1;         /* cards and tables: a step lighter than the page, never plain white */
-  --surface-raised: #FDF9F4;     /* modals, dropdowns */
-  --table-head: #F1E8DE;
-  --row-hover: #F4ECE2;
-  --tier-row: #F4EDE4;
-  --control-bg: #FDFAF6;
-  --track: #EADFD4;
+  --surface-bg: #F0E8DE;         /* cards and tables: a step darker than the page (never white) */
+  --surface-raised: #F6F0E8;     /* modals, dropdowns */
+  --table-head: #E8DED2;
+  --row-hover: #E8DCCF;
+  --tier-row: #EDE4D9;
+  --control-bg: #FAF6F0;
+  --track: #E2D6CA;
   --text-primary: #2E2A28;
   --text-strong: #2E2A28;
   --text-secondary: #5E544F;
-  --text-muted: #8A7D76;
+  --text-muted: #6A5D55;
   --text-rank: #4A403C;
   --heading: #5A1F32;
-  --border: #E4DAD1;
-  --border-soft: #ECE4DB;
-  --border-strong: #CDBDB0;
-  --brand: #2E2A28;
-  --brand-accent: #5A1F32;
+  --border: #DED2C6;
+  --border-soft: #E6DCD1;
+  --border-strong: #C6B4A6;
+  --brand: #5A1F32;
+  --brand-accent: #D96B5B;
   --accent-primary: #5A1F32;     /* burgundy: buttons, active states, emphasis */
   --accent-hover: #7A3A4A;
   --accent-text: #F7F2EB;
-  --accent-secondary: #D96B5B;   /* coral, used sparingly */
-  --accent-secondary-text: #A6443A;
+  --accent-secondary: #A33F2E;   /* coral, used sparingly */
+  --accent-secondary-text: #A33F2E;
   --burgundy-1: #5A1F32;
   --burgundy-2-t: #7A3A4A;
   --coral: #D96B5B;
   --peach: #F0B18A;
-  --hover-bg: #F1E7DC;
+  --hover-bg: #E8DCCF;
   --btn-text: #2E2A28;
-  --btn-hover-bg: #F3EADF;
+  --btn-hover-bg: #EDE3D8;
   --danger-bg: #F5E0DA;
   --danger-hover: #EFCFC6;
-  --danger-text: #A6443A;
+  --danger-text: #A33F2E;
   --selection-bg: #F0B18A;
   --selection-text: #2E2A28;
-  --editor-panel: #F5E7E2;
+  --editor-panel: #F1E2DC;
   --editor-border: #E6CBC4;
-  --custom-panel: #F7E3DE;
+  --custom-panel: #F3DED8;
   --custom-border: #E7C3BB;
-  --pos-qb: #B4475A;
-  --pos-rb: #2E8564;
-  --pos-wr: #3768B2;
-  --pos-te: #7650B0;
+  --pos-qb: #A7404F;
+  --pos-rb: #1F6F55;
+  --pos-wr: #3162A8;
+  --pos-te: #6F4AA8;
   --pos-pick: #8A7D76;
   --shadow-color: rgba(90, 31, 50, 0.16);
   --shadow-soft: rgba(90, 31, 50, 0.10);
   --backdrop: rgba(74, 40, 36, 0.28);
-  --hero-tint: #F2E3DD;
+  --hero-tint: #EEDDD6;
   --theme-scheme: light;
 }
 /* Aliases used throughout the stylesheet (they follow the tokens above) */
@@ -764,7 +776,10 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 850; font-stretch: 112%; font-size: 1.75rem; line-height: 1; letter-spacing: -0.035em;
   margin: 0; color: var(--brand);
 }
-.brand-name span { color: var(--brand-accent); }
+.brand-name::after {   /* small accent square: gold in dark mode, coral in light mode */
+  content: ""; display: inline-block; width: 0.2em; height: 0.2em; margin-left: 0.07em; background: var(--brand-accent);
+  vertical-align: baseline; border-radius: 1px;
+}
 .brand-tag { font-weight: 500; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.01em; }
 .meta {
   font-size: 0.68rem; font-weight: 600; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
@@ -1749,7 +1764,7 @@ footer { border-top: 1px solid var(--line-soft); padding-block: 22px 40px; color
 .footer-link { background: none; border: 0; padding: 0; color: var(--muted); font-size: 0.78rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .footer-link:hover { color: var(--cream); }
 dialog.signin {
-  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink);
   padding: 26px; width: min(460px, calc(100vw - 32px)); box-shadow: 0 30px 70px -24px var(--shadow-color);
 }
 dialog.signin::backdrop { background: var(--backdrop); }
@@ -1983,7 +1998,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     </div>
     <div class="league-controls" id="league-controls" hidden>
       <div class="view-toggle" role="group" aria-label="Rankings view">
-        <button class="chip-btn" type="button" data-view="base" aria-pressed="false">SPMetrics board</button>
+        <button class="chip-btn" type="button" data-view="base" aria-pressed="false">SPAM Board</button>
         <button class="chip-btn" type="button" data-view="league" aria-pressed="true" id="view-adj">League-adjusted</button>
       </div>
       <span class="fmt-note" id="fmt-note"></span>
@@ -2200,7 +2215,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 <dialog class="signin sleeper-dialog" id="sleeper-dialog" aria-labelledby="sd-title">
   <div id="sd-step-user">
     <h2 id="sd-title">Connect Sleeper</h2>
-    <p>Enter your Sleeper username to import your leagues. SPMetrics only reads public league data from Sleeper, so no password is needed.</p>
+    <p>Enter your Sleeper username to import your leagues. SPAM only reads public league data from Sleeper, so no password is needed.</p>
     <form id="sd-user-form">
       <label for="sd-username">Sleeper username</label>
       <input id="sd-username" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your_username">
@@ -2225,13 +2240,13 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 <dialog class="signin fmt-dialog" id="fmt-dialog" aria-labelledby="fmt-title">
   <form id="fmt-form" method="dialog">
     <h2 id="fmt-title">League settings</h2>
-    <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. The SPMetrics order stays put unless a player's value changes enough in your format to pass someone.</p>
+    <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. The SPAM order stays put unless a player's value changes enough in your format to pass someone.</p>
     <div class="fmt-locked" id="fmt-locked" hidden></div>
     <div class="fmt-presets" id="fmt-presets" role="group" aria-label="Common formats"></div>
     <div id="fmt-grid"></div>
     <p class="fmt-summary" id="fmt-summary"></p>
     <div class="signin-actions fmt-actions">
-      <button class="btn link" id="fmt-reset" type="button">Reset to SPMetrics default</button>
+      <button class="btn link" id="fmt-reset" type="button">Reset to SPAM default</button>
       <span class="fmt-spacer"></span>
       <button class="btn" id="fmt-cancel" type="button">Cancel</button>
       <button class="btn primary" id="fmt-apply" type="submit">Apply</button>
@@ -2540,7 +2555,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
      null = the site's own format. A connected league's settings always win over these. */
   const FMT_DEFAULT = { teams: 12, qb: "sf", rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 };
   const FMT_PRESETS = [
-    { id: "spm", label: "SPMetrics default", v: {} },
+    { id: "spm", label: "SPAM default", v: {} },
     { id: "1qb-ppr", label: "1QB · PPR", v: { qb: "1", tep: 0 } },
     { id: "1qb-half", label: "1QB · Half PPR", v: { qb: "1", rec: 0.5, tep: 0 } },
     { id: "1qb-std", label: "1QB · Standard", v: { qb: "1", rec: 0, tep: 0 } },
@@ -2605,7 +2620,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 
   /* ---------- Header / footer ---------- */
   const nm = esc(SITE.name);
-  $("brand-name").innerHTML = nm.length > 2 ? nm.slice(0, 2) + "<span>" + nm.slice(2) + "</span>" : nm;
+  $("brand-name").innerHTML = nm;   // one strong word; the small accent mark comes from CSS
   $("brand-tag").textContent = SITE.tagline;
   $("meta").textContent = [SITE.format, "Updated " + SITE.updated].filter(Boolean).join("  ·  ");
   $("footer-text").textContent = "Rankings and trade model by " + SITE.author + ". Values reflect " + SITE.format + " scoring.";
@@ -2713,7 +2728,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function boardMove(from, to) {
     if (from == null || to == null || from === to) return "";
     const up = to < from, n = Math.abs(from - to);
-    return `<span class="bm ${up ? "bm-up" : "bm-down"}" title="${up ? "Up" : "Down"} ${n} from #${from} on the SPMetrics board">${up ? "▲" : "▼"}${n}</span>`;
+    return `<span class="bm ${up ? "bm-up" : "bm-down"}" title="${up ? "Up" : "Down"} ${n} from #${from} on the SPAM Board">${up ? "▲" : "▼"}${n}</span>`;
   }
   const posLabel = p => (leagueView() && LG.adjPos.has(p.id) ? p.pos + LG.adjPos.get(p.id) : p.posRank);
   function renderRankings() {
@@ -2789,7 +2804,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const origin = new Map();   // 3-team trades: player id -> side that sends him
   const TC3 = { on: false };
   const inTrade = id => sides.A.includes(id) || sides.B.includes(id) || sides.C.includes(id);
-  // Universal mode (no league): base SPMetrics values, any players. League mode: a synced Sleeper league.
+  // Universal mode (no league): base SPAM values, any players. League mode: a synced Sleeper league.
   const TC = { mode: (() => { try { return localStorage.getItem("spm_tc_mode") || "league"; } catch (e) { return "league"; } })() };
   const saveTc = () => { try { localStorage.setItem("spm_tc_mode", TC.mode); } catch (e) {} };
   const tcLeague = () => TC.mode === "league" && LG.active;
@@ -2959,7 +2974,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     return { title: row[0](), text: row[1]() };
   }
 
-  /* League context bar: universal mode (any players, base SPMetrics values) or league mode
+  /* League context bar: universal mode (any players, base SPAM values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
   const infoIcon = (text, label = "More info") => `<button class="info" type="button" aria-label="${esc(label)}" data-info="${esc(text)}">i</button>`;
   const TC_UI = { open: { A: false, B: false, C: false }, balance: false, lens: "market", ctx: null };
@@ -2981,7 +2996,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       ? `<span class="tc-dot" aria-hidden="true"></span>League context ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
       : !LG.active && leagueView()
         ? `<span class="tc-dot" aria-hidden="true"></span>Your settings · ${esc(formatParts(fmtLeague(FMT)).join(" · "))} ${infoIcon("Values are adjusted for the league settings you picked. Connect a league to also use its rosters.", "About your settings")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
-        : `SPMetrics values ${infoIcon("Base SPMetrics values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick your league's settings, or connect a league to use its rosters and scoring.", "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
+        : `SPAM Values ${infoIcon("Base SPAM values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick your league's settings, or connect a league to use its rosters and scoring.", "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
     $("tc-badge").classList.toggle("on", on || (!LG.active && leagueView()));
     ["A", "B", "C"].forEach(s => {
       $("search-" + s).placeholder = on ? "Search any player" : "Search players";
@@ -3158,7 +3173,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function lockUntouched(places, movedPos, who) {
     for (const pos of EDIT_POS) {
       if (movedPos.has(pos) || !places[pos] || places[pos][0] === places[pos][1]) continue;
-      console.warn(`SPMetrics check: ${who || "a team"}'s ${pos} grade moved in a trade with no ${pos}s; kept it unchanged.`);
+      console.warn(`SPAM check: ${who || "a team"}'s ${pos} grade moved in a trade with no ${pos}s; kept it unchanged.`);
       places[pos][1] = places[pos][0];
     }
     return places;
@@ -3633,7 +3648,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   // Plain-English reasoning for universal mode
   function tradeWhyText(res, names, ahead, pct, fair) {
     const cap = t => t.charAt(0).toUpperCase() + t.slice(1), a = res.adj, out = [];
-    out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in SPMetrics value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
+    out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in SPAM Value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
     if (a && a.bonus) out.push(`${cap(subj(a.best))} ${verb(a.best, "land", "lands")} the best player in an uneven trade, worth a small bonus (+${fmt(a.bonus)}).`);
     if (a && a.spot) out.push(`${cap(subj(a.more))} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, which costs a roster spot (−${fmt(a.spot)}).`);
     const ns = Math.round((res.needA || 0) - (res.needB || 0));
@@ -3649,7 +3664,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("tc-breakdown-body").innerHTML = `<table class="bd-table">
         <thead><tr><th scope="col"></th><th scope="col">${esc(names.A)}</th><th scope="col">${esc(names.B)}</th></tr></thead>
         <tbody>
-          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), tcLeague() ? "League-adjusted SPMetrics values for the players each side gets." : !LG.active && leagueView() ? "SPMetrics values adjusted for your settings, for the players each side gets." : "Base SPMetrics values for the players each side gets.")}
+          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), tcLeague() ? "League-adjusted SPAM values for the players each side gets." : !LG.active && leagueView() ? "SPAM values adjusted for your settings, for the players each side gets." : "Base SPAM values for the players each side gets.")}
           ${row("Best-player bonus", sign(bonusA), sign(bonusB), "In an uneven trade (2-for-1 etc.), the side getting the best player gets up to 5% of the deal.")}
           ${row("Waiver adjustment", sign(spotA), sign(spotB), "The side taking on more players has to cut someone: 1% of the deal per extra player, up to 2%.")}
           ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
@@ -3779,7 +3794,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
     $("eb-count").textContent = n ? `${n} unsaved` : "All saved";
     $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
-    $("eb-hint").textContent = leagueView() ? `${adjName()} view is read-only. Switch to SPMetrics board to edit rankings.`
+    $("eb-hint").textContent = leagueView() ? `${adjName()} view is read-only. Switch to SPAM Board to edit rankings.`
       : posFilter === "ALL"
       ? "Drag or use the arrows to reorder. Click a value to override it."
       : EDIT_POS.includes(posFilter)
@@ -4461,8 +4476,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span>Adjusted for <b>${esc(formatParts(vl).join(" · "))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPMetrics board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}${d ? "" : `<button class="btn link inline" type="button" data-open-fmt>Change</button>`}`
-      : `<span>Showing the SPMetrics board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).join(" · "))}</b></span>`;
+      ? `<span>Adjusted for <b>${esc(formatParts(vl).join(" · "))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPAM Board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}${d ? "" : `<button class="btn link inline" type="button" data-open-fmt>Change</button>`}`
+      : `<span>Showing the SPAM Board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).join(" · "))}</b></span>`;
     if (!d) {
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
       if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
@@ -4733,7 +4748,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     e.preventDefault();
     setFormat(fmtDraft);
     fdialog.close();
-    toast(FMT ? `Using ${formatParts(fmtLeague(FMT)).join(" · ")}. Your settings are saved in this browser and in the page link.` : "Back to the SPMetrics default format.");
+    toast(FMT ? `Using ${formatParts(fmtLeague(FMT)).join(" · ")}. Your settings are saved in this browser and in the page link.` : "Back to the SPAM default format.");
   });
   $("fmt-chip").addEventListener("click", openFormat);
   $("fmt-import").addEventListener("click", e => {
@@ -5279,12 +5294,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 
   /* ---------- Team evaluation (power rankings) ----------
      For every team: the best lineup its healthy roster can field in this league's
-     slots using SPMetrics values, plus bench depth. Score = starters + benchWeight x bench.
+     slots using SPAM Values, plus bench depth. Score = starters + benchWeight x bench.
      Position rooms = starters at that position + benchWeight x bench at that position. */
   const ELIG = { QB: ["QB"], RB: ["RB"], WR: ["WR"], TE: ["TE"], WRRB_FLEX: ["RB", "WR"], REC_FLEX: ["WR", "TE"],
                  FLEX: ["RB", "WR", "TE"], SUPER_FLEX: ["QB", "RB", "WR", "TE"] };
   const SLOT_ORDER = ["QB", "RB", "WR", "TE", "WRRB_FLEX", "REC_FLEX", "FLEX", "SUPER_FLEX"];
-  // Best lineup a set of players can field in the league's starting slots (by SPMetrics value),
+  // Best lineup a set of players can field in the league's starting slots (by SPAM Value),
   // plus bench depth (only as many bench players as the league has bench spots count)
   function leagueSlots(league) {
     return (league.roster_positions || []).filter(s => ELIG[s]).sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
@@ -5411,7 +5426,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       <div class="panel-head">
         <div>
           <h2 class="panel-title">Power rankings</h2>
-          <p class="panel-sub">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))} · ${leagueView() ? "League-adjusted" : "Base"} SPMetrics values</p>
+          <p class="panel-sub">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))} · ${leagueView() ? "League-adjusted" : "Base"} SPAM Values</p>
         </div>
       </div>
       <p class="method-note">Each team's best lineup in this league's starting slots, plus ${Math.round(benchW() * 100)}% of its bench depth${depthWord(LG.depth) === "shallow" ? " (less than usual: in a league this shallow, depth matters less than high-end starters)" : depthWord(LG.depth) === "deep" ? " (more than usual: deep league)" : ""}. IR and taxi players are left out. Click a team for its position-by-position breakdown.</p>
@@ -5453,7 +5468,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       </div>
       <h3 class="section-label">Position strength vs the league</h3>
       <div class="strength-grid five">${strengthCards(x, ev)}</div>
-      <h3 class="section-label">Best lineup (SPMetrics)</h3>
+      <h3 class="section-label">Best lineup (SPAM)</h3>
       <div class="lineup-strip">${lineup || `<span class="muted">No ranked starters.</span>`}</div>
       <h3 class="section-label">Roster by position</h3>
       <div class="table-scroll"><table class="mt-table team-table">
@@ -5493,7 +5508,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (faQuery) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(faQuery));
     list.sort((a, b) => dv(b) - dv(a));
     const mx = Math.max(1, ...players.map(dv));
-    $("fa-sub").textContent = `${d.league.name} · sorted by SPMetrics ${leagueView() ? "league-adjusted" : "base"} values`;
+    $("fa-sub").textContent = `${d.league.name} · sorted by SPAM ${leagueView() ? "league-adjusted" : "base"} values`;
     $("fa-body").innerHTML = list.length ? list.map(p => `<tr class="player">
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}</div></div></td>
@@ -5548,7 +5563,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
      Separate data layers meet here; none of them writes to another:
        identity  data/sleeper_players.json (Sleeper ID, name, position, team, nflverse ID, birthdate)
        stats     data/stats/<season>.json  (weekly game logs and schedules; refreshed every Tuesday)
-       rankings  RANKINGS_CSV + editor edits (rank, position rank, SPMetrics value)
+       rankings  RANKINGS_CSV + editor edits (rank, position rank, SPAM Value)
        history   data/rank_history.json    (a snapshot saved each time rankings are published)
        league    Sleeper data in this browser (ownership, scoring, rosters)
      Photos come from Sleeper's CDN by Sleeper ID (face()). */
@@ -5576,7 +5591,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const DEFAULT_SCORING = { pass_yd: 0.04, pass_td: 4, pass_int: -2, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
                             rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: -2, bonus_rec_te: 0.5 };
   const scoringNow = () => { const d = activeData(); return d ? d.league.scoring_settings || {} : FMT ? fmtLeague(FMT).scoring_settings : (comps && comps.base_scoring) || DEFAULT_SCORING; };
-  const scoringLabel = () => (activeData() ? `${activeData().league.name} scoring` : FMT ? `Your scoring (${formatParts(fmtLeague(FMT)).slice(1).join(" · ")})` : "SPMetrics scoring (" + SITE.format.replace(/^12-Team · /, "") + ")");
+  const scoringLabel = () => (activeData() ? `${activeData().league.name} scoring` : FMT ? `Your scoring (${formatParts(fmtLeague(FMT)).slice(1).join(" · ")})` : "SPAM scoring (" + SITE.format.replace(/^12-Team · /, "") + ")");
   const STAT_KEYS = ["pass_cmp", "pass_att", "pass_yd", "pass_td", "pass_int", "pass_2pt", "pass_sack", "pass_fd",
                      "rush_att", "rush_yd", "rush_td", "rush_2pt", "rush_fd", "rec_tgt", "rec", "rec_yd", "rec_td", "rec_2pt", "rec_fd", "fum_lost"];
   const THRESHOLDS = [
@@ -5849,9 +5864,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const r3 = avgPts(last3), r5 = avgPts(last5);
     return `
       <div class="ov-grid">
-        ${cell("Overall rank", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "Unranked", p ? (leagueView() ? adjName() : "SPMetrics") : "")}
+        ${cell("Overall rank", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "Unranked", p ? (leagueView() ? adjName() : "SPAM") : "")}
         ${cell("Position rank", p ? esc(p.posRank) : "–", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : "")}
-        ${cell("SPMetrics value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? adjName() + (LG.factor.has(p.id) ? ` · ${LG.factor.get(p.id) > 1 ? "+" : "−"}${Math.abs(Math.round((LG.factor.get(p.id) - 1) * 1000) / 10)}% for his scoring profile` : "") : "Base") : "")}
+        ${cell("SPAM Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? adjName() + (LG.factor.has(p.id) ? ` · ${LG.factor.get(p.id) > 1 ? "+" : "−"}${Math.abs(Math.round((LG.factor.get(p.id) - 1) * 1000) / 10)}% for his scoring profile` : "") : "Base") : "")}
         ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"}` : "No games yet")}
         ${cell("Points per game", t && t.g ? fp(t.ppg) : "–", esc(activeData() ? "League scoring" : "Site scoring"))}
         ${cell("Recent production", last3.length ? last3.map(g => fp(g.pts)).join(" · ") : "–", last3.length ? "Last 3 games, newest first" : "")}
@@ -5863,7 +5878,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         ${cell("Roster status", LG.active ? esc(rosterStatus(sid, own)) : "–", "")}
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
-      ${p && p.projPPG != null ? `<p class="pp-glance">SPMetrics projection: <b>${fp(p.projPPG)}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
+      ${p && p.projPPG != null ? `<p class="pp-glance">SPAM projection: <b>${fp(p.projPPG)}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
       ${cur && cur.games.length ? `<h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><div class="chart-box" data-chart="0"></div>` : ""}`;
   }
   function glanceLine(pos, t) {
@@ -5993,13 +6008,13 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function ppHistory(info) {
     const h = historyOf(info.sid), p = info.p;
     const first = rankHistory && rankHistory.snapshots && rankHistory.snapshots[0];
-    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the SPMetrics rankings.</p>`;
-    const note = `<p class="pp-note">A snapshot of your rankings is saved every time they're published${first ? `; history starts ${esc(longDate(first.date))}` : ""}. Values are base SPMetrics values.</p>`;
+    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the SPAM Rankings.</p>`;
+    const note = `<p class="pp-note">A snapshot of your rankings is saved every time they're published${first ? `; history starts ${esc(longDate(first.date))}` : ""}. Values are base SPAM values.</p>`;
     if (!h.length) return `<p class="empty-note">No published snapshot includes ${esc(info.name)} yet.</p>` + note;
     if (h.length >= 2) {
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.date, y: x.rank })), invert: true, title: "Overall rank", fmt: v => "#" + v });
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.date, y: x.posRank })), invert: true, title: "Position rank", fmt: v => info.pos + v });
-      PP.charts.push({ type: "line", points: h.map(x => ({ label: x.date, y: x.value })), title: "SPMetrics value", fmt: v => fmt(v) });
+      PP.charts.push({ type: "line", points: h.map(x => ({ label: x.date, y: x.value })), title: "SPAM Value", fmt: v => fmt(v) });
     }
     const rows = h.slice().reverse().map((x, i, arr) => {
       const prev = arr[i + 1];
@@ -6010,7 +6025,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     return `${h.length >= 2 ? `<div class="pp-three">
         <div><h3 class="section-label">Overall rank</h3><div class="chart-box" data-chart="0"></div></div>
         <div><h3 class="section-label">Position rank</h3><div class="chart-box" data-chart="1"></div></div>
-        <div><h3 class="section-label">SPMetrics value</h3><div class="chart-box" data-chart="2"></div></div></div>` : ""}
+        <div><h3 class="section-label">SPAM Value</h3><div class="chart-box" data-chart="2"></div></div></div>` : ""}
       <h3 class="section-label">Published snapshots</h3>
       <div class="table-scroll"><table class="gl-table">
         <thead><tr><th scope="col">Published</th><th scope="col">Overall</th><th scope="col">Move</th><th scope="col">Pos rank</th><th scope="col">Move</th><th scope="col">Value</th><th scope="col">Change</th></tr></thead>
@@ -6023,7 +6038,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* Trade value: similar values, trade-up and trade-down targets */
   function ppTradeValue(info) {
     const p = info.p;
-    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the SPMetrics rankings, so he has no trade value yet.</p>`;
+    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the SPAM Rankings, so he has no trade value yet.</p>`;
     const h = historyOf(info.sid), today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     const before = h.filter(x => x.date < today).pop();
     const v = dv(p), mineOwner = ownerOfSid(info.sid);
@@ -6048,7 +6063,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const canFind = LG.active && mineOwner && mineOwner !== "fa";
     return `
       <div class="pp-grid">
-        ${tile("Current value", fmt(v), leagueView() ? (LG.active ? "League-adjusted SPMetrics value" : "SPMetrics value for your settings") : "Base SPMetrics value")}
+        ${tile("Current value", fmt(v), leagueView() ? (LG.active ? "League-adjusted SPAM Value" : "SPAM Value for your settings") : "Base SPAM Value")}
         ${tile("Recent value movement", before ? valueMove(p.value - before.value) : "–", before ? `Base value since ${esc(longDate(before.date))}` : "No earlier snapshot yet")}
         ${tile("Ranking movement", before ? moveTag(before.rank - p.rank) : "–", before ? `Overall rank #${before.rank} → #${p.rank ?? "–"}` : "No earlier snapshot yet")}
       </div>
@@ -6075,7 +6090,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const rows = [
       ["Overall rank", s => (s.inf.p ? (leagueView() ? overallRank(s.inf.p) : s.inf.p.rank) : null), v => "#" + v, false],
       ["Position rank", s => (s.inf.p ? s.inf.p.posNum : null), (v, s) => s.inf.pos + v, null],
-      ["SPMetrics value", s => (s.inf.p ? dv(s.inf.p) : null), v => fmt(v), true],
+      ["SPAM Value", s => (s.inf.p ? dv(s.inf.p) : null), v => fmt(v), true],
       [`${STATS_SEASONS[0]} PPG`, s => (s.t && s.t.g ? s.t.ppg : null), v => fp(v), true],
       [`${STATS_SEASONS[0]} points`, s => (s.t ? s.t.pts : null), v => fp(v), true],
       ["Games", s => (s.t ? s.t.g : null), v => v, null],
@@ -6445,7 +6460,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const lines = [];
     lines.push(mu ? `${you ? "Your" : S.name + "'s"} ${mu.pos} room goes ${arrow(mu)}${md ? `, while ${sPoss} ${md.pos} room goes ${arrow(md)}` : ""}.` : it.dS > 0 ? `${you ? "Your" : S.name + "'s"} starting lineup gets stronger.` : `${you ? "Your" : S.name + "'s"} lineup stays about level.`);
     lines.push(tu ? `${T}'s ${tu.pos} room goes ${arrow(tu)}${td ? ` and its ${td.pos} room ${arrow(td)}` : ""}.` : it.dT > 0 ? `${T}'s lineup gets stronger.` : `${T} gets the value but not a lineup upgrade, so they may need convincing.`);
-    it.fS.inc.forEach(e => lines.push(`${e.p.name}: ${fmt(dv(e.p))} SPMetrics value, worth ${fmt(e.tv)} to ${sN} (${e.why.toLowerCase()}).`));
+    it.fS.inc.forEach(e => lines.push(`${e.p.name}: ${fmt(dv(e.p))} SPAM Value, worth ${fmt(e.tv)} to ${sN} (${e.why.toLowerCase()}).`));
     it.fT.inc.forEach(e => lines.push(`${e.p.name}: worth ${fmt(e.tv)} to ${T} (${e.why.toLowerCase()}).`));
     if (it.give.length > it.get.length) lines.push(`${you ? "You consolidate" : S.name + " consolidates"} into one stronger piece and ${you ? "open" : "opens"} a roster spot.`);
     else if (it.get.length > it.give.length) lines.push(`Taking ${it.get.length} players costs ${sPoss} bench a spot.`);
@@ -6508,7 +6523,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (!d) { body.innerHTML = ""; return; }
     if ($("panel-finder").hidden) { TF.dirty = true; return; }
     TF.dirty = false;
-    $("tf-sub").textContent = `${d.league.name} · ${formatParts(d.league).join(" · ")} · ${leagueView() ? "League-adjusted" : "Base"} SPMetrics values`;
+    $("tf-sub").textContent = `${d.league.name} · ${formatParts(d.league).join(" · ")} · ${leagueView() ? "League-adjusted" : "Base"} SPAM Values`;
     renderFinderPick();
     const { X, owner, S, mode } = finderTarget();
     const others = LG.teams;
@@ -6650,7 +6665,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     return out;
   }
   const HISTORY_FILE = "data/rank_history.json";
-  const historyText = h => `{"note":"SPMetrics ranking snapshots: {sleeper_id: [overall rank, position rank, base value]}. Saved when rankings are published.",\n"snapshots":[\n${h.snapshots.map(s => JSON.stringify(s)).join(",\n")}\n]}\n`;
+  const historyText = h => `{"note":"SPAM ranking snapshots: {sleeper_id: [overall rank, position rank, base value]}. Saved when rankings are published.",\n"snapshots":[\n${h.snapshots.map(s => JSON.stringify(s)).join(",\n")}\n]}\n`;
   async function saveSnapshot() {
     const date = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     for (let attempt = 0; attempt < 3; attempt++) {
