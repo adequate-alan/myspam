@@ -14,6 +14,8 @@ The product name is **SPAM** (SPAM Rankings, SPAM Values, SPAM Board). The wordm
 
 ## Light and dark themes
 
+Dropdowns: every `<select>` on the site is upgraded on load to a themed SPAM dropdown (`SpamSelect`, at the end of `index.html`). The native select stays hidden in the page and keeps the value, so code keeps using `.value` and `change` events. Groups become section labels, lists of 12+ options get a search box, and the menu supports arrow keys, Home/End, type-ahead, Enter, Escape and click-outside. Add `data-native-select` on a container to opt out.
+
 The sun/moon button in the header switches between light mode (warm cream + burgundy) and dark mode (near-black + burgundy surfaces + cream + warm gold). The choice is saved in the browser (`spm_theme`) and applied before the page draws, so every tab, dialog, dropdown, table, chart and the editor match on every load; with no saved choice the device's light/dark setting decides.
 
 All colors come from one set of theme tokens at the top of the stylesheet (`:root` for dark, `:root[data-theme="light"]` for light): page background, header, surface, raised surface (modals and dropdowns), table header, row hover, tier rows, controls, text (primary, strong, secondary, muted), headings, borders, primary and secondary accents, hover and active states, buttons, danger, editor panels, the QB/RB/WR/TE colors, shadows and the modal backdrop. Older names used across the stylesheet (`--bg`, `--surface`, `--gold`, `--cream`…) are aliases of those tokens. Charts draw with the same variables, so they switch with the theme. To adjust a color, change it in the token block for that theme.

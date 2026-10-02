@@ -1106,13 +1106,13 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .tc-pl-v { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
 .tc-pl-v.low { color: var(--rose-ink); } .tc-pl-v.high { color: var(--gold); }
 .tc-pl-meta .from-menu { display: inline-flex; align-items: center; gap: 4px; margin: 0; font-size: 0.7rem; font-weight: 500; color: var(--muted); min-width: 0; }
-.tc-pl-meta .from-menu select {
+.tc-pl-meta .from-menu select, .tc-pl-meta .from-menu .dd-btn {
   appearance: none; -webkit-appearance: none; background: none; border: 0; border-bottom: 1px dotted var(--border-strong); border-radius: 0;
   padding: 0 11px 0 0; font: inherit; font-weight: 600; color: var(--ink-2); max-width: 140px; min-width: 0; text-overflow: ellipsis; cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%238F8379' stroke-width='1.3'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 1px center;
 }
-.tc-pl-meta .from-menu select:hover, .tc-pl-meta .from-menu select:focus { color: var(--cream); border-bottom-color: var(--gold); outline: none; }
+.tc-pl-meta .from-menu select:hover, .tc-pl-meta .from-menu select:focus, .tc-pl-meta .from-menu .dd-btn:hover, .tc-pl-meta .from-menu .dd-btn[aria-expanded="true"] { color: var(--cream); border-bottom-color: var(--gold); outline: none; }
 .remove {
   background: none; border: 0; cursor: pointer; color: var(--muted); font-size: 1.05rem; line-height: 1;
   width: 26px; height: 26px; border-radius: 5px; transition: background 0.16s ease, color 0.16s ease;
@@ -1332,6 +1332,59 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .lm-action.danger { color: var(--rose-ink); }
 .lm-divider { height: 1px; background: var(--line); margin: 6px 4px; }
 .lm-foot { font-size: 0.7rem; color: var(--muted); padding: 8px 10px 6px; border-top: 1px solid var(--line); margin-top: 6px; }
+
+/* ---------- Dropdowns: every <select> becomes a themed SPAM dropdown (see SpamSelect) ---------- */
+.dd-native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }
+.dd-btn { display: inline-flex; align-items: center; max-width: 100%; text-align: left; white-space: nowrap; font-family: inherit; }
+.dd-btn .dd-label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dd-btn.select[aria-expanded="true"] { border-color: var(--accent-primary); }
+.dd-btn:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.dd-btn:disabled { color: var(--disabled-text); background-color: var(--disabled-bg); border-color: var(--disabled-border); cursor: default; opacity: 1; }
+.dd-menu {
+  position: fixed; z-index: 1000; display: flex; flex-direction: column; min-width: 200px; max-width: min(380px, calc(100vw - 16px));
+  background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 22px 44px -18px var(--shadow-color), 0 2px 6px -2px var(--shadow-soft); overflow: hidden;
+  font-size: 0.86rem; animation: dd-in 0.12s ease-out;
+}
+@keyframes dd-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.dd-menu[hidden] { display: none; }
+.dd-search { padding: 8px 8px 6px; border-bottom: 1px solid var(--border-soft); }
+.dd-search input {
+  width: 100%; height: 32px; padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--control-bg); color: var(--text-primary); font: inherit; font-size: 0.82rem; outline: none;
+}
+.dd-search input::placeholder { color: var(--text-muted); }
+.dd-search input:focus { border-color: var(--accent-primary); }
+.dd-list { overflow-y: auto; padding: 5px; outline: none; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; overscroll-behavior: contain; }
+.dd-list::-webkit-scrollbar { width: 8px; }
+.dd-list::-webkit-scrollbar-track { background: transparent; }
+.dd-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; border: 2px solid var(--surface-raised); }
+.dd-opt {
+  position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 30px 8px 11px; border-radius: var(--radius-sm);
+  color: var(--text-primary); cursor: pointer; line-height: 1.25; user-select: none;
+}
+.dd-opt .dd-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-opt.active { background: var(--hover-bg); }
+.dd-opt[aria-selected="true"] { background: color-mix(in srgb, var(--accent-primary) 16%, transparent); color: var(--text-strong); font-weight: 650; }
+.dd-opt[aria-selected="true"].active { background: color-mix(in srgb, var(--accent-primary) 24%, transparent); }
+.dd-opt[aria-selected="true"]::after {
+  content: ""; position: absolute; right: 11px; top: 50%; width: 9px; height: 5px; margin-top: -4px;
+  border-left: 2px solid var(--accent-primary); border-bottom: 2px solid var(--accent-primary); transform: rotate(-45deg);
+}
+.dd-opt[aria-disabled="true"] { color: var(--disabled-text); cursor: default; }
+.dd-group {
+  margin: 6px 4px 2px; padding: 9px 7px 5px; border-top: 1px solid var(--border-soft);
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: var(--text-muted);
+}
+.dd-list > .dd-group:first-child { margin-top: 0; border-top: 0; padding-top: 4px; }
+.dd-group + .dd-opt { margin-top: 1px; }
+.dd-empty { padding: 12px 11px; color: var(--text-muted); font-size: 0.82rem; }
+:root[data-theme="light"] .dd-opt.active { background: color-mix(in srgb, var(--table-head) 85%, var(--burgundy-1) 4%); }
+:root[data-theme="light"] .dd-opt[aria-selected="true"] { background: color-mix(in srgb, var(--peach) 30%, transparent); color: var(--heading); }
+:root[data-theme="light"] .dd-opt[aria-selected="true"].active { background: color-mix(in srgb, var(--peach) 42%, transparent); }
+:root[data-theme="light"] .dd-menu { box-shadow: 0 18px 36px -18px rgba(90, 31, 50, 0.35), 0 2px 6px -3px rgba(90, 31, 50, 0.18); }
+/* the league switcher menu uses the same surface */
+.league-menu { background: var(--surface-raised); border-color: var(--border-strong); }
 
 /* ---------- Sleeper: rankings controls and ownership ---------- */
 .league-controls {
@@ -1935,7 +1988,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .roster .n:has(.from-menu) { white-space: normal; }
 .roster .n .n-link { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .from-menu { display: flex; align-items: center; gap: 4px; margin: 3px 0 0; font-size: 0.66rem; color: var(--muted); font-weight: 550; }
-.from-menu select { background: var(--control); color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; font-size: 0.7rem; padding: 1px 4px; max-width: 120px; }
+.from-menu select, .from-menu .dd-btn { background: var(--control); color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; font-size: 0.7rem; padding: 1px 4px; max-width: 120px; }
 .tr-player.tr3 { cursor: default; }
 .tr-send { flex: none; border: 1px solid var(--line); background: var(--control); color: var(--ink-2); border-radius: 4px; padding: 2px 7px; font-size: 0.66rem; font-weight: 650; cursor: pointer; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-send:hover:not(:disabled) { border-color: var(--gold); color: var(--cream); }
@@ -2933,7 +2986,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-02T23:10Z";
+  const BUILD_ID = "2026-10-02T23:50Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7409,6 +7462,175 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const ex = [find("Jahmyr Gibbs")], exB = [find("Ashton Jeanty"), find("Kyren Williams")];
   if (ex.every(Boolean) && exB.every(Boolean)) { sides.A = ex.map(p => p.id); sides.B = exB.map(p => p.id); }
   renderTrade();
+})();
+</script>
+<script>
+/* SpamSelect: every <select> on the page gets a themed, accessible dropdown.
+   The native <select> stays in the DOM (hidden) and keeps the value, so all existing
+   code (.value, change listeners, innerHTML refreshes) works unchanged: picking an
+   option sets select.value and fires "change"/"input" on it. Groups (<optgroup>)
+   become section labels; long lists get a search box. */
+(() => {
+  const SEARCH_MIN = 12;
+  let menu = null, cur = null, uid = 0;
+  const desc = (P, k) => Object.getOwnPropertyDescriptor(P, k);
+  // keep the button in sync when code sets the value directly
+  for (const [P, k] of [[HTMLSelectElement.prototype, "value"], [HTMLSelectElement.prototype, "selectedIndex"], [HTMLOptionElement.prototype, "selected"]]) {
+    const d = desc(P, k);
+    if (!d || !d.set) continue;
+    Object.defineProperty(P, k, { configurable: true, enumerable: d.enumerable, get: d.get,
+      set(v) { d.set.call(this, v); const sel = this instanceof HTMLOptionElement ? this.parentElement && this.closest("select") : this; if (sel && sel._dd) sel._dd.sync(); } });
+  }
+  function optText(o) { return o.label || o.textContent.trim(); }
+  function enhance(sel) {
+    if (sel._dd || sel.multiple || sel.size > 1 || sel.closest("[data-native-select]")) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = [...sel.classList].join(" ") + " dd-btn";
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-expanded", "false");
+    btn.innerHTML = '<span class="dd-label"></span>';
+    const lab = sel.getAttribute("aria-label") || (sel.closest("label") && sel.closest("label").textContent.trim().split("\n")[0]) || "";
+    sel.classList.add("dd-native");
+    sel.tabIndex = -1;
+    sel.setAttribute("aria-hidden", "true");
+    sel.after(btn);
+    const dd = sel._dd = {
+      sel, btn,
+      sync() {
+        const o = sel.options[sel.selectedIndex];
+        btn.querySelector(".dd-label").textContent = o ? optText(o) : "";
+        btn.setAttribute("aria-label", (lab ? lab + ": " : "") + (o ? optText(o) : ""));
+        btn.disabled = sel.disabled;
+        btn.hidden = sel.hidden;
+        if (cur === dd) render();
+      }
+    };
+    dd.sync();
+    new MutationObserver(() => dd.sync()).observe(sel, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["disabled", "hidden", "label"] });
+    sel.addEventListener("change", () => dd.sync());
+    sel.addEventListener("focus", () => btn.focus());
+    btn.addEventListener("click", () => (cur === dd ? close(true) : open(dd)));
+    btn.addEventListener("keydown", e => {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) { e.preventDefault(); open(dd); }
+    });
+  }
+  function scan(root) {
+    if (root.nodeType !== 1) return;
+    if (root.tagName === "SELECT") enhance(root);
+    else root.querySelectorAll && root.querySelectorAll("select").forEach(enhance);
+  }
+  function build() {
+    menu = document.createElement("div");
+    menu.className = "dd-menu"; menu.hidden = true;
+    menu.innerHTML = '<div class="dd-search"><input type="search" placeholder="Search" aria-label="Search options" autocomplete="off"></div><div class="dd-list" role="listbox" tabindex="-1"></div>';
+    document.body.appendChild(menu);
+    const input = menu.querySelector("input"), list = menu.querySelector(".dd-list");
+    input.addEventListener("input", () => { render(); const f = items()[0]; setActive(f || null); });
+    menu.addEventListener("keydown", onKey);
+    list.addEventListener("mousemove", e => { const o = e.target.closest(".dd-opt"); if (o && !o.classList.contains("active") && o.getAttribute("aria-disabled") !== "true") setActive(o, false); });
+    list.addEventListener("mousedown", e => e.preventDefault());   // keep focus where it is
+    list.addEventListener("click", e => { const o = e.target.closest(".dd-opt"); if (o && o.getAttribute("aria-disabled") !== "true") choose(o); });
+  }
+  const items = () => [...menu.querySelectorAll(".dd-opt:not([aria-disabled='true'])")];
+  function render() {
+    const { sel } = cur, list = menu.querySelector(".dd-list"), input = menu.querySelector("input");
+    const q = input.value.trim().toLowerCase(), many = sel.options.length >= SEARCH_MIN;
+    menu.querySelector(".dd-search").hidden = !many;
+    const out = [];
+    let lastGroup = null, n = 0;
+    [...sel.options].forEach((o, i) => {
+      const t = optText(o);
+      if (q && !t.toLowerCase().includes(q)) return;
+      const g = o.parentElement.tagName === "OPTGROUP" ? o.parentElement : null;
+      if (g !== lastGroup) { if (g) out.push(`<div class="dd-group" role="presentation">${esc(g.label)}</div>`); lastGroup = g; }
+      if (o.hidden) return;
+      n++;
+      out.push(`<div class="dd-opt" role="option" id="dd-o-${uid}-${i}" data-i="${i}" aria-selected="${i === sel.selectedIndex}"${o.disabled || (g && g.disabled) ? ' aria-disabled="true"' : ""}><span class="dd-t">${esc(t)}</span></div>`);
+    });
+    list.innerHTML = n ? out.join("") : `<div class="dd-empty">No matches</div>`;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  function setActive(o, scroll = true) {
+    menu.querySelectorAll(".dd-opt.active").forEach(x => x.classList.remove("active"));
+    const list = menu.querySelector(".dd-list");
+    if (!o) { list.removeAttribute("aria-activedescendant"); return; }
+    o.classList.add("active");
+    list.setAttribute("aria-activedescendant", o.id);
+    if (scroll) o.scrollIntoView({ block: "nearest" });
+  }
+  function place() {
+    if (!cur) return;
+    const r = cur.btn.getBoundingClientRect(), vh = window.innerHeight, vw = window.innerWidth, gap = 6;
+    const below = vh - r.bottom - gap - 8, above = r.top - gap - 8, up = below < 220 && above > below;
+    const maxH = Math.max(140, Math.min(360, up ? above : below));
+    const list = menu.querySelector(".dd-list"), searchH = menu.querySelector(".dd-search").hidden ? 0 : 47;
+    list.style.maxHeight = (maxH - searchH) + "px";
+    menu.style.minWidth = Math.max(200, r.width) + "px";
+    const w = menu.offsetWidth;
+    menu.style.left = Math.max(8, Math.min(r.left, vw - w - 8)) + "px";
+    if (up) { menu.style.top = "auto"; menu.style.bottom = (vh - r.top + gap) + "px"; }
+    else { menu.style.bottom = "auto"; menu.style.top = (r.bottom + gap) + "px"; }
+  }
+  function open(dd) {
+    if (dd.btn.disabled) return;
+    if (!menu) build();
+    if (cur && cur !== dd) close(false);
+    cur = dd; uid++;
+    const input = menu.querySelector("input");
+    input.value = "";
+    render();
+    menu.hidden = false;
+    dd.btn.setAttribute("aria-expanded", "true");
+    const list = menu.querySelector(".dd-list");
+    dd.btn.setAttribute("aria-controls", "dd-menu"); list.id = "dd-menu";
+    place();
+    setActive(menu.querySelector('.dd-opt[aria-selected="true"]') || items()[0] || null);
+    (menu.querySelector(".dd-search").hidden ? list : input).focus({ preventScroll: true });
+  }
+  function close(refocus) {
+    if (!cur) return;
+    const dd = cur; cur = null;
+    menu.hidden = true;
+    dd.btn.setAttribute("aria-expanded", "false");
+    if (refocus) dd.btn.focus({ preventScroll: true });
+  }
+  function choose(o) {
+    const dd = cur, i = Number(o.dataset.i);
+    close(true);
+    if (dd.sel.selectedIndex !== i) {
+      dd.sel.selectedIndex = i;
+      dd.sel.dispatchEvent(new Event("input", { bubbles: true }));
+      dd.sel.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+  let typed = "", typedAt = 0;
+  function onKey(e) {
+    if (!cur) return;
+    const all = items(), a = menu.querySelector(".dd-opt.active"), k = all.indexOf(a);
+    const inSearch = e.target.tagName === "INPUT";
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }
+    else if (e.key === "Tab") { close(false); cur = null; }
+    else if (e.key === "ArrowDown") { e.preventDefault(); setActive(all[Math.min(all.length - 1, k + 1)] || all[0]); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(all[Math.max(0, k - 1)] || all[0]); }
+    else if (e.key === "PageDown" || e.key === "PageUp") { e.preventDefault(); setActive(all[Math.max(0, Math.min(all.length - 1, k + (e.key === "PageDown" ? 8 : -8)))]); }
+    else if ((e.key === "Home" || e.key === "End") && !inSearch) { e.preventDefault(); setActive(e.key === "Home" ? all[0] : all[all.length - 1]); }
+    else if (e.key === "Enter" || (e.key === " " && !inSearch)) { e.preventDefault(); if (a) choose(a); }
+    else if (!inSearch && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {   // type-ahead
+      const now = Date.now(); typed = (now - typedAt > 700 ? "" : typed) + e.key.toLowerCase(); typedAt = now;
+      const hit = all.find(o => o.textContent.trim().toLowerCase().startsWith(typed));
+      if (hit) setActive(hit);
+    }
+  }
+  document.addEventListener("pointerdown", e => { if (cur && !menu.contains(e.target) && !cur.btn.contains(e.target)) close(false); }, true);
+  window.addEventListener("resize", () => close(false));
+  document.addEventListener("scroll", e => { if (cur && !menu.contains(e.target)) place(); }, true);
+  const start = () => {
+    scan(document.body);
+    new MutationObserver(ms => { for (const m of ms) m.addedNodes.forEach(scan); if (cur && !cur.btn.isConnected) close(false); })
+      .observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
 </script>
 </body>
