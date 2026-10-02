@@ -360,6 +360,14 @@ const CONSOLIDATION_MAX = 0.05;   // consolidation bonus never exceeds 5% of the
 const ROSTER_SPOT_PCT = 0.01;     // 1% of the deal per extra player taken on
 const ROSTER_SPOT_MAX = 0.02;     // roster cost never exceeds 2% of the deal
 
+/* Roster-needs adjustment (the trade calculator's position sliders).
+   Each slider says how your team stands at that position, 1 to 5. Every player at that
+   position in the trade (on either side) counts as NEED_MULTIPLIERS[level - 1] x his value,
+   so a position you need helps whichever side receives it, and a position you're set at
+   counts for less. Level 3 (average) changes nothing. Applied after the waiver adjustment. */
+const NEED_LEVELS = ["Desperately need", "Need", "Average at", "Good at", "Set at"];
+const NEED_MULTIPLIERS = [1.08, 1.04, 1.00, 0.96, 0.92];
+
 function tradeModel(sideA, sideB) {
   const raw = side => side.reduce((sum, p) => sum + p.value, 0);
   const rawA = raw(sideA), rawB = raw(sideB);
@@ -835,6 +843,28 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .bal-plus { color: var(--muted); font-weight: 500; }
 .bal-result { font-size: 0.72rem; font-weight: 600; color: var(--gold); letter-spacing: 0.02em; }
 .bal-or { align-self: center; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
+
+/* ---------- Trade calculator: roster needs ---------- */
+.needs { margin-bottom: 16px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.needs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; }
+.needs-hint { flex: 1 1 300px; font-size: 0.8rem; color: var(--muted); }
+.needs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 22px; }
+.need { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.need-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.need-top .pos { min-width: 34px; height: 20px; font-size: 0.64rem; padding: 0 5px; }
+.need-label { flex: 1; min-width: 0; font-size: 0.82rem; font-weight: 650; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.need.on .need-label { color: var(--cream); }
+.need-mult { font-size: 0.76rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.need.on .need-mult { color: var(--gold-bright); }
+.need input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; margin: 0; }
+.need input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--gold) 0%, var(--track) 50%, var(--line) 100%); }
+.need input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--gold) 0%, var(--track) 50%, var(--line) 100%); }
+.need input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--c); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--c); }
+.need input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--c); }
+.need input[type=range]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+.need-QB { --c: var(--qb); } .need-RB { --c: var(--rb); } .need-WR { --c: var(--wr); } .need-TE { --c: var(--te); }
+.need-scale { display: flex; justify-content: space-between; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.model-note { white-space: pre-line; }
 
 /* ---------- Trade calculator: league context ---------- */
 .tc-context { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 22px; margin-bottom: 16px; }
@@ -1367,6 +1397,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   .ri-row { grid-template-columns: 1fr auto; }
   .ri-row .ri-bar { grid-column: 1 / -1; }
   .ri-verdicts, .lc-cols { grid-template-columns: 1fr; }
+  .needs { padding: 12px 14px; }
+  .needs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
   .pm-id { gap: 14px; padding-right: 44px; }
   .pm-panel { overflow-y: auto; overscroll-behavior: contain; }
   .pm-body { flex: none; overflow: visible; }
@@ -1565,6 +1597,14 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       <p class="tc-mode" id="tc-mode"></p>
     </div>
     <div class="tc-warn" id="tc-warn" role="status" hidden></div>
+    <div class="needs">
+      <div class="needs-head">
+        <span class="ctl-label">Roster needs</span>
+        <span class="needs-hint">Your team's situation at each position. Positions you need count for more in the trade, positions you're set at count for less.</span>
+        <button class="footer-link" id="needs-reset" type="button" hidden>Reset to average</button>
+      </div>
+      <div class="needs-grid" id="needs-grid"></div>
+    </div>
     <div class="trade-grid">
       <div class="side A">
         <div class="side-head">
@@ -2038,6 +2078,22 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const saveTc = () => { try { localStorage.setItem("spm_tc_mode", TC.mode); } catch (e) {} };
   const tcLeague = () => TC.mode === "league" && LG.active;
   const tv = p => (tcLeague() ? dv(p) : p.value);   // value used by the trade calculator
+  // Roster needs (1 = desperately need … 5 = set); saved in this browser
+  const NEEDS = (() => { try { return { QB: 3, RB: 3, WR: 3, TE: 3, ...JSON.parse(localStorage.getItem("spm_needs") || "{}") }; } catch (e) { return { QB: 3, RB: 3, WR: 3, TE: 3 }; } })();
+  const needMult = pos => (NEEDS[pos] ? NEED_MULTIPLIERS[NEEDS[pos] - 1] ?? 1 : 1);
+  const needsActive = () => EDIT_POS.some(pos => NEEDS[pos] !== 3);
+  function renderNeeds() {
+    $("needs-grid").innerHTML = EDIT_POS.map(pos => {
+      const lv = NEEDS[pos], m = NEED_MULTIPLIERS[lv - 1];
+      return `<label class="need need-${pos}${lv !== 3 ? " on" : ""}">
+        <span class="need-top"><span class="pos ${pos}">${pos}</span><span class="need-label">${esc(NEED_LEVELS[lv - 1])} ${pos}</span><span class="need-mult">×${m.toFixed(2)}</span></span>
+        <input type="range" min="1" max="5" step="1" value="${lv}" data-need="${pos}" aria-label="${pos} situation" aria-valuetext="${esc(NEED_LEVELS[lv - 1])} ${pos}">
+        <span class="need-scale"><span>Need</span><span>Average</span><span>Set</span></span></label>`;
+    }).join("");
+    $("needs-reset").hidden = !needsActive();
+  }
+  let skipNeedsRender = false;   // keep the slider being dragged in place
+  function saveNeeds() { try { localStorage.setItem("spm_needs", JSON.stringify(NEEDS)); } catch (e) {} }
 
   function matches(q) {
     q = q.toLowerCase();
@@ -2088,11 +2144,24 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   setupPicker("A");
   setupPicker("B");
 
-  function runModel(aIds, bIds, val = tv) {
+  function runModel(aIds, bIds, val = tv, withNeeds = val === tv) {
     try {
       const pick = id => { const p = byId.get(id); return { ...p, value: val(p) }; };
-      const r = tradeModel(aIds.map(pick), bIds.map(pick)) || {};
-      return { a: Number(r.scoreA) || 0, b: Number(r.scoreB) || 0, rawA: r.rawA, rawB: r.rawB, note: r.note || "" };
+      const A = aIds.map(pick), B = bIds.map(pick);
+      const r = tradeModel(A, B) || {};
+      let a = Number(r.scoreA) || 0, b = Number(r.scoreB) || 0;
+      const notes = r.note ? [r.note] : [];
+      // roster needs: each position's players count as multiplier x value (both sides)
+      if (withNeeds && A.length && B.length) {
+        const extra = side => side.reduce((sum, p) => sum + p.value * (needMult(p.pos) - 1), 0);
+        const nA = extra(A), nB = extra(B), swing = Math.round(nA - nB);
+        a += nA; b += nB;
+        if (swing !== 0) {
+          const used = uniq(A.concat(B).map(p => p.pos)).filter(pos => needMult(pos) !== 1).map(pos => `${pos} ×${needMult(pos).toFixed(2)}`);
+          notes.push(`Need adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${swing > 0 ? "A" : "B"} (${used.join(", ")}).`);
+        }
+      }
+      return { a, b, rawA: r.rawA, rawB: r.rawB, note: notes.join("\n") };
     } catch (err) {
       console.error(err);
       return { a: 0, b: 0, note: "The trade model threw an error: " + err.message, error: true };
@@ -2175,6 +2244,18 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     } else if (!$("team-A").value && LG.myRosterId != null) $("team-A").value = String(LG.myRosterId);
     renderTradeContext(); renderTrade();
   });
+  $("needs-grid").addEventListener("input", e => {
+    const r = e.target.closest("[data-need]"); if (!r) return;
+    NEEDS[r.dataset.need] = Number(r.value); saveNeeds();
+    const lv = NEEDS[r.dataset.need], box = r.closest(".need");   // update the label in place so dragging stays smooth
+    box.classList.toggle("on", lv !== 3);
+    box.querySelector(".need-label").textContent = `${NEED_LEVELS[lv - 1]} ${r.dataset.need}`;
+    box.querySelector(".need-mult").textContent = "×" + NEED_MULTIPLIERS[lv - 1].toFixed(2);
+    r.setAttribute("aria-valuetext", `${NEED_LEVELS[lv - 1]} ${r.dataset.need}`);
+    skipNeedsRender = true; renderTrade(); skipNeedsRender = false;
+    $("needs-reset").hidden = !needsActive();
+  });
+  $("needs-reset").addEventListener("click", () => { EDIT_POS.forEach(pos => { NEEDS[pos] = 3; }); saveNeeds(); renderTrade(); });
   $("tc-warn").addEventListener("click", e => {
     if (!e.target.closest("[data-tc-remove]")) return;
     tcStray().forEach(x => { sides[x.side] = sides[x.side].filter(id => id !== x.p.id); });
@@ -2351,6 +2432,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const title = $("verdict-title"), sub = $("verdict-sub"), meter = $("meter");
     const note = $("model-note");
     note.hidden = !res.note; note.textContent = res.note;
+    if (!skipNeedsRender) renderNeeds();
     $("balance").hidden = true;
     $("verdict-gap").hidden = true;
     $("verdict-ctx").hidden = true;
@@ -2388,6 +2470,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     let line = `<b>${pct}</b> adjusted value gap · ${esc(tier.range)}`;
     if (res.rawA != null && res.rawB != null && Math.min(res.rawA, res.rawB) > 0) {
       const rawMore = pctMore(res.rawA, res.rawB);
+      if (needsActive()) line += " · Roster needs applied";
       if (rawMore !== more || (res.rawA >= res.rawB) !== (ahead === "A"))
         line += ` · Raw player value: ${fmt(res.rawA)} vs ${fmt(res.rawB)} (${rawMore.toFixed(1)}% gap) before the roster adjustment`;
     }
