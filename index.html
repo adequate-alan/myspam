@@ -824,6 +824,64 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .suggest:hover { border-color: #46382F; background: #241E1A; }
 .suggest .r-val { font-size: 0.78rem; color: var(--muted); font-weight: 550; font-variant-numeric: tabular-nums; }
 
+.balance-sub { margin: -4px 0 10px; font-size: 0.84rem; color: var(--ink-2); }
+.balance-sub:empty { display: none; }
+.suggest.bal { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 12px; text-align: left; color: var(--cream); }
+.bal-players { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.bal-p { display: inline-flex; align-items: center; gap: 8px; }
+.bal-p .pos { min-width: 36px; height: 20px; font-size: 0.64rem; padding: 0 5px; }
+.bal-n { display: inline-flex; flex-direction: column; line-height: 1.15; }
+.bal-n small { font-size: 0.64rem; font-weight: 500; color: var(--muted); }
+.bal-plus { color: var(--muted); font-weight: 500; }
+.bal-result { font-size: 0.72rem; font-weight: 600; color: var(--gold); letter-spacing: 0.02em; }
+.bal-or { align-self: center; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
+
+/* ---------- Trade calculator: league context ---------- */
+.tc-context { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 22px; margin-bottom: 16px; }
+.tc-league { display: flex; flex-direction: column; gap: 6px; }
+.tc-league .select { min-width: 230px; }
+.tc-mode { margin: 0 0 8px; font-size: 0.82rem; color: var(--muted); flex: 1 1 320px; }
+.tc-mode b { color: var(--cream); font-weight: 650; }
+.tc-warn {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px;
+  padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.84rem; color: var(--ink-2);
+  background: var(--editor-bg); border: 1px solid color-mix(in srgb, var(--burgundy-2) 55%, var(--line));
+}
+.tc-warn b { color: var(--cream); }
+.verdict-eyebrow { display: block; margin-bottom: 4px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
+.verdict-ctx { margin: 8px 0 0; font-size: 0.82rem; color: var(--ink-2); }
+.verdict-ctx b.win-A, .ri-verdicts b.win-A { color: var(--side-a); }
+.verdict-ctx b.win-B, .ri-verdicts b.win-B { color: var(--side-b); }
+.verdict-ctx b { color: var(--cream); }
+.tc-analysis { border-top: 1px solid var(--line-soft); padding-top: 4px; }
+.tc-analysis .section-label { margin-top: 14px; }
+.ri { display: flex; flex-direction: column; gap: 8px; }
+.ri-row { display: grid; grid-template-columns: minmax(120px, 0.9fr) minmax(170px, 1fr) minmax(120px, 1.2fr); align-items: center; gap: 12px; }
+.ri-name { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-name.side-A { color: var(--side-a); } .ri-name.side-B { color: var(--side-b); }
+.ri-txt { font-size: 0.84rem; color: var(--ink-2); }
+.ri-txt b { color: var(--cream); font-variant-numeric: tabular-nums; }
+.ri-bar { position: relative; height: 6px; background: var(--track); border-radius: 3px; }
+.ri-bar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line); }
+.ri-bar span { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.ri-bar .ri-up { left: 50%; background: var(--rb); opacity: 0.85; }
+.ri-bar .ri-down { right: 50%; background: var(--qb); opacity: 0.85; }
+.ri-verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 14px; background: var(--line-soft); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); overflow: hidden; }
+.ri-verdicts > div { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px; background: var(--surface-2); }
+.ri-verdicts b { font-size: 1rem; font-weight: 800; color: var(--cream); text-transform: uppercase; font-stretch: 106%; }
+.ri-note { font-size: 0.72rem; color: var(--muted); }
+.ri-story { margin: 14px 0 0; font-size: 0.92rem; line-height: 1.55; color: var(--ink); max-width: 85ch; }
+.lc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.lc-col h4 { margin: 0 0 6px; font-size: 0.8rem; font-weight: 700; color: var(--cream); }
+.lc-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.lc-col li { position: relative; padding-left: 16px; font-size: 0.84rem; color: var(--ink-2); }
+.lc-col li::before { content: ""; position: absolute; left: 2px; top: 0.55em; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.lc-col li.lc-in::before { background: var(--rb); }
+.lc-col li.lc-move::before { background: var(--gold); }
+.lc-col li.lc-bench::before { background: var(--line); }
+.lc-col li.lc-out::before { background: var(--qb); }
+.lc-col li.lc-in { color: var(--ink); }
+
 /* ---------- Sleeper: header league switcher ---------- */
 .mast-right { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
 .league-slot { position: relative; }
@@ -1305,6 +1363,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   .pm-head { padding: 16px 16px 0; }
   .pm-body { padding: 16px 16px 24px; }
   .pm-close { top: 12px; right: 12px; }
+  .tc-league, .tc-league .select { width: 100%; }
+  .ri-row { grid-template-columns: 1fr auto; }
+  .ri-row .ri-bar { grid-column: 1 / -1; }
+  .ri-verdicts, .lc-cols { grid-template-columns: 1fr; }
   .pm-id { gap: 14px; padding-right: 44px; }
   .pm-panel { overflow-y: auto; overscroll-behavior: contain; }
   .pm-body { flex: none; overflow: visible; }
@@ -1498,6 +1560,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   </section>
 
   <section id="panel-trade" role="tabpanel" aria-labelledby="tab-trade" hidden>
+    <div class="tc-context">
+      <label class="tc-league"><span class="ctl-label">League context</span><select class="select" id="tc-league" aria-label="League context"></select></label>
+      <p class="tc-mode" id="tc-mode"></p>
+    </div>
+    <div class="tc-warn" id="tc-warn" role="status" hidden></div>
     <div class="trade-grid">
       <div class="side A">
         <div class="side-head">
@@ -1530,9 +1597,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     <div class="verdict" aria-live="polite">
       <div class="verdict-top">
         <div>
+          <span class="verdict-eyebrow" id="verdict-eyebrow" hidden>Value verdict</span>
           <h2 id="verdict-title">Build a trade</h2>
           <p class="verdict-sub" id="verdict-sub"></p>
           <p class="verdict-gap" id="verdict-gap" hidden></p>
+          <p class="verdict-ctx" id="verdict-ctx" hidden></p>
         </div>
         <div class="actions">
           <button class="btn" id="swap-btn" type="button">Swap sides</button>
@@ -1544,8 +1613,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         <div class="meter-labels"><span id="score-A">Team A</span><span id="score-B">Team B</span></div>
       </div>
       <p class="model-note" id="model-note" hidden></p>
+      <div class="tc-analysis" id="tc-analysis" hidden></div>
       <div class="balance" id="balance" hidden>
         <h3 id="balance-title">To even it out</h3>
+        <p class="balance-sub" id="balance-sub"></p>
         <div class="balance-list" id="balance-list"></div>
       </div>
     </div>
@@ -1962,12 +2033,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- Trade calculator ---------- */
   const sides = { A: [], B: [] };
   const inTrade = id => sides.A.includes(id) || sides.B.includes(id);
+  // Universal mode (no league): base SPMetrics values, any players. League mode: a synced Sleeper league.
+  const TC = { mode: (() => { try { return localStorage.getItem("spm_tc_mode") || "league"; } catch (e) { return "league"; } })() };
+  const saveTc = () => { try { localStorage.setItem("spm_tc_mode", TC.mode); } catch (e) {} };
+  const tcLeague = () => TC.mode === "league" && LG.active;
+  const tv = p => (tcLeague() ? dv(p) : p.value);   // value used by the trade calculator
 
   function matches(q) {
     q = q.toLowerCase();
     return players
       .filter(p => !inTrade(p.id) && (p.name + " " + p.team + " " + p.pos).toLowerCase().includes(q))
-      .sort((a, b) => dv(b) - dv(a))
+      .sort((a, b) => tv(b) - tv(a))
       .slice(0, 8);
   }
 
@@ -1984,7 +2060,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         `<li><button type="button" data-id="${p.id}" class="${i === hl ? "hl" : ""}">
           ${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
           <span class="r-name">${esc(p.name)}${ownerTag(p)}</span>
-          <span class="r-val">${fmt(dv(p))}</span></button></li>`).join("")
+          <span class="r-val">${fmt(tv(p))}</span></button></li>`).join("")
         : `<li class="empty" style="padding:10px">No match</li>`;
       list.hidden = false;
     };
@@ -2012,9 +2088,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   setupPicker("A");
   setupPicker("B");
 
-  function runModel(aIds, bIds) {
+  function runModel(aIds, bIds, val = tv) {
     try {
-      const pick = id => { const p = byId.get(id); return { ...p, value: dv(p) }; };
+      const pick = id => { const p = byId.get(id); return { ...p, value: val(p) }; };
       const r = tradeModel(aIds.map(pick), bIds.map(pick)) || {};
       return { a: Number(r.scoreA) || 0, b: Number(r.scoreB) || 0, rawA: r.rawA, rawB: r.rawB, note: r.note || "" };
     } catch (err) {
@@ -2022,42 +2098,268 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       return { a: 0, b: 0, note: "The trade model threw an error: " + err.message, error: true };
     }
   }
+  const pctMore = (a, b) => (Math.min(a, b) > 0 ? Math.round(1000 * Math.abs(a - b) / Math.min(a, b)) / 10 : Infinity);
 
   function renderRoster(side) {
     const ids = sides[side];
     $("roster-" + side).innerHTML = ids.length ? ids.map(id => {
       const p = byId.get(id);
       return `<li>${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
-        <span class="n">${nameLink(p.sleeperId, p.name, "n-link")}${ownerTag(p)}</span><span class="v">${fmt(dv(p))}</span>
+        <span class="n">${nameLink(p.sleeperId, p.name, "n-link")}${ownerTag(p)}</span><span class="v">${fmt(tv(p))}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
     }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
   }
 
-  // Name for a side in verdicts: the Sleeper team picked for it, or "Team A" / "Team B"
-  function sideName(side) {
-    const sel = $("team-" + side), id = LG.active && sel && !sel.hidden ? sel.value : "";
-    const t = id ? LG.teams.find(x => String(x.rosterId) === id) : null;
-    return t ? t.name : "Team " + side;
+  // Name for a side in verdicts: the Sleeper team picked for it (league mode), or "Team A" / "Team B"
+  function sideTeam(side) {
+    if (!tcLeague()) return null;
+    const id = $("team-" + side).value;
+    return id ? LG.teams.find(x => String(x.rosterId) === id) || null : null;
   }
+  function sideName(side) { const t = sideTeam(side); return t ? t.name : "Team " + side; }
+
+  /* League context bar: universal mode (any players, base SPMetrics values) or league mode
+     (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
+  function renderTradeContext() {
+    const sel = $("tc-league"), on = tcLeague();
+    const leagues = sl && sl.leagues ? sl.leagues : [];
+    sel.innerHTML = `<option value="none">No league context</option>` +
+      (leagues.length ? `<optgroup label="Synced Sleeper leagues">${leagues.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</optgroup>` : "") +
+      (!sl ? `<option value="connect">Connect a Sleeper league…</option>` : "");
+    sel.value = on ? sl.activeId : "none";
+    // first time in league mode for this league: Team A starts as your team
+    if (on && TC.defaulted !== sl.activeId) {
+      TC.defaulted = sl.activeId;
+      if (!$("team-A").value && LG.myRosterId != null && !$("team-B").value) $("team-A").value = String(LG.myRosterId);
+    }
+    const d = activeData();
+    $("tc-mode").innerHTML = on
+      ? `<b>League mode</b> · ${esc(formatParts(d.league).join(" · "))} · ${leagueView() ? "league-adjusted" : "base"} values. Pick both teams to see how the trade fits each roster.`
+      : `<b>Universal mode</b> · search any players · SPMetrics ${SITE.format ? esc(SITE.format) + " " : ""}values.`;
+    ["A", "B"].forEach(s => {
+      $("team-" + s).hidden = !on;
+      $("search-" + s).placeholder = on ? "Search any player" : "Add a player";
+      if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; }
+    });
+    // players in the trade who aren't on the roster they're supposedly coming from (kept as hypothetical)
+    const warn = $("tc-warn"), stray = tcStray();
+    warn.hidden = !stray.length;
+    if (stray.length) {
+      warn.innerHTML = `<span>${stray.map(x => `<b>${esc(x.p.name)}</b>`).join(", ")} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster. ${stray.length === 1 ? "He stays" : "They stay"} in the trade as hypothetical.</span>
+        <button class="btn" type="button" data-tc-remove>Remove ${stray.length === 1 ? "him" : "them"}</button>`;
+    }
+  }
+  const uniq = list => [...new Set(list)];
+  function tcStray() {
+    if (!tcLeague()) return [];
+    const out = [];
+    [["A", "B"], ["B", "A"]].forEach(([getter, giver]) => {
+      const t = sideTeam(giver); if (!t) return;
+      const ids = new Set((t.roster.players || []).map(String));
+      sides[getter].forEach(id => { const p = byId.get(id); if (p && !ids.has(String(p.sleeperId))) out.push({ p, side: getter, from: t.name }); });
+    });
+    return out;
+  }
+  $("tc-league").addEventListener("change", async e => {
+    const v = e.target.value;
+    if (v === "connect") { e.target.value = "none"; openConnect(); return; }
+    if (v === "none") { TC.mode = "none"; saveTc(); renderTradeContext(); renderTrade(); return; }
+    TC.mode = "league"; saveTc();
+    if (v !== sl.activeId) {
+      toast("Loading league…");
+      try {
+        await syncLeague(v);
+        $("team-A").value = LG.myRosterId != null ? String(LG.myRosterId) : ""; $("team-B").value = "";
+        toast(`Switched to ${activeData().league.name}. Your trade was kept.`);
+      } catch (err) { toast("Couldn't load that league: " + err.message); }
+    } else if (!$("team-A").value && LG.myRosterId != null) $("team-A").value = String(LG.myRosterId);
+    renderTradeContext(); renderTrade();
+  });
+  $("tc-warn").addEventListener("click", e => {
+    if (!e.target.closest("[data-tc-remove]")) return;
+    tcStray().forEach(x => { sides[x.side] = sides[x.side].filter(id => id !== x.p.id); });
+    renderTrade();
+  });
+
+  /* Roster context: how the trade changes each team's best lineup in this league */
+  function rosterContext() {
+    const d = activeData(), tA = sideTeam("A"), tB = sideTeam("B");
+    if (!d || !tA || !tB || tA === tB || (!sides.A.length && !sides.B.length)) return null;
+    const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
+    const byVal = (a, b) => dv(b) - dv(a);
+    const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
+    const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(s => !o.has(s)).map(s => map.get(s)).filter(Boolean); };
+    const strength = pool => {
+      const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench);
+      L.cut = sorted.slice(limit); L.labels = slotLabels(L); L.filled = L.starters.length; return L;
+    };
+    const getA = sides.A.map(id => byId.get(id)), getB = sides.B.map(id => byId.get(id));
+    const team = (t, incoming, outgoing, otherOut) => {
+      const before = healthy(t);
+      const after = before.filter(p => !outgoing.includes(p)).concat(incoming.filter(p => !otherOut.has(String(p.sleeperId))));
+      const B = strength(before), Aft = strength(after);
+      return { t, before: B, after: Aft, incoming, outgoing: outgoing.filter(p => before.includes(p)), impact: B.score > 0 ? 100 * (Aft.score - B.score) / B.score : 0 };
+    };
+    const A = team(tA, getA, getB, outSet(tB)), B = team(tB, getB, getA, outSet(tA));
+    // position-room places in the league before and after (other teams unchanged)
+    const ev = evaluateTeams(), others = ev.list.filter(x => x.team !== tA && x.team !== tB);
+    const placeOf = (pos, val, otherTeamVal) => 1 + others.filter(x => x.room[pos] > val).length + (otherTeamVal > val ? 1 : 0);
+    for (const [X, Y] of [[A, B], [B, A]]) {
+      X.places = {};
+      for (const pos of EDIT_POS) X.places[pos] = [placeOf(pos, X.before.room[pos], Y.before.room[pos]), placeOf(pos, X.after.room[pos], Y.after.room[pos])];
+      X.changes = lineupChanges(X);
+    }
+    return { A, B, n: ev.n, league: d.league };
+  }
+  // QB, RB1, RB2, WR1… FLEX, SF for each starter
+  function slotLabels(L) {
+    const count = {}, seen = {}, out = new Map();
+    L.starters.forEach(p => { const r = L.role.get(p.id); count[r] = (count[r] || 0) + 1; });
+    L.starters.forEach(p => { const r = L.role.get(p.id); seen[r] = (seen[r] || 0) + 1; out.set(p.id, count[r] > 1 ? r + seen[r] : r); });
+    return out;
+  }
+  function lineupChanges(X) {
+    const lb = X.before.labels, la = X.after.labels, lines = [], moved = new Set([...X.incoming, ...X.outgoing].map(p => p.id));
+    X.incoming.forEach(p => {
+      if (la.has(p.id)) lines.push({ kind: "in", text: `${p.name} becomes ${la.get(p.id)}` });
+      else if (X.after.cut.includes(p)) lines.push({ kind: "out", text: `${p.name} would be cut (no roster spot)` });
+      else lines.push({ kind: "bench", text: `${p.name} joins the bench` });
+    });
+    const everyone = uniq([...X.before.starters, ...X.after.starters]);
+    everyone.forEach(p => {
+      if (moved.has(p.id)) return;
+      const b = lb.get(p.id), a = la.get(p.id);
+      if (b && a && b !== a) lines.push({ kind: "move", text: `${p.name} moves from ${b} to ${a}` });
+      else if (b && !a) lines.push({ kind: "bench", text: `${p.name} moves from ${b} to the bench` });
+      else if (!b && a) lines.push({ kind: "in", text: `${p.name} moves into the lineup at ${a}` });
+    });
+    X.after.cut.filter(p => !X.incoming.includes(p) && !X.before.cut.includes(p)).forEach(p => lines.push({ kind: "out", text: `${p.name} would be cut to make room` }));
+    X.outgoing.forEach(p => lines.push({ kind: "out", text: lb.has(p.id) ? `Loses ${lb.get(p.id)} ${p.name}` : `Loses bench depth: ${p.name}` }));
+    if (X.after.filled < X.before.filled) lines.push({ kind: "out", text: `Can't fill every starting spot anymore` });
+    return lines;
+  }
+  // League-adjusted margin: value first, roster fit refines it (capped so need never overrides value)
+  const FIT_WEIGHT = 0.4, FIT_CAP = 4;
+  function contextVerdict(res, ctx) {
+    const valueMargin = (res.a >= res.b ? 1 : -1) * pctMore(res.a, res.b);   // + = Team A ahead
+    const fit = Math.max(-FIT_CAP, Math.min(FIT_CAP, FIT_WEIGHT * (ctx.A.impact - ctx.B.impact)));
+    const total = valueMargin + fit, more = Math.round(Math.abs(total) * 10) / 10;
+    const ahead = total >= 0 ? "A" : "B", loser = ahead === "A" ? "B" : "A";
+    const tier = TRADE_VERDICTS.find(t => more < t.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+    return { valueMargin, fit, total, more, ahead, loser, tier, fair: tier.upTo <= 3 };
+  }
+  function contextStory(ctx, cv, names) {
+    const A = ctx.A, B = ctx.B, ord = ordinal, n = ctx.n;
+    const vm = Math.abs(cv.valueMargin), valueAhead = cv.valueMargin >= 0 ? "A" : "B";
+    const diff = A.impact - B.impact, fitW = diff >= 0 ? "A" : "B", fitL = fitW === "A" ? "B" : "A";
+    const X = { A, B }[fitW], Y = { A, B }[fitL];
+    const W = names[fitW], L = names[fitL];
+    let s = vm < 3 ? "This trade is nearly even in value" : `${names[valueAhead]} gets ${vm.toFixed(1)}% more value`;
+    if (Math.abs(diff) < 2) {
+      s += vm < 3 ? ", and it fits both rosters about equally." : ", and roster fit doesn't change the picture much.";
+    } else {
+      s += vm < 3 ? `, but it helps ${W} more` : fitW === valueAhead ? `, and it helps ${W} more on the field too` : `, but it fits ${W}'s roster better`;
+      const star = X.incoming.filter(p => X.after.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
+      if (star) {
+        const pl = X.places[star.pos][0], weak = pl > Math.ceil(n / 2);
+        const consolidate = X.incoming.length < X.outgoing.length;
+        s += weak ? ` because ${W} is weak at ${star.pos} (${ord(pl)} in the league) and ${star.name} immediately becomes their ${X.after.labels.get(star.id)}.`
+          : consolidate ? ` because ${W} consolidates depth into a starter: ${star.name} becomes their ${X.after.labels.get(star.id)}.`
+          : ` because ${star.name} steps right into ${W}'s lineup as their ${X.after.labels.get(star.id)}.`;
+      } else s += ` because ${W} adds depth without weakening its starting lineup.`;
+    }
+    // the other side
+    const lostStarter = Y.outgoing.filter(p => Y.before.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
+    const hole = EDIT_POS.map(pos => ({ pos, b: Y.places[pos][0], a: Y.places[pos][1] })).filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
+    const bestPos = EDIT_POS.map(pos => ({ pos, b: Y.places[pos][0] })).sort((x, y) => x.b - y.b)[0];
+    let t = "";
+    if (Math.abs(diff) >= 2 && lostStarter && hole && hole.a >= Math.ceil(n * 0.67)) {
+      const strong = bestPos.b <= 3 && bestPos.pos !== hole.pos;
+      t = `${strong ? `${L} already has strong ${bestPos.pos} depth, but losing` : `Losing`} ${lostStarter.name} leaves ${strong ? "them" : L} thin at ${hole.pos} (${hole.pos} room ${ord(hole.b)} → ${ord(hole.a)}).`;
+    } else if (Math.abs(diff) >= 2 && Y.impact < 0) {
+      t = `${L}'s lineup gets ${Y.impact < -5 ? "noticeably" : "a little"} weaker (−${Math.abs(Y.impact).toFixed(1)}% roster impact), so they're paying for the value in lineup strength.`;
+    } else if (Y.impact >= 0 && Math.abs(diff) >= 2) {
+      t = `${L} still comes out fine on the field (${Y.impact >= 0 ? "+" : ""}${Y.impact.toFixed(1)}% roster impact).`;
+    }
+    const cut = [A, B].filter(Z => Z.after.cut.some(p => !Z.before.cut.includes(p)));
+    if (cut.length) t += ` ${cut.map(Z => names[Z === A ? "A" : "B"]).join(" and ")} would need to cut a player to make room.`;
+    return (s + " " + t).trim();
+  }
+
+  // Balancing in league mode: players from the roster of the team that's ahead (they owe value),
+  // preferring expendable depth and never a player whose loss leaves a starting spot empty
+  function leagueBalance(res, ctx) {
+    const ahead = res.a >= res.b ? "A" : "B", other = ahead === "A" ? "B" : "A";
+    // the team that receives more owes value: it adds players from its own roster to the other side
+    const giverSide = ahead, giver = sideTeam(giverSide);
+    if (!giver || !ctx) return null;
+    const X = giverSide === "A" ? ctx.A : ctx.B;   // giver's after-trade lineup
+    const pool = (giver.roster.players || []).map(String).filter(s => !(giver.roster.taxi || []).map(String).includes(s))
+      .map(s => bySleeper().get(s)).filter(p => p && !inTrade(p.id));
+    const d = activeData(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
+    const afterPool = X.after.starters.concat(X.after.bench);
+    const scoreWithout = list => {
+      const rest = afterPool.filter(p => !list.includes(p)).sort((a, b) => dv(b) - dv(a));
+      return bestLineup(rest.slice(0, limit), slots, lu.bench);
+    };
+    const nowGap = pctMore(res.a, res.b), base = X.after.score || 1;
+    const evalSet = list => {
+      const a = other === "A" ? sides.A.concat(list.map(p => p.id)) : sides.A, b = other === "B" ? sides.B.concat(list.map(p => p.id)) : sides.B;
+      const r = runModel(a, b), gapAfter = pctMore(r.a, r.b), W = scoreWithout(list);
+      const loss = Math.max(0, X.after.score - W.score), hole = W.starters.length < X.after.starters.length;
+      // closest to fair first (anything inside the fair range is nearly as good), then the least lineup damage, then fewer players
+      const close = gapAfter < 3 ? gapAfter * 0.5 : 1.5 + (gapAfter - 3) * 1.5;
+      return { list, gapAfter, r, lossPct: 100 * loss / base, hole, key: close + 0.6 * (100 * loss / base) + (list.length - 1) * 1.0 + (hole ? 50 : 0) };
+    };
+    const singles = pool.map(p => evalSet([p])).filter(x => x.gapAfter < nowGap).sort((a, b) => a.key - b.key);
+    const need = Math.abs(res.a - res.b);
+    const small = pool.filter(p => dv(p) <= need * 1.4).sort((a, b) => dv(b) - dv(a)).slice(0, 12), pairs = [];
+    for (let i = 0; i < small.length; i++) for (let j = i + 1; j < small.length; j++) if (dv(small[j]) >= 0.15 * dv(small[i])) pairs.push(evalSet([small[i], small[j]]));
+    const goodPairs = pairs.filter(x => x.gapAfter < nowGap).sort((a, b) => a.key - b.key);
+    // never leave a starting spot empty unless nothing else works; skip adds that barely move the needle
+    let all = singles.concat(goodPairs).filter(x => !x.hole);
+    if (!all.length) all = singles.slice();
+    const useful = all.filter(x => x.gapAfter <= nowGap * 0.75);
+    if (useful.length) all = useful;
+    all.sort((a, b) => a.key - b.key);
+    // packages only when a single player can't do the job about as well; no two packages share a player
+    const fairSingle = all.find(x => x.list.length === 1 && x.gapAfter < 3);
+    const picks = [], usedInPairs = new Set();
+    for (const x of all) {
+      if (x.list.length === 2) {
+        if (picks.filter(y => y.list.length === 2).length >= (fairSingle ? 1 : 2)) continue;
+        if (fairSingle && x.key > fairSingle.key - 1) continue;
+        if (x.list.some(p => usedInPairs.has(p.id))) continue;
+        x.list.forEach(p => usedInPairs.add(p.id));
+      }
+      picks.push(x); if (picks.length >= 4) break;
+    }
+    return { giver, giverSide, receiverSide: other, picks, X };
+  }
+
   function renderTrade() {
     renderRoster("A");
     renderRoster("B");
-    if (LG.active && typeof renderTeamRosters === "function") renderTeamRosters();
+    if (typeof renderTeamRosters === "function") renderTeamRosters();
+    renderTradeContext();
     const res = runModel(sides.A, sides.B);
     $("total-A").textContent = fmt(res.rawA ?? res.a);
     $("total-B").textContent = fmt(res.rawB ?? res.b);
-    $("score-A").textContent = "Team A · " + fmt(res.a);
-    $("score-B").textContent = fmt(res.b) + " · Team B";
+    $("score-A").textContent = sideName("A") + " · " + fmt(res.a);
+    $("score-B").textContent = fmt(res.b) + " · " + sideName("B");
 
     const title = $("verdict-title"), sub = $("verdict-sub"), meter = $("meter");
     const note = $("model-note");
     note.hidden = !res.note; note.textContent = res.note;
     $("balance").hidden = true;
     $("verdict-gap").hidden = true;
+    $("verdict-ctx").hidden = true;
+    $("tc-analysis").hidden = true;
+    $("verdict-eyebrow").hidden = !tcLeague();
 
     if (!sides.A.length && !sides.B.length) {
       title.className = ""; title.textContent = "Build a trade";
-      sub.textContent = "Add what each team gets to see who wins.";
+      sub.textContent = tcLeague() ? "Pick both teams, then click players from their rosters (or search any player)." : "Add what each team gets to see who wins.";
       meter.classList.add("idle"); $("meter-a").style.width = "50%";
       return;
     }
@@ -2076,7 +2378,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       sub.textContent = `${l} isn't getting anything back yet. Add what ${l} receives.`;
       return;
     }
-    const more = Math.round(1000 * (hi - lo) / lo) / 10;      // % more for the side ahead, 1 decimal
+    const more = pctMore(res.a, res.b);      // % more for the side ahead, 1 decimal
     const tier = TRADE_VERDICTS.find(t => more < t.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
     const fair = tier.upTo <= 3, pct = more.toFixed(1) + "%";
     title.className = fair ? "fair" : "win-" + ahead;
@@ -2085,14 +2387,27 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     // the exact numbers behind the label; raw player value shown when the roster adjustment moved it
     let line = `<b>${pct}</b> adjusted value gap · ${esc(tier.range)}`;
     if (res.rawA != null && res.rawB != null && Math.min(res.rawA, res.rawB) > 0) {
-      const rawMore = Math.round(1000 * Math.abs(res.rawA - res.rawB) / Math.min(res.rawA, res.rawB)) / 10;
+      const rawMore = pctMore(res.rawA, res.rawB);
       if (rawMore !== more || (res.rawA >= res.rawB) !== (ahead === "A"))
         line += ` · Raw player value: ${fmt(res.rawA)} vs ${fmt(res.rawB)} (${rawMore.toFixed(1)}% gap) before the roster adjustment`;
     }
     gapLine.innerHTML = line; gapLine.hidden = false;
+
+    // League mode: does the trade make sense for these two rosters?
+    const ctx = tcLeague() ? rosterContext() : null;
+    if (ctx) renderContext(res, ctx, names);
+    else if (tcLeague()) {
+      const box = $("tc-analysis");
+      box.innerHTML = `<h3 class="section-label">Roster context</h3><p class="pp-note">Pick ${!sideTeam("A") && !sideTeam("B") ? "both teams" : "the other team"} above to see how this trade changes each lineup in ${esc(activeData().league.name)}.</p>`;
+      box.hidden = false;
+    }
     if (fair) return;
 
-    // Suggest additions for the trailing side that bring the trade closest to even
+    if (ctx) {
+      const lb = leagueBalance(res, ctx);
+      if (lb && lb.picks.length) { renderLeagueBalance(lb, res, names); return; }
+    }
+    // Universal suggestions: anyone in the player pool, added to the trailing side
     const pool = players.filter(p => !inTrade(p.id));
     const scored = pool.map(p => {
       const a = loser === "A" ? sides.A.concat(p.id) : sides.A;
@@ -2103,21 +2418,78 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     }).filter(s => s.gap < gap).sort((x, y) => x.gap - y.gap).slice(0, 4);
 
     if (scored.length) {
-      $("balance-title").textContent = `To even it out, add to Team ${loser}`;
+      $("balance-title").textContent = `To even it out, add to ${names[loser]}`;
+      $("balance-sub").textContent = "";
       $("balance-list").innerHTML = scored.map(s =>
-        `<button class="suggest" type="button" data-id="${s.p.id}" data-side="${loser}">
+        `<button class="suggest" type="button" data-ids="${s.p.id}" data-side="${loser}">
           ${face(s.p.sleeperId, s.p.name, "xs")}<span class="pos ${esc(s.p.pos)}">${esc(s.p.posRank)}</span>${esc(s.p.name)}
-          <span class="r-val">${fmt(dv(s.p))}</span></button>`).join("");
+          <span class="r-val">${fmt(tv(s.p))}</span></button>`).join("");
       $("balance").hidden = false;
     }
   }
 
+  function renderContext(res, ctx, names) {
+    const cv = contextVerdict(res, ctx), A = ctx.A, B = ctx.B;
+    const imp = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+    const word = v => (v >= 0.5 ? "gains" : v <= -0.5 ? "loses" : "holds steady at");
+    const label = cv.tier.title(names[cv.ahead], names[cv.loser]);
+    // short line under the main verdict
+    const fitTxt = Math.abs(A.impact - B.impact) < 2 ? "Roster fit is about even for both teams" : `Roster fit favors ${names[A.impact >= B.impact ? "A" : "B"]} (${imp(A.impact)} vs ${imp(B.impact)})`;
+    const vc = $("verdict-ctx");
+    vc.innerHTML = `${esc(fitTxt)} · In ${esc(ctx.league.name)}: <b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>`;
+    vc.hidden = false;
+    const maxAbs = Math.max(4, Math.abs(A.impact), Math.abs(B.impact));
+    const bar = v => `<span class="ri-bar"><span class="${v >= 0 ? "ri-up" : "ri-down"}" style="width:${(50 * Math.min(1, Math.abs(v) / maxAbs)).toFixed(1)}%"></span></span>`;
+    const changeList = (X, nm) => `<div class="lc-col"><h4>${esc(nm)}</h4>${X.changes.length
+      ? `<ul>${X.changes.map(c => `<li class="lc-${c.kind}">${esc(c.text)}</li>`).join("")}</ul>` : `<p class="pp-note">No lineup changes.</p>`}</div>`;
+    const box = $("tc-analysis");
+    box.innerHTML = `
+      <h3 class="section-label">Roster context<span class="tier-sub">${esc(ctx.league.name)} lineups: ${esc(lineupText(ctx.league))}</span></h3>
+      <div class="ri">
+        ${[["A", A], ["B", B]].map(([s, X]) => `<div class="ri-row"><span class="ri-name side-${s}">${esc(names[s])}</span>
+          <span class="ri-txt">${word(X.impact)} <b>${imp(X.impact)}</b> roster impact</span>${bar(X.impact)}</div>`).join("")}
+      </div>
+      <div class="ri-verdicts">
+        <div><span class="ctl-label">Value verdict</span><b>${esc($("verdict-title").textContent)}</b><span class="ri-note">${(Math.abs(cv.valueMargin)).toFixed(1)}% value gap</span></div>
+        <div><span class="ctl-label">League-adjusted verdict</span><b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>
+          <span class="ri-note">Value ${cv.valueMargin >= 0 ? "+" : "−"}${Math.abs(cv.valueMargin).toFixed(1)}% to ${esc(names[cv.valueMargin >= 0 ? "A" : "B"])}, roster fit ${cv.fit >= 0 ? "+" : "−"}${Math.abs(cv.fit).toFixed(1)} to ${esc(names[cv.fit >= 0 ? "A" : "B"])} (capped at ${FIT_CAP})</span></div>
+      </div>
+      <p class="ri-story">${esc(contextStory(ctx, cv, names))}</p>
+      <h3 class="section-label">Lineup changes</h3>
+      <div class="lc-cols">${changeList(A, names.A)}${changeList(B, names.B)}</div>`;
+    box.hidden = false;
+  }
+  function lineupText(league) {
+    const lu = lineupOf(league), parts = [];
+    if (lu.QB) parts.push(`${lu.QB} QB`); if (lu.RB) parts.push(`${lu.RB} RB`); if (lu.WR) parts.push(`${lu.WR} WR`); if (lu.TE) parts.push(`${lu.TE} TE`);
+    const flex = lu.FLEX + lu.WRRB_FLEX + lu.REC_FLEX; if (flex) parts.push(`${flex} FLEX`); if (lu.SUPER_FLEX) parts.push(`${lu.SUPER_FLEX} SF`);
+    if (Number((league.scoring_settings || {}).bonus_rec_te) > 0) parts.push("TE premium");
+    return parts.join(" · ");
+  }
+  function renderLeagueBalance(lb, res, names) {
+    const giverName = names[lb.giverSide], recvName = names[lb.receiverSide];
+    $("balance-title").textContent = "Best fits to balance the trade";
+    $("balance-sub").textContent = `To even it out, ${giverName} could add (from their roster, to ${recvName}):`;
+    const role = p => (lb.X.after.labels.has(p.id) ? `Starts at ${lb.X.after.labels.get(p.id)}` : "Bench depth");
+    $("balance-list").innerHTML = lb.picks.map((x, i) => {
+      const t = TRADE_VERDICTS.find(v => x.gapAfter < v.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+      return `${i ? `<span class="bal-or">or</span>` : ""}<button class="suggest bal" type="button" data-ids="${x.list.map(p => p.id).join(",")}" data-side="${lb.receiverSide}">
+        <span class="bal-players">${x.list.map(p => `<span class="bal-p">${face(p.sleeperId, p.name, "xs")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span><span class="bal-n">${esc(p.name)}<small>${esc(role(p))}</small></span><span class="r-val">+${fmt(tv(p))}</span></span>`).join(`<span class="bal-plus">+</span>`)}</span>
+        <span class="bal-result">→ ${x.gapAfter.toFixed(1)}% · ${esc(t.upTo <= 3 ? "Fair" : t.range.split(":")[0])}</span></button>`;
+    }).join("");
+    $("balance").hidden = false;
+  }
+
   $("balance-list").addEventListener("click", e => {
-    const b = e.target.closest("button"); if (!b) return;
-    sides[b.dataset.side].push(Number(b.dataset.id));
+    const b = e.target.closest("button[data-ids]"); if (!b) return;
+    b.dataset.ids.split(",").forEach(id => sides[b.dataset.side].push(Number(id)));
     renderTrade();
   });
-  $("swap-btn").addEventListener("click", () => { [sides.A, sides.B] = [sides.B, sides.A]; renderTrade(); });
+  $("swap-btn").addEventListener("click", () => {
+    [sides.A, sides.B] = [sides.B, sides.A];
+    const a = $("team-A").value; $("team-A").value = $("team-B").value; $("team-B").value = a;   // teams follow their players
+    renderTrade();
+  });
   $("clear-btn").addEventListener("click", () => { sides.A = []; sides.B = []; renderTrade(); });
 
   /* ---------- Editor mode ----------
@@ -2706,7 +3078,6 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     tabs.myteam.hidden = tabs.league.hidden = tabs.finder.hidden = tabs.fa.hidden = !d;
     document.body.classList.toggle("has-league", !!d);
     $("league-controls").hidden = !d;
-    ["A", "B"].forEach(s => { $("team-" + s).hidden = !d; });
     if (!d) {
       ["A", "B"].forEach(s => { $("teamroster-" + s).hidden = true; });
       if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
@@ -2967,7 +3338,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (ot) { openTeam(ot.dataset.openTeam); return; }
     const b = e.target.closest("[data-roster]");
     if (!b || LG.myRosterId == null) return;
-    $("team-A").value = String(LG.myRosterId); $("team-B").value = b.dataset.roster;
+    TC.mode = "league"; saveTc(); $("team-A").value = String(LG.myRosterId); $("team-B").value = b.dataset.roster;
     sides.A = []; sides.B = [];
     renderTeamRosters(); renderTrade();
     showTab("trade"); history.replaceState(null, "", "#trade");
@@ -3156,7 +3527,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (row) { openTeam(row.dataset.team); return; }
     if (back) { leagueTeam = null; renderLeague(); window.scrollTo({ top: 0 }); return; }
     if (tw && LG.myRosterId != null) {
-      $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
+      TC.mode = "league"; saveTc(); $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
       sides.A = []; sides.B = [];
       renderTeamRosters(); renderTrade();
       showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
@@ -3198,20 +3569,20 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const map = bySleeper();
     ["A", "B"].forEach(s => {
       const box = $("teamroster-" + s), id = $("team-" + s).value;
-      const team = LG.active && id ? LG.teams.find(t => String(t.rosterId) === id) : null;
+      const team = tcLeague() && id ? LG.teams.find(t => String(t.rosterId) === id) : null;
       box.hidden = !team;
       if (!team) { box.innerHTML = ""; return; }
       const entries = (team.roster.players || []).map(sid => rosterEntry(sid, map))
-        .sort((a, b) => (b.ranked ? dv(b.p) : -1) - (a.ranked ? dv(a.p) : -1));
+        .sort((a, b) => (b.ranked ? tv(b.p) : -1) - (a.ranked ? tv(a.p) : -1));
       box.innerHTML = `<div class="tr-head">${esc(team.mine ? "My Team" : team.name)} roster <span>Click to send to Team ${s === "A" ? "B" : "A"}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
           ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s === "A" ? "B" : "A"}"${inTrade(e.p.id) ? " disabled" : ""}>
-              ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(dv(e.p))}</span></button>`
+              ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span></button>`
           : `<div class="tr-player unranked">${face(e.sid, e.name, "sm")}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">Unranked</span></div>`).join("")}</div>`;
     });
   }
   ["A", "B"].forEach(s => {
-    $("team-" + s).addEventListener("change", renderTeamRosters);
+    $("team-" + s).addEventListener("change", () => renderTrade());
     $("teamroster-" + s).addEventListener("click", e => {
       const b = e.target.closest("button[data-id]");
       if (!b) return;
@@ -3398,7 +3769,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   // Which side of the trade calculator a player goes to: away from the team that owns him
   function tradeSideFor(sid) {
     const own = ownerOfSid(sid);
-    if (own && own !== "fa") {
+    if (own && own !== "fa" && tcLeague()) {
       if ($("team-A").value === String(own.rosterId)) return "B";
       if ($("team-B").value === String(own.rosterId)) return "A";
     }
@@ -3968,7 +4339,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           const side = mode === "give" ? get : give, main = side.slice().sort(byVal)[0];
           if (main.pos !== opts.pos) continue;
         }
-        const m = runModel(get.map(p => p.id), give.map(p => p.id));   // A = what you receive, B = what they receive
+        const m = runModel(get.map(p => p.id), give.map(p => p.id), dv);   // A = what you receive, B = what they receive
         if (m.error || !(m.a > 0 && m.b > 0)) continue;
         const more = Math.round(1000 * Math.abs(m.a - m.b) / Math.min(m.a, m.b)) / 10;
         if (more > opts.gap) continue;
@@ -4096,7 +4467,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   $("tf-body").addEventListener("click", e => {
     const b = e.target.closest("[data-tf-open]"); if (!b) return;
     const it = TF.ideas[Number(b.dataset.tfOpen)]; if (!it) return;
-    $("team-A").value = String(LG.myRosterId); $("team-B").value = String(it.team.rosterId);
+    TC.mode = "league"; saveTc(); $("team-A").value = String(LG.myRosterId); $("team-B").value = String(it.team.rosterId);
     sides.A = it.get.map(p => p.id); sides.B = it.give.map(p => p.id);
     renderTeamRosters(); renderTrade();
     showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
