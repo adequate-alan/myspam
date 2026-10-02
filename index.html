@@ -475,6 +475,24 @@ const TIER_NAMES = {
 // each year and run pipeline/build_stats.py for it.
 const STATS_SEASONS = [2026, 2025, 2024];
 
+// Other league settings (a connected league, or settings picked in "League settings").
+// 1. Each position's values move with the league's scoring and lineup (value curves).
+// 2. Each player then gets a small personal nudge: his last `games` games are scored with
+//    the league's settings and with the site's, and his ratio is compared with the average
+//    at his position. A back who lives on catches loses a little in standard scoring; a
+//    rushing QB gains a little with 6-point passing TDs turned off, and so on.
+// 3. Your order stays unless a player's adjusted value passes the player above him by
+//    more than `margin`. Within a position nobody moves more than `maxPosMove` spots.
+const FORMAT_ADJUST = {
+  games: 17,          // most recent games used (this season first, then last season)
+  minGames: 4,        // fewer games than this: no personal nudge
+  shrinkGames: 6,     // personal nudge counts games / (games + shrinkGames) of its full size
+  maxFactor: 0.10,    // personal nudge never moves a value more than 10%
+  margin: 0.03,       // must pass the player above by more than 3% to jump him
+  maxPosMove: 2,      // most spots a player can move within his position
+  avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 }   // players used for each position's average
+};
+
 // Trade verdicts. "gap" = how much more adjusted value the side ahead receives, in %
 // (10,000 vs 8,000 = 25% more). A tier covers gaps below its upTo (and at or above the
 // previous tier's). w = the side ahead, l = the side behind, pct = the gap, e.g. "4.5%".
@@ -1120,6 +1138,83 @@ button.tr-player:hover:not(:disabled) { background: var(--surface-2); }
 .lo-format { grid-column: 1; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
 .lo-status { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 0.68rem; font-weight: 650; letter-spacing: 0.06em; color: var(--ink-2); }
 
+/* ---------- League settings (by hand) and league imports ---------- */
+.fmt-chip {
+  display: inline-flex; align-items: baseline; gap: 9px; max-width: min(460px, 100%);
+  background: none; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 11px;
+  cursor: pointer; color: var(--cream); transition: border-color 0.18s ease, background 0.18s ease;
+}
+.fmt-chip:hover { border-color: #4A3A30; background: var(--surface); }
+.fmt-chip.custom { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.fc-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
+.fc-format { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+dialog.fmt-dialog { width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.fmt-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 4px; }
+.fmt-preset {
+  height: 30px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--control);
+  color: var(--ink-2); font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: border-color 0.16s ease, color 0.16s ease;
+}
+.fmt-preset:hover { border-color: #4A3A30; color: var(--cream); }
+.fmt-preset[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-bright); }
+.fmt-group { margin-top: 18px; }
+.fmt-group h3 { margin: 0 0 4px; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
+.fmt-row { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
+.fmt-row:last-child { border-bottom: 0; }
+.fmt-row > span { font-size: 0.84rem; font-weight: 550; color: var(--cream); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.seg button {
+  min-width: 42px; height: 30px; padding: 0 10px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg);
+  color: var(--ink-2); font-size: 0.78rem; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.seg button:hover { color: var(--cream); border-color: #4A3A30; }
+.seg button[aria-checked="true"] { background: color-mix(in srgb, var(--gold) 16%, var(--control)); border-color: var(--gold); color: var(--gold-bright); }
+.fmt-row .select { height: 30px; min-width: 90px; }
+.fmt-summary { margin: 16px 0 0 !important; font-size: 0.78rem !important; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gold) !important; }
+.fmt-actions { align-items: center; flex-wrap: wrap; }
+.fmt-spacer { flex: 1; }
+.fmt-import { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--muted); }
+.fmt-import span { margin-right: 4px; }
+.fmt-locked p { font-size: 0.88rem; }
+.btn.link.inline { height: auto; padding: 0; color: var(--gold-bright); text-decoration: underline; text-underline-offset: 3px; font-size: inherit; }
+dialog.import-dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.import-dialog textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: 5px; padding: 9px 11px; background: var(--bg); color: var(--cream);
+  font: 0.8rem/1.45 var(--font-body); resize: vertical;
+}
+.import-dialog textarea:focus { outline: none; border-color: var(--gold); }
+.im-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.im-grow { flex: 1; min-width: 220px; }
+.im-row .select { height: 38px; }
+.im-paste-box { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); }
+.im-steps { margin: 0 0 10px; padding-left: 20px; font-size: 0.84rem; color: var(--ink-2); }
+.im-steps li { margin: 3px 0; }
+.im-steps a { color: var(--gold-bright); }
+dialog.signin label.im-file { text-transform: none; letter-spacing: 0; font-size: 0.8rem; font-weight: 500; margin-top: 10px; }
+dialog.signin label.im-file input { height: auto; border: 0; padding: 4px 0 0; background: none; }
+.im-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.im-block h3 { margin: 0 0 6px; font-size: 0.7rem; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cream); }
+.im-block > p { font-size: 0.84rem !important; }
+.im-found { font-size: 0.78rem !important; color: var(--gold) !important; margin: 6px 0 0 !important; min-height: 1em; }
+.im-team { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px; background: var(--surface-2); }
+.im-team-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+dialog.signin .im-team-top input.im-team-name { flex: 1; min-width: 160px; width: auto; height: 32px; }
+dialog.signin label.im-mine { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
+dialog.signin label.im-mine input { width: auto; height: auto; accent-color: var(--gold); }
+.im-team-found { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; font-size: 0.74rem; color: var(--muted); align-items: center; }
+.im-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: 999px; background: var(--control); border: 1px solid var(--line); color: var(--ink-2); }
+.im-chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0 3px; }
+.im-chip button:hover { color: var(--rose-ink); }
+.fmt-note { font-size: 0.74rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fmt-note b { color: var(--ink-2); font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.68rem; }
+.bm { display: inline-block; margin-left: 5px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: 1px; }
+.bm-up { color: var(--rb); }
+.bm-down { color: var(--rose); }
+@media (max-width: 560px) {
+  .fmt-row { grid-template-columns: 1fr; gap: 6px; }
+  .fc-format { display: none; }
+  .bm { display: block; margin-left: 0; }
+}
+
 /* ---------- Player photos ---------- */
 .face {
   position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center;
@@ -1649,8 +1744,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       </div>
       <div class="mast-right">
         <div class="meta" id="meta"></div>
+        <button class="fmt-chip" id="fmt-chip" type="button" aria-haspopup="dialog">
+          <span class="fc-label">League settings</span><span class="fc-format" id="fc-format"></span><span class="lc-caret" aria-hidden="true">▾</span>
+        </button>
         <div class="league-slot" id="league-slot">
-          <button class="btn connect-btn" id="sl-connect" type="button">Connect Sleeper</button>
+          <button class="btn connect-btn" id="sl-connect" type="button">Connect league</button>
           <div class="league-pick" id="league-pick" hidden>
             <button class="league-chip" id="league-chip" type="button" aria-haspopup="true" aria-expanded="false">
               <span class="lc-name" id="lc-name"></span><span class="lc-format" id="lc-format"></span><span class="lc-caret" aria-hidden="true">▾</span>
@@ -1703,10 +1801,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     </div>
     <div class="league-controls" id="league-controls" hidden>
       <div class="view-toggle" role="group" aria-label="Rankings view">
-        <button class="chip-btn" type="button" data-view="base" aria-pressed="false">Base</button>
-        <button class="chip-btn" type="button" data-view="league" aria-pressed="true">League-adjusted</button>
+        <button class="chip-btn" type="button" data-view="base" aria-pressed="false">SPMetrics board</button>
+        <button class="chip-btn" type="button" data-view="league" aria-pressed="true" id="view-adj">League-adjusted</button>
       </div>
-      <label class="owner-filter"><span>Show</span>
+      <span class="fmt-note" id="fmt-note"></span>
+      <label class="owner-filter" id="owner-filter-wrap"><span>Show</span>
         <select class="select" id="owner-filter" aria-label="Filter by owner"></select>
       </label>
     </div>
@@ -1941,6 +2040,98 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     </div>
   </div>
 </dialog>
+<dialog class="signin fmt-dialog" id="fmt-dialog" aria-labelledby="fmt-title">
+  <form id="fmt-form" method="dialog">
+    <h2 id="fmt-title">League settings</h2>
+    <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. The SPMetrics order stays put unless a player's value changes enough in your format to pass someone.</p>
+    <div class="fmt-locked" id="fmt-locked" hidden></div>
+    <div class="fmt-presets" id="fmt-presets" role="group" aria-label="Common formats"></div>
+    <div id="fmt-grid"></div>
+    <p class="fmt-summary" id="fmt-summary"></p>
+    <div class="signin-actions fmt-actions">
+      <button class="btn link" id="fmt-reset" type="button">Reset to SPMetrics default</button>
+      <span class="fmt-spacer"></span>
+      <button class="btn" id="fmt-cancel" type="button">Cancel</button>
+      <button class="btn primary" id="fmt-apply" type="submit">Apply</button>
+    </div>
+    <div class="fmt-import" id="fmt-import">
+      <span>Or bring in your league:</span>
+      <button class="btn" type="button" data-import="sleeper">Sleeper</button>
+      <button class="btn" type="button" data-import="espn">ESPN</button>
+      <button class="btn" type="button" data-import="yahoo">Yahoo</button>
+      <button class="btn link" type="button" data-import="other">Other site</button>
+    </div>
+  </form>
+</dialog>
+<dialog class="signin import-dialog" id="import-dialog" aria-labelledby="im-title">
+  <div id="im-choose">
+    <h2 id="im-title">Connect your league</h2>
+    <p>Bring in your league's settings and rosters for league-adjusted values, My Team, power rankings, free agents and the Trade Finder. Nothing is posted to your league.</p>
+    <ul class="league-list">
+      <li><button class="league-option" type="button" data-src="sleeper"><span class="lo-name">Sleeper</span><span class="lo-format">Your username · all your leagues</span><span class="lo-status">One click</span></button></li>
+      <li><button class="league-option" type="button" data-src="espn"><span class="lo-name">ESPN</span><span class="lo-format">League link or ID · private leagues by copy and paste</span><span class="lo-status">One click</span></button></li>
+      <li><button class="league-option" type="button" data-src="yahoo"><span class="lo-name">Yahoo</span><span class="lo-format">Copy and paste your league pages</span><span class="lo-status">About a minute</span></button></li>
+      <li><button class="league-option" type="button" data-src="other"><span class="lo-name">Another site</span><span class="lo-format">NFL.com, CBS, Fleaflicker… paste your rosters</span><span class="lo-status">About a minute</span></button></li>
+    </ul>
+    <p class="hint">Just want different scoring? <button class="btn link inline" type="button" data-open-fmt>Pick your settings by hand</button></p>
+    <div class="signin-actions"><button class="btn" type="button" data-im-close>Cancel</button></div>
+  </div>
+  <form id="im-espn" hidden>
+    <h2>Connect ESPN</h2>
+    <p>Paste your league page's address or just the league ID (the number after <span class="mono">leagueId=</span>).</p>
+    <div class="im-row">
+      <div class="im-grow"><label for="im-espn-id">ESPN league link or ID</label>
+        <input id="im-espn-id" type="text" autocomplete="off" spellcheck="false" placeholder="https://fantasy.espn.com/football/league?leagueId=123456"></div>
+      <div><label for="im-espn-season">Season</label><select class="select" id="im-espn-season"></select></div>
+    </div>
+    <div class="im-paste-box" id="im-espn-paste" hidden>
+      <p><b>ESPN didn't let this site read the league directly.</b> That's normal for private leagues. Copy it from your own browser instead:</p>
+      <ol class="im-steps">
+        <li>Open <a id="im-espn-link" href="#" target="_blank" rel="noopener">your league's data on ESPN</a> in a tab where you're signed in to ESPN.</li>
+        <li>Select everything on that page (Ctrl+A, or ⌘A on a Mac) and copy it. In Firefox, click <i>Raw Data</i> first.</li>
+        <li>Paste it here.</li>
+      </ol>
+      <textarea id="im-espn-json" rows="4" spellcheck="false" placeholder="Paste ESPN's league data here"></textarea>
+      <label class="im-file">Or upload it as a saved file <input type="file" id="im-espn-file" accept=".json,.txt,application/json,text/plain"></label>
+    </div>
+    <p class="signin-error" id="im-espn-error" role="alert"></p>
+    <div class="signin-actions">
+      <button class="btn link" type="button" data-im-back>Back</button>
+      <button class="btn" type="button" data-im-close>Cancel</button>
+      <button class="btn primary" id="im-espn-go" type="submit">Connect</button>
+    </div>
+  </form>
+  <div id="im-paste" hidden>
+    <h2 id="im-paste-title">Connect Yahoo</h2>
+    <p id="im-paste-intro"></p>
+    <section class="im-block" id="im-settings-block">
+      <h3>1 · League settings</h3>
+      <p>On Yahoo, open <b>League → Settings</b>, select everything (Ctrl+A or ⌘A), copy, and paste it here. Skip it to use the settings from League settings.</p>
+      <textarea id="im-settings" rows="3" spellcheck="false" placeholder="Paste the league settings page"></textarea>
+      <p class="im-found" id="im-settings-found"></p>
+    </section>
+    <section class="im-block">
+      <h3 id="im-teams-h">2 · Rosters</h3>
+      <p id="im-teams-p">Open each team's roster page, select everything, copy, and paste it into its own box. Start with your team and the teams you trade with; you can add the rest later.</p>
+      <div id="im-teams"></div>
+      <button class="btn" type="button" id="im-add-team">+ Add a team</button>
+    </section>
+    <label for="im-league-name">League name</label>
+    <input id="im-league-name" type="text" autocomplete="off" placeholder="My league">
+    <p class="signin-error" id="im-paste-error" role="alert"></p>
+    <div class="signin-actions">
+      <button class="btn link" type="button" data-im-back>Back</button>
+      <button class="btn" type="button" data-im-close>Cancel</button>
+      <button class="btn primary" id="im-paste-go" type="button">Connect</button>
+    </div>
+  </div>
+  <div id="im-mine" hidden>
+    <h2>Which team is yours?</h2>
+    <p id="im-mine-sub"></p>
+    <ul class="league-list" id="im-mine-list"></ul>
+    <div class="signin-actions"><button class="btn link" type="button" data-mine="">I'm not in this league</button></div>
+  </div>
+</dialog>
 <dialog class="pm" id="player-modal" aria-labelledby="pm-name">
   <div class="pm-panel" id="player-body"></div>
 </dialog>
@@ -2145,9 +2336,72 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
   let savedCsv = null, draft = null, localEdits = {};   // set up in the editor section below
   // Sleeper league layer (layer 2) and league-adjusted values (layer 3); filled in by the Sleeper section
-  const LG = { active: false, mode: "league", ownerFilter: "all", adj: new Map(), adjRank: new Map(), ownerOf: new Map(), teams: [], myRosterId: null };
+  const LG = { active: false, fmtOn: false, mode: "league", ownerFilter: "all", adj: new Map(), adjRank: new Map(), adjPos: new Map(), factor: new Map(), ownerOf: new Map(), teams: [], myRosterId: null };
   let sl = null, slPlayers = null, comps = null;
-  const leagueView = () => LG.active && LG.mode === "league";
+  /* League settings picked by hand (for anyone not connecting a league).
+     null = the site's own format. A connected league's settings always win over these. */
+  const FMT_DEFAULT = { teams: 12, qb: "sf", rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fd: 0 };
+  const FMT_PRESETS = [
+    { id: "spm", label: "SPMetrics default", v: {} },
+    { id: "1qb-ppr", label: "1QB · PPR", v: { qb: "1", tep: 0 } },
+    { id: "1qb-half", label: "1QB · Half PPR", v: { qb: "1", rec: 0.5, tep: 0 } },
+    { id: "1qb-std", label: "1QB · Standard", v: { qb: "1", rec: 0, tep: 0 } },
+    { id: "10-half", label: "10-team · 1QB · Half", v: { teams: 10, qb: "1", rec: 0.5, tep: 0, wr: 2, flex: 1, int: -2 } },
+    { id: "sf-ppr", label: "Superflex · PPR", v: { tep: 0 } },
+    { id: "sf-6pt", label: "Superflex · 6pt pass TD", v: { ptd: 6, tep: 0 } },
+    { id: "2qb", label: "2QB · PPR", v: { qb: "2", tep: 0 } }
+  ];
+  const FMT_KEY = "spm_format", FMT_VIEW_KEY = "spm_format_view";
+  const fmtFull = f => ({ ...FMT_DEFAULT, ...(f || {}) });
+  const fmtSame = (a, b) => Object.keys(FMT_DEFAULT).every(k => String(fmtFull(a)[k]) === String(fmtFull(b)[k]));
+  // compact URL form: t10_qb1_rec0.5_tep0_ptd4_pyd25_int-2_fd0_rb2_wr3_te1_fx1_bn6
+  const FMT_URL = { teams: "t", qb: "qb", rec: "rec", tep: "tep", ptd: "ptd", pyd: "pyd", int: "int", fd: "fd", rb: "rb", wr: "wr", te: "te", flex: "fx", bench: "bn" };
+  const fmtToUrl = f => Object.entries(FMT_URL).map(([k, s]) => s + fmtFull(f)[k]).join("_");
+  function fmtFromUrl(str) {
+    const out = {}, parts = String(str || "").split("_");
+    for (const [k, s] of Object.entries(FMT_URL)) {
+      const part = parts.find(x => x.startsWith(s) && /^-?[\d.]+$|^sf$/.test(x.slice(s.length)) && !(s === "t" && x.startsWith("te")) && !(s === "te" && x.startsWith("tep")));
+      if (!part) continue;
+      const raw = part.slice(s.length);
+      out[k] = k === "qb" ? (raw === "sf" ? "sf" : raw === "2" ? "2" : "1") : Number(raw);
+    }
+    return fmtClean(out);
+  }
+  // keep every setting inside what the panel offers
+  function fmtClean(f) {
+    const v = fmtFull(f), pick = (x, list, d) => (list.map(String).includes(String(x)) ? (typeof d === "number" ? Number(x) : String(x)) : d);
+    return {
+      teams: pick(v.teams, [8, 10, 12, 14, 16], 12), qb: pick(v.qb, ["1", "sf", "2"], "sf"),
+      rb: pick(v.rb, [1, 2, 3], 2), wr: pick(v.wr, [1, 2, 3, 4], 3), te: pick(v.te, [1, 2], 1), flex: pick(v.flex, [0, 1, 2, 3], 1),
+      bench: pick(v.bench, [3, 4, 5, 6, 7, 8, 9, 10, 12, 15], 6), rec: pick(v.rec, [0, 0.5, 1], 1), tep: pick(v.tep, [0, 0.5, 1], 0.5),
+      ptd: pick(v.ptd, [4, 5, 6], 4), pyd: pick(v.pyd, [20, 25, 30], 25), int: pick(v.int, [-1, -2, -3], -2), fd: pick(v.fd, [0, 0.5, 1], 0)
+    };
+  }
+  let FMT = (() => {
+    try {
+      const q = new URLSearchParams(location.search).get("fmt");
+      if (q) { const f = fmtFromUrl(q); localStorage.setItem(FMT_KEY, JSON.stringify(f)); return fmtSame(f, FMT_DEFAULT) ? null : f; }
+      const s = JSON.parse(localStorage.getItem(FMT_KEY) || "null");
+      return s && !fmtSame(s, FMT_DEFAULT) ? fmtClean(s) : null;
+    } catch (e) { return null; }
+  })();
+  let fmtView = (() => { try { return localStorage.getItem(FMT_VIEW_KEY) === "base" ? "base" : "league"; } catch (e) { return "league"; } })();
+  // A Sleeper-shaped league object for hand-picked settings, so the same value code handles both
+  function fmtLeague(f) {
+    f = fmtFull(f);
+    const rp = [].concat(Array(f.qb === "2" ? 2 : 1).fill("QB"), Array(f.rb).fill("RB"), Array(f.wr).fill("WR"), Array(f.te).fill("TE"),
+      Array(f.flex).fill("FLEX"), f.qb === "sf" ? ["SUPER_FLEX"] : [], Array(f.bench).fill("BN"));
+    const sc = { pass_yd: Math.round(10000 / f.pyd) / 10000, pass_td: f.ptd, pass_int: f.int, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
+                 rec: f.rec, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: -2 };
+    if (f.tep) sc.bonus_rec_te = f.tep;
+    if (f.fd) { sc.rush_fd = f.fd; sc.rec_fd = f.fd; }
+    return { league_id: "custom", name: "Your settings", total_rosters: f.teams, roster_positions: rp, scoring_settings: sc,
+             settings: { num_teams: f.teams, reserve_slots: 0, taxi_slots: 0, type: 0 } };
+  }
+  // The settings values are adjusted to: a connected league, else hand-picked settings, else none (base)
+  const valueLeague = () => (sl && sl.activeId && sl.data && sl.data[sl.activeId] ? sl.data[sl.activeId].league : FMT ? fmtLeague(FMT) : null);
+  const leagueView = () => LG.fmtOn && LG.mode === "league";
+  const adjName = () => (LG.active ? "League-adjusted" : "Your settings");
   const dv = p => (leagueView() && LG.adj.has(p.id) ? LG.adj.get(p.id) : p.value);
   const EDIT_POS = ["QB", "RB", "WR", "TE"];
 
@@ -2239,6 +2493,13 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         : ""}</span></div>`;
   }
 
+  // ▲/▼ next to a rank when other settings moved the player off your board's spot
+  function boardMove(from, to) {
+    if (from == null || to == null || from === to) return "";
+    const up = to < from, n = Math.abs(from - to);
+    return `<span class="bm ${up ? "bm-up" : "bm-down"}" title="${up ? "Up" : "Down"} ${n} from #${from} on the SPMetrics board">${up ? "▲" : "▼"}${n}</span>`;
+  }
+  const posLabel = p => (leagueView() && LG.adjPos.has(p.id) ? p.pos + LG.adjPos.get(p.id) : p.posRank);
   function renderRankings() {
     let list, rk, group;
     const editing = editor.on && !leagueView();
@@ -2252,7 +2513,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       list = players.filter(p => p.pos !== "PICK");
       if (leagueView()) {
         list.sort((a, b) => (LG.adjRank.get(a.id) ?? 1e9) - (LG.adjRank.get(b.id) ?? 1e9));
-        rk = p => LG.adjRank.get(p.id) ?? "–";
+        rk = p => (LG.adjRank.get(p.id) ?? "–") + boardMove(p.rank, LG.adjRank.get(p.id));
         group = () => null;
       } else if (hasOverall()) {
         list.sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || byPos(a, b));
@@ -2264,6 +2525,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         rk = p => p.posNum ?? "–";
         group = p => POS_NAMES[p.pos] || p.pos;
       }
+    } else if (leagueView()) {
+      list = players.filter(p => p.pos === posFilter).sort((a, b) => (LG.adjPos.get(a.id) ?? 1e9) - (LG.adjPos.get(b.id) ?? 1e9));
+      rk = p => (LG.adjPos.get(p.id) ?? "–") + boardMove(p.posNum, LG.adjPos.get(p.id));
+      group = () => null;
     } else {
       list = players.filter(p => p.pos === posFilter).sort(byPos);
       rk = p => p.posNum ?? "–";
@@ -2291,7 +2556,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       out.push(`<tr class="player" data-id="${p.id}">${editCol}
         <td class="rk">${rk(p)}</td>
         <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}${ownerTag(p)}</div></div></td>
-        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span></td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
@@ -2312,7 +2577,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const TC = { mode: (() => { try { return localStorage.getItem("spm_tc_mode") || "league"; } catch (e) { return "league"; } })() };
   const saveTc = () => { try { localStorage.setItem("spm_tc_mode", TC.mode); } catch (e) {} };
   const tcLeague = () => TC.mode === "league" && LG.active;
-  const tv = p => (tcLeague() ? dv(p) : p.value);   // value used by the trade calculator
+  // value used by the trade calculator: the league's (league mode), your hand-picked settings (no league), else base
+  const tv = p => (tcLeague() || (!LG.active && leagueView()) ? dv(p) : p.value);
   // Roster needs (1 = desperately need … 5 = set); saved in this browser
   const NEEDS = (() => { try { return { QB: 3, RB: 3, WR: 3, TE: 3, ...JSON.parse(localStorage.getItem("spm_needs") || "{}") }; } catch (e) { return { QB: 3, RB: 3, WR: 3, TE: 3 }; } })();
   const needMult = pos => (NEEDS[pos] ? NEED_MULTIPLIERS[NEEDS[pos] - 1] ?? 1 : 1);
@@ -2480,8 +2746,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const sel = $("tc-league"), on = tcLeague();
     const leagues = sl && sl.leagues ? sl.leagues : [];
     sel.innerHTML = `<option value="none">No league</option>` +
-      (leagues.length ? `<optgroup label="Sleeper leagues">${leagues.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</optgroup>` : "") +
-      (!sl ? `<option value="connect">Connect Sleeper…</option>` : "");
+      (leagues.length ? `<optgroup label="${esc(SOURCE_NAME[slSource()])} league${leagues.length > 1 ? "s" : ""}">${leagues.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</optgroup>` : "") +
+      `<option value="connect">${sl ? "Connect a different league…" : "Connect a league…"}</option>`;
     sel.value = on ? sl.activeId : "none";
     // first time in league mode for this league: the left side starts as your team
     if (on && TC.defaulted !== sl.activeId) {
@@ -2492,8 +2758,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("tc-teamC").hidden = !(on && TC3.on);
     $("tc-badge").innerHTML = on
       ? `<span class="tc-dot" aria-hidden="true"></span>League context ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
-      : `SPMetrics values ${infoIcon("Base SPMetrics values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick a Sleeper league to use its rosters and scoring.", "About values")}`;
-    $("tc-badge").classList.toggle("on", on);
+      : !LG.active && leagueView()
+        ? `<span class="tc-dot" aria-hidden="true"></span>Your settings · ${esc(formatParts(fmtLeague(FMT)).join(" · "))} ${infoIcon("Values are adjusted for the league settings you picked. Connect a league to also use its rosters.", "About your settings")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
+        : `SPMetrics values ${infoIcon("Base SPMetrics values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick your league's settings, or connect a league to use its rosters and scoring.", "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
+    $("tc-badge").classList.toggle("on", on || (!LG.active && leagueView()));
     ["A", "B", "C"].forEach(s => {
       $("search-" + s).placeholder = on ? "Search any player" : "Search players";
       if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; $("rtoggle-" + s).hidden = true; }
@@ -2546,7 +2814,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
   $("tc-league").addEventListener("change", async e => {
     const v = e.target.value;
-    if (v === "connect") { e.target.value = "none"; openConnect(); return; }
+    if (v === "connect") { e.target.value = tcLeague() ? sl.activeId : "none"; openImport(); return; }
     if (v === "none") { TC.mode = "none"; saveTc(); renderTradeContext(); renderTrade(); return; }
     TC.mode = "league"; saveTc();
     if (v !== sl.activeId) {
@@ -2586,7 +2854,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
     const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(s => !o.has(s)).map(s => map.get(s)).filter(Boolean); };
     const strength = pool => {
-      const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench);
+      const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench, sorted);
       L.cut = sorted.slice(limit); L.labels = slotLabels(L); L.filled = L.starters.length; return L;
     };
     const getA = sides.A.map(id => byId.get(id)), getB = sides.B.map(id => byId.get(id));
@@ -2603,6 +2871,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     for (const [X, Y] of [[A, B], [B, A]]) {
       X.places = {};
       for (const pos of EDIT_POS) X.places[pos] = [placeOf(pos, X.before.room[pos], Y.before.room[pos]), placeOf(pos, X.after.room[pos], Y.after.room[pos])];
+      lockUntouched(X.places, posSet(getA.concat(getB)), X.t.name);
       X.changes = lineupChanges(X);
       const pool = X.after.starters.concat(X.after.bench, X.after.cut);
       X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
@@ -2660,6 +2929,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const recv = inc.reduce((a, x) => a + x.tv, 0), give = out.reduce((a, x) => a + x.tv, 0);
     return { inc, out, recv, give, net: recv && give ? 100 * (recv - give) / Math.min(recv, give) : 0 };
   }
+  // Double-check on every trade read: a position that no player in the deal plays keeps every
+  // team's grade there. Position rooms already guarantee this; the check catches any regression.
+  function lockUntouched(places, movedPos, who) {
+    for (const pos of EDIT_POS) {
+      if (movedPos.has(pos) || !places[pos] || places[pos][0] === places[pos][1]) continue;
+      console.warn(`SPMetrics check: ${who || "a team"}'s ${pos} grade moved in a trade with no ${pos}s; kept it unchanged.`);
+      places[pos][1] = places[pos][0];
+    }
+    return places;
+  }
+  const posSet = list => new Set(list.filter(Boolean).map(p => p.pos));
   function slotLabels(L) {
     const count = {}, seen = {}, out = new Map();
     L.starters.forEach(p => { const r = L.role.get(p.id); count[r] = (count[r] || 0) + 1; });
@@ -2718,13 +2998,14 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       } else s += ` because ${W} adds depth without weakening its starting lineup.`;
     }
     // the other side
-    const lostStarter = Y.outgoing.filter(p => Y.before.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
-    const hole = EDIT_POS.map(pos => ({ pos, b: Y.places[pos][0], a: Y.places[pos][1] })).filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
+    const gavePos = new Set(Y.outgoing.map(p => p.pos));   // only a position the team actually gave up can open a hole
+    const hole = EDIT_POS.filter(pos => gavePos.has(pos)).map(pos => ({ pos, b: Y.places[pos][0], a: Y.places[pos][1] })).filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
     const bestPos = EDIT_POS.map(pos => ({ pos, b: Y.places[pos][0] })).sort((x, y) => x.b - y.b)[0];
     let t = "";
-    if (Math.abs(diff) >= 2 && lostStarter && hole && hole.a >= Math.ceil(n * 0.67)) {
+    const holeStarter = hole && Y.outgoing.filter(p => p.pos === hole.pos && Y.before.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
+    if (Math.abs(diff) >= 2 && holeStarter && hole.a >= Math.ceil(n * 0.67)) {
       const strong = bestPos.b <= 3 && bestPos.pos !== hole.pos;
-      t = `${strong ? `${L} already has strong ${bestPos.pos} depth, but losing` : `Losing`} ${lostStarter.name} leaves ${strong ? "them" : L} thin at ${hole.pos} (${hole.pos} room ${ord(hole.b)} → ${ord(hole.a)}).`;
+      t = `${strong ? `${L} already has strong ${bestPos.pos} depth, but losing` : `Losing`} ${holeStarter.name} leaves ${strong ? "them" : L} thin at ${hole.pos} (${hole.pos} room ${ord(hole.b)} → ${ord(hole.a)}).`;
     } else if (Math.abs(diff) >= 2 && Y.impact < 0) {
       t = `${L}'s lineup gets ${Y.impact < -5 ? "noticeably" : "a little"} weaker (−${Math.abs(Y.impact).toFixed(1)}% roster impact), so they're paying for the value in lineup strength.`;
     } else if (Y.impact >= 0 && Math.abs(diff) >= 2) {
@@ -2957,7 +3238,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
     const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(x => !o.has(x)).map(x => map.get(x)).filter(Boolean); };
-    const strength = pool => { const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench); L.cut = sorted.slice(limit); L.labels = slotLabels(L); L.filled = L.starters.length; return L; };
+    const strength = pool => { const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench, sorted); L.cut = sorted.slice(limit); L.labels = slotLabels(L); L.filled = L.starters.length; return L; };
     const R = {};
     for (const s of SIDES3) {
       const t = T[s], before = healthy(t), inc = sides[s].map(id => byId.get(id)), out = sentBy(s).map(id => byId.get(id));
@@ -2972,6 +3253,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         const place = (val, key) => 1 + rest.filter(x => x.room[pos] > val).length + others3(s).filter(o => R[o][key].room[pos] > val).length;
         X.places[pos] = [place(X.before.room[pos], "before"), place(X.after.room[pos], "after")];
       }
+      lockUntouched(X.places, posSet(SIDES3.flatMap(r => sides[r].map(id => byId.get(id)))), X.t.name);
       X.changes = lineupChanges(X);
       const pool = X.after.starters.concat(X.after.bench, X.after.cut);
       X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
@@ -3143,7 +3425,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("tc-breakdown-body").innerHTML = `<table class="bd-table">
         <thead><tr><th scope="col"></th><th scope="col">${esc(names.A)}</th><th scope="col">${esc(names.B)}</th></tr></thead>
         <tbody>
-          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), tcLeague() ? "League-adjusted SPMetrics values for the players each side gets." : "Base SPMetrics values for the players each side gets.")}
+          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), tcLeague() ? "League-adjusted SPMetrics values for the players each side gets." : !LG.active && leagueView() ? "SPMetrics values adjusted for your settings, for the players each side gets." : "Base SPMetrics values for the players each side gets.")}
           ${row("Best-player bonus", sign(bonusA), sign(bonusB), "In an uneven trade (2-for-1 etc.), the side getting the best player gets up to 5% of the deal.")}
           ${row("Waiver adjustment", sign(spotA), sign(spotB), "The side taking on more players has to cut someone: 1% of the deal per extra player, up to 2%.")}
           ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
@@ -3273,7 +3555,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
     $("eb-count").textContent = n ? `${n} unsaved` : "All saved";
     $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
-    $("eb-hint").textContent = leagueView() ? "League-adjusted view is read-only. Switch to Base to edit rankings."
+    $("eb-hint").textContent = leagueView() ? `${adjName()} view is read-only. Switch to SPMetrics board to edit rankings.`
       : posFilter === "ALL"
       ? "Drag or use the arrows to reorder. Click a value to override it."
       : EDIT_POS.includes(posFilter)
@@ -3683,6 +3965,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const rec = Number(sc.rec || 0);
     parts.push(rec === 1 ? "Full PPR" : rec === 0.5 ? "Half PPR" : rec === 0 ? "Standard" : `${rec} PPR`);
     if (Number(sc.bonus_rec_te) > 0) parts.push("TE Premium");
+    if (Number(sc.pass_td) >= 5) parts.push(`${Number(sc.pass_td)}pt Pass TD`);
+    if (Number(sc.rush_fd) > 0 || Number(sc.rec_fd) > 0) parts.push("PPFD");
     const type = league.settings && league.settings.type;
     if (type === 2) parts.push("Dynasty"); else if (type === 1) parts.push("Keeper");
     return parts;
@@ -3755,11 +4039,16 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 
   // Recompute layer 3 and ownership from the current players (called after every rebuild)
   function leagueRecalc() {
-    const d = activeData();
+    const d = activeData(), vl = valueLeague();
     LG.active = !!(d && sl);
-    LG.adj = new Map(); LG.adjRank = new Map(); LG.ownerOf = new Map(); LG.teams = []; LG.myRosterId = null;
-    if (!LG.active) return;
-    LG.mode = sl.view === "base" ? "base" : "league";
+    LG.fmtOn = !!vl;
+    LG.adj = new Map(); LG.adjRank = new Map(); LG.adjPos = new Map(); LG.factor = new Map();
+    LG.ownerOf = new Map(); LG.teams = []; LG.myRosterId = null;
+    LG.mode = LG.active ? (sl.view === "base" ? "base" : "league") : fmtView;
+    if (LG.active) leagueTeams(d);
+    if (LG.fmtOn) adjustValues(vl);
+  }
+  function leagueTeams(d) {
     const users = new Map(d.users.map(u => [u.user_id, u]));
     LG.teams = d.rosters.map(r => {
       const u = users.get(r.owner_id) || {};
@@ -3772,26 +4061,106 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const bySid = new Map();
     LG.teams.forEach(t => (t.roster.players || []).forEach(sid => bySid.set(String(sid), t)));
     players.forEach(p => { const t = p.sleeperId && bySid.get(p.sleeperId); if (t) LG.ownerOf.set(p.id, t); });
+  }
 
-    // League-adjusted values
+  /* Values for other settings (FORMAT_ADJUST explains the three steps) */
+  function adjustValues(vl) {
+    const FA = FORMAT_ADJUST, raw = new Map();
     if (comps) {
       const base = modelTable(curvesFor(comps.base_scoring), BASE_LINEUP());
-      const lg = modelTable(curvesFor(d.league.scoring_settings || {}), lineupOf(d.league));
+      const lg = modelTable(curvesFor(vl.scoring_settings || {}), lineupOf(vl));
       const delta = (pos, num) => { const i = Math.min(num, base[pos].length) - 1; return lg[pos][i] - base[pos][i]; };
-      players.forEach(p => {
-        const v = EDIT_POS.includes(p.pos) && p.posNum != null ? Math.max(0, p.value + delta(p.pos, p.posNum)) : p.value;
-        LG.adj.set(p.id, Math.round(v));
-      });
-      for (const pos of EDIT_POS) {   // keep each position in your order
-        const g = players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
+      const fac = playerFactors(vl.scoring_settings || {});
+      players.forEach(p => raw.set(p.id, EDIT_POS.includes(p.pos) && p.posNum != null ? Math.max(0, p.value + delta(p.pos, p.posNum)) : p.value));
+      // the position curve alone never reorders a position: keep it in your order first…
+      for (const pos of EDIT_POS) {
         let prev = Infinity;
-        g.forEach(p => { if (p.custom) return; const v = Math.min(LG.adj.get(p.id), prev); LG.adj.set(p.id, v); prev = v; });
+        players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum)
+          .forEach(p => { if (p.custom) return; const v = Math.min(raw.get(p.id), prev); raw.set(p.id, v); prev = v; });
       }
-    } else {
-      players.forEach(p => LG.adj.set(p.id, p.value));
+      // …then each player's own scoring profile nudges his value
+      players.forEach(p => {
+        const f = (fac && fac.get(p.id)) || 1;
+        if (f !== 1) { LG.factor.set(p.id, f); raw.set(p.id, raw.get(p.id) * f); }
+      });
+    } else players.forEach(p => raw.set(p.id, p.value));
+    // each position: your order, unless the adjusted value passes the player above by more than the margin
+    for (const pos of EDIT_POS) {
+      const g = players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
+      let prev = Infinity;
+      stickyOrder(g, p => raw.get(p.id), FA.margin, FA.maxPosMove).forEach((p, k) => {
+        LG.adjPos.set(p.id, k + 1);
+        const v = p.custom ? raw.get(p.id) : Math.min(raw.get(p.id), prev);
+        LG.adj.set(p.id, Math.round(v));
+        if (!p.custom) prev = v;
+      });
     }
-    [...players].filter(p => p.pos !== "PICK").sort((a, b) => LG.adj.get(b.id) - LG.adj.get(a.id))
-      .forEach((p, k) => LG.adjRank.set(p.id, k + 1));
+    players.forEach(p => { if (!LG.adj.has(p.id)) LG.adj.set(p.id, Math.round(raw.get(p.id))); });
+    // overall: your board's slots filled in each position's adjusted order, then the same margin rule across positions
+    const ranked = players.filter(p => p.pos !== "PICK"), withRank = ranked.filter(p => p.rank != null).sort((a, b) => a.rank - b.rank);
+    const qs = {};
+    EDIT_POS.forEach(pos => { qs[pos] = withRank.filter(p => p.pos === pos && LG.adjPos.has(p.id)).sort((a, b) => LG.adjPos.get(a.id) - LG.adjPos.get(b.id)); });
+    const seq = withRank.map(p => (qs[p.pos] && LG.adjPos.has(p.id) ? qs[p.pos].shift() : p));
+    const rest = ranked.filter(p => p.rank == null).sort((a, b) => LG.adj.get(b.id) - LG.adj.get(a.id));
+    stickyOrder(seq.concat(rest), p => LG.adj.get(p.id), FA.margin, Infinity).forEach((p, k) => LG.adjRank.set(p.id, k + 1));
+  }
+  // Keeps the given order; a player moves up only past someone his value beats by more than `margin`
+  function stickyOrder(list, val, margin, maxMove) {
+    const seq = list.slice(), home = new Map(list.map((p, i) => [p, i]));
+    for (let i = 1; i < seq.length; i++) {
+      for (let j = i; j > 0; j--) {
+        const x = seq[j], y = seq[j - 1];
+        if (!(val(x) > val(y) * (1 + margin))) break;
+        if (home.get(x) - (j - 1) > maxMove || j - home.get(y) > maxMove) break;
+        seq[j] = y; seq[j - 1] = x;
+      }
+    }
+    return seq;
+  }
+  // Personal nudge per player: his recent games scored both ways, compared with his position's average
+  let factorCache = { key: null, map: null }, factorLoading = false;
+  function playerFactors(sc) {
+    const seasons = STATS_SEASONS.slice(0, 2), FA = FORMAT_ADJUST;
+    if (seasons.some(s => statsCache[s] === undefined)) {
+      if (!factorLoading) {
+        factorLoading = true;
+        Promise.all(seasons.map(loadSeason)).then(() => { factorLoading = false; factorCache.key = null; if (LG.fmtOn) renderLeagueAll(); });
+      }
+      return null;
+    }
+    const key = JSON.stringify(sc) + "|" + players.map(p => p.id + ":" + p.posNum).join(",");
+    if (factorCache.key === key) return factorCache.map;
+    const baseSc = comps.base_scoring, ratio = new Map();
+    players.forEach(p => {
+      if (!EDIT_POS.includes(p.pos) || !p.sleeperId) return;
+      const games = [];
+      for (const s of seasons) {
+        const data = statsCache[s], pl = data && data.players && data.players[p.sleeperId];
+        if (!pl) continue;
+        for (let i = pl.g.length - 1; i >= 0 && games.length < FA.games; i--) {
+          const g = {}; data.cols.forEach((c, k) => { g[c] = pl.g[i][k]; }); games.push(g);
+        }
+      }
+      if (games.length < FA.minGames) return;
+      let b = 0, l = 0;
+      games.forEach(g => { b += gamePoints(g, p.pos, baseSc); l += gamePoints(g, p.pos, sc); });
+      if (b / games.length < 3) return;   // too few points to compare
+      ratio.set(p.id, { r: l / b, n: games.length });
+    });
+    const map = new Map();
+    for (const pos of EDIT_POS) {
+      const top = players.filter(p => p.pos === pos && p.posNum != null && p.posNum <= FA.avgDepth[pos] && ratio.has(p.id));
+      if (top.length < 5) continue;
+      const avg = top.reduce((a, p) => a + ratio.get(p.id).r, 0) / top.length;
+      if (!(avg > 0)) continue;
+      players.filter(p => p.pos === pos && ratio.has(p.id)).forEach(p => {
+        const { r, n } = ratio.get(p.id), w = n / (n + FA.shrinkGames);
+        const f = Math.max(1 - FA.maxFactor, Math.min(1 + FA.maxFactor, 1 + w * (r / avg - 1)));
+        if (Math.abs(f - 1) > 0.001) map.set(p.id, Math.round(f * 1000) / 1000);
+      });
+    }
+    factorCache = { key, map };
+    return map;
   }
 
   /* Header, tabs and controls */
@@ -3807,9 +4176,22 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("sl-connect").hidden = !!d;
     $("league-pick").hidden = !d;
     $("meta").hidden = !!d;
+    $("fmt-chip").hidden = !!d;
+    $("meta").textContent = (FMT ? [] : [SITE.format]).concat(SITE.updated ? ["Updated " + SITE.updated] : []).join("  ·  ");
+    $("fc-format").textContent = formatParts(FMT ? fmtLeague(FMT) : fmtLeague(FMT_DEFAULT)).join(" · ");
+    $("fmt-chip").classList.toggle("custom", !!FMT);
+    $("fmt-chip").title = FMT ? "Values follow the settings you picked. Click to change." : "Pick your league's scoring and lineup";
     tabs.myteam.hidden = tabs.league.hidden = tabs.finder.hidden = tabs.fa.hidden = !d;
     document.body.classList.toggle("has-league", !!d);
-    $("league-controls").hidden = !d;
+    // Rankings view row: shown for a connected league or hand-picked settings
+    $("league-controls").hidden = !LG.fmtOn;
+    $("owner-filter-wrap").hidden = !d;
+    $("view-adj").textContent = adjName();
+    $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
+    const vl = valueLeague();
+    $("fmt-note").innerHTML = !vl ? "" : leagueView()
+      ? `<span>Adjusted for <b>${esc(formatParts(vl).join(" · "))}</b></span>${infoIcon("Values move with these settings. The order is the SPMetrics board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}${d ? "" : `<button class="btn link inline" type="button" data-open-fmt>Change</button>`}`
+      : `<span>Showing the SPMetrics board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).join(" · "))}</b></span>`;
     if (!d) {
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
       if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
@@ -3817,7 +4199,6 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     }
     $("lc-name").textContent = d.league.name;
     $("lc-format").textContent = formatParts(d.league).join(" · ");
-    $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const opts = [`<option value="all">All players</option>`];
     if (LG.myRosterId != null) opts.push(`<option value="mine">My Team</option>`);
     opts.push(`<option value="fa">Free agents</option>`, `<optgroup label="Teams">`);
@@ -3836,7 +4217,21 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     renderTeamRosters();
   }
   function renderLeagueMenu() {
-    const d = activeData();
+    const d = activeData(), src = slSource();
+    if (src !== "sleeper") {
+      const nm = SOURCE_NAME[src];
+      $("league-menu").innerHTML = `
+        <div class="lm-section">${src === "espn" ? "ESPN league" : src === "yahoo" ? "Yahoo league" : "Pasted league"}</div>
+        <div class="lm-league active"><span class="lm-name">${esc(d.league.name)}</span><span class="lm-format">${esc(formatParts(d.league).join(" · "))}</span></div>
+        <div class="lm-divider"></div>
+        <button class="lm-action" type="button" role="menuitem" data-act="refresh">${src === "espn" ? "Refresh from ESPN" : "Update rosters"}</button>
+        <button class="lm-action" type="button" role="menuitem" data-act="mine">Change my team</button>
+        <button class="lm-action" type="button" role="menuitem" data-act="settings">League settings</button>
+        <button class="lm-action" type="button" role="menuitem" data-act="other">Connect a different league</button>
+        <button class="lm-action danger" type="button" role="menuitem" data-act="disconnect">Disconnect ${esc(nm === "pasted" ? "league" : nm)}</button>
+        <div class="lm-foot">${esc(nm === "pasted" ? "Pasted rosters" : nm)} · ${src === "espn" ? "Synced" : "Updated"} ${d ? ago(d.syncedAt) : "never"}</div>`;
+      return;
+    }
     const items = sl.leagues.map(l => `
       <button class="lm-league${l.id === sl.activeId ? " active" : ""}" type="button" role="menuitem" data-league="${esc(l.id)}">
         <span class="lm-name">${esc(l.name)}</span><span class="lm-format">${esc(l.format)}</span>
@@ -3846,6 +4241,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       <div class="lm-divider"></div>
       <button class="lm-action" type="button" role="menuitem" data-act="refresh">Refresh from Sleeper</button>
       <button class="lm-action" type="button" role="menuitem" data-act="account">Change Sleeper account</button>
+      <button class="lm-action" type="button" role="menuitem" data-act="settings">League settings</button>
+      <button class="lm-action" type="button" role="menuitem" data-act="other">Connect ESPN or Yahoo instead</button>
       <button class="lm-action danger" type="button" role="menuitem" data-act="disconnect">Disconnect Sleeper</button>
       <div class="lm-foot">@${esc(sl.username)} · Synced ${d ? ago(d.syncedAt) : "never"}</div>`;
   }
@@ -3883,7 +4280,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       </button></li>`).join("");
   }
   let pending = null;   // { user, season, leagues } while picking
-  $("sl-connect").addEventListener("click", openConnect);
+  $("sl-connect").addEventListener("click", () => openImport());
   $("sd-cancel").addEventListener("click", () => sdialog.close());
   $("sd-cancel2").addEventListener("click", () => sdialog.close());
   $("sd-back").addEventListener("click", () => { $("sd-step-leagues").hidden = true; $("sd-step-user").hidden = false; $("sd-username").focus(); });
@@ -3911,7 +4308,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     b.classList.add("loading"); $("sd-error2").textContent = "";
     const { user, season, leagues } = pending;
     const prev = sl;
-    sl = { username: user.username || user.display_name, userId: user.user_id, displayName: user.display_name,
+    sl = { source: "sleeper", username: user.username || user.display_name, userId: user.user_id, displayName: user.display_name,
            season, leagues: leagues.map(summary), activeId: null, data: {}, view: prev ? prev.view : "league" };
     try {
       await syncLeague(b.dataset.league);
@@ -3955,6 +4352,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 
   async function refreshLeague() {
     if (!sl || slBusy) return;
+    if (slSource() === "espn") { refreshEspn(true); return; }
+    if (slSource() !== "sleeper") { openPaste(slSource(), activeData()); return; }
     slBusy = true; toast("Refreshing from Sleeper…");
     try {
       const list = await slGet(`/user/${sl.userId}/leagues/nfl/${sl.season}`).catch(() => null);
@@ -3966,10 +4365,509 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
   function disconnect() {
     sl = null; writeSl();
+    if (FMT && !comps) loadStatic().then(renderLeagueAll);
     LG.ownerFilter = "all";
     renderLeagueAll();
-    toast("Sleeper disconnected.");
+    toast("League disconnected." + (FMT ? " Values follow your League settings again." : ""));
+    syncFmtUrl();
   }
+
+  /* ---------- League settings by hand ----------
+     For visitors who don't connect a league. The choices become a Sleeper-shaped league object
+     (fmtLeague) and go through the same value code as a connected league. Saved in this browser
+     and in the page address (?fmt=…), so a shared link opens with the same settings. */
+  const FMT_FIELDS = [
+    { group: "Lineup", k: "teams", label: "Teams", opts: [[8], [10], [12], [14], [16]] },
+    { group: "Lineup", k: "qb", label: "Quarterbacks", opts: [["1", "1QB"], ["sf", "Superflex"], ["2", "2QB"]] },
+    { group: "Lineup", k: "rb", label: "RB starters", opts: [[1], [2], [3]] },
+    { group: "Lineup", k: "wr", label: "WR starters", opts: [[1], [2], [3], [4]] },
+    { group: "Lineup", k: "te", label: "TE starters", opts: [[1], [2]] },
+    { group: "Lineup", k: "flex", label: "FLEX (RB/WR/TE)", opts: [[0], [1], [2], [3]] },
+    { group: "Lineup", k: "bench", label: "Bench spots", select: [3, 4, 5, 6, 7, 8, 9, 10, 12, 15] },
+    { group: "Scoring", k: "rec", label: "Points per catch", opts: [[0, "Standard"], [0.5, "Half PPR"], [1, "Full PPR"]] },
+    { group: "Scoring", k: "tep", label: "TE premium", opts: [[0, "None"], [0.5, "+0.5"], [1, "+1"]] },
+    { group: "Scoring", k: "ptd", label: "Passing TD", opts: [[4, "4 pts"], [5, "5 pts"], [6, "6 pts"]] },
+    { group: "Scoring", k: "pyd", label: "Passing yards", opts: [[25, "25 per pt"], [20, "20 per pt"], [30, "30 per pt"]] },
+    { group: "Scoring", k: "int", label: "Interception", opts: [[-1, "−1"], [-2, "−2"], [-3, "−3"]] },
+    { group: "Scoring", k: "fd", label: "Rush/rec first down", opts: [[0, "None"], [0.5, "0.5"], [1, "1"]] }
+  ];
+  const fdialog = $("fmt-dialog");
+  let fmtDraft = fmtFull(FMT);
+  const showDialog = dlg => { if (dlg.open) return; if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); };
+  function openFormat() {
+    const d = activeData();
+    fmtDraft = fmtFull(FMT);
+    $("fmt-locked").hidden = !d;
+    ["fmt-presets", "fmt-grid", "fmt-reset", "fmt-apply", "fmt-intro", "fmt-summary"].forEach(id => { $(id).hidden = !!d; });
+    $("fmt-cancel").textContent = d ? "Close" : "Cancel";
+    $("fmt-import").hidden = !!d;
+    if (d) {
+      $("fmt-locked").innerHTML = `<p>Values follow <b>${esc(d.league.name)}</b>'s own settings from ${esc(SOURCE_NAME[slSource()] === "pasted" ? "your pasted league" : SOURCE_NAME[slSource()])}:</p>
+        <p class="fmt-summary">${esc(formatParts(d.league).join(" · "))}</p><p>${esc(lineupText(d.league))}</p>
+        <p class="hint">To pick settings by hand instead, disconnect the league from the league menu at the top.</p>`;
+    } else renderFmtForm();
+    showDialog(fdialog);
+  }
+  function renderFmtForm() {
+    const cur = fmtClean(fmtDraft);
+    $("fmt-presets").innerHTML = FMT_PRESETS.map(pr => `<button class="fmt-preset" type="button" data-preset="${pr.id}" aria-pressed="${fmtSame(cur, { ...FMT_DEFAULT, ...pr.v })}">${esc(pr.label)}</button>`).join("");
+    const groups = ["Lineup", "Scoring"].map(g => `<div class="fmt-group"><h3>${g}</h3>${FMT_FIELDS.filter(f => f.group === g).map(f => {
+      const val = String(cur[f.k]);
+      const ctl = f.select
+        ? `<select class="select" data-fmt="${f.k}" aria-label="${esc(f.label)}">${f.select.map(o => `<option value="${o}"${String(o) === val ? " selected" : ""}>${o}</option>`).join("")}</select>`
+        : `<div class="seg" role="radiogroup" aria-label="${esc(f.label)}">${f.opts.map(([v, lab]) => `<button type="button" role="radio" data-fmt="${f.k}" data-v="${v}" aria-checked="${String(v) === val}">${esc(lab ?? v)}</button>`).join("")}</div>`;
+      return `<div class="fmt-row"><span>${esc(f.label)}</span>${ctl}</div>`;
+    }).join("")}</div>`).join("");
+    $("fmt-grid").innerHTML = groups;
+    const lg = fmtLeague(cur);
+    $("fmt-summary").textContent = formatParts(lg).join(" · ") + " · " + lineupText(lg).replace(/ · TE premium$/, "");
+  }
+  $("fmt-grid").addEventListener("click", e => {
+    const b = e.target.closest("button[data-fmt]"); if (!b) return;
+    const f = FMT_FIELDS.find(x => x.k === b.dataset.fmt);
+    fmtDraft[f.k] = typeof f.opts[0][0] === "number" ? Number(b.dataset.v) : b.dataset.v;
+    renderFmtForm();
+  });
+  $("fmt-grid").addEventListener("change", e => {
+    const sel = e.target.closest("select[data-fmt]"); if (!sel) return;
+    fmtDraft[sel.dataset.fmt] = Number(sel.value); renderFmtForm();
+  });
+  $("fmt-presets").addEventListener("click", e => {
+    const b = e.target.closest("[data-preset]"); if (!b) return;
+    const pr = FMT_PRESETS.find(x => x.id === b.dataset.preset);
+    fmtDraft = fmtFull({ ...FMT_DEFAULT, ...pr.v }); renderFmtForm();
+  });
+  $("fmt-reset").addEventListener("click", () => { fmtDraft = fmtFull(FMT_DEFAULT); renderFmtForm(); });
+  $("fmt-cancel").addEventListener("click", () => fdialog.close());
+  function syncFmtUrl() {
+    try {
+      const u = new URL(location.href);
+      if (FMT && !activeData()) u.searchParams.set("fmt", fmtToUrl(FMT)); else u.searchParams.delete("fmt");
+      history.replaceState(null, "", u.pathname + u.search + u.hash);
+    } catch (e) {}
+  }
+  function setFormat(f) {
+    f = fmtClean(f);
+    FMT = fmtSame(f, FMT_DEFAULT) ? null : f;
+    try { if (FMT) localStorage.setItem(FMT_KEY, JSON.stringify(FMT)); else localStorage.removeItem(FMT_KEY); } catch (e) {}
+    if (FMT) { fmtView = "league"; try { localStorage.setItem(FMT_VIEW_KEY, "league"); } catch (e) {} }
+    syncFmtUrl();
+    renderLeagueAll();
+    if (FMT && !comps) loadStatic().then(renderLeagueAll);
+  }
+  $("fmt-form").addEventListener("submit", e => {
+    e.preventDefault();
+    setFormat(fmtDraft);
+    fdialog.close();
+    toast(FMT ? `Using ${formatParts(fmtLeague(FMT)).join(" · ")}. Your settings are saved in this browser and in the page link.` : "Back to the SPMetrics default format.");
+  });
+  $("fmt-chip").addEventListener("click", openFormat);
+  $("fmt-import").addEventListener("click", e => {
+    const b = e.target.closest("[data-import]"); if (!b) return;
+    fdialog.close(); openImport(b.dataset.import);
+  });
+  // any "Change" / "League settings" link on the page
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-open-fmt]"); if (!b) return;
+    e.preventDefault();
+    if (idialog.open) idialog.close();
+    openFormat();
+  });
+
+  /* ---------- ESPN, Yahoo and other sites ----------
+     Every import becomes the same shape as a Sleeper league ({ league, users, rosters }), so values,
+     My Team, power rankings, free agents, the Trade Finder and the calculator all work the same way.
+     ESPN: read straight from ESPN's league API when ESPN allows it (public leagues). Private leagues:
+           the visitor opens that same address in their own browser, where they're signed in to ESPN,
+           and pastes what it shows. Nothing is stored anywhere but this browser.
+     Yahoo: Yahoo only shares league data with apps that sign people in through a server, which a
+           static site can't do, so this reads the pasted text of the settings and roster pages.
+     Other sites: the same paste flow, with scoring and lineup from League settings. */
+  const slSource = () => (sl && sl.source) || "sleeper";
+  const SOURCE_NAME = { sleeper: "Sleeper", espn: "ESPN", yahoo: "Yahoo", other: "pasted" };
+  let platformIds = null;
+  async function loadPlatformIds() {
+    if (!platformIds) { try { const r = await fetch("data/platform_ids.json"); platformIds = r.ok ? await r.json() : {}; } catch (e) { platformIds = {}; } }
+    return platformIds;
+  }
+
+  // Player names → Sleeper IDs, using every player the site knows (ranked players win ties)
+  const nameKey = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.'’`]/g, "").replace(/-/g, " ")
+    .replace(/\b(jr|sr|ii|iii|iv|v)\b/g, " ").replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+  let nameIdx = null;
+  function nameIndex() {
+    if (nameIdx && nameIdx.n === players.length && nameIdx.sl === !!slPlayers) return nameIdx;
+    const full = new Map(), init = new Map(), info = new Map();
+    const add = (m, k, e) => { if (!k) return; if (!m.has(k)) m.set(k, []); if (!m.get(k).some(x => x.sid === e.sid)) m.get(k).push(e); };
+    const ranked = new Map(players.filter(p => p.sleeperId && EDIT_POS.includes(p.pos)).map(p => [p.sleeperId, p]));
+    const entries = [];
+    ranked.forEach((p, sid) => entries.push({ sid, name: p.name, pos: p.pos, team: p.team, value: p.value || 1 }));
+    Object.entries(slPlayers || {}).forEach(([sid, a]) => { if (!ranked.has(sid)) entries.push({ sid, name: a[0], pos: a[1], team: a[2], value: 0 }); });
+    entries.forEach(e => {
+      info.set(e.sid, e);
+      const k = nameKey(e.name), w = k.split(" ");
+      add(full, k, e);
+      if (w.length >= 2) add(init, w[0][0] + " " + w.slice(1).join(" "), e);
+    });
+    nameIdx = { n: players.length, sl: !!slPlayers, full, init, info };
+    return nameIdx;
+  }
+  const TEAM_ALIAS = { JAC: "JAX", WSH: "WAS", LA: "LAR", LVR: "LV", OAK: "LV", SD: "LAC", STL: "LAR", KCC: "KC", GBP: "GB", NEP: "NE", NOS: "NO", SFO: "SF", TBB: "TB" };
+  const NFL_TEAMS = new Set(["ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LV", "LAC", "LAR",
+                             "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SF", "SEA", "TB", "TEN", "WAS", "JAC", "WSH"]);
+  const normTeam = t => { t = String(t || "").toUpperCase(); return TEAM_ALIAS[t] || t; };
+  function pickCandidate(list, pos, team) {
+    if (!list || !list.length) return null;
+    let c = list;
+    if (pos) { const f = c.filter(e => e.pos === pos); if (f.length) c = f; }
+    if (team && c.length > 1) { const f = c.filter(e => e.team === normTeam(team)); if (f.length) c = f; }
+    return c.slice().sort((a, b) => b.value - a.value)[0];
+  }
+  const matchPlayer = (name, pos, team) => pickCandidate(nameIndex().full.get(nameKey(name)), pos, team);
+  // Every known player named in pasted text (a roster page). Team and position on the same line break ties.
+  function playersInText(text) {
+    const ix = nameIndex(), found = [], seen = new Set();
+    const push = c => { if (c && !seen.has(c.sid)) { seen.add(c.sid); found.push(c); } };
+    String(text || "").split(/\r?\n/).forEach(line => {
+      if (line.length > 400) return;   // paragraphs of news, not roster rows
+      const team = (line.match(/\b[A-Za-z]{2,3}\b/g) || []).map(t => t.toUpperCase()).find(t => NFL_TEAMS.has(t) && t !== "NO" && t !== "NE");
+      const pos = (line.match(/\b(QB|RB|WR|TE|K)\b/) || [])[1];
+      const words = nameKey(line).split(" ").filter(Boolean);
+      for (let i = 0; i < words.length; i++) {
+        for (let len = 4; len >= 2; len--) {
+          if (i + len > words.length) continue;
+          const c = pickCandidate(ix.full.get(words.slice(i, i + len).join(" ")), pos, team);
+          if (c) { push(c); i += len - 1; break; }
+        }
+      }
+      for (const m of line.matchAll(/\b([A-Z])\.\s?([A-Z][A-Za-z'’\-]+(?:\s(?:Jr|Sr|II|III|IV)\.?)?)/g)) {
+        push(pickCandidate(ix.init.get(m[1].toLowerCase() + " " + nameKey(m[2])), pos, team));
+      }
+    });
+    return found;
+  }
+
+  /* ESPN */
+  const ESPN_API = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons";
+  const espnUrl = (season, id) => `${ESPN_API}/${season}/segments/0/leagues/${id}?view=mSettings&view=mTeam&view=mRoster`;
+  const ESPN_SLOT = { 0: "QB", 2: "RB", 3: "WRRB_FLEX", 4: "WR", 5: "REC_FLEX", 6: "TE", 7: "SUPER_FLEX", 16: "DEF", 17: "K", 20: "BN", 23: "FLEX" };
+  const ESPN_POS = { 1: "QB", 2: "RB", 3: "WR", 4: "TE", 5: "K", 16: "DEF" };
+  const ESPN_TEAM = { 1: "ATL", 2: "BUF", 3: "CHI", 4: "CIN", 5: "CLE", 6: "DAL", 7: "DEN", 8: "DET", 9: "GB", 10: "TEN", 11: "IND", 12: "KC", 13: "LV", 14: "LAR",
+                      15: "MIA", 16: "MIN", 17: "NE", 18: "NO", 19: "NYG", 20: "NYJ", 21: "PHI", 22: "ARI", 23: "PIT", 24: "LAC", 25: "SF", 26: "SEA", 27: "TB",
+                      28: "WAS", 29: "CAR", 30: "JAX", 33: "BAL", 34: "HOU" };
+  // ESPN scoring stat IDs → Sleeper scoring keys
+  const ESPN_STAT = { 0: "pass_att", 1: "pass_cmp", 2: "pass_inc", 3: "pass_yd", 4: "pass_td", 19: "pass_2pt", 20: "pass_int", 64: "pass_sack",
+                      23: "rush_att", 24: "rush_yd", 25: "rush_td", 26: "rush_2pt", 53: "rec", 42: "rec_yd", 43: "rec_td", 44: "rec_2pt", 58: "rec_tgt", 72: "fum_lost" };
+  function espnScoring(items) {
+    const sc = {}, by = new Map((items || []).map(it => [Number(it.statId), it]));
+    const pts = id => (by.has(id) ? Number(by.get(id).points) || 0 : 0);
+    for (const [id, key] of Object.entries(ESPN_STAT)) if (by.has(Number(id))) sc[key] = pts(Number(id));
+    if (!by.has(53) && by.has(41)) sc.rec = pts(41);
+    if (!by.has(72) && by.has(68)) sc.fum_lost = pts(68);
+    // big-game bonuses: ESPN's ranges don't stack (300-399, 400+); the site's thresholds do
+    [[17, 18, "bonus_pass_yd_300", "bonus_pass_yd_400"], [37, 38, "bonus_rush_yd_100", "bonus_rush_yd_200"], [56, 57, "bonus_rec_yd_100", "bonus_rec_yd_200"]]
+      .forEach(([lo, hi, k1, k2]) => { if (pts(lo)) sc[k1] = pts(lo); if (pts(hi)) sc[k2] = Math.round((pts(hi) - pts(lo)) * 100) / 100; });
+    // catch points by position (TE premium) are ESPN "overrides" keyed by lineup slot
+    const rec = by.get(53) || by.get(41);
+    if (rec && rec.pointsOverrides) {
+      const o = rec.pointsOverrides, base = Number(rec.points) || 0;
+      [["6", "te"], ["2", "rb"], ["4", "wr"], ["0", "qb"]].forEach(([slot, pos]) => {
+        if (o[slot] != null && Number(o[slot]) !== base) sc["bonus_rec_" + pos] = Math.round((Number(o[slot]) - base) * 100) / 100;
+      });
+    }
+    return sc;
+  }
+  function espnToLeague(j, ids) {
+    if (Array.isArray(j)) j = j[0];
+    if (!j || !j.settings || !Array.isArray(j.teams)) throw new Error("That doesn't look like ESPN league data. Copy everything on the ESPN page and paste it again.");
+    if (!j.teams.some(t => t.roster)) throw new Error("ESPN sent the league without rosters. Use the link above exactly as it is (it asks for rosters) and copy that page.");
+    const st = j.settings, counts = (st.rosterSettings && st.rosterSettings.lineupSlotCounts) || {}, rp = [];
+    Object.keys(counts).sort((a, b) => Number(a) - Number(b)).forEach(slot => { const sname = ESPN_SLOT[slot]; for (let i = 0; i < (ESPN_SLOT[slot] ? counts[slot] : 0); i++) rp.push(sname); });
+    if (!rp.includes("QB") && !rp.includes("SUPER_FLEX")) throw new Error("Couldn't read this league's lineup from ESPN's data.");
+    const espnMap = (ids && ids.espn) || {};
+    let unmatched = 0;
+    const users = [], rosters = [];
+    j.teams.forEach(t => {
+      const uid = "t" + t.id, name = (t.name || [t.location, t.nickname].filter(Boolean).join(" ") || t.abbrev || "Team " + t.id).trim();
+      const m = (j.members || []).find(x => x.id === (t.primaryOwner || (t.owners || [])[0])) || {};
+      users.push({ user_id: uid, display_name: m.displayName || name, team_name: name, avatar: /^https:\/\//.test(t.logo || "") ? t.logo : "" });
+      const plist = [], reserve = [], starters = [];
+      ((t.roster && t.roster.entries) || []).forEach(e => {
+        const pl = (e.playerPoolEntry && e.playerPoolEntry.player) || e.player || {};
+        const pos = ESPN_POS[pl.defaultPositionId];
+        let sid = null;
+        if (pos === "DEF") sid = ESPN_TEAM[pl.proTeamId] || null;
+        else {
+          sid = espnMap[String(e.playerId)] || null;
+          if (!sid && pl.fullName) { const c = matchPlayer(pl.fullName, pos, ESPN_TEAM[pl.proTeamId]); sid = c ? c.sid : null; }
+        }
+        if (!sid) { unmatched++; return; }
+        plist.push(sid);
+        if (e.lineupSlotId === 21) reserve.push(sid); else if (e.lineupSlotId !== 20 && ESPN_SLOT[e.lineupSlotId]) starters.push(sid);
+      });
+      const rec = (t.record && t.record.overall) || {};
+      rosters.push({ roster_id: t.id, owner_id: uid, co_owners: [], players: plist, starters, reserve, taxi: [],
+                     settings: { wins: rec.wins || 0, losses: rec.losses || 0, ties: rec.ties || 0, pf: rec.pointsFor || 0, pa: rec.pointsAgainst || 0 } });
+    });
+    const size = st.size || j.teams.length;
+    const league = { league_id: "espn-" + j.id, name: st.name || "ESPN league", season: String(j.seasonId || ""), status: "in_season", total_rosters: size,
+                     roster_positions: rp, scoring_settings: espnScoring(st.scoringSettings && st.scoringSettings.scoringItems),
+                     settings: { num_teams: size, reserve_slots: Number(counts["21"] || 0), taxi_slots: 0, type: 0 } };
+    return { league, users, rosters, unmatched, espnId: String(j.id), season: String(j.seasonId || "") };
+  }
+  async function espnFetch(season, id) {
+    let r;
+    try { r = await fetch(espnUrl(season, id), { credentials: "omit" }); } catch (e) { return { blocked: true }; }
+    if (r.status === 404) throw new Error(`ESPN couldn't find league ${id} for the ${season} season. Check the ID and season.`);
+    if (!r.ok) return { blocked: true };
+    try { return { json: await r.json() }; } catch (e) { return { blocked: true }; }
+  }
+  const espnId = v => { const m = String(v || "").match(/leagueId=(\d+)/i) || String(v || "").trim().match(/^(\d{3,12})$/); return m ? m[1] : null; };
+  const nflSeason = () => { const now = new Date(); return now.getMonth() >= 2 ? now.getFullYear() : now.getFullYear() - 1; };
+
+  /* Paste (Yahoo and other sites): Yahoo's settings page → scoring, lineup and team count */
+  function parseYahooSettings(text) {
+    const t = String(text || "").replace(/ /g, " ");
+    if (!t.trim()) return null;
+    const out = { scoring: {}, positions: null, teams: null, name: null };
+    const tm = t.match(/(?:Max(?:imum)?\s+Teams|Number of Teams)\s*:?\s*(\d{1,2})/i); if (tm) out.teams = Number(tm[1]);
+    const nm = t.match(/League Name\s*:?\s*([^\n\t]+)/i); if (nm) out.name = nm[1].trim().slice(0, 60);
+    const rpm = t.match(/Roster Positions\s*:?\s*([^\n]+)/i);
+    if (rpm) {
+      const map = { QB: "QB", RB: "RB", WR: "WR", TE: "TE", "W/R/T": "FLEX", "W/R": "WRRB_FLEX", "W/T": "REC_FLEX", "Q/W/R/T": "SUPER_FLEX", OP: "SUPER_FLEX", K: "K", DEF: "DEF", BN: "BN" };
+      const list = [];
+      rpm[1].split(/,\s*/).forEach(tok => {
+        const m = tok.trim().match(/^([A-Z/]+)\s*(?:\((\d+)\)|[x×]\s*(\d+))?/i); if (!m) return;
+        const slot = map[m[1].toUpperCase()]; if (!slot) return;
+        for (let i = 0; i < Number(m[2] || m[3] || 1); i++) list.push(slot);
+      });
+      if (list.includes("QB")) out.positions = list;
+    }
+    const sc = out.scoring;
+    const rate = (label, key, perYard) => {
+      const m = t.match(new RegExp(label + "\\s*:?\\s*\\(?\\s*(-?[\\d.]+)\\s*(yards?\\s*per\\s*point)?", "i"));
+      if (!m) return;
+      let v = Number(m[1]);
+      if (!isFinite(v)) return;
+      if (perYard && (m[2] || Math.abs(v) >= 1)) v = v ? 1 / v : 0;   // "25 yards per point" → 0.04 per yard
+      sc[key] = Math.round(v * 10000) / 10000;
+    };
+    rate("Passing\\s+Yards", "pass_yd", true); rate("Passing\\s+Touchdowns", "pass_td"); rate("Interceptions", "pass_int");
+    rate("Rushing\\s+Yards", "rush_yd", true); rate("Rushing\\s+Touchdowns", "rush_td");
+    rate("Receptions", "rec"); rate("Receiving\\s+Yards", "rec_yd", true); rate("Receiving\\s+Touchdowns", "rec_td");
+    rate("Fumbles\\s+Lost", "fum_lost"); rate("2-Point\\s+Conversions", "pass_2pt");
+    rate("Passing\\s+1st\\s+Downs", "pass_fd"); rate("Rushing\\s+1st\\s+Downs", "rush_fd"); rate("Receiving\\s+1st\\s+Downs", "rec_fd");
+    if (sc.pass_2pt != null) sc.rush_2pt = sc.rec_2pt = sc.pass_2pt;
+    if (sc.pass_int > 0) sc.pass_int = -sc.pass_int;
+    if (sc.fum_lost > 0) sc.fum_lost = -sc.fum_lost;
+    return out;
+  }
+
+  /* Import dialog */
+  const idialog = $("import-dialog");
+  const IM = { source: null, blocks: [], k: 0, leagueId: null, pending: null };
+  const imSteps = ["im-choose", "im-espn", "im-paste", "im-mine"];
+  const imStep = id => imSteps.forEach(s => { $(s).hidden = s !== id; });
+  function openImport(src) {
+    ["im-espn-error", "im-paste-error"].forEach(id => { $(id).textContent = ""; });
+    if (src === "sleeper") { openConnect(); return; }
+    if (src === "espn") { openEspn(); return; }
+    if (src === "yahoo" || src === "other") { openPaste(src); return; }
+    imStep("im-choose"); showDialog(idialog);
+  }
+  idialog.addEventListener("click", e => {
+    if (e.target.closest("[data-im-close]")) { idialog.close(); return; }
+    if (e.target.closest("[data-im-back]")) { imStep("im-choose"); return; }
+    const src = e.target.closest("[data-src]");
+    if (src) { if (src.dataset.src === "sleeper") { idialog.close(); openConnect(); } else openImport(src.dataset.src); }
+  });
+
+  function openEspn() {
+    const seasons = [nflSeason(), nflSeason() - 1];
+    $("im-espn-season").innerHTML = seasons.map(y => `<option value="${y}">${y}</option>`).join("");
+    if (sl && slSource() === "espn" && sl.espn) { $("im-espn-id").value = sl.espn.id; $("im-espn-season").value = sl.espn.season; }
+    $("im-espn-paste").hidden = true; $("im-espn-json").value = ""; $("im-espn-file").value = "";
+    $("im-espn-error").textContent = "";
+    imStep("im-espn"); showDialog(idialog);
+    $("im-espn-id").focus();
+  }
+  $("im-espn-file").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    $("im-espn-json").value = await f.text();
+  });
+  $("im-espn").addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = espnId($("im-espn-id").value), season = $("im-espn-season").value, err = $("im-espn-error");
+    if (!id) { err.textContent = "Paste your ESPN league page's address or the league ID number."; return; }
+    $("im-espn-go").disabled = true;
+    try {
+      await Promise.all([loadStatic(), loadPlatformIds()]);
+      let json = null;
+      const pasted = $("im-espn-json").value.trim();
+      if (pasted) {
+        try { json = JSON.parse(pasted.slice(pasted.indexOf("{"), pasted.lastIndexOf("}") + 1)); }
+        catch (x) { throw new Error("That paste isn't ESPN's league data. Open the link in step 1, copy everything on the page, and paste it again."); }
+      } else {
+        err.textContent = "Reading the league from ESPN…";
+        const r = await espnFetch(season, id);
+        if (r.blocked) {
+          $("im-espn-link").href = espnUrl(season, id);
+          $("im-espn-paste").hidden = false;
+          err.textContent = "";
+          $("im-espn-json").focus();
+          return;
+        }
+        json = r.json;
+      }
+      const d = espnToLeague(json, platformIds);
+      err.textContent = "";
+      IM.pending = { source: "espn", d, extra: { espn: { id, season, direct: !pasted } } };
+      showMinePicker(d, IM.pending);
+    } catch (x) { err.textContent = x.message; }
+    finally { $("im-espn-go").disabled = false; }
+  });
+  async function refreshEspn(manual) {
+    if (!sl || !sl.espn) return;
+    if (!sl.espn.direct) { if (manual) { openEspn(); $("im-espn-link").href = espnUrl(sl.espn.season, sl.espn.id); $("im-espn-paste").hidden = false; } return; }
+    try {
+      if (manual) toast("Refreshing from ESPN…");
+      await Promise.all([loadStatic(), loadPlatformIds()]);
+      const r = await espnFetch(sl.espn.season, sl.espn.id);
+      if (r.blocked) { if (manual) toast("ESPN didn't answer. Try again in a minute."); return; }
+      const d = espnToLeague(r.json, platformIds), mine = sl.userId;
+      saveImported("espn", d, { espn: sl.espn }, mine);
+      if (manual) toast("League refreshed. Your rankings weren't changed.");
+    } catch (x) { if (manual) toast("Refresh failed: " + x.message); }
+  }
+
+  // "Which team is yours?"
+  function showMinePicker(d, pending) {
+    IM.pending = pending;   // null = changing the team in the connected league
+    $("im-mine-sub").textContent = `${d.league.name} · ${formatParts(d.league).join(" · ")}` + (pending && pending.d.unmatched ? ` · ${pending.d.unmatched} kicker/defense or unknown player${pending.d.unmatched === 1 ? "" : "s"} skipped` : "");
+    const users = new Map(d.users.map(u => [u.user_id, u]));
+    $("im-mine-list").innerHTML = d.rosters.map(r => {
+      const u = users.get(r.owner_id) || {}, st = r.settings || {};
+      return `<li><button class="league-option" type="button" data-mine="${esc(r.owner_id)}"><span class="lo-name">${esc(u.team_name || u.display_name)}</span>
+        <span class="lo-format">${esc(u.display_name && u.display_name !== u.team_name ? u.display_name + " · " : "")}${r.players.length} players</span>
+        <span class="lo-status">${st.wins || st.losses || st.ties ? esc(`${st.wins}-${st.losses}${st.ties ? "-" + st.ties : ""}`) : ""}</span></button></li>`;
+    }).join("");
+    imStep("im-mine"); showDialog(idialog);
+  }
+  $("im-mine").addEventListener("click", e => {
+    const b = e.target.closest("[data-mine]"); if (!b) return;
+    const mine = b.dataset.mine || null;
+    if (IM.pending) { const p = IM.pending; saveImported(p.source, p.d, p.extra, mine); toast(`Connected ${p.d.league.name}.`); }
+    else if (sl) { sl.userId = mine; writeSl(); renderLeagueAll(); toast(mine ? "Your team is set." : "No team picked; My Team stays hidden."); }
+    IM.pending = null; idialog.close();
+  });
+  function saveImported(source, d, extra, mine) {
+    const prevView = sl ? sl.view : "league";
+    const { league, users, rosters } = d;
+    sl = { source, username: SOURCE_NAME[source], userId: mine, displayName: "", season: league.season, leagues: [summary(league)],
+           activeId: league.league_id, data: { [league.league_id]: { league, users, rosters, syncedAt: Date.now() } }, view: prevView, ...(extra || {}) };
+    writeSl(); syncFmtUrl();
+    renderLeagueAll();
+  }
+
+  // Paste flow
+  function openPaste(src, existing) {
+    IM.source = src; IM.k = 0; IM.leagueId = existing ? existing.league.league_id : null;
+    const yahoo = src === "yahoo";
+    $("im-paste-title").textContent = existing ? `Update ${existing.league.name}` : yahoo ? "Connect Yahoo" : "Connect another site";
+    $("im-paste-intro").textContent = yahoo
+      ? "Yahoo only shares league data with apps that sign you in through a server, so this works by copy and paste instead. It takes about a minute, and nothing leaves your browser."
+      : "Works with NFL.com, CBS, Fleaflicker and most other sites: paste each roster page and the site finds the players. Scoring and lineup come from League settings.";
+    $("im-settings-block").hidden = !yahoo;
+    $("im-teams-h").textContent = yahoo ? "2 · Rosters" : "Rosters";
+    $("im-settings").value = ""; $("im-settings-found").textContent = "";
+    $("im-league-name").value = existing ? existing.league.name : "";
+    if (existing) {
+      const users = new Map(existing.users.map(u => [u.user_id, u]));
+      IM.blocks = existing.rosters.map(r => ({ k: ++IM.k, name: (users.get(r.owner_id) || {}).team_name || "", text: "", players: r.players.slice(), mine: r.owner_id === sl.userId }));
+    } else IM.blocks = [{ k: ++IM.k, name: "", text: "", players: [], mine: true }, { k: ++IM.k, name: "", text: "", players: [], mine: false }];
+    $("im-paste-error").textContent = "";
+    renderBlocks(); imStep("im-paste"); showDialog(idialog);
+    loadStatic().then(() => { nameIdx = null; });
+  }
+  function blockFound(b) {
+    const info = nameIndex().info;
+    if (!b.players.length) return b.text.trim() ? `<span>No players found in this paste yet.</span>` : "";
+    return `<span>${b.players.length} player${b.players.length === 1 ? "" : "s"}:</span>` + b.players.map(sid => {
+      const e = info.get(sid) || { name: /^[A-Z]{2,3}$/.test(sid) ? sid + " D/ST" : "Player " + sid, pos: "" };
+      return `<span class="im-chip">${esc(e.name)}${e.pos ? ` <small>${esc(e.pos)}</small>` : ""}<button type="button" data-im-x="${b.k}|${esc(sid)}" aria-label="Remove ${esc(e.name)}">×</button></span>`;
+    }).join("");
+  }
+  function renderBlocks() {
+    $("im-teams").innerHTML = IM.blocks.map((b, i) => `<div class="im-team" data-k="${b.k}">
+      <div class="im-team-top"><input class="im-team-name" type="text" value="${esc(b.name)}" placeholder="${i === 0 ? "Your team's name" : "Team name"}" aria-label="Team name">
+        <label class="im-mine"><input type="radio" name="im-mine" value="${b.k}"${b.mine ? " checked" : ""}> My team</label>
+        ${IM.blocks.length > 1 ? `<button class="btn link" type="button" data-im-del="${b.k}">Remove</button>` : ""}</div>
+      <textarea class="im-team-text" rows="3" spellcheck="false" placeholder="Paste this team's roster page">${esc(b.text)}</textarea>
+      <div class="im-team-found">${blockFound(b)}</div></div>`).join("");
+  }
+  const blockOf = el => IM.blocks.find(b => String(b.k) === el.closest(".im-team").dataset.k);
+  $("im-teams").addEventListener("input", e => {
+    const b = e.target.closest(".im-team") && blockOf(e.target); if (!b) return;
+    if (e.target.classList.contains("im-team-name")) { b.name = e.target.value; return; }
+    if (e.target.classList.contains("im-team-text")) {
+      b.text = e.target.value;
+      b.players = playersInText(b.text).map(c => c.sid);
+      e.target.closest(".im-team").querySelector(".im-team-found").innerHTML = blockFound(b);
+    }
+  });
+  $("im-teams").addEventListener("change", e => {
+    if (e.target.name === "im-mine") IM.blocks.forEach(b => { b.mine = String(b.k) === e.target.value; });
+  });
+  $("im-teams").addEventListener("click", e => {
+    const x = e.target.closest("[data-im-x]"), del = e.target.closest("[data-im-del]");
+    if (x) {
+      const [k, sid] = x.dataset.imX.split("|"), b = IM.blocks.find(y => String(y.k) === k);
+      b.players = b.players.filter(s => s !== sid);
+      x.closest(".im-team-found").innerHTML = blockFound(b);
+    } else if (del) {
+      IM.blocks = IM.blocks.filter(b => String(b.k) !== del.dataset.imDel);
+      if (!IM.blocks.some(b => b.mine) && IM.blocks[0]) IM.blocks[0].mine = true;
+      renderBlocks();
+    }
+  });
+  $("im-add-team").addEventListener("click", () => {
+    IM.blocks.push({ k: ++IM.k, name: "", text: "", players: [], mine: false });
+    renderBlocks();
+    const boxes = $("im-teams").querySelectorAll(".im-team-name"); boxes[boxes.length - 1].focus();
+  });
+  $("im-settings").addEventListener("input", () => {
+    const ys = parseYahooSettings($("im-settings").value), out = [];
+    if (ys) {
+      if (ys.teams) out.push(`${ys.teams} teams`);
+      if (ys.positions) out.push(lineupText({ roster_positions: ys.positions, scoring_settings: {} }));
+      if (ys.scoring.rec != null) out.push(ys.scoring.rec === 1 ? "Full PPR" : ys.scoring.rec === 0.5 ? "Half PPR" : ys.scoring.rec === 0 ? "Standard" : ys.scoring.rec + " per catch");
+      if (ys.scoring.pass_td != null) out.push(`${ys.scoring.pass_td}pt pass TD`);
+      if (ys.name && !$("im-league-name").value) $("im-league-name").value = ys.name;
+    }
+    $("im-settings-found").textContent = !$("im-settings").value.trim() ? "" : out.length ? "Found: " + out.join(" · ") : "Couldn't find the settings in this paste. Make sure it's the League → Settings page.";
+  });
+  $("im-paste-go").addEventListener("click", () => {
+    const err = $("im-paste-error"), teams = IM.blocks.filter(b => b.players.length);
+    if (teams.length < 2) { err.textContent = "Paste at least two teams' rosters (yours and one more) to connect."; return; }
+    const src = IM.source, ys = src === "yahoo" ? parseYahooSettings($("im-settings").value) : null;
+    const base = fmtLeague(FMT || FMT_DEFAULT);
+    const parsedScoring = ys && Object.keys(ys.scoring).length >= 3;
+    const scoring = parsedScoring ? { ...base.scoring_settings, bonus_rec_te: 0, ...ys.scoring } : base.scoring_settings;
+    const rp = (ys && ys.positions) || base.roster_positions;
+    const size = Math.max(teams.length, (ys && ys.teams) || base.total_rosters);
+    const id = IM.leagueId || `${src}-${Date.now()}`;
+    const name = $("im-league-name").value.trim() || (ys && ys.name) || (src === "yahoo" ? "Yahoo league" : "My league");
+    const users = teams.map((b, i) => ({ user_id: "t" + (i + 1), display_name: b.name.trim() || "Team " + (i + 1), team_name: b.name.trim() || "Team " + (i + 1), avatar: "" }));
+    const rosters = teams.map((b, i) => ({ roster_id: i + 1, owner_id: "t" + (i + 1), co_owners: [], players: [...new Set(b.players)], starters: [], reserve: [], taxi: [],
+                                           settings: { wins: 0, losses: 0, ties: 0, pf: 0, pa: 0 } }));
+    const league = { league_id: id, name, season: String(nflSeason()), status: "in_season", total_rosters: size, roster_positions: rp, scoring_settings: scoring,
+                     settings: { num_teams: size, reserve_slots: 0, taxi_slots: 0, type: 0 } };
+    const mineIdx = teams.findIndex(b => b.mine);
+    saveImported(src, { league, users, rosters }, { paste: { settingsFound: !!parsedScoring } }, mineIdx >= 0 ? "t" + (mineIdx + 1) : null);
+    idialog.close();
+    const missing = src === "yahoo" && !parsedScoring ? " Scoring comes from League settings until you paste Yahoo's settings page." : "";
+    toast(`${IM.leagueId ? "Updated" : "Connected"} ${name} with ${teams.length} team${teams.length === 1 ? "" : "s"}.${missing}`);
+  });
 
   $("league-chip").addEventListener("click", () => toggleMenu());
   document.addEventListener("click", e => { if (!e.target.closest("#league-pick")) toggleMenu(false); });
@@ -3986,13 +4884,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       toggleMenu(false);
       if (act.dataset.act === "refresh") refreshLeague();
       else if (act.dataset.act === "account") openConnect();
+      else if (act.dataset.act === "settings") openFormat();
+      else if (act.dataset.act === "other") openImport();
+      else if (act.dataset.act === "mine") showMinePicker(activeData(), null);
       else if (act.dataset.act === "disconnect") disconnect();
     }
   });
   $("league-controls").addEventListener("click", e => {
     const b = e.target.closest("[data-view]");
-    if (!b || !sl) return;
-    sl.view = b.dataset.view; writeSl();
+    if (!b) return;
+    if (activeData()) { sl.view = b.dataset.view; writeSl(); }
+    else { fmtView = b.dataset.view; try { localStorage.setItem(FMT_VIEW_KEY, fmtView); } catch (err) {} }
     renderLeagueAll();
   });
   $("owner-filter").addEventListener("change", e => { LG.ownerFilter = e.target.value; renderRankings(); });
@@ -4016,7 +4918,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const me = LG.teams.find(t => t.mine);
     if (!me) {
       box.innerHTML = `<div class="panel-head"><div><h2 class="panel-title">My Team</h2>
-        <p class="panel-sub">@${esc(sl.username)} doesn't own a team in ${esc(d.league.name)}.</p></div></div>`;
+        <p class="panel-sub">${slSource() === "sleeper" ? `@${esc(sl.username)} doesn't own a team in ${esc(d.league.name)}.` : `You haven't picked your team in ${esc(d.league.name)}. Use the league menu at the top → Change my team.`}</p></div></div>`;
       return;
     }
     const map = bySleeper(), r = me.roster, lu = lineupOf(d.league);
@@ -4113,7 +5015,40 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   function leagueSlots(league) {
     return (league.roster_positions || []).filter(s => ELIG[s]).sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
   }
-  function bestLineup(players, slots, benchN) {
+  /* Position room ("QB room", "RB room"...): graded from that position's players only, so a trade
+     that moves no QBs can never change a team's QB grade. Each position's players, best first, are
+     weighted by the slots they can fill: 1 for each dedicated starting slot, a share of each flex
+     slot (FLEX ≈ 45% RB / 45% WR / 10% TE, superflex ≈ 90% QB), then bench depth at the bench weight.
+     It uses the whole healthy roster, not the lineup, so a player shuffling into FLEX/SF or getting
+     cut for roster space doesn't move another position's grade. */
+  const ROOM_SHARE = { FLEX: { RB: 0.45, WR: 0.45, TE: 0.10 }, WRRB_FLEX: { RB: 0.5, WR: 0.5 }, REC_FLEX: { WR: 0.8, TE: 0.2 },
+                       SUPER_FLEX: { QB: 0.9, RB: 0.04, WR: 0.04, TE: 0.02 } };
+  const roomCache = new Map();
+  function roomWeights(slots, benchN) {
+    const key = slots.join(",") + "|" + benchN;
+    if (roomCache.has(key)) return roomCache.get(key);
+    const w = { QB: [], RB: [], WR: [], TE: [] };
+    slots.forEach(s => { if (w[s]) w[s].push(1); });
+    slots.forEach(s => { const sh = ROOM_SHARE[s]; if (sh) for (const pos in sh) w[pos].push(sh[pos]); });
+    const sf = slots.includes("SUPER_FLEX") || w.QB.length >= 2;
+    const share = { QB: sf ? 1 : 0.5, RB: 2, WR: 2, TE: 1 }, tot = share.QB + share.RB + share.WR + share.TE;
+    for (const pos of EDIT_POS) {
+      const n = Math.max(1, Math.round(benchN * share[pos] / tot));
+      for (let i = 0; i < n; i++) w[pos].push(VALUE_MODEL.benchWeight);
+      w[pos].sort((a, b) => b - a);
+    }
+    roomCache.set(key, w);
+    return w;
+  }
+  function roomOf(players, slots, benchN) {
+    const w = roomWeights(slots, benchN), room = {};
+    for (const pos of EDIT_POS) {
+      const list = players.filter(p => p.pos === pos).map(dv).sort((a, b) => b - a);
+      room[pos] = w[pos].reduce((a, x, i) => a + x * (list[i] || 0), 0);
+    }
+    return room;
+  }
+  function bestLineup(players, slots, benchN, roomPool = players) {
     const bw = VALUE_MODEL.benchWeight;
     const pool = players.slice().sort((a, b) => dv(b) - dv(a));
     const role = new Map(), starters = [];
@@ -4125,8 +5060,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const depthList = bench.slice(0, Math.max(benchN, 1));
     const sum = list => list.reduce((a, p) => a + dv(p), 0);
     const startVal = sum(starters), depthVal = sum(depthList);
-    const room = {};
-    for (const pos of EDIT_POS) room[pos] = sum(starters.filter(p => p.pos === pos)) + bw * sum(depthList.filter(p => p.pos === pos));
+    const room = roomOf(roomPool, slots, benchN);
     return { starters, bench, depthList, role, startVal, depthVal, score: startVal + bw * depthVal, room };
   }
   function evaluateTeams() {
@@ -4367,8 +5301,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* Fantasy points: league scoring when a Sleeper league is connected, otherwise the site's format */
   const DEFAULT_SCORING = { pass_yd: 0.04, pass_td: 4, pass_int: -2, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
                             rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: -2, bonus_rec_te: 0.5 };
-  const scoringNow = () => { const d = activeData(); return d ? d.league.scoring_settings || {} : (comps && comps.base_scoring) || DEFAULT_SCORING; };
-  const scoringLabel = () => (activeData() ? `${activeData().league.name} scoring` : "SPMetrics scoring (" + SITE.format.replace(/^12-Team · /, "") + ")");
+  const scoringNow = () => { const d = activeData(); return d ? d.league.scoring_settings || {} : FMT ? fmtLeague(FMT).scoring_settings : (comps && comps.base_scoring) || DEFAULT_SCORING; };
+  const scoringLabel = () => (activeData() ? `${activeData().league.name} scoring` : FMT ? `Your scoring (${formatParts(fmtLeague(FMT)).slice(1).join(" · ")})` : "SPMetrics scoring (" + SITE.format.replace(/^12-Team · /, "") + ")");
   const STAT_KEYS = ["pass_cmp", "pass_att", "pass_yd", "pass_td", "pass_int", "pass_2pt", "pass_sack", "pass_fd",
                      "rush_att", "rush_yd", "rush_td", "rush_2pt", "rush_fd", "rec_tgt", "rec", "rec_yd", "rec_td", "rec_2pt", "rec_fd", "fum_lost"];
   const THRESHOLDS = [
@@ -4537,7 +5471,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const meta = [info.team || "Free agent", age != null ? `Age ${age}` : ""].filter(Boolean);
     const prevName = PP.trail.length ? playerInfo(PP.trail[PP.trail.length - 1]).name : "";
     const inTradeNow = p && inTrade(p.id);
-    const findHint = !LG.active ? "Connect a Sleeper league to find trades" : !p ? "Unranked players can't be valued yet" : own === "fa" ? "Free agent in your league" : "";
+    const findHint = !LG.active ? "Connect a league to find trades" : !p ? "Unranked players can't be valued yet" : own === "fa" ? "Free agent in your league" : "";
     const stat = (label, val, sub) => `<div class="pm-stat"><span class="pm-stat-label">${label}</span><span class="pm-stat-val">${val}</span>${sub ? `<span class="pm-stat-sub">${sub}</span>` : ""}</div>`;
     const tabsList = PP.compare ? PP_TABS.concat([["compare", "Compare"]]) : PP_TABS;
     box.innerHTML = `
@@ -4554,7 +5488,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         <div class="pm-stats">
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
           ${stat("Position", p ? esc(p.posRank) : "–", "")}
-          ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? "League-adj." : "Base") : "Unranked")}
+          ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
           ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? `${curT.g} G · ${activeData() ? "league" : "site"} scoring` : "No games")}
           ${LG.active ? stat("Owner", esc(own === "fa" ? "Free agent" : own.mine ? "You" : own.name), "") : ""}
         </div>
@@ -4641,9 +5575,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const r3 = avgPts(last3), r5 = avgPts(last5);
     return `
       <div class="ov-grid">
-        ${cell("Overall rank", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "Unranked", p ? (leagueView() ? "League-adjusted" : "SPMetrics") : "")}
+        ${cell("Overall rank", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "Unranked", p ? (leagueView() ? adjName() : "SPMetrics") : "")}
         ${cell("Position rank", p ? esc(p.posRank) : "–", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : "")}
-        ${cell("SPMetrics value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? "League-adjusted" : "Base") : "")}
+        ${cell("SPMetrics value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? adjName() + (LG.factor.has(p.id) ? ` · ${LG.factor.get(p.id) > 1 ? "+" : "−"}${Math.abs(Math.round((LG.factor.get(p.id) - 1) * 1000) / 10)}% for his scoring profile` : "") : "Base") : "")}
         ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"}` : "No games yet")}
         ${cell("Points per game", t && t.g ? fp(t.ppg) : "–", esc(activeData() ? "League scoring" : "Site scoring"))}
         ${cell("Recent production", last3.length ? last3.map(g => fp(g.pts)).join(" · ") : "–", last3.length ? "Last 3 games, newest first" : "")}
@@ -4651,7 +5585,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         ${cell("Last 5 average", r5 != null ? fp(r5) : "–", last5.some(g => g.season !== STATS_SEASONS[0]) ? `Includes ${STATS_SEASONS[1]} games` : "")}
         ${cell("Season trend", trend, esc(trendSub))}
         ${cell("Next opponent", esc(nextTxt), esc(nextSub))}
-        ${cell("Sleeper owner", LG.active ? esc(own === "fa" ? "Free agent" : own.mine ? "Your team" : own.name) : "–", LG.active ? esc(activeData().league.name) : "No league connected")}
+        ${cell("League owner", LG.active ? esc(own === "fa" ? "Free agent" : own.mine ? "Your team" : own.name) : "–", LG.active ? esc(activeData().league.name) : "No league connected")}
         ${cell("Roster status", LG.active ? esc(rosterStatus(sid, own)) : "–", "")}
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
@@ -4840,7 +5774,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const canFind = LG.active && mineOwner && mineOwner !== "fa";
     return `
       <div class="pp-grid">
-        ${tile("Current value", fmt(v), leagueView() ? "League-adjusted SPMetrics value" : "Base SPMetrics value")}
+        ${tile("Current value", fmt(v), leagueView() ? (LG.active ? "League-adjusted SPMetrics value" : "SPMetrics value for your settings") : "Base SPMetrics value")}
         ${tile("Recent value movement", before ? valueMove(p.value - before.value) : "–", before ? `Base value since ${esc(longDate(before.date))}` : "No earlier snapshot yet")}
         ${tile("Ranking movement", before ? moveTag(before.rank - p.rank) : "–", before ? `Overall rank #${before.rank} → #${p.rank ?? "–"}` : "No earlier snapshot yet")}
       </div>
@@ -5068,14 +6002,18 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
     const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(s => !o.has(s)).map(s => map.get(s)).filter(Boolean); };
     const tradable = t => { const taxi = new Set((t.roster.taxi || []).map(String)); return (t.roster.players || []).map(String).filter(s => !taxi.has(s)).map(s => map.get(s)).filter(Boolean).sort(byVal); };
-    const strength = pool => { const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench); L.cut = sorted.slice(limit); L.labels = slotLabels(L); return L; };   // over the limit = cut
+    const strength = pool => { const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench, sorted); L.cut = sorted.slice(limit); L.labels = slotLabels(L); return L; };   // over the limit = cut
     const base = new Map(LG.teams.map(t => [t.rosterId, strength(healthy(t))]));
     // a team's roster after it sends `out` and receives `inc` (injured incoming players don't help now)
     const after = (t, out, inc, incFrom) => strength(healthy(t).filter(p => !out.includes(p)).concat(inc.filter((p, i) => !outSet(incFrom[i] || t).has(String(p.sleeperId)))));
     const placeIn = (rid, pos, room) => 1 + LG.teams.filter(t => t.rosterId !== rid && room(t.rosterId)[pos] > room(rid)[pos]).length;
-    function placeMoves(afterMap) {   // Map rosterId -> lineup after the trade
+    function placeMoves(afterMap, moved) {   // Map rosterId -> lineup after the trade; moved = players in the deal
       const rb = rid => base.get(rid).room, ra = rid => (afterMap.get(rid) || base.get(rid)).room, out = {};
-      for (const rid of afterMap.keys()) { out[rid] = {}; for (const pos of EDIT_POS) out[rid][pos] = [placeIn(rid, pos, rb), placeIn(rid, pos, ra)]; }
+      for (const rid of afterMap.keys()) {
+        out[rid] = {};
+        for (const pos of EDIT_POS) out[rid][pos] = [placeIn(rid, pos, rb), placeIn(rid, pos, ra)];
+        if (moved) lockUntouched(out[rid], posSet(moved), "Trade Finder team");
+      }
       return out;
     }
     return { d, map, V, byVal, healthy, tradable, outSet, strength, base, after, placeMoves };
@@ -5122,7 +6060,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         const dS = sAfter.score - K.base.get(S.rosterId).score, dT = tAfter.score - K.base.get(T.rosterId).score;
         const scale = Math.max(1000, xv), clamp = v => Math.max(-1, Math.min(1, v));
         const fit = 0.5 * clamp((dS + dT) / scale) + 0.5 * clamp(Math.min(dS, dT) / scale);   // both teams better = best
-        const places = K.placeMoves(new Map([[S.rosterId, sAfter], [T.rosterId, tAfter]]));
+        const places = K.placeMoves(new Map([[S.rosterId, sAfter], [T.rosterId, tAfter]]), give.concat(get));
         // team-specific value: what each side gets is worth less if it would sit on that bench
         const fitOf = (team, L, inc, out) => {
           const pool = L.starters.concat(L.bench, L.cut);
@@ -5186,7 +6124,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       if (used.has(k) || used.has(kc)) continue;
       used.add(k); used.add(kc);
       const after = new Map([[f.S.rosterId, K.after(f.S, [f.P1], [f.P3], [f.B])], [f.B.rosterId, K.after(f.B, [f.P3], [f.P2], [f.C])], [f.C.rosterId, K.after(f.C, [f.P2], [f.P1], [f.S])]]);
-      f.after = after; f.places = K.placeMoves(after);
+      f.after = after; f.places = K.placeMoves(after, [f.P1, f.P2, f.P3]);
       out.push(f);
       if (out.length >= 4) break;
     }
@@ -5467,11 +6405,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       renderLeagueAll(); showTab((location.hash || "#rankings").slice(1));
       const d = activeData();
       const stale = !d || Date.now() - d.syncedAt > 6 * 3600 * 1000 || !d.rosters.every(r => r.settings && "pf" in r.settings);
-      if (stale) syncLeague(sl.activeId).catch(() => {});
+      if (stale && slSource() === "sleeper") syncLeague(sl.activeId).catch(() => {});
+      else if (stale && slSource() === "espn") refreshEspn(false);
     });
+  } else if (FMT) {
+    // hand-picked settings: the value curves are needed before values can move
+    loadStatic().then(() => { renderLeagueAll(); showTab((location.hash || "#rankings").slice(1)); });
   }
+  syncFmtUrl();
 
   rebuild();   // show any edits saved in this browser
+  renderLeagueUI();   // header settings chip and the rankings view row
 
   // Open with an example trade so the calculator shows what it does
   const find = n => players.find(p => p.name === n);

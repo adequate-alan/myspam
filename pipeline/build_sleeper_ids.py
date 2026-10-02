@@ -5,7 +5,8 @@
    (ranked or not) without calling Sleeper's 5 MB players endpoint. This is the
    player identity table: photos come from Sleeper's CDN by sleeper_id, stats from
    nflverse by gsis_id (see build_stats.py).
-2. Adds a sleeper_id column to RANKINGS_CSV in index.html so ranked players can
+2. data/platform_ids.json: ESPN and Yahoo player IDs -> Sleeper IDs (league imports).
+3. Adds a sleeper_id column to RANKINGS_CSV in index.html so ranked players can
    be matched to Sleeper rosters. Matching: position + normalized name, with
    ALIASES from merge_projections.py for spellings that differ.
 
@@ -43,6 +44,20 @@ def write_players(ids, out_path):
     return len(data)
 
 
+def write_platform_ids(ids, out_path):
+    """data/platform_ids.json: {"espn": {espn_id: sleeper_id}, "yahoo": {yahoo_id: sleeper_id}}
+    so leagues imported from ESPN (and Yahoo, when IDs are available) map to the same players."""
+    out = {"espn": {}, "yahoo": {}}
+    for col, key in (("espn_id", "espn"), ("yahoo_id", "yahoo")):
+        if col not in ids.columns:
+            continue
+        for r in ids[ids[col].notna()].itertuples():
+            out[key][str(int(getattr(r, col)))] = r.sleeper_id
+    with open(out_path, "w") as f:
+        json.dump(out, f, separators=(",", ":"))
+    return {k: len(v) for k, v in out.items()}
+
+
 def tag_rankings(ids, site_path):
     s = open(site_path).read()
     m = re.search(r"const RANKINGS_CSV = `\n(.*?)\n`;", s, re.S)
@@ -78,6 +93,8 @@ if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__))
     ids = load_ids(src)
     n = write_players(ids, os.path.join(here, "..", "data", "sleeper_players.json"))
+    plat = write_platform_ids(ids, os.path.join(here, "..", "data", "platform_ids.json"))
+    print("platform_ids.json:", plat)
     missing = tag_rankings(ids, site)
     print(f"sleeper_players.json: {n} players")
     print("ranked players without a Sleeper ID:", missing or "none")

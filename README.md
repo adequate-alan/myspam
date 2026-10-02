@@ -135,6 +135,27 @@ While the rankings system is being built, the editing controls are on for every 
 - **Publish to live site:** writes the browser-saved edits to `index.html` on GitHub so everyone sees them (site redeploys in about a minute). Publishing needs a GitHub fine-grained token for an account with write access (**Contents: Read and write**, this repository only); the page asks once and remembers it in that browser. Only the edited fields are merged onto the latest version, so the weekly projection refresh is kept.
 - **Discard browser edits:** drops everything saved in the browser and shows the live rankings again.
 
+## League settings (no league connected)
+
+**League settings** (top right) lets anyone pick their format without connecting a league: teams, 1QB / superflex / 2QB, RB/WR/TE/FLEX starters, bench, points per catch, TE premium, passing TD and yardage points, interceptions and first-down points, plus one-click presets. The rankings, values, player pages and trade calculator then use those settings. The choice is saved in the browser and in the page address (`?fmt=…`), so a shared link opens with the same settings. A connected league's own settings always take over.
+
+How values and order change for any non-base settings (league or hand-picked), tunable in `FORMAT_ADJUST` at the top of `index.html`:
+1. **Position values** move with the scoring and lineup (re-scored value curves, replacement and waiver levels). This step never reorders players within a position.
+2. **A personal nudge** per player: his last 17 games are scored with the league's settings and with the site's, compared with his position's average, shrunk toward zero for small samples and capped at ±10%. A back who gets most of his points from catches loses a little in standard scoring, etc.
+3. **Order stays the SPMetrics board** unless a player's adjusted value passes the player above him by more than 3%, and nobody moves more than 2 spots within his position. Across positions the same 3% rule applies, so in a 1QB league quarterbacks slide down the overall board. ▲/▼ next to the rank shows each move; the **SPMetrics board** toggle shows the unadjusted board.
+
+## Connecting a league: Sleeper, ESPN, Yahoo, other sites
+
+**Connect league** offers four sources. Each import is converted to the same shape as a Sleeper league, so everything below works the same for all of them. Everything stays in the visitor's browser.
+- **Sleeper:** username, one click (below).
+- **ESPN:** paste the league page address or league ID. Public leagues are read straight from ESPN's league API. Private leagues (or if ESPN blocks the request) switch to copy and paste: the visitor opens the same ESPN address in a tab where they're signed in, copies the page and pastes it (or uploads it as a file). Scoring (including TE-premium overrides and big-game bonuses), lineup, teams, records and rosters come across; players map by ESPN ID (`data/platform_ids.json`) and then by name. Then they pick their team.
+- **Yahoo:** Yahoo only shares league data with apps that sign people in through a server, which a static site can't do, so this is copy and paste: the League → Settings page (scoring, lineup, team count) and each team's roster page. The site finds the players in the pasted text and shows them as chips that can be removed before connecting. **Update rosters** in the league menu re-opens it with the current teams.
+- **Another site** (NFL.com, CBS, Fleaflicker…): the same roster paste, with scoring and lineup from League settings.
+
+## Position grades
+
+The QB / RB / WR / TE "rooms" (power rankings, team breakdowns, trade analysis, Trade Finder) are graded from that position's players only: 1 for each dedicated starting slot, a share of each flex slot (FLEX ≈ 45% RB / 45% WR / 10% TE, superflex ≈ 90% QB), then bench depth at the bench weight, using the whole healthy roster. A trade with no QBs can't change any team's QB grade. Every trade read also double-checks this and logs a warning if it ever happens.
+
 ## Sleeper leagues
 
 **Connect Sleeper** (top right) asks for a Sleeper username, lists that account's leagues for the current season, and imports the one you pick. It uses Sleeper's public API, so no password is needed. Everything is kept in the visitor's browser.
@@ -146,7 +167,7 @@ Data is kept in three separate layers:
 
 With a league connected:
 - The header shows the league and its format; click it to switch leagues, refresh, change account or disconnect.
-- Rankings get a **Base / League-adjusted** toggle, an owner label on each player (My Team, manager name, FA), and an owner filter. Editing works in the Base view.
+- Rankings get a **SPMetrics board / League-adjusted** toggle, an owner label on each player (My Team, manager name, FA), and an owner filter. Editing works in the Base view.
 - **My Team:** lineup by slot, bench, IR and taxi with overall rank, position rank and value; roster strength by position and power rank (same calculation as the League tab); **Trade with** buttons that open the trade calculator with both rosters.
 - **League:** power rankings for every team, strongest to weakest. Team score = the best lineup the team's healthy roster can field in the league's starting slots (SPMetrics values) + 25% of its bench depth; IR and taxi are left out. Each row shows manager, record, PF/PA, team score, best and weakest position (place in the league) and top starters. Click a team for its breakdown: position strength vs the league (QB, RB, WR, TE rooms and bench depth, each with total value, place and difference from the league average), its best lineup, and the roster grouped by position with role, overall rank, position rank and value. Uses whichever view (Base or League-adjusted) is on.
 - **Free Agents:** ranked players nobody rosters, sorted by SPMetrics values, filterable by position.
@@ -154,7 +175,7 @@ With a league connected:
 
 Player photos come from Sleeper's image CDN by Sleeper ID (initials show when a photo is missing); manager avatars come from Sleeper too. The site refreshes league data in the background when it's more than 6 hours old.
 
-`data/sleeper_players.json` (names for any rostered player) and the `sleeper_id` column in `RANKINGS_CSV` come from `pipeline/build_sleeper_ids.py` (DynastyProcess player IDs) and are refreshed by the weekly workflow.
+`data/sleeper_players.json` (names for any rostered player), `data/platform_ids.json` (ESPN and Yahoo IDs → Sleeper IDs) and the `sleeper_id` column in `RANKINGS_CSV` come from `pipeline/build_sleeper_ids.py` (DynastyProcess player IDs) and are refreshed by the weekly workflow.
 
 ## Updating
 
