@@ -69,6 +69,23 @@ In league mode with both teams picked, the calculator answers two questions sepa
 
 **Best fits to balance the trade** come from the real roster of the team that's getting more value: closest to fair first, then expendable depth over starters, never a player whose loss leaves a starting spot empty, and at most two-player packages (only when a single player can't do the job about as well).
 
+### Team-specific value (league mode)
+
+A player's SPMetrics value never changes, but what he's worth **to a roster** depends on whether he'd start there. With a league and both teams picked, every incoming player gets a team-specific value from his role in the new lineup, and every outgoing player a cost from his role before the trade (`TEAM_FIT` in `index.html`, capped at 0.60–1.10 so a good player never becomes worthless):
+
+| Role | Incoming | Outgoing |
+|---|---|---|
+| Big upgrade at a weak spot, or the new QB/TE/RB1/WR1 | ×1.06 (+0.03 for a TE in TE premium) | – |
+| Starter at QB/RB/WR/TE | ×1.00 | ×1.00 (×1.05 if it leaves a hole) |
+| Superflex / FLEX starter | ×0.98 / ×0.93–1.00 | ×0.95 |
+| Bench, first in line | ×0.82 | ×0.85 |
+| Bench, one backup ahead | ×0.72 | ×0.75 |
+| Buried | ×0.62 | ×0.65 |
+| QB3 in superflex / backup QB in 1QB | ×0.74 / ×0.62 | – |
+| No roster spot | ×0.60 | – |
+
+The calculator shows both layers: the raw (market) difference and each team's **roster-adjusted** net. When they disagree the headline says so ("Fair on value, bad fit for X"), with the reason ("Geno Smith would be X's QB3 and wouldn't start…"). Each incoming player shows "To {team}: value · role". **Market value / League fit** switches the totals, balance bar and player values between the two. *Value breakdown* and *Roster impact* list every player's team-specific value. The Trade Finder ranks Best Match by roster-adjusted value (both teams must get useful players), drops trades where one side's roster-adjusted net is worse than −20%, and shows both layers on every card.
+
 ### Roster needs
 
 Four sliders under **Roster impact** (QB, RB, WR, TE) say how your team stands at each position: 1 Desperately need, 2 Need, 3 Average, 4 Good, 5 Set. Every player at that position in the trade, on either side, counts as a multiplier × his value: ×1.08, ×1.04, ×1.00, ×0.96, ×0.92. A position you need helps whichever side receives it, a position you're set at counts for less, and Average changes nothing. The result shows as a **Need adjustment** next to the waiver adjustment. Settings are saved in your browser; the multipliers are `NEED_MULTIPLIERS` in `index.html`. The Trade Finder doesn't use the sliders.

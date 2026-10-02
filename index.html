@@ -365,6 +365,25 @@ const ROSTER_SPOT_MAX = 0.02;     // roster cost never exceeds 2% of the deal
    position in the trade (on either side) counts as NEED_MULTIPLIERS[level - 1] x his value,
    so a position you need helps whichever side receives it, and a position you're set at
    counts for less. Level 3 (average) changes nothing. Applied after the waiver adjustment. */
+/* Team-specific value (league mode). A player's SPMetrics value never changes, but what he is worth
+   TO A ROSTER depends on whether he'd start there. Incoming players are multiplied by the factor
+   for their role in the new lineup; outgoing players by what losing them costs. Capped 0.60-1.10. */
+const TEAM_FIT = {
+  majorUpgrade: 1.06,   // starts and is a big upgrade at a weak spot (or becomes the QB/TE/RB1/WR1)
+  starter: 1.00,        // starts at QB, RB, WR or TE
+  superflex: 0.98,      // starts at superflex
+  flexMin: 0.93,        // starts at FLEX: 0.93-1.00 depending on how much he adds
+  tePremium: 0.03,      // extra for a starting TE in a TE-premium league
+  nextUp: 0.82,         // bench, first in line at his position
+  noPath: 0.72,         // bench, one better backup ahead of him
+  deep: 0.62,           // bench, buried behind two or more backups
+  qbBackupSuperflex: 0.74, // QB3 in superflex
+  qbBackup1QB: 0.62,    // backup QB in a 1-QB league
+  cut: 0.60,            // no roster spot for him
+  loseStarterHole: 1.05, loseStarter: 1.00, loseFlex: 0.95,   // what giving a player away costs
+  loseNextUp: 0.85, loseNoPath: 0.75, loseDeep: 0.65,
+  min: 0.60, max: 1.10,
+};
 const NEED_LEVELS = ["Desperately need", "Need", "Average at", "Good at", "Set at"];
 const NEED_MULTIPLIERS = [1.08, 1.04, 1.00, 0.96, 0.92];
 
@@ -1362,6 +1381,18 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tf-why span { display: block; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
 .tf-foot { display: flex; justify-content: flex-end; margin-top: auto; }
 
+/* ---------- Team-specific value ---------- */
+.roster .n:has(.fit-line) { white-space: normal; }
+.fit-line { display: block; margin-top: 2px; font-size: 0.7rem; font-weight: 500; color: var(--muted); line-height: 1.35; }
+.fit-line.low { color: var(--rose-ink); } .fit-line.high { color: var(--gold); }
+.roster .v small { display: block; font-size: 0.62rem; font-weight: 500; color: var(--muted); text-align: right; }
+.fit-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 4px; font-size: 0.7rem; font-weight: 650; color: var(--rose-ink); background: color-mix(in srgb, var(--rose) 16%, transparent); }
+.fit-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.fit-table td { padding: 4px 6px 4px 0; vertical-align: top; color: var(--ink-2); border-bottom: 1px solid var(--line-soft); }
+.fit-table td:nth-child(2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fit-table b { color: var(--cream); }
+.tc-lens .chip-btn { height: 30px; font-size: 0.68rem; }
+
 /* ---------- 3-team trades ---------- */
 .side.C { --side-color: var(--cream); }
 @media (min-width: 1000px) { .trade-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -1827,6 +1858,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           <p class="verdict-sub" id="verdict-sub"></p>
         </div>
         <div class="actions">
+          <div class="view-toggle tc-lens" id="tc-lens" role="group" aria-label="Value lens" hidden>
+            <button class="chip-btn" type="button" data-lens="market" aria-pressed="true">Market value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false">League fit</button>
+          </div>
           <button class="btn" id="swap-btn" type="button">Swap sides</button>
           <button class="btn" id="clear-btn" type="button">Clear</button>
         </div>
@@ -2371,8 +2405,17 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
 
   function renderRoster(side) {
     const ids = sides[side];
+    const X = !TC3.on && TC_UI.ctx ? TC_UI.ctx[side] : null, fitView = X && TC_UI.lens === "fit";
+    const team = X ? X.t.name : "";
     $("roster-" + side).innerHTML = ids.length ? ids.map(id => {
-      const p = byId.get(id);
+      const p = byId.get(id), fe = X ? X.fit.inc.find(e => e.p === p) : null;
+      if (fe) {
+        const cls = fe.f < 0.9 ? " low" : fe.f > 1.0 ? " high" : "";
+        return `<li>${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+          <span class="n">${nameLink(p.sleeperId, p.name, "n-link")}<span class="fit-line${cls}" title="${esc(fe.why)}">To ${esc(team)}: ${fmt(fe.tv)} · ${esc(fe.why)}</span></span>
+          <span class="v">${fmt(fitView ? fe.tv : tv(p))}${fitView ? `<small>${fmt(tv(p))} market</small>` : ""}</span>
+          <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
+      }
       return `<li>${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
         <span class="n">${nameLink(p.sleeperId, p.name, "n-link")}${TC3.on ? fromMenu(id, side) : ownerTag(p)}</span><span class="v">${fmt(tv(p))}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
@@ -2432,7 +2475,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* League context bar: universal mode (any players, base SPMetrics values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
   const infoIcon = (text, label = "More info") => `<button class="info" type="button" aria-label="${esc(label)}" data-info="${esc(text)}">i</button>`;
-  const TC_UI = { open: { A: false, B: false, C: false }, balance: false };
+  const TC_UI = { open: { A: false, B: false, C: false }, balance: false, lens: "market", ctx: null };
   function renderTradeContext() {
     const sel = $("tc-league"), on = tcLeague();
     const leagues = sl && sl.leagues ? sl.leagues : [];
@@ -2561,10 +2604,62 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       X.places = {};
       for (const pos of EDIT_POS) X.places[pos] = [placeOf(pos, X.before.room[pos], Y.before.room[pos]), placeOf(pos, X.after.room[pos], Y.after.room[pos])];
       X.changes = lineupChanges(X);
+      const pool = X.after.starters.concat(X.after.bench, X.after.cut);
+      X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
+                          without: list => strength(pool.filter(p => !list.includes(p))) });
     }
     return { A, B, n: ev.n, league: d.league };
   }
   // QB, RB1, RB2, WR1… FLEX, SF for each starter
+  // Team-specific value for every player moving in or out of one roster (see TEAM_FIT)
+  function fitValues(o) {   // { before, after, incoming, outgoing, places, n, league, without(list) -> lineup }
+    const F = TEAM_FIT, sc = o.league.scoring_settings || {}, rp = o.league.roster_positions || [];
+    const te = Number(sc.bonus_rec_te) > 0, superflex = rp.includes("SUPER_FLEX") || rp.filter(x => x === "QB").length >= 2;
+    const third = Math.max(1, Math.floor(o.n / 3)), clampF = f => Math.max(F.min, Math.min(F.max, f));
+    const all = L => L.starters.concat(L.bench, L.cut || []);
+    const depthOf = (L, p) => 1 + all(L).filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
+    const isFlex = r => /FLEX|W\/R|W\/T/.test(r);
+    const inc = o.incoming.map(p => {
+      const L = o.after, role = L.labels.get(p.id), v = dv(p);
+      let f, why;
+      if ((L.cut || []).includes(p)) { f = F.cut; why = "No roster spot, he'd be cut"; }
+      else if (role) {
+        const W = o.without([p]), gain = L.startVal - W.startVal, ratio = v > 0 ? gain / v : 0;
+        const bumped = W.starters.filter(x => !L.starters.includes(x)).sort((a, b) => dv(b) - dv(a))[0];
+        const weak = o.places[p.pos] && o.places[p.pos][0] > o.n - third;
+        if (isFlex(role)) f = F.flexMin + (1 - F.flexMin) * Math.min(1, Math.max(0, ratio));
+        else if (role === "SF") f = F.superflex + 0.02 * Math.min(1, Math.max(0, ratio));
+        else f = F.starter;
+        if (!isFlex(role) && ratio >= 0.5 && (weak || /^(QB|TE)$|1$/.test(role))) f = F.majorUpgrade;
+        if (te && p.pos === "TE" && !isFlex(role)) f += F.tePremium;
+        why = `Starts at ${role}` + (bumped && !o.incoming.some(q => q !== p && L.starters.includes(q) && W.starters.includes(bumped) === false && q.id < p.id) ? `, bumping ${bumped.name}` : "") + (weak ? `, fills a weak ${p.pos} spot` : "");
+      } else {
+        const ahead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
+        if (p.pos === "QB") f = superflex ? (ahead === 0 ? F.qbBackupSuperflex : F.deep) : F.qbBackup1QB;
+        else f = ahead === 0 ? F.nextUp : ahead === 1 ? F.noPath : F.deep;
+        why = `Would be ${p.pos}${depthOf(L, p)} and wouldn't start` + (ahead >= 2 ? ", buried on the depth chart" : ahead === 0 && p.pos !== "QB" ? ", first in line" : "");
+      }
+      f = clampF(f);
+      return { p, f, tv: Math.round(v * f), why, starts: !!role, role: role || "" };
+    });
+    const out = o.outgoing.map(p => {
+      const L = o.before, role = L.labels.get(p.id), v = dv(p);
+      let f, why;
+      if (role) {
+        const hole = o.places[p.pos] && o.places[p.pos][1] > o.n - third && o.places[p.pos][0] <= o.n - third;
+        f = hole ? F.loseStarterHole : (isFlex(role) || role === "SF") ? F.loseFlex : F.loseStarter;
+        why = `Starter (${role})` + (hole ? `, leaves a hole at ${p.pos}` : "");
+      } else {
+        const ahead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
+        f = ahead === 0 ? F.loseNextUp : ahead === 1 ? F.loseNoPath : F.loseDeep;
+        why = ahead === 0 ? `Top ${p.pos} backup` : "Bench depth";
+      }
+      f = clampF(f);
+      return { p, f, tv: Math.round(v * f), why, starts: !!role, role: role || "" };
+    });
+    const recv = inc.reduce((a, x) => a + x.tv, 0), give = out.reduce((a, x) => a + x.tv, 0);
+    return { inc, out, recv, give, net: recv && give ? 100 * (recv - give) / Math.min(recv, give) : 0 };
+  }
   function slotLabels(L) {
     const count = {}, seen = {}, out = new Map();
     L.starters.forEach(p => { const r = L.role.get(p.id); count[r] = (count[r] || 0) + 1; });
@@ -2593,10 +2688,11 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
   // League-adjusted margin: value first, roster fit refines it (capped so need never overrides value)
   const FIT_WEIGHT = 0.4, FIT_CAP = 4;
+  // Roster-adjusted verdict: each team's net in team-specific value (what it receives minus what it gives up, valued to that roster)
   function contextVerdict(res, ctx) {
     const valueMargin = (res.a >= res.b ? 1 : -1) * pctMore(res.a, res.b);   // + = Team A ahead
-    const fit = Math.max(-FIT_CAP, Math.min(FIT_CAP, FIT_WEIGHT * (ctx.A.impact - ctx.B.impact)));
-    const total = valueMargin + fit, more = Math.round(Math.abs(total) * 10) / 10;
+    const fit = (ctx.A.fit.net - ctx.B.fit.net) / 2;
+    const total = fit, more = Math.round(Math.abs(total) * 10) / 10;
     const ahead = total >= 0 ? "A" : "B", loser = ahead === "A" ? "B" : "A";
     const tier = TRADE_VERDICTS.find(t => more < t.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
     return { valueMargin, fit, total, more, ahead, loser, tier, fair: tier.upTo <= 3 };
@@ -2696,10 +2792,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("side-C").hidden = !three; $("add-third").hidden = three;
     $("three-verdicts").hidden = !three;
     ["verdict-title", "verdict-gap", "verdict-sub", "meter-wrap", "swap-btn"].forEach(id => { $(id).hidden = three; });
+    if (three) $("tc-lens").hidden = true;
     if (three) { renderTrade3(); return; }
+    renderTradeContext();
+    TC_UI.ctx = tcLeague() && (sides.A.length || sides.B.length) ? rosterContext() : null;
     renderRoster("A");
     renderRoster("B");
-    renderTradeContext();
     if (typeof renderTeamRosters === "function") renderTeamRosters();
     const res = runModel(sides.A, sides.B);
     ["A", "B"].forEach(s => {
@@ -2714,6 +2812,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (!skipNeedsRender) renderNeeds();
 
     const title = $("verdict-title"), sub = $("verdict-sub"), meter = $("meter"), gapLine = $("verdict-gap");
+    $("tc-lens").hidden = true;
     const hide = () => {
       $("balance-btn").hidden = true; $("balance").hidden = true; gapLine.hidden = true;
       $("tc-why-body").innerHTML = `<p class="pp-note">Add players to both sides to see the reasoning.</p>`;
@@ -2757,10 +2856,25 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     gapLine.innerHTML = fair ? `<b>${pct}</b> apart in adjusted value` : `<b>${pct}</b> more adjusted value for ${esc(forWhom(ahead))}`;
     gapLine.hidden = false;
 
-    // League mode: does the trade make sense for these two rosters?
-    const ctx = tcLeague() ? rosterContext() : null;
-    const fit = ctx ? fitLine(ctx, names) : "";
-    sub.textContent = fit || advice;
+    // League mode: does the trade make sense for these two rosters? (team-specific value)
+    const ctx = TC_UI.ctx;
+    const lensOn = !!ctx;
+    $("tc-lens").hidden = !lensOn;
+    $("tc-lens").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lens === TC_UI.lens));
+    if (ctx) {
+      const fh = fitHeadline(ctx, names, fair), fitView = TC_UI.lens === "fit";
+      const cv = contextVerdict(res, ctx), fitLabel = cv.tier.title(names[cv.ahead], names[cv.loser]);
+      if (fitView) { title.textContent = fh.head || fitLabel; title.className = fh.head ? "fair" : cv.fair ? "fair" : "win-" + cv.ahead; }
+      else if (fh.head) { title.textContent = fh.head; title.className = "fair"; }
+      gapLine.innerHTML = `<b>${pct}</b> raw difference · Roster-adjusted: ${esc(names.A)} <b>${fmtNet(ctx.A.fit.net)}</b>, ${esc(names.B)} <b>${fmtNet(ctx.B.fit.net)}</b>${fh.tag ? ` <span class="fit-tag">${esc(fh.tag)}</span>` : ""}`;
+      sub.textContent = fitReason(ctx, names) || fitLine(ctx, names) || advice;
+      if (fitView) {
+        const fa = ctx.A.fit.recv, fb = ctx.B.fit.recv, tot = fa + fb;
+        $("meter-a").style.width = (tot > 0 ? (fa / tot) * 100 : 50).toFixed(1) + "%";
+        $("score-A").textContent = `${names.A} · ${fmt(fa)} to them`; $("score-B").textContent = `${fmt(fb)} to them · ${names.B}`;
+        $("total-A").textContent = fmt(fa); $("total-B").textContent = fmt(fb);
+      }
+    } else sub.textContent = advice;
     $("tc-why-body").innerHTML = `<p class="ri-story">${esc(ctx ? contextStory(ctx, contextVerdict(res, ctx), names) : tradeWhyText(res, names, ahead, pct, fair))}</p>`;
     renderBreakdown(res, names, pct, tier);
     if (ctx) renderContext(res, ctx, names);
@@ -2859,6 +2973,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         X.places[pos] = [place(X.before.room[pos], "before"), place(X.after.room[pos], "after")];
       }
       X.changes = lineupChanges(X);
+      const pool = X.after.starters.concat(X.after.bench, X.after.cut);
+      X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
+                          without: list => strength(pool.filter(p => !list.includes(p))) });
     }
     return { R, n: ev.n, league: d.league };
   }
@@ -2968,6 +3085,38 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     $("balance-btn").textContent = TC_UI.balance ? "Hide suggestions" : "Balance this trade";
   }
 
+  const fmtNet = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+  // "Fair on value, bad fit for X" when market value and lineup fit disagree
+  function fitHeadline(ctx, names, marketFair) {
+    const n = { A: ctx.A.fit.net, B: ctx.B.fit.net };
+    const bad = ["A", "B"].filter(s => n[s] <= -8), good = ["A", "B"].filter(s => n[s] >= 3);
+    if (marketFair) {
+      if (bad.length === 2) return { head: "Fair on value, bad fit for both", tag: "" };
+      if (bad.length) return { head: `Fair on value, bad fit for ${names[bad[0]]}`, tag: "" };
+      if (good.length === 2) return { head: "Fair trade, good fit for both", tag: "" };
+      return { head: null, tag: "" };
+    }
+    if (bad.length === 2) return { head: null, tag: "Bad fit for both teams" };
+    if (bad.length) return { head: null, tag: `Bad fit for ${names[bad[0]]}` };
+    if (good.length === 2) return { head: null, tag: "Good fit for both teams" };
+    return { head: null, tag: "" };
+  }
+  // The one roster fact that matters most, in a sentence
+  function fitReason(ctx, names) {
+    const sides = ["A", "B"].sort((x, y) => ctx[x].fit.net - ctx[y].fit.net);
+    const worst = sides[0], X = ctx[worst];
+    if (X.fit.net <= -8) {
+      const benchIn = X.fit.inc.filter(e => !e.starts).sort((a, b) => dv(b.p) - dv(a.p))[0];
+      const lostStarter = X.fit.out.find(e => e.starts);
+      if (benchIn) return `${benchIn.p.name} would be ${names[worst]}'s ${benchIn.p.pos}${1 + X.after.starters.concat(X.after.bench).filter(x => x !== benchIn.p && x.pos === benchIn.p.pos && dv(x) > dv(benchIn.p)).length} and wouldn't start, so most of the incoming value would sit on the bench${lostStarter ? `, while ${names[worst]} gives up a starter in ${lostStarter.p.name}` : ""}.`;
+      const lost = X.fit.out.filter(e => e.starts), got = X.fit.inc.filter(e => e.starts);
+      if (lost.length > got.length) return `${names[worst]} gives up ${lost.length} starters (${lost.map(e => e.p.name).join(" and ")}) and gets ${got.length === 1 ? "one" : got.length || "none"} back.`;
+      if (lostStarter) return `${names[worst]} gives up more lineup value than it gets back.`;
+    }
+    const best = sides[1], Y = ctx[best], st = Y.fit.inc.filter(e => e.starts).sort((a, b) => dv(b.p) - dv(a.p))[0];
+    if (st) return `${st.p.name} immediately becomes ${names[best]}'s ${st.role} and improves the starting lineup.`;
+    return "";
+  }
   function fitLine(ctx, names) {
     const diff = ctx.A.impact - ctx.B.impact;
     if (Math.abs(diff) < 2) return "";
@@ -2999,6 +3148,9 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
           ${row("Waiver adjustment", sign(spotA), sign(spotB), "The side taking on more players has to cut someone: 1% of the deal per extra player, up to 2%.")}
           ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
           ${row("Adjusted value", fmt(res.a), fmt(res.b), "", "bd-total")}
+          ${TC_UI.ctx ? row("Value to the team", fmt(TC_UI.ctx.A.fit.recv), fmt(TC_UI.ctx.B.fit.recv), "Roster-adjusted: what the players each side receives are worth to that roster (starters near full value, bench players discounted).") +
+            row("Cost of what they give", fmt(TC_UI.ctx.A.fit.give), fmt(TC_UI.ctx.B.fit.give), "Roster-adjusted: losing a starter costs full value, losing bench depth costs less.") +
+            row("Roster-adjusted net", fmtNet(TC_UI.ctx.A.fit.net), fmtNet(TC_UI.ctx.B.fit.net), "", "bd-total") : ""}
         </tbody></table>
       <p class="pp-note">${pct} gap · ${esc(tier.range)}</p>`;
   }
@@ -3007,7 +3159,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const imp = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
     const word = v => (v >= 0.5 ? "gains" : v <= -0.5 ? "loses" : "holds at");
     const label = cv.tier.title(names[cv.ahead], names[cv.loser]);
-    $("tc-impact-hint").innerHTML = `· In ${esc(ctx.league.name)}: <b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>`;
+    $("tc-impact-hint").innerHTML = `· Roster-adjusted: <b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>`;
     const maxAbs = Math.max(4, Math.abs(A.impact), Math.abs(B.impact));
     const bar = v => `<span class="ri-bar"><span class="${v >= 0 ? "ri-up" : "ri-down"}" style="width:${(50 * Math.min(1, Math.abs(v) / maxAbs)).toFixed(1)}%"></span></span>`;
     const changeList = (X, nm) => `<div class="lc-col"><h4>${esc(nm)}</h4>${X.changes.length
@@ -3020,8 +3172,14 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       </div>
       <div class="ri-verdicts">
         <div><span class="ctl-label">Value verdict</span><b>${esc($("verdict-title").textContent)}</b></div>
-        <div><span class="ctl-label">With roster fit ${infoIcon(`Value gap plus 0.4 × the difference in roster impact, capped at ${FIT_CAP} points, so need never overrides a clearly lopsided trade.`, "How roster fit is weighed")}</span><b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b></div>
+        <div><span class="ctl-label">Roster-adjusted verdict ${infoIcon("Compares what each team receives against what it gives up, with every player valued to that roster: starters near full value, bench players discounted (see TEAM_FIT).", "How roster-adjusted value works")}</span><b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b></div>
       </div>
+      <h4 class="sub-label">Team-specific value</h4>
+      <div class="lc-cols">${[["A", A], ["B", B]].map(([s, X]) => `<div class="lc-col"><h4>${esc(names[s])} <span class="muted">${fmtNet(X.fit.net)}</span></h4>
+        <table class="fit-table"><tbody>
+          ${X.fit.inc.map(e => `<tr><td>+ ${esc(e.p.name)}</td><td>${fmt(dv(e.p))} → <b>${fmt(e.tv)}</b></td><td class="muted">${esc(e.why)}</td></tr>`).join("")}
+          ${X.fit.out.map(e => `<tr><td>− ${esc(e.p.name)}</td><td>${fmt(dv(e.p))} → <b>${fmt(e.tv)}</b></td><td class="muted">${esc(e.why)}</td></tr>`).join("")}
+        </tbody></table></div>`).join("")}</div>
       <h4 class="sub-label">Lineup changes</h4>
       <div class="lc-cols">${changeList(A, names.A)}${changeList(B, names.B)}</div>`;
     box.hidden = false;
@@ -3047,6 +3205,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
 
   $("balance-btn").addEventListener("click", () => { TC_UI.balance = !TC_UI.balance; renderTrade(); });
+  $("tc-lens").addEventListener("click", e => { const b = e.target.closest("[data-lens]"); if (b) { TC_UI.lens = b.dataset.lens; renderTrade(); } });
   $("balance-list").addEventListener("click", e => {
     const b = e.target.closest("button[data-ids]"); if (!b) return;
     b.dataset.ids.split(",").forEach(id => { sides[b.dataset.side].push(Number(id)); if (b.dataset.origin) origin.set(Number(id), b.dataset.origin); });
@@ -4909,7 +5068,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
     const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(s => !o.has(s)).map(s => map.get(s)).filter(Boolean); };
     const tradable = t => { const taxi = new Set((t.roster.taxi || []).map(String)); return (t.roster.players || []).map(String).filter(s => !taxi.has(s)).map(s => map.get(s)).filter(Boolean).sort(byVal); };
-    const strength = pool => bestLineup(pool.slice().sort(byVal).slice(0, limit), slots, lu.bench);   // over the limit = cut
+    const strength = pool => { const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench); L.cut = sorted.slice(limit); L.labels = slotLabels(L); return L; };   // over the limit = cut
     const base = new Map(LG.teams.map(t => [t.rosterId, strength(healthy(t))]));
     // a team's roster after it sends `out` and receives `inc` (injured incoming players don't help now)
     const after = (t, out, inc, incFrom) => strength(healthy(t).filter(p => !out.includes(p)).concat(inc.filter((p, i) => !outSet(incFrom[i] || t).has(String(p.sleeperId)))));
@@ -4963,12 +5122,21 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
         const dS = sAfter.score - K.base.get(S.rosterId).score, dT = tAfter.score - K.base.get(T.rosterId).score;
         const scale = Math.max(1000, xv), clamp = v => Math.max(-1, Math.min(1, v));
         const fit = 0.5 * clamp((dS + dT) / scale) + 0.5 * clamp(Math.min(dS, dT) / scale);   // both teams better = best
+        const places = K.placeMoves(new Map([[S.rosterId, sAfter], [T.rosterId, tAfter]]));
+        // team-specific value: what each side gets is worth less if it would sit on that bench
+        const fitOf = (team, L, inc, out) => {
+          const pool = L.starters.concat(L.bench, L.cut);
+          return fitValues({ before: K.base.get(team.rosterId), after: L, incoming: inc, outgoing: out, places: places[team.rosterId], n: LG.teams.length, league: K.d.league,
+                             without: list => K.strength(pool.filter(p => !list.includes(p))) });
+        };
+        const fS = fitOf(S, sAfter, get, give), fT = fitOf(T, tAfter, give, get), fitMin = Math.min(fS.net, fT.net);
+        if (fitMin < -20) continue;   // fair on paper but no practical sense for one of the teams
         const fair = more < 3 ? 1 : 1 - (more - 3) / Math.max(opts.gap - 3, 1);   // inside the fair range every trade is equally fair
-        const score = 0.6 * fair + 0.4 * (fit + 1) / 2 - 0.05 * (give.length + get.length - 2);
-        ideas.push({ team: T, S, give, get, m, more, dS, dT, sAfter, tAfter, score, scale });
+        const fitScore = Math.max(0, Math.min(1, (fitMin + 15) / 25));
+        const score = 0.35 * fair + 0.45 * fitScore + 0.2 * (fit + 1) / 2 - 0.05 * (give.length + get.length - 2);
+        ideas.push({ team: T, S, give, get, m, more, dS, dT, sAfter, tAfter, places, fS, fT, score, scale });
       }
     }
-    ideas.forEach(it => { it.places = K.placeMoves(new Map([[S.rosterId, it.sAfter], [it.team.rosterId, it.tAfter]])); });
     ideas.sort((a, b) => b.score - a.score);
     const out = [], perTeam = new Map(), seen = new Set(), one = mode === "get" || opts.against !== "ANY";
     for (const it of ideas) {
@@ -5040,7 +5208,20 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (starter) return `${v("get", "receives")} a new starting ${starter.pos}`;
     return `${v("add", "adds")} depth`;
   }
+  // Verdict that also flags lineup fit: "Fair on value, bad fit for X"
+  function fitBadge(it, v) {
+    const S = it.S, sN = S.mine ? "you" : S.name, bad = [];
+    if (it.fS.net <= -8) bad.push(sN);
+    if (it.fT.net <= -8) bad.push(it.team.name);
+    if (!bad.length) return v.fair && it.fS.net >= 3 && it.fT.net >= 3 ? `${v.label}, good fit for both` : v.label;
+    return `${v.fair ? "Fair on value" : v.label}, bad fit for ${bad.length === 2 ? "both" : bad[0]}`;
+  }
   function shortWhy(it) {
+    const worst = it.fS.net <= it.fT.net ? { f: it.fS, name: it.S.mine ? "your" : it.S.name + "'s" } : { f: it.fT, name: it.team.name + "'s" };
+    if (worst.f.net <= -8) {
+      const b = worst.f.inc.filter(e => !e.starts).sort((x, y) => dv(y.p) - dv(x.p))[0];
+      if (b) return `${b.p.name} ${b.why.replace(/^Would be/, `would be ${worst.name}`)}, so most of that value would sit on the bench.`;
+    }
     const S = it.S, T = it.team, sub = S.mine ? "You" : S.name;
     return `${sub} ${gainPhrase(S.mine, it.places, S.rosterId, it.get, it.sAfter, it.give)} while ${T.name} ${gainPhrase(false, it.places, T.rosterId, it.give, it.tAfter, it.get)}.`;
   }
@@ -5052,7 +5233,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const lines = [];
     lines.push(mu ? `${you ? "Your" : S.name + "'s"} ${mu.pos} room goes ${arrow(mu)}${md ? `, while ${sPoss} ${md.pos} room goes ${arrow(md)}` : ""}.` : it.dS > 0 ? `${you ? "Your" : S.name + "'s"} starting lineup gets stronger.` : `${you ? "Your" : S.name + "'s"} lineup stays about level.`);
     lines.push(tu ? `${T}'s ${tu.pos} room goes ${arrow(tu)}${td ? ` and its ${td.pos} room ${arrow(td)}` : ""}.` : it.dT > 0 ? `${T}'s lineup gets stronger.` : `${T} gets the value but not a lineup upgrade, so they may need convincing.`);
-    it.get.forEach(p => lines.push(it.sAfter.role.has(p.id) ? `${p.name} would start at ${it.sAfter.role.get(p.id)} for ${sN}.` : `${p.name} would sit on ${sPoss} bench for now.`));
+    it.fS.inc.forEach(e => lines.push(`${e.p.name}: ${fmt(dv(e.p))} SPMetrics value, worth ${fmt(e.tv)} to ${sN} (${e.why.toLowerCase()}).`));
+    it.fT.inc.forEach(e => lines.push(`${e.p.name}: worth ${fmt(e.tv)} to ${T} (${e.why.toLowerCase()}).`));
     if (it.give.length > it.get.length) lines.push(`${you ? "You consolidate" : S.name + " consolidates"} into one stronger piece and ${you ? "open" : "opens"} a roster spot.`);
     else if (it.get.length > it.give.length) lines.push(`Taking ${it.get.length} players costs ${sPoss} bench a spot.`);
     return lines;
@@ -5150,7 +5332,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const sortKey = {
       best: (a, b) => b.score - a.score,
       fair: (a, b) => a.more - b.more || b.score - a.score,
-      start: (a, b) => (b.m.a - b.m.b) / Math.min(b.m.a, b.m.b) - (a.m.a - a.m.b) / Math.min(a.m.a, a.m.b),
+      start: (a, b) => b.fS.net - a.fS.net,
       roster: (a, b) => b.dS - a.dS,
       oneone: (a, b) => (a.give.length + a.get.length) - (b.give.length + b.get.length) || b.score - a.score,
       fewest: (a, b) => (a.give.length + a.get.length) - (b.give.length + b.get.length) || a.more - b.more,
@@ -5169,10 +5351,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       const full = TF.openFull.has(i), fw = fullWhy(it);
       return `<article class="tf-card">
         <header class="tf-head">${teamFace(it.team, "sm")}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size">${it.give.length}-for-${it.get.length}</span></header>
-        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}">${esc(v.label)}</span><span class="tf-diff">${it.more.toFixed(1)}% value difference</span></div>
+        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}">${esc(fitBadge(it, v))}</span><span class="tf-diff">${it.more.toFixed(1)}% raw · roster-adjusted ${esc(S.mine ? "you" : S.name)} ${fmtNet(it.fS.net)}, ${esc(it.team.name)} ${fmtNet(it.fT.net)}</span></div>
         <div class="tf-sides">
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => prow(p, S, "")).join("")}</ul></div>
-          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "receive" : "receives"}</h4><ul>${it.get.map(p => prow(p, it.team, it.sAfter.role.has(p.id) ? "starts at " + it.sAfter.role.get(p.id) : "bench")).join("")}</ul></div>
+          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "receive" : "receives"}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return prow(p, it.team, fe ? `worth ${fmt(fe.tv)} to ${you ? "you" : S.name} · ${fe.starts ? "starts at " + fe.role : "bench"}` : ""); }).join("")}</ul></div>
         </div>
         <p class="tf-why"><span>Why it works</span>${esc(shortWhy(it))}</p>
         ${full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
