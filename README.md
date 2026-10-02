@@ -26,6 +26,20 @@ All colors come from one set of theme tokens at the top of the stylesheet (`:roo
 4. **Tiers first, then rank order.** Tiers decide how big the gaps are: each positional tier is pulled 80% of the way to its average (`tierBlend`), and no tier spans more than 15% top to bottom (`tierMaxSpread`), so tiermates stay close however many rank spots apart they are. The real drops happen where a tier ends (at least 5%, `tierMinDrop`). Rank order inside a tier sets the order and the small gaps. The overall board can nudge a value by at most 2% (`overallMaxShift`), so where your overall order and your tiers disagree (e.g. an RB tier-2 player ranked overall below a QB tier-3 player), the tier value wins and the All list can show a higher value below a lower one. Scaled so the top player is 10,000.
 5. **Other formats keep your tiers.** A league or hand-picked settings re-price each tier as a block (the average of what its rank spots are worth in that format vs the base board), and everyone in the tier moves by the same factor. The format changes how much a tier is worth, never where the drops are or how close tiermates sit.
 
+## Auto-ranked players (the board's tail)
+
+The board has two kinds of players, marked in the `source` column of the rankings CSV:
+
+- **manual**: the players you ranked yourself (overall #1–183 when this was added). They are locked: nothing automatic ever moves or re-values them.
+- **auto**: supplemental players (70 added 2026-10-02: backup and stopgap QBs for superflex, rotational and handcuff RBs, WR3/WR4 types, starting and emerging TEs) ranked underneath every manual player, from #184 down. They get a position rank, tier, value, team and Sleeper ID like everyone else and appear everywhere on the site (rankings, search, player pages, trade calculator, trade finder, free agents, league rosters, power rankings, comparisons).
+
+How the tail is valued:
+- Auto players run through the same curve and tiers; their tiers continue each position's tier numbers under yours (QB 7–9, RB 11–13, WR 10–12, TE 7–9). They are handled separately from your players, so adding them changes none of your values: projections only re-order auto players among auto spots, rank order never lets an auto player pull one of yours down, and the overall-order pass stops where the tail starts.
+- Deep in a position the curve reaches zero (below waiver level), so the tail also has a floor: it starts just under the lowest value ranked above it and eases down 2.2% per spot (`autoDecay`). In superflex the curve still values backup QBs, so the first few auto QBs keep a real value.
+- In other formats and leagues, each position's tail moves by the same share as your last player at that position and stays under him; overall, the tail is always listed after every manual player.
+
+Editing: auto players show an **Auto** tag in editor mode and can be dragged or nudged like anyone. The player you move, or whose value you set, becomes **manual** when you save (players who only shift because someone else moved stay auto; one moved back to exactly where he was stays auto).
+
 ## Trade verdicts
 
 The calculator compares the adjusted value each side receives: raw player value plus a small roster adjustment (a capped bonus for getting the best player and for taking on fewer roster spots, applied only when player counts differ). The verdict comes from how much more value the side ahead gets:
@@ -152,6 +166,7 @@ While the rankings system is being built, the editing controls are on for every 
 
 - **Reorder:** drag a player by the ⠿ handle or nudge with ▲ ▼, in the **All** view or any position tab. The All rankings (the `rank` column) are the source of truth: position ranks are each player's place among same-position players in the overall order. Moving someone in a position tab swaps him with players at his position, keeping the same overall spots. A player who lands in a new position spot takes that spot's tier.
 - **Values** come from each player's position rank (the value model), then are kept in order down the All rankings: if you put a player above someone with a higher value, their values meet in the middle.
+- **Auto players** (see *Auto-ranked players*) carry an **Auto** tag; moving one or setting his value makes him manual when you save.
 - **Custom values:** click any value to type a number (marked **Custom** with a striped bar). **Auto** switches back to the model value for his current rank.
 - **Save changes / Cancel changes:** Save keeps your edits in *this browser* (they survive reloads and feed the trade calculator). Cancel throws away unsaved changes. A visitor who edits only changes their own copy, never the live board.
 - **Ranking history:** every publish also saves a snapshot of the published board (rank, position rank and base value per player) to `data/rank_history.json`, one per day. Player pages chart it.

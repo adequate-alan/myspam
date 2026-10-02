@@ -18,6 +18,9 @@ import pandas as pd
 from project_players import norm
 from merge_projections import ALIASES
 
+# Site names that match nflverse but not the DynastyProcess ID table
+ID_ALIASES = {"Kenny Gainwell": "Kenneth Gainwell", "Josh Palmer": "Joshua Palmer", "Chig Okonkwo": "Chigoziem Okonkwo"}
+
 IDS_URL = "https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv"
 POS = {"QB": "QB", "RB": "RB", "WR": "WR", "TE": "TE", "PK": "K", "K": "K"}
 TEAM_FIX = {"LVR": "LV", "JAC": "JAX", "LAR": "LAR", "KCC": "KC", "GBP": "GB", "NEP": "NE", "NOS": "NO",
@@ -76,7 +79,7 @@ def tag_rankings(ids, site_path):
     for line in lines[1:]:
         row = dict(zip(old_head, line.split(",")))
         name, pos = row.get("player", ""), row.get("pos", "")
-        sid = look.get((norm(ALIASES.get(name, name)), pos), "")
+        sid = look.get((norm(ID_ALIASES.get(name) or ALIASES.get(name, name)), pos), "")
         if not sid:
             missing.append(f"{pos} {name}")
         c = [row.get(h, "") for h in head]
