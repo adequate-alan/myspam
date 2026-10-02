@@ -2358,7 +2358,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   let sl = null, slPlayers = null, comps = null;
   /* League settings picked by hand (for anyone not connecting a league).
      null = the site's own format. A connected league's settings always win over these. */
-  const FMT_DEFAULT = { teams: 12, qb: "sf", rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fd: 0 };
+  const FMT_DEFAULT = { teams: 12, qb: "sf", rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 };
   const FMT_PRESETS = [
     { id: "spm", label: "SPMetrics default", v: {} },
     { id: "1qb-ppr", label: "1QB · PPR", v: { qb: "1", tep: 0 } },
@@ -2372,8 +2372,8 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const FMT_KEY = "spm_format", FMT_VIEW_KEY = "spm_format_view";
   const fmtFull = f => ({ ...FMT_DEFAULT, ...(f || {}) });
   const fmtSame = (a, b) => Object.keys(FMT_DEFAULT).every(k => String(fmtFull(a)[k]) === String(fmtFull(b)[k]));
-  // compact URL form: t10_qb1_rec0.5_tep0_ptd4_pyd25_int-2_fd0_rb2_wr3_te1_fx1_bn6
-  const FMT_URL = { teams: "t", qb: "qb", rec: "rec", tep: "tep", ptd: "ptd", pyd: "pyd", int: "int", fd: "fd", rb: "rb", wr: "wr", te: "te", flex: "fx", bench: "bn" };
+  // compact URL form: t10_qb1_rec0.5_tep0_ptd4_pyd25_int-2_fl-2_fd0_rb2_wr3_te1_fx1_bn6
+  const FMT_URL = { teams: "t", qb: "qb", rec: "rec", tep: "tep", ptd: "ptd", pyd: "pyd", int: "int", fum: "fl", fd: "fd", rb: "rb", wr: "wr", te: "te", flex: "fx", bench: "bn" };
   const fmtToUrl = f => Object.entries(FMT_URL).map(([k, s]) => s + fmtFull(f)[k]).join("_");
   function fmtFromUrl(str) {
     const out = {}, parts = String(str || "").split("_");
@@ -2392,7 +2392,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       teams: pick(v.teams, [8, 10, 12, 14, 16], 12), qb: pick(v.qb, ["1", "sf", "2"], "sf"),
       rb: pick(v.rb, [1, 2, 3], 2), wr: pick(v.wr, [1, 2, 3, 4], 3), te: pick(v.te, [1, 2], 1), flex: pick(v.flex, [0, 1, 2, 3], 1),
       bench: pick(v.bench, [3, 4, 5, 6, 7, 8, 9, 10, 12, 15], 6), rec: pick(v.rec, [0, 0.5, 1], 1), tep: pick(v.tep, [0, 0.5, 1], 0.5),
-      ptd: pick(v.ptd, [4, 5, 6], 4), pyd: pick(v.pyd, [20, 25, 30], 25), int: pick(v.int, [-1, -2, -3], -2), fd: pick(v.fd, [0, 0.5, 1], 0)
+      ptd: pick(v.ptd, [4, 5, 6], 4), pyd: pick(v.pyd, [20, 25, 30], 25), int: pick(v.int, [-1, -2, -3], -2), fum: pick(v.fum, [0, -1, -2, -3], -2), fd: pick(v.fd, [0, 0.5, 1], 0)
     };
   }
   let FMT = (() => {
@@ -2410,7 +2410,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const rp = [].concat(Array(f.qb === "2" ? 2 : 1).fill("QB"), Array(f.rb).fill("RB"), Array(f.wr).fill("WR"), Array(f.te).fill("TE"),
       Array(f.flex).fill("FLEX"), f.qb === "sf" ? ["SUPER_FLEX"] : [], Array(f.bench).fill("BN"));
     const sc = { pass_yd: Math.round(10000 / f.pyd) / 10000, pass_td: f.ptd, pass_int: f.int, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
-                 rec: f.rec, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: -2 };
+                 rec: f.rec, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: f.fum };
     if (f.tep) sc.bonus_rec_te = f.tep;
     if (f.fd) { sc.rush_fd = f.fd; sc.rec_fd = f.fd; }
     return { league_id: "custom", name: "Your settings", total_rosters: f.teams, roster_positions: rp, scoring_settings: sc,
@@ -4432,6 +4432,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     { group: "Scoring", k: "ptd", label: "Passing TD", opts: [[4, "4 pts"], [5, "5 pts"], [6, "6 pts"]] },
     { group: "Scoring", k: "pyd", label: "Passing yards", opts: [[25, "25 per pt"], [20, "20 per pt"], [30, "30 per pt"]] },
     { group: "Scoring", k: "int", label: "Interception", opts: [[-1, "−1"], [-2, "−2"], [-3, "−3"]] },
+    { group: "Scoring", k: "fum", label: "Fumble lost", opts: [[0, "None"], [-1, "−1"], [-2, "−2"], [-3, "−3"]] },
     { group: "Scoring", k: "fd", label: "Rush/rec first down", opts: [[0, "None"], [0.5, "0.5"], [1, "1"]] }
   ];
   const fdialog = $("fmt-dialog");

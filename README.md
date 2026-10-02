@@ -137,7 +137,7 @@ While the rankings system is being built, the editing controls are on for every 
 
 ## League settings (no league connected)
 
-**League settings** (top right) lets anyone pick their format without connecting a league: teams, 1QB / superflex / 2QB, RB/WR/TE/FLEX starters, bench, points per catch, TE premium, passing TD and yardage points, interceptions and first-down points, plus one-click presets. The rankings, values, player pages and trade calculator then use those settings. The choice is saved in the browser and in the page address (`?fmt=…`), so a shared link opens with the same settings. A connected league's own settings always take over.
+**League settings** (top right) lets anyone pick their format without connecting a league: teams, 1QB / superflex / 2QB, RB/WR/TE/FLEX starters, bench, points per catch, TE premium, passing TD and yardage points, interceptions, fumbles lost and first-down points, plus one-click presets. The rankings, values, player pages and trade calculator then use those settings. The choice is saved in the browser and in the page address (`?fmt=…`), so a shared link opens with the same settings. A connected league's own settings always take over.
 
 How values and order change for any non-base settings (league or hand-picked), tunable in `FORMAT_ADJUST` at the top of `index.html`:
 1. **Position values** move with the scoring and lineup (re-scored value curves, replacement and waiver levels). This step never reorders players within a position.
