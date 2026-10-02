@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1A1314" id="theme-color">
+<meta http-equiv="Cache-Control" content="no-cache">
 <script>
   /* Theme before first paint: saved choice (spm_theme), else the device setting, else dark */
   (function () {
@@ -1328,6 +1329,12 @@ button.tr-player:hover:not(:disabled) { background: var(--surface-2); }
 .lo-format { grid-column: 1; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
 .lo-status { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 0.68rem; font-weight: 650; letter-spacing: 0.06em; color: var(--ink-2); }
 
+.update-bar {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 40;
+  display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 16px; border-radius: var(--radius);
+  background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--ink); font-size: 0.86rem; font-weight: 600;
+  box-shadow: 0 18px 40px -16px var(--shadow-color); max-width: calc(100vw - 32px);
+}
 /* ---------- Theme toggle (sun shows in dark mode, moon in light mode) ---------- */
 .theme-toggle {
   display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0;
@@ -1459,6 +1466,11 @@ dialog.signin label.im-mine input { width: auto; height: auto; accent-color: var
 .pr-item:last-child { border-bottom: 0; }
 .pr-item.mine > .pr-row { box-shadow: inset 3px 0 0 var(--gold); }
 .pr-item.open > .pr-row { background: var(--surface-hover); }
+.pr-row, .pr-row * { cursor: pointer; }
+.pr-row:hover { background: var(--surface-hover); }
+.pr-row:hover .pr-name { color: var(--heading); }
+.lg-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 14px 16px; border: 1px solid var(--editor-line); background: var(--editor-bg); border-radius: var(--radius); }
+.lg-error p { margin: 0; font-size: 0.86rem; color: var(--ink); }
 .pr-rec { font-size: 0.86rem; font-weight: 650; color: var(--cream); font-variant-numeric: tabular-nums; }
 .pr-pf { display: flex; flex-direction: column; font-size: 0.8rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; line-height: 1.25; }
 .pr-pf small { font-size: 0.7rem; color: var(--muted); font-weight: 500; }
@@ -2766,6 +2778,31 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   $("footer-text").textContent = "Rankings and trade model by " + SITE.author + ". Values reflect " + SITE.format + " scoring.";
   $("sample-notice").hidden = !SITE.sampleData;
   if (SITE.sampleNote) $("sample-note").textContent = SITE.sampleNote;
+
+  /* ---------- New version check ----------
+     GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
+     BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
+  const BUILD_ID = "2026-10-02T22:28Z";
+  let lastBuildCheck = 0;
+  async function checkForUpdate() {
+    if (Date.now() - lastBuildCheck < 5 * 60e3) return;
+    lastBuildCheck = Date.now();
+    try {
+      const r = await fetch(location.pathname + "?build=" + Date.now(), { cache: "no-store" });
+      const m = r.ok ? (await r.text()).match(/const BUILD_ID = "([^"]+)"/) : null;
+      if (m && m[1] !== BUILD_ID && !(editor.on && changedRows().length)) showUpdate();
+    } catch (e) {}
+  }
+  function showUpdate() {
+    if ($("update-bar")) return;
+    const bar = document.createElement("div");
+    bar.id = "update-bar"; bar.className = "update-bar"; bar.setAttribute("role", "status");
+    bar.innerHTML = `<span>A new version of SPAM is available.</span><button class="btn primary" type="button">Refresh</button>`;
+    bar.querySelector("button").addEventListener("click", () => location.reload());
+    document.body.appendChild(bar);
+  }
+  setTimeout(checkForUpdate, 4000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(); });
 
   /* ---------- Theme (light / dark) ----------
      All colors come from the theme tokens at the top of the stylesheet; this only flips
@@ -5542,7 +5579,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- League tab: Power Rankings (expandable teams), Trade History, Standings ----------
      Clicking a team opens its roster board right under its row (one at a time, unless "Keep teams open"
      is on or Shift/Cmd/Ctrl is held). Nothing navigates away from the list. */
-  const LT = { sub: "power", open: new Set(), keep: false, tradesFull: new Set(), loading: false, error: "" };
+  const LT = { sub: "power", open: new Set(), keep: false, tradesFull: new Set(), loading: null, error: {} };   // loading/error are per league id
   function openTeam(rosterId) {   // My Team's "Position breakdown" and others: open that team in place
     LT.sub = "power"; LT.open = new Set([String(rosterId)]);
     showTab("league"); history.replaceState(null, "", "#league");
@@ -5554,8 +5591,14 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const box = $("league-body"), d = activeData();
     if (!d) { box.innerHTML = ""; return; }
     const subs = [["power", "Power Rankings"], ["trades", "Trade History"], ["standings", "Standings"]];
-    const ev = evaluateTeams();
-    const body = LT.sub === "trades" ? tradeHistoryHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : powerHtml(ev, d);
+    let body;
+    try {
+      const ev = evaluateTeams();
+      body = LT.sub === "trades" ? tradeHistoryHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : powerHtml(ev, d);
+    } catch (err) {   // never leave the old view up silently
+      console.error(err);
+      body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
+    }
     box.innerHTML = `
       <div class="panel-head lg-head">
         <div>
@@ -5683,33 +5726,41 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const after = list.map(e => ({ t: whenDate(e[0]).getTime(), v: e[4], ts: e[0], pr: e[2] })).filter(x => x.t > ms && x.t - ms <= HIST_NEAR_DAYS * 864e5).sort((a, b) => a.t - b.t)[0];
     return after || null;
   }
+  // one Sleeper call with a time limit, so a request that never answers can't leave the view stuck
+  const slGetTimed = (path, ms = 12000) => Promise.race([slGet(path), new Promise((_, rej) => setTimeout(() => rej(new Error("Sleeper took too long to answer")), ms))]);
   async function loadTrades(force) {
     const d = activeData();
-    if (!d || slSource() !== "sleeper" || LT.loading) return;
+    if (!d || slSource() !== "sleeper") return;
+    const id = d.league.league_id;
+    if (LT.loading === id) return;
     if (!force && d.trades && Date.now() - (d.tradesAt || 0) < 3600e3) return;
-    LT.loading = true; LT.error = "";
+    LT.loading = id; LT.error[id] = "";
     if (currentTab === "league" && LT.sub === "trades") renderLeague();
     try {
-      const id = d.league.league_id;
-      const lists = await Promise.all(Array.from({ length: 18 }, (_, i) => slGet(`/league/${id}/transactions/${i + 1}`).catch(() => null)));
+      let failed = 0;
+      const lists = await Promise.all(Array.from({ length: 18 }, (_, i) => slGetTimed(`/league/${id}/transactions/${i + 1}`).catch(() => { failed++; return null; })));
+      if (failed === 18) throw new Error("Sleeper didn't answer");
       const seen = new Set(), trades = [];
-      lists.forEach((list, i) => (list || []).forEach(t => {
-        if (t.type !== "trade" || t.status !== "complete" || seen.has(t.transaction_id)) return;
+      lists.forEach((list, i) => (Array.isArray(list) ? list : []).forEach(t => {
+        if (!t || t.type !== "trade" || t.status !== "complete" || seen.has(t.transaction_id)) return;
         seen.add(t.transaction_id);
-        trades.push({ id: t.transaction_id, at: t.status_updated || t.created, week: t.leg || i + 1, rosters: t.roster_ids || [],
+        trades.push({ id: String(t.transaction_id), at: t.status_updated || t.created || 0, week: t.leg || i + 1, rosters: t.roster_ids || [],
           adds: t.adds || {}, drops: t.drops || {},
           picks: (t.draft_picks || []).map(p => ({ season: p.season, round: p.round, from: p.roster_id, owner: p.owner_id, prev: p.previous_owner_id })),
           faab: (t.waiver_budget || []).map(b => ({ sender: b.sender, receiver: b.receiver, amount: b.amount })) });
       }));
-      if (activeData() === d) { d.trades = trades.sort((a, b) => b.at - a.at); d.tradesAt = Date.now(); writeSl(); }
-    } catch (err) { LT.error = err.message; }
-    finally { LT.loading = false; }
+      const cur = sl && sl.data && sl.data[id];   // by league id: a background refresh may have replaced the object
+      if (cur) { cur.trades = trades.sort((a, b) => b.at - a.at); cur.tradesAt = Date.now(); writeSl(); }
+    } catch (err) { LT.error[id] = err.message || "unknown error"; }
+    finally { if (LT.loading === id) LT.loading = null; }
     if (currentTab === "league" && LT.sub === "trades") renderLeague();
   }
   function ensureTrades() {
     const d = activeData();
     if (rankHistory === undefined) loadHistory().then(() => { if (currentTab === "league" && LT.sub === "trades") renderLeague(); });
-    if (d && slSource() === "sleeper" && !LT.loading && !LT.error && (!d.trades || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
+    if (!d || slSource() !== "sleeper") return;
+    const id = d.league.league_id;
+    if (LT.loading !== id && !LT.error[id] && (!d.trades || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
   }
   const SIDE_LABELS = [[3, "Fair", "Fair"], [7, "Slight win", "Slight loss"], [12, "Win", "Loss"], [20, "Clear win", "Clear loss"], [30, "Steal", "Lopsided loss"], [Infinity, "Robbery", "Robbed"]];
   function evalTrade(t) {
@@ -5807,11 +5858,12 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   }
   function tradeHistoryHtml(ev, d) {
     if (slSource() !== "sleeper") return `<p class="empty-note">Trade history comes from Sleeper's transaction log, so it's available for Sleeper leagues. ${esc(SOURCE_NAME[slSource()] === "pasted" ? "Pasted" : SOURCE_NAME[slSource()])} leagues show power rankings and standings.</p>`;
+    const id = d.league.league_id, loading = LT.loading === id, error = LT.error[id];
     const head = `<div class="lg-toolbar"><p class="method-note">Completed trades this season, judged with the trade calculator's verdicts. SPAM values from the trade date are used when ranking history covers it.</p>
-      <button class="btn" type="button" data-th-refresh${LT.loading ? " disabled" : ""}>${LT.loading ? "Loading…" : "Refresh"}</button></div>`;
-    if (LT.error) return head + `<p class="empty-note">Couldn't load trades from Sleeper (${esc(LT.error)}). Try Refresh.</p>`;
-    if (!d.trades) return head + `<p class="empty-note">Loading trades from Sleeper…</p>`;
-    if (!d.trades.length) return head + `<p class="empty-note">No completed trades in ${esc(d.league.name)} yet.</p>`;
+      <button class="btn" type="button" data-th-refresh${loading ? " disabled" : ""}>${loading ? "Loading…" : "Refresh"}</button></div>`;
+    if (error) return head + `<div class="lg-error"><p>Couldn't load trades for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div>`;
+    if (!d.trades) return head + `<p class="empty-note lg-loading">Loading completed trades for ${esc(d.league.name)}…</p>`;
+    if (!d.trades.length) return head + `<p class="empty-note">No completed trades found for this league.</p>`;
     return head + `<div class="th-feed">${d.trades.map(t => tradeCard(evalTrade(t))).join("")}</div>`;
   }
   function analyzeTrade(id) {
@@ -5855,11 +5907,14 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (full) { const id = full.dataset.thFull; if (LT.tradesFull.has(id)) LT.tradesFull.delete(id); else LT.tradesFull.add(id); renderLeague(); return; }
     const an = e.target.closest("[data-th-analyze]");
     if (an) { analyzeTrade(an.dataset.thAnalyze); return; }
-    if (e.target.closest("[data-th-refresh]")) { LT.error = ""; loadTrades(true); return; }
+    if (e.target.closest("[data-th-refresh]")) { const d = activeData(); if (d) LT.error[d.league.league_id] = ""; loadTrades(true); return; }
+    if (e.target.closest("[data-lg-retry]")) { renderLeague(); return; }
     const st = e.target.closest("[data-standing-team]");
     if (st) { openTeam(st.dataset.standingTeam); return; }
+    // anywhere on a team row opens/closes it (name, logo, manager, rank, score, blank space, the arrow);
+    // real controls inside the row keep their own action
     const row = e.target.closest("[data-toggle-team]");
-    if (row && !e.target.closest(".pr-detail")) toggleTeam(row.dataset.toggleTeam, e.shiftKey || e.metaKey || e.ctrlKey);
+    if (row && !e.target.closest(".pr-detail") && !e.target.closest("button, a, input, select, textarea, label")) toggleTeam(row.dataset.toggleTeam, e.shiftKey || e.metaKey || e.ctrlKey);
   });
   $("league-body").addEventListener("keydown", e => {
     if (e.key !== "Enter" && e.key !== " ") return;
