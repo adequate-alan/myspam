@@ -67,6 +67,10 @@ In league mode with both teams picked, the calculator answers two questions sepa
 
 **Best fits to balance the trade** come from the real roster of the team that's getting more value: closest to fair first, then expendable depth over starters, never a player whose loss leaves a starting spot empty, and at most two-player packages (only when a single player can't do the job about as well).
 
+### Roster needs
+
+Four sliders above the trade (QB, RB, WR, TE) say how your team stands at each position: 1 Desperately need, 2 Need, 3 Average, 4 Good, 5 Set. Every player at that position in the trade, on either side, counts as a multiplier × his value: ×1.08, ×1.04, ×1.00, ×0.96, ×0.92. A position you need helps whichever side receives it, a position you're set at counts for less, and Average changes nothing. The result shows as a **Need adjustment** next to the waiver adjustment. Settings are saved in your browser; the multipliers are `NEED_MULTIPLIERS` in `index.html`. The Trade Finder doesn't use the sliders.
+
 ## Trade finder
 
 With a Sleeper league connected, **Trade Finder** searches every other roster for trades around one of your players (or, from another team's player page, ways to get him):
