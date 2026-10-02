@@ -56,7 +56,9 @@ The stats refresh never writes to the rankings, and nothing from Sleeper or stat
 
 ## Trade calculator modes
 
-**League context** at the top of the calculator picks the mode. Changing it never clears the trade.
+The toolbar at the top holds the league picker and, in league mode, the two team pickers. Changing them never clears the trade.
+
+Layout, in order: the two sides (team name, total, players, search, a collapsed **Add from roster** picker and a subtle *Needs / Strong* line), then the verdict (label, value difference, one-line explanation, balance bar). **Balance this trade** opens 3–4 suggestions on request. Three collapsed sections hold the details: **Why?** (plain-English reasoning), **Roster impact** (roster fit, lineup changes and your roster-need sliders) and **Value breakdown** (raw values, best-player bonus, waiver adjustment, roster needs, adjusted totals). Small ⓘ icons explain the math.
 
 - **Universal mode** (*No league context*): the two sides are **You get** and **They get**, and verdicts read from your point of view ("Slight edge to you", "You're getting robbed"). Search any players; base SPMetrics values and the small roster adjustment. Works without Sleeper.
 - **League mode** (a synced Sleeper league): pick the two teams (the sides, verdicts and notes then use their Sleeper team names), then click players straight from their real rosters (a player clicked on Team A's roster goes to Team B, and the reverse). *Search any player* still works for hypothetical trades. Values are league-adjusted. Choosing a different league switches the site's active league; players in the trade who aren't on the selected rosters are flagged and kept as hypothetical until you remove them.
@@ -69,7 +71,7 @@ In league mode with both teams picked, the calculator answers two questions sepa
 
 ### Roster needs
 
-Four sliders above the trade (QB, RB, WR, TE) say how your team stands at each position: 1 Desperately need, 2 Need, 3 Average, 4 Good, 5 Set. Every player at that position in the trade, on either side, counts as a multiplier × his value: ×1.08, ×1.04, ×1.00, ×0.96, ×0.92. A position you need helps whichever side receives it, a position you're set at counts for less, and Average changes nothing. The result shows as a **Need adjustment** next to the waiver adjustment. Settings are saved in your browser; the multipliers are `NEED_MULTIPLIERS` in `index.html`. The Trade Finder doesn't use the sliders.
+Four sliders under **Roster impact** (QB, RB, WR, TE) say how your team stands at each position: 1 Desperately need, 2 Need, 3 Average, 4 Good, 5 Set. Every player at that position in the trade, on either side, counts as a multiplier × his value: ×1.08, ×1.04, ×1.00, ×0.96, ×0.92. A position you need helps whichever side receives it, a position you're set at counts for less, and Average changes nothing. The result shows as a **Need adjustment** next to the waiver adjustment. Settings are saved in your browser; the multipliers are `NEED_MULTIPLIERS` in `index.html`. The Trade Finder doesn't use the sliders.
 
 ## Trade finder
 
