@@ -4112,9 +4112,16 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     if (comps) {
       const base = modelTable(curvesFor(comps.base_scoring), BASE_LINEUP());
       const lg = modelTable(curvesFor(vl.scoring_settings || {}), lineupOf(vl), VALUE_MODEL.benchWeight * LG.depth);   // shallow leagues: depth counts less
-      const delta = (pos, num) => { const i = Math.min(num, base[pos].length) - 1; return lg[pos][i] - base[pos][i]; };
+      // A player's value = the league curve at his rank + his own distance from the base curve (your tiers,
+      // projections), shrunk in proportion when the position is worth less here. A flat shift would let a
+      // tier gap of 1,000 swallow a QB12 whose whole 1QB value is ~1,300; scaled, a 20% tier drop stays ~20%.
+      const shifted = (pos, num, value) => {
+        const i = Math.min(num, base[pos].length) - 1, b0 = base[pos][i], l0 = lg[pos][i];
+        const scale = b0 > 0 ? Math.min(1, l0 / b0) : 1;
+        return Math.max(0, l0 + (value - b0) * scale);
+      };
       const fac = playerFactors(vl.scoring_settings || {});
-      players.forEach(p => raw.set(p.id, EDIT_POS.includes(p.pos) && p.posNum != null ? Math.max(0, p.value + delta(p.pos, p.posNum)) : p.value));
+      players.forEach(p => raw.set(p.id, EDIT_POS.includes(p.pos) && p.posNum != null ? shifted(p.pos, p.posNum, p.value) : p.value));
       // the position curve alone never reorders a position: keep it in your order first…
       for (const pos of EDIT_POS) {
         let prev = Infinity;
