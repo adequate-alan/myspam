@@ -38,6 +38,14 @@ The calculator compares the adjusted value each side receives: raw player value 
 
 The exact gap is shown under the verdict, along with the raw player value gap when the roster adjustment changed it. With a Sleeper league connected, verdicts use the team names. Tiers and wording are in `TRADE_VERDICTS` in `index.html`.
 
+## Ranking history
+
+Every player's Ranking History (player pop-up → Ranking history) is a log of **committed changes**, stored in `data/rank_history.json` as `[timestamp, overall rank, position rank, tier, base SPAM value, source]` per player:
+- **Manual edit:** when you commit with **Save changes**, every player whose overall rank, position rank, tier or value changed gets one entry at his final spot (dragging around before saving doesn't count; several moves = one entry). Saved entries show "not published" in your browser and go into the shared file with **Publish to live site** (along with anything else that changed). A second edit published later the same day is a second entry. **Discard browser edits** drops unpublished entries too.
+- **Scheduled update:** the Tuesday workflow loads the site in a headless browser and runs `pipeline/snapshot_history.py`, adding an entry only for players whose rank, tier or value changed since their last entry.
+- **Published update:** any other published change (e.g. a value-model update).
+No duplicates: a player gets a new entry only when his overall rank, position rank or tier changed, or his value moved by at least 10 points and 0.5% (`HISTORY_VALUE_MIN`). The charts use every entry; the table shows the date and time, both rank moves, tier, value change and source.
+
 ## Player details
 
 Click any player's name or photo anywhere on the site (rankings, My Team, team pages, free agents, trade calculator, Trade Finder) to open his details in a pop-up over the current page. Nothing underneath changes: your place in the rankings and any trade you're building stay exactly as they were. Close it with ×, Escape or a click outside. Clicking another player inside the pop-up switches to him (← goes back). On phones it opens as a nearly full-screen panel.

@@ -39,12 +39,20 @@ jobs:
           python build_stats.py 2026
           python stamp_date.py ../index.html
 
+      - name: Scheduled ranking-history snapshot (weekly / manual runs only)
+        if: github.event_name != 'push'
+        working-directory: pipeline
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+          python snapshot_history.py
+
       - name: Commit refreshed site
         if: github.event_name != 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html data/sleeper_players.json data/platform_ids.json data/stats/2026.json
+          git add index.html data/sleeper_players.json data/platform_ids.json data/stats/2026.json data/rank_history.json
           git diff --cached --quiet || git commit -m "Weekly projections and stats refresh"
           git push
 
