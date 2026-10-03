@@ -612,7 +612,11 @@ const FORMAT_ADJUST = {
   maxFactor: 0.10,    // personal nudge never moves a value more than 10%
   margin: 0.03,       // must pass the player above by more than 3% to jump him
   maxPosMove: 2,      // most spots a player can move within his position
-  avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 }   // players used for each position's average
+  avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 },  // players used for each position's average
+  // Shallow formats can price a whole tier at waiver level (10-team 1QB: QB13+ ≈ 0). Two guards:
+  tierKeep: 0.40,     // a tier keeps at least 40% of the last value above it (unless your base board's own drop there is steeper)
+  floor: 25,          // nobody shows 0: a tiny floor of 25, easing down 2% per position spot
+  floorDecay: 0.98
 };
 
 // Trade verdicts. "gap" = how much more adjusted value the side ahead receives, in %
@@ -3078,7 +3082,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T08:20Z";
+  const BUILD_ID = "2026-10-03T08:35Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4905,6 +4909,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         const r = last && last.value > 0 ? raw.get(last.id) / last.value : 1, cap = last ? raw.get(last.id) * 0.99 : Infinity;
         g.forEach(p => { if (p.tail && !p.custom) raw.set(p.id, Math.min(p.value * r * (LG.factor.get(p.id) || 1), cap)); });
       }
+      smoothTiers(raw);
     } else players.forEach(p => raw.set(p.id, p.value));
     // each position: your order, unless the adjusted value passes the player above by more than the margin
     for (const pos of EDIT_POS) {
@@ -4929,6 +4934,31 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     stickyOrder(all.filter(p => !isAuto(p)), p => LG.adj.get(p.id), FA.margin, Infinity)
       .concat(stickyOrder(all.filter(isAuto), p => LG.adj.get(p.id), FA.margin, Infinity))
       .forEach((p, k) => LG.adjRank.set(p.id, k + 1));
+  }
+  // Tier drop guard + floor for formats that push deep tiers to ~0 (see FORMAT_ADJUST.tierKeep / floor).
+  // Each tier moves as a block (tiermates stay close); a league in the base format is unchanged, since
+  // the guard only lifts a tier whose drop is steeper here than on your base board.
+  function smoothTiers(raw) {
+    const FA = FORMAT_ADJUST, keep = Number(FA.tierKeep) || 0, isTag = p => Number(p.tier) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+    for (const pos of EDIT_POS) {
+      const g = players.filter(p => p.pos === pos && p.posNum != null && !isTag(p)).sort((a, b) => a.posNum - b.posNum);
+      const blocks = [];
+      g.forEach(p => { const b = blocks[blocks.length - 1]; if (b && b.tier === String(p.tier)) b.m.push(p); else blocks.push({ tier: String(p.tier), m: [p] }); });
+      for (let i = 1; i < blocks.length && keep > 0; i++) {
+        const prev = blocks[i - 1].m[blocks[i - 1].m.length - 1], cur = blocks[i].m;
+        const prevV = raw.get(prev.id), top = Math.max(...cur.map(p => raw.get(p.id)));
+        if (!(prevV > 0) || !(top >= 0)) continue;
+        const baseTop = Math.max(...cur.map(p => p.value)), baseRatio = prev.value > 0 ? baseTop / prev.value : 1;
+        const need = Math.min(baseRatio, keep) * prevV;
+        if (top < need - 1e-6) {
+          const lift = top > 0 ? need / top : 0;
+          cur.forEach(p => { if (!p.custom) raw.set(p.id, top > 0 ? raw.get(p.id) * lift : need); });
+          // a lifted block of near-equal values still steps down a hair per spot, so the order reads
+          for (let k = 1; k < cur.length; k++) if (!cur[k].custom) raw.set(cur[k].id, Math.min(raw.get(cur[k].id), raw.get(cur[k - 1].id) * 0.995));
+        }
+      }
+      if (FA.floor > 0) g.forEach(p => { if (!p.custom) raw.set(p.id, Math.max(raw.get(p.id), FA.floor * Math.pow(FA.floorDecay || 1, p.posNum - 1))); });
+    }
   }
   // Keeps the given order; a player moves up only past someone his value beats by more than `margin`,
   // beyond any edge he already had on the base board (tiers can put a value above an overall rank there;
