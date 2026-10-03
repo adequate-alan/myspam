@@ -2986,7 +2986,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T00:50Z";
+  const BUILD_ID = "2026-10-03T01:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3095,13 +3095,32 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   const hasOverall = () => players.some(p => p.pos !== "PICK" && p.rank != null);
   const byPos = (a, b) => (POS_ORDER[a.pos] ?? 9) - (POS_ORDER[b.pos] ?? 9) || (a.posNum ?? 1e9) - (b.posNum ?? 1e9);
 
+  /* Custom = a value typed in and not published yet. Once published it is the player's
+     official SPAM value and looks like any other (it stays fixed until edited again). */
+  let pubValCache = { csv: null, map: null };
+  function publishedValueOf(p) {
+    let csv;
+    try { csv = publishedCsv; } catch (e) { return undefined; }   // editor not set up yet
+    if (pubValCache.csv !== csv) {
+      const rows = parseCSV(csv), head = (rows.shift() || []).map(h => h.toLowerCase());
+      const iN = head.indexOf("player"), iP = head.indexOf("pos"), iV = head.indexOf("value");
+      pubValCache = { csv, map: new Map(rows.map(r => [(r[iN] + "|" + r[iP]).toLowerCase(), iV < 0 ? "" : String(r[iV] ?? "").trim()])) };
+    }
+    return pubValCache.map.get((p.name + "|" + p.pos).toLowerCase());
+  }
+  function isOverride(p) {
+    if (!p.custom) return false;
+    const pub = publishedValueOf(p);
+    return pub === undefined || pub === "" || Math.round(parseFloat(pub.replace(/,/g, ""))) !== Math.round(p.value);
+  }
   function valueCellEdit(p) {
-    const pct = Math.max(2, (p.value / maxValue) * 100);
-    return `<div class="valbar${p.custom ? " custom" : ""}" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))">
+    const pct = Math.max(2, (p.value / maxValue) * 100), over = isOverride(p);
+    const pub = publishedValueOf(p), official = pub !== undefined && pub !== "";
+    return `<div class="valbar${over ? " custom" : ""}" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))">
       <div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div>
       <button class="num-btn" type="button" data-id="${p.id}" aria-label="Set a custom value for ${esc(p.name)}">${fmt(p.value)}</button>
-      <span class="val-extra">${p.custom
-        ? `<span class="custom-pill" title="Typed in by an editor, not from the model">Custom</span><button class="auto-btn" type="button" data-id="${p.id}">Auto</button>`
+      <span class="val-extra">${over
+        ? `<span class="custom-pill" title="Typed in and not published yet">Custom</span><button class="auto-btn" type="button" data-id="${p.id}" title="${official ? "Back to the published value" : "Back to the model value"}">${official ? "Reset" : "Auto"}</button>`
         : ""}</span></div>`;
   }
 
@@ -4299,7 +4318,10 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
       return;
     }
     const auto = e.target.closest(".auto-btn");
-    if (auto) { setValue(Number(auto.dataset.id), null); return; }
+    if (auto) {   // Reset: back to the published value if there is one, else to the model
+      const p = byId.get(Number(auto.dataset.id)), pub = p && publishedValueOf(p);
+      setValue(Number(auto.dataset.id), pub ? parseFloat(pub.replace(/,/g, "")) : null); return;
+    }
     const num = e.target.closest(".num-btn");
     if (num) {
       const id = Number(num.dataset.id), p = byId.get(id);
