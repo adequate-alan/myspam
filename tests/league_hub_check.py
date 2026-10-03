@@ -35,6 +35,8 @@ def make_league(lid, name, teams, positions, scoring):
     # rosters as they are after these moves: team 3 claimed free[0] and dropped its last player, team 1 added free[1]
     rosters[2]["players"] = rosters[2]["players"][:11] + [free[0]]
     rosters[0]["players"] = rosters[0]["players"] + [free[1]]
+    # team 5 has two players on IR (still on the roster, as on Sleeper)
+    rosters[4]["reserve"] = rosters[4]["players"][2:4]
     mx = []
     for i, r in enumerate(rosters):
         pts = {s: round(3 + (j * 1.7 + i * 2.3) % 20, 2) for j, s in enumerate(r["starters"])}
@@ -123,6 +125,18 @@ with sync_playwright() as p:
     pg.locator(".pr-item .pr-row").nth(2).click(); pg.wait_for_timeout(400)
     ok(pg.locator(".pr-item.open .tx-board").count() == 1, "Clicking a team row expands its roster inline")
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_power.png", full_page=False)
+    # IR players: listed at the bottom of the expanded team, badged IR, not in the position columns or the score
+    ir_names = [name_of[x] for x in L1["rosters"][4]["reserve"]]
+    row5 = pg.locator(".pr-item", has=pg.locator(".pr-name", has_text="Alpha League Team 5"))
+    score_before = row5.locator(".pr-score").inner_text()
+    row5.locator(".pr-row").click(); pg.wait_for_timeout(400)
+    inactive = row5.locator(".tx-pl.inactive")
+    ok(inactive.count() == 2 and all(n in row5.locator(".tx-inactive").inner_text() for n in ir_names), f"Expanded team lists both IR players at the bottom: {ir_names}")
+    ok(all(t.strip() == "IR" for t in inactive.locator(".tx-role").all_inner_texts()), "IR players carry an IR badge")
+    board = row5.locator(".tx-board").inner_text()
+    ok(not any(n in board for n in ir_names), "IR players are not in the position columns (not starters or bench)")
+    ok(row5.locator(".pr-score").inner_text() == score_before, "Team score is the same with the team expanded")
+    if SHOTS: row5.screenshot(path=f"{SHOTS}/hub_ir.png")
 
     pg.click("[data-lsub=standings]"); pg.wait_for_timeout(400)
     st = pg.inner_text(".st-table thead")
