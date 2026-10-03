@@ -65,7 +65,7 @@ Committing these as `tests/` would be a good first improvement.
 ```
 index.html                     the whole site (HTML + CSS + JS, ~8k lines) AND the rankings data
 data/rank_history.json         ranking history: {note, version: 2, players: {sleeper_id: [[ts, rank, posRank, tier, value, src]]}}; the browser writes src M, the scheduler S; existing P entries come from older code
-data/stats/<season>.json       weekly game stats + team schedules for player pages (2026, 2025, 2024); schedule rows also carry kickoff (ET), team spread, game total, roof, stadium (see `schedule_cols`)
+data/stats/<season>.json       weekly game stats + team schedules for player pages (2026, 2025, 2024); schedule rows also carry kickoff (ET), team spread, game total, roof, stadium (see `schedule_cols`); `defense` = per-team run/pass EPA, success, explosive rate allowed (play-by-play); `injuries` = latest week's injury report per team
 data/sleeper_players.json      Sleeper ID → [name, pos, team, gsis_id, birthdate]
 data/platform_ids.json         ESPN/Yahoo ID → Sleeper ID (for ESPN/Yahoo imports)
 data/curve_components.json     points-by-rank curve inputs used to re-score other formats
@@ -156,7 +156,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 |---|---|---|
 | push to `main` | deploy only | Pages |
 | **Tue 14:00 UTC** (weekly) | `project_players.py` → `merge_projections.py` → `build_sleeper_ids.py` → `build_stats.py 2026` → `stamp_date.py` → `snapshot_history.py` (headless browser) | `index.html` (proj columns, sleeper IDs, date), `data/sleeper_players.json`, `data/platform_ids.json`, `data/stats/2026.json`, `data/rank_history.json` |
-| **Fri 08:30 & 15:00, Sun 08:30 & 15:00, Mon 08:30 & 15:00, Tue 08:30, Thu 15:00 UTC** | **stats only**: `build_stats.py 2026` | `data/stats/2026.json` |
+| **Fri 08:30 & 15:00, Sun 08:30 & 15:00, Mon 08:30 & 15:00, Tue 08:30, Thu 15:00 UTC**, plus **Wed/Thu/Fri 22:00 UTC** for injury/practice reports | **stats only**: `build_stats.py 2026` (stats, schedule lines, defense efficiency, injury report) | `data/stats/2026.json` |
 | manual "Run workflow" (`stats_only` true/false) or editor **Refresh stats** button | stats-only or the full weekly job | as above |
 
 - Stats come from nflverse's weekly player stats, which usually appear the night of the games and sometimes the next morning. That's why each game day has a retry.
@@ -191,9 +191,12 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Empty tiers last only until you save.
   - **Sign out** sits at the right of the editor bar whenever this browser has a saved GitHub token (next to `@login`); it removes the token from the browser. Unpublished edits stay saved.
 - **Player modal:**
-  - Overview, game log, stats, fantasy performance (charts), ranking history, compare.
+  - Tabs: Overview, Game log, Schedule, Injuries, Stats, Fantasy performance, Ranking history, Trade value, Compare.
+  - Game log: every week of the season: result (W/L score), points, weekly position finish (`weeklyFinish`, current scoring), bye week, and upcoming games greyed with kickoff.
+  - Schedule: every remaining week with the opponent's ranks vs his position (points allowed, EPA, success, explosive; 1 = softest) and a grade dot.
+  - Injuries: his team's and the next opponent's latest report grouped by position (game status, practice FP/LP/DNP, injury). nflverse keeps only the latest practice status per week, not Wed/Thu/Fri separately.
   - Overview order: identity → rank / value / PPG (header) → **This week** card → Start/sit line (league only) → season grid → season line → weekly chart.
-  - This week: opponent, home/away, kickoff, stadium + roof, spread, game total, implied team total (from nflverse `games.csv` via `build_stats.py`), the opponent's rank vs the position and fantasy points allowed per game (computed in the browser from the weekly logs, current scoring: `defenseVsPos`). Matchup grade Good / Neutral / Tough = thirds of a 60/40 blend of points allowed per game and per opportunity; it only tints a thin edge and its label. Bye weeks show "Week N · Bye". No player props (no keyless source) and no forecast weather yet (nflverse fills temp/wind only after games).
+  - This week: opponent, home/away, kickoff, stadium + roof, spread, game total, implied team total (from nflverse `games.csv` via `build_stats.py`), the opponent's rank vs the position and fantasy points allowed per game (computed in the browser from the weekly logs, current scoring: `defenseVsPos`). Matchup grade Good / Neutral / Tough = thirds of a blend: points allowed per game 45%, per opportunity 20%, EPA allowed 20%, success rate 15% (EPA from play-by-play: runs for RBs, dropbacks for QB/WR/TE); it only tints a thin edge and its label. The card also shows the opponent's EPA / success / explosive ranks and his own injury status. Bye weeks show "Week N · Bye". No player props (no keyless source) and no forecast weather yet (nflverse fills temp/wind only after games).
   - Start/sit (league): his slot in his fantasy team's best lineup, "Every-week starter / Flex starter / Bench depth", next player up at the position, and Sleeper's own lineup status.
   - Photos come from `sleepercdn.com`, with an initials fallback.
   - Shows both the league position rank and the SPAM Board rank when they differ.

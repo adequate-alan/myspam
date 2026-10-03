@@ -11,6 +11,11 @@ Also each team's schedule (opponent, home/away, date, score) for bye weeks and
 upcoming opponents, plus the betting context nflverse carries for each game:
 kickoff time (ET), the team's spread (negative = favored), game total, roof and stadium.
 
+Also, for the player pages' matchup context:
+  defense   each defense's run and pass efficiency allowed (EPA per play, success rate,
+            explosive-play rate: runs of 10+ yards, passes of 20+), from nflverse play-by-play
+  injuries  the latest week's injury report per team: game status, practice status, injury
+
 Sources: nflverse player stats (weekly) and nflverse schedules, matched to Sleeper
 IDs with the DynastyProcess player ID table.
 Run from the pipeline folder: python build_stats.py 2026 [2025 2024 ...]
@@ -22,6 +27,8 @@ import pandas as pd
 STATS_URL = "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{}.csv"
 GAMES_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
 IDS_URL = "https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv"
+PBP_URL = "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{}.csv.gz"
+INJ_URL = "https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_{}.csv"
 POS = ["QB", "RB", "WR", "TE"]
 TEAM_FIX = {"LA": "LAR", "WSH": "WAS", "JAC": "JAX", "LVR": "LV", "OAK": "LV", "SD": "LAC", "STL": "LAR"}
 
@@ -81,7 +88,59 @@ def schedule(games, season):
     return {t: sorted(v, key=lambda x: x[0]) for t, v in sorted(out.items())}
 
 
-def build(season, ids, games, stats_src=STATS_URL):
+DEFENSE_COLS = ["g", "run_plays", "run_epa", "run_success", "run_expl", "pass_plays", "pass_epa", "pass_success", "pass_expl"]
+
+
+def defense(season, src=PBP_URL):
+    """Per defense, regular season: games, then for runs and dropbacks: plays, EPA/play, success rate, explosive rate."""
+    p = pd.read_csv(src.format(season), low_memory=False,
+                    usecols=["season_type", "game_id", "defteam", "play_type", "rush", "qb_dropback", "epa", "success", "yards_gained"])
+    p = p[(p.season_type == "REG") & p.defteam.notna() & p.epa.notna()]
+    run = p[(p.rush == 1) & (p.play_type == "run")]
+    drop = p[p.qb_dropback == 1]
+    out = {}
+    for d, rows in p.groupby("defteam"):
+        r, q = run[run.defteam == d], drop[drop.defteam == d]
+        def stats(x, big):
+            return [int(len(x)), round(float(x.epa.mean()), 3) if len(x) else None,
+                    round(float(x.success.mean()), 3) if len(x) else None,
+                    round(float((x.yards_gained >= big).mean()), 3) if len(x) else None]
+        out[team(d)] = [int(rows.game_id.nunique())] + stats(r, 10) + stats(q, 20)
+    return {"cols": DEFENSE_COLS, "teams": dict(sorted(out.items()))}
+
+
+PRACTICE = {"Did Not Participate In Practice": "DNP", "Limited Participation in Practice": "LP", "Full Participation in Practice": "FP"}
+INJURY_COLS = ["name", "pos", "sid", "status", "practice", "injury"]
+
+
+def injuries(season, ids, src=INJ_URL):
+    """The latest regular-season week's report: per team, everyone listed (game status, practice status, injury)."""
+    d = pd.read_csv(src.format(season), low_memory=False)
+    d = d[d.season_type == "REG"]
+    if not len(d):
+        return None
+    wk = int(d.week.max())
+    d = d[d.week == wk]
+    teams = {}
+    for r in d.itertuples():
+        inj = r.report_primary_injury if isinstance(r.report_primary_injury, str) else r.practice_primary_injury
+        teams.setdefault(team(r.team), []).append([
+            r.full_name, r.position, ids.get(r.gsis_id) if isinstance(r.gsis_id, str) else None,
+            r.report_status if isinstance(r.report_status, str) else None,
+            PRACTICE.get(r.practice_status) if isinstance(r.practice_status, str) else None,
+            inj if isinstance(inj, str) else None])
+    return {"week": wk, "cols": INJURY_COLS, "teams": dict(sorted(teams.items()))}
+
+
+def optional(label, fn, *args):
+    try:
+        return fn(*args)
+    except Exception as e:   # matchup extras never block the stats file
+        print(f"  {label} skipped: {e}")
+        return None
+
+
+def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL):
     d = pd.read_csv(stats_src.format(season), low_memory=False)
     d = d[(d.season_type == "REG") & d.position.isin(POS)].copy()
     d["sid"] = d.player_id.map(ids)
@@ -106,6 +165,8 @@ def build(season, ids, games, stats_src=STATS_URL):
         "players": players,
         "schedule_cols": SCHEDULE_COLS,
         "schedule": schedule(games, season),
+        "defense": optional("defense", defense, season, pbp_src),
+        "injuries": optional("injuries", injuries, season, ids, inj_src),
     }
 
 
@@ -118,7 +179,7 @@ if __name__ == "__main__":
     ids = sleeper_map(os.environ.get("IDS_SRC", IDS_URL))
     games = pd.read_csv(os.environ.get("GAMES_SRC", GAMES_URL), low_memory=False)
     for s in seasons:
-        data = build(s, ids, games, stats_src)
+        data = build(s, ids, games, stats_src, os.environ.get("PBP_SRC", PBP_URL), os.environ.get("INJ_SRC", INJ_URL))
         path = os.path.join(out_dir, f"{s}.json")
         with open(path, "w") as f:
             json.dump(data, f, separators=(",", ":"))
