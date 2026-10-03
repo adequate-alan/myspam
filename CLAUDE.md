@@ -4,6 +4,8 @@ Read this file first. It's the context an AI assistant (or a new developer) need
 
 Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, collaborator). Both edit the rankings; both may work on the code from their own Claude accounts. Keep this file current: when you make a product decision, add it here in the same commit.
 
+**Git workflow (agreed Oct 3, 2026):** Steven (`stevenp36`) and Alan (`adequate-alan`) **both push straight to `main`**; there's no branch/PR step. Every push to `main` redeploys the live site, so: `git pull --rebase` right before you start and again right before you push, keep commits small and focused, test locally first, and never force-push. If a rebase conflicts in `index.html`, resolve it by keeping both people's changes; never resolve a `RANKINGS_CSV` conflict by taking one side wholesale (that can drop the other person's published ranking edits). Commit as yourself (git `user.name`/`user.email` set to your own GitHub account) so the history shows who changed what. The `alan-dev` branch was only an access test and can be deleted.
+
 ---
 
 ## 1. What SPAM is
@@ -126,7 +128,7 @@ Inside `index.html` (search for these names):
 
 **Code changes**: commit to `main` and push. The `push` trigger in `site.yml` deploys the repo root to GitHub Pages in ~1 minute. **Bump `BUILD_ID`** (top of the main script) in every code change so open browsers get the "new version" prompt. Rankings publishes from the editor don't need it.
 
-Before pushing a code change, `git pull --rebase` first: the editor and the scheduled jobs commit to `main` too (`Rankings edit by @…`, `Ranking history: N changes`, `Player stats refresh`, `Weekly projections and stats refresh`).
+Both owners push straight to `main` (see the workflow note at the top). Before pushing a code change, `git pull --rebase` first: the editor and the scheduled jobs commit to `main` too (`Rankings edit by @…`, `Ranking history: N changes`, `Player stats refresh`, `Weekly projections and stats refresh`).
 
 ## 7. How to change rankings safely
 
