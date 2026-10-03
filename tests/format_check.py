@@ -85,6 +85,9 @@ with sync_playwright() as p:
     base0 = board(pg)
     for c in pg.evaluate("() => SPM.formatCheck()"):
         ok(c["pass"], f'{c["check"]}: {c["values"]}')
+    # weekly projections follow the league's scoring (one shared projection function)
+    for c in pg.evaluate("() => SPM.projectionCheck()"):
+        ok(c["pass"], f'Projection: {c["check"]}: {c["values"]}')
     pg.close()
 
     # 2. the calculator with a connected league that has no TE premium
