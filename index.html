@@ -1907,15 +1907,46 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .tx-selects { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .st-mgr { color: var(--muted); font-size: 0.84rem; white-space: nowrap; }
 .st-table .bm small { font-size: 0.66rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
-.mv-card { padding: 0; overflow: hidden; }
+.th-card.mv-card { padding: 0; overflow: hidden; }
 .mv-card .th-head { margin: 0; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); align-items: center; }
 .mv-tags { display: inline-flex; gap: 6px; }
 .mv-tag { padding: 3px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-2); }
 .mv-tag.waiver { color: var(--wr); border-color: color-mix(in srgb, var(--wr) 45%, transparent); background: color-mix(in srgb, var(--wr) 8%, transparent); }
 .mv-tag.free_agent { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 45%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
 .mv-tag.drop { color: var(--st-dnp, var(--accent-primary)); border-color: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 45%, transparent); background: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 7%, transparent); }
-.mv-tag.bidders { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, transparent); }
-.mv-body { display: grid; grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr) auto minmax(0, 1.2fr); align-items: center; gap: 12px 18px; padding: 10px 14px 12px; }
+.th-feed.tx-feed, .tx-feed + .count { max-width: 960px; }
+.mv-body { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 10px 22px; padding: 10px 14px 12px; }
+.mv-body.one { grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); }
+.mv-faab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 7px; font-size: 0.74rem; color: var(--muted); }
+.mv-faab-amt b { font-size: 1rem; font-weight: 800; color: var(--heading); font-variant-numeric: tabular-nums; margin-right: 2px; }
+.mv-bidders { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); color: var(--gold); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.mv-bidders:hover { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+.mv-bidders:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+dialog.bids-dialog { padding: 0; border: 0; background: transparent; color: var(--ink); max-width: none; }
+dialog.bids-dialog::backdrop { background: var(--backdrop); }
+.bids-panel { position: relative; width: min(460px, calc(100vw - 32px)); padding: 18px 20px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); box-shadow: 0 30px 70px -24px var(--shadow-color); }
+.bids-x { all: unset; position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; cursor: pointer; font-size: 1.2rem; color: var(--muted); }
+.bids-x:hover { background: var(--hover-bg); color: var(--ink); }
+.bids-x:focus-visible { outline: 2px solid var(--gold); }
+.bids-head { display: flex; align-items: center; gap: 10px; padding-right: 34px; margin-bottom: 12px; }
+.bids-player { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.bids-player b { display: block; font-size: 1rem; color: var(--heading); }
+.bids-player span { font-size: 0.76rem; color: var(--muted); }
+.bids-title { margin: 0 0 8px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.bids-title span { margin-left: 6px; font-weight: 600; letter-spacing: 0.04em; text-transform: none; }
+.bids-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bids-list li { display: grid; grid-template-columns: 48px auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--surface); }
+.bids-list li.won { border-color: color-mix(in srgb, var(--rb) 55%, transparent); background: color-mix(in srgb, var(--rb) 9%, var(--surface)); }
+.bids-amt { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.bids-list li.won .bids-amt { color: var(--rb); }
+.bids-team { min-width: 0; font-size: 0.86rem; }
+.bids-team b { color: var(--ink); }
+.bids-team span { color: var(--muted); font-size: 0.78rem; }
+.bids-team small { display: block; font-size: 0.7rem; color: var(--muted); }
+.bids-list li.lost .bids-team b { font-weight: 600; color: var(--ink-2); }
+.bids-st { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 7px; border-radius: 4px; color: var(--muted); border: 1px solid var(--line); }
+.bids-list li.won .bids-st { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 55%, transparent); }
+.bids-note { margin: 10px 0 0; font-size: 0.72rem; line-height: 1.45; color: var(--muted); }
 .mv-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .mv-team b { display: block; font-size: 0.9rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mv-team span { font-size: 0.74rem; color: var(--muted); }
@@ -1930,9 +1961,6 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mv-name { font-weight: 650; font-size: 0.86rem; color: var(--cream); }
 .mv-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--muted); }
 .mv-v { font-variant-numeric: tabular-nums; }
-.mv-bid { display: flex; flex-direction: column; align-items: center; line-height: 1; padding: 0 6px; }
-.mv-bid b { font-size: 1.5rem; font-weight: 850; color: var(--heading); font-variant-numeric: tabular-nums; }
-.mv-bid span { margin-top: 3px; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); }
 .mx-list { display: flex; flex-direction: column; gap: 10px; }
 .mx-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); cursor: pointer; outline-offset: 2px; }
 .mx-card:hover { border-color: var(--line); }
@@ -1980,9 +2008,7 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .fa-fit-t.deep { color: var(--muted); }
 #fa-wrap .controls { flex-wrap: wrap; gap: 10px; }
 @media (max-width: 900px) {
-  .mv-body { grid-template-columns: 1fr auto; }
-  .mv-team { grid-column: 1 / -1; }
-  .mv-col.drop { grid-column: 1 / -1; }
+  .mv-body, .mv-body.one { grid-template-columns: 1fr; }
   .mx-row { grid-template-columns: minmax(0, 1fr) 62px 40px 62px minmax(0, 1fr) 12px; gap: 6px; padding: 10px 10px 6px; }
   .mx-score { font-size: 1.1rem; }
   .mx-team .face { display: none; }
@@ -3189,6 +3215,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     <div class="signin-actions"><button class="btn link" type="button" data-mine="">I'm not in this league</button></div>
   </div>
 </dialog>
+<dialog class="bids-dialog" id="bids-dialog" aria-label="FAAB bids">
+  <div class="bids-panel"><button class="bids-x" id="bids-close" type="button" aria-label="Close">×</button><div id="bids-body"></div></div>
+</dialog>
 <dialog class="pm" id="player-modal" aria-labelledby="pm-name">
   <div class="pm-panel" id="player-body"></div>
 </dialog>
@@ -3609,7 +3638,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T20:45Z";
+  const BUILD_ID = "2026-10-04T21:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7068,12 +7097,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Bidders: Sleeper lists each losing waiver claim as a "failed" waiver for the same player in the same run,
   // so a claim's bidder count is the teams that claimed that player in that run (shown only when 2 or more).
   const txOn = () => currentTab === "league" && (LT.sub === "tx" || LT.sub === "waivers");
+  const TX_VERSION = 2;   // bump when the stored transaction shape changes (2: waiver bids), so saved logs reload
   async function loadTrades(force) {
     const d = activeData();
     if (!d || slSource() !== "sleeper") return;
     const id = d.league.league_id;
     if (LT.loading === id) return;
-    if (!force && d.tx && Date.now() - (d.tradesAt || 0) < 3600e3) return;
+    if (!force && d.tx && d.txV === TX_VERSION && Date.now() - (d.tradesAt || 0) < 3600e3) return;
     LT.loading = id; LT.error[id] = "";
     if (txOn()) renderLeague();
     try {
@@ -7085,7 +7115,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         if (!t || seen.has(t.transaction_id)) return;
         seen.add(t.transaction_id);
         const at = t.status_updated || t.created || 0, week = t.leg || i + 1;
-        if (t.type === "waiver") Object.keys(t.adds || {}).forEach(sid => claims.push({ sid: String(sid), week, at, rid: (t.roster_ids || [])[0] }));
+        if (t.type === "waiver") Object.keys(t.adds || {}).forEach(sid => claims.push({ sid: String(sid), week, at, rid: (t.roster_ids || [])[0],
+          bid: t.settings && t.settings.waiver_bid != null ? Number(t.settings.waiver_bid) : null, won: t.status === "complete", notes: (t.metadata && t.metadata.notes) || "" }));
         if (t.status !== "complete" || !["trade", "waiver", "free_agent", "commissioner"].includes(t.type)) return;
         tx.push({ id: String(t.transaction_id), type: t.type, at, week, rosters: t.roster_ids || [],
           adds: t.adds || {}, drops: t.drops || {},
@@ -7093,15 +7124,23 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           picks: (t.draft_picks || []).map(p => ({ season: p.season, round: p.round, from: p.roster_id, owner: p.owner_id, prev: p.previous_owner_id })),
           faab: (t.waiver_budget || []).map(b => ({ sender: b.sender, receiver: b.receiver, amount: b.amount })) });
       }));
+      // every claim for the same player in the same waiver run: one per team (its winning claim, else its highest
+      // bid), highest bid first; the winner leads its tie because Sleeper already resolved it (priority isn't logged)
       tx.forEach(t => {
         if (t.type !== "waiver") return;
-        const sid = Object.keys(t.adds)[0];
-        const teams = new Set(claims.filter(c => c.sid === sid && c.week === t.week && Math.abs(c.at - t.at) < 30 * 60e3).map(c => c.rid));
-        if (teams.size >= 2) t.bidders = teams.size;
+        const sid = Object.keys(t.adds)[0], byTeam = new Map();
+        claims.filter(c => c.sid === sid && c.week === t.week && Math.abs(c.at - t.at) < 30 * 60e3).forEach((c, i) => {
+          const have = byTeam.get(c.rid);
+          if (!have || (c.won && !have.won) || (!have.won && (c.bid ?? -1) > (have.bid ?? -1))) byTeam.set(c.rid, { ...c, order: i });
+        });
+        if (byTeam.size < 2) return;
+        t.bidders = byTeam.size;
+        t.bids = [...byTeam.values()].sort((a, b) => ((b.bid ?? -1) - (a.bid ?? -1)) || (b.won - a.won) || (a.order - b.order))
+          .map(c => ({ rid: c.rid, bid: c.bid, won: c.won, notes: c.notes }));
       });
       tx.sort((a, b) => b.at - a.at);
       const cur = sl && sl.data && sl.data[id];   // by league id: a background refresh may have replaced the object
-      if (cur) { cur.tx = tx; cur.trades = tx.filter(t => t.type === "trade"); cur.tradesAt = Date.now(); writeSl(); }
+      if (cur) { cur.tx = tx; cur.txV = TX_VERSION; cur.trades = tx.filter(t => t.type === "trade"); cur.tradesAt = Date.now(); writeSl(); }
     } catch (err) { LT.error[id] = err.message || "unknown error"; }
     finally { if (LT.loading === id) LT.loading = null; }
     if (txOn()) renderLeague();
@@ -7111,7 +7150,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (rankHistory === undefined) loadHistory().then(() => { if (txOn()) renderLeague(); });
     if (!d || slSource() !== "sleeper") return;
     const id = d.league.league_id;
-    if (LT.loading !== id && !LT.error[id] && (!d.tx || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
+    if (LT.loading !== id && !LT.error[id] && (!d.tx || d.txV !== TX_VERSION || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
   }
   const SIDE_LABELS = [[3, "Fair", "Fair"], [7, "Slight win", "Slight loss"], [12, "Win", "Loss"], [20, "Clear win", "Clear loss"], [30, "Steal", "Lopsided loss"], [Infinity, "Robbery", "Robbed"]];
   function evalTrade(t) {
@@ -7248,12 +7287,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const tradeNote = LT.txType === "all" || LT.txType === "trade"
       ? `<p class="method-note">Trades are judged with SPAM values from the time of the trade when ranking history covers it. Trades from before SPAM rankings existed are labeled Pre-SPAM and evaluated as a retrospective with current values.</p>` : "";
     if (!list.length) return head + `<p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p>`;
-    return head + tradeNote + `<div class="th-feed">${list.map(t => t.type === "trade" ? tradeCard(evalTrade(t)) : moveCard(t)).join("")}</div>
+    return head + tradeNote + `<div class="th-feed tx-feed">${list.map(t => t.type === "trade" ? tradeCard(evalTrade(t)) : moveCard(t)).join("")}</div>
       <p class="count">${list.length} of ${all.length} transaction${all.length === 1 ? "" : "s"}</p>`;
   }
-  // A waiver claim, free-agent pickup or drop: one team's adds and drops side by side
+  // A waiver claim, free-agent pickup or drop: team | adds (+ FAAB and bidders) | drops. An empty side collapses.
   function moveCard(t) {
-    const map = bySleeper(), rid = t.rosters[0], team = LG.teams.find(x => x.rosterId === rid) || { name: `Team ${rid}`, manager: "", avatar: "" };
+    const map = bySleeper(), rid = t.rosters[0], team = teamByRid(rid);
     const line = sid => {
       const e = rosterEntry(sid, map);
       return `<li>${face(e.sid, e.name, "sm")}<span class="mv-txt"><span class="pl-head">${EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name, "mv-name") : `<span class="mv-name">${esc(e.name)}</span>`}${nflTag(e.team)}</span>
@@ -7261,18 +7300,44 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     };
     const adds = Object.keys(t.adds).filter(sid => t.adds[sid] === rid), drops = Object.keys(t.drops).filter(sid => t.drops[sid] === rid);
     const faabOn = activeData().league.settings && activeData().league.settings.waiver_type === 2;
-    const bid = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0) ? `<div class="mv-bid"><b>$${t.bid}</b><span>FAAB</span></div>` : "";
+    const faab = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0) ? `<span class="mv-faab-amt"><b>$${t.bid}</b> FAAB</span>` : "";
+    const bidders = t.bids && t.bids.length > 1 ? `<button class="mv-bidders" type="button" data-bids="${esc(t.id)}" aria-haspopup="dialog">${t.bids.length} bidders</button>` : "";
+    const col = (cls, label, list, extra) => `<div class="mv-col ${cls}"><span class="mv-label">${label}</span><ul>${list.map(line).join("")}</ul>${extra}</div>`;
     return `<article class="th-card mv-card ${txKind(t)}">
-      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span>${t.bidders ? `<span class="mv-tag bidders">${t.bidders} bidders</span>` : ""}</span>
+      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span></span>
         <span class="th-date">Week ${t.week} · ${esc(txWhen(t.at))}</span></header>
-      <div class="mv-body">
+      <div class="mv-body${adds.length && drops.length ? "" : " one"}">
         <div class="mv-team">${teamFace(team, "sm")}<div><b>${esc(team.name)}</b>${team.manager && team.manager !== team.name ? `<span>${esc(team.manager)}</span>` : ""}</div></div>
-        <div class="mv-col add"><span class="mv-label">Adds</span>${adds.length ? `<ul>${adds.map(line).join("")}</ul>` : `<p class="muted">–</p>`}</div>
-        ${bid}
-        <div class="mv-col drop"><span class="mv-label">Drops</span>${drops.length ? `<ul>${drops.map(line).join("")}</ul>` : `<p class="muted">–</p>`}</div>
+        ${adds.length ? col("add", "Adds", adds, faab || bidders ? `<div class="mv-faab">${faab}${bidders}</div>` : "") : ""}
+        ${drops.length ? col("drop", "Drops", drops, !adds.length && (faab || bidders) ? `<div class="mv-faab">${faab}${bidders}</div>` : "") : ""}
       </div>
     </article>`;
   }
+  const teamByRid = rid => LG.teams.find(x => x.rosterId === rid) || { name: `Team ${rid}`, manager: "", avatar: "", rosterId: rid };
+  // FAAB bids for one waiver claim: every claim Sleeper logged for that player in that waiver run, highest first
+  function openBids(id) {
+    const d = activeData(), t = d && d.tx && d.tx.find(x => x.id === id);
+    if (!t || !t.bids) return;
+    const map = bySleeper(), sid = Object.keys(t.adds)[0], e = rosterEntry(sid, map), win = t.bids.find(b => b.won);
+    const status = b => b.won ? "Won" : win && b.bid != null && win.bid != null && b.bid < win.bid ? "Outbid" : win && b.bid === win.bid ? "Lost tie-break" : "Not awarded";
+    const ties = win ? t.bids.filter(b => !b.won && b.bid === win.bid) : [];
+    const money = b => (b.bid == null ? "–" : "$" + b.bid);
+    $("bids-body").innerHTML = `<div class="bids-head"><span class="mv-tag waiver">Waiver claim</span><span class="th-date">Week ${t.week} · ${esc(txWhen(t.at))}</span></div>
+      <div class="bids-player">${face(e.sid, e.name, "sm")}<div><b>${esc(e.name)}</b><span>${esc([e.p ? posLabel(e.p) : e.pos, e.team].filter(Boolean).join(" · "))}</span></div></div>
+      <h3 class="bids-title">FAAB bids <span>${t.bids.length} bid${t.bids.length === 1 ? "" : "s"}</span></h3>
+      <ol class="bids-list">${t.bids.map(b => { const tm = teamByRid(b.rid); return `<li class="${b.won ? "won" : "lost"}">
+          <span class="bids-amt">${money(b)}</span>${teamFace(tm, "xs")}<span class="bids-team"><b>${esc(tm.name)}</b>${tm.manager && tm.manager !== tm.name ? ` <span>(${esc(tm.manager)})</span>` : ""}${!b.won && b.notes ? `<small>${esc(b.notes)}</small>` : ""}</span>
+          <span class="bids-st">${status(b)}</span></li>`; }).join("")}</ol>
+      ${ties.length ? `<p class="bids-note">Tie at ${money(win)}: Sleeper awarded the claim to ${esc(teamByRid(win.rid).name)} on its tie-break (waiver priority). Sleeper's public data doesn't record the priority order it used.</p>` : ""}
+      <p class="bids-note">From Sleeper's transaction log: every claim submitted for this player in this waiver run.</p>`;
+    const dlg = $("bids-dialog");
+    if (!dlg.open) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); }
+    $("bids-close").focus();
+  }
+  document.addEventListener("click", e => { const b = e.target.closest("[data-bids]"); if (b) { e.preventDefault(); openBids(b.dataset.bids); } });
+  $("bids-close").addEventListener("click", () => $("bids-dialog").close());
+  $("bids-dialog").addEventListener("click", e => { if (e.target === $("bids-dialog")) $("bids-dialog").close(); });   // outside the panel (Escape closes natively)
+
   /* Matchups: the selected week's Sleeper matchups. Scores and lineups come from Sleeper (kept in memory,
      never stored); NFL game status (kickoff, live, final) from our schedule. No projections or win
      probabilities: Sleeper's public API doesn't provide projections, and SPAM doesn't invent them. */

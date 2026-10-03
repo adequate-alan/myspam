@@ -31,6 +31,7 @@ def make_league(lid, name, teams, positions, scoring):
                "adds": {free[0]: 3}, "drops": {rosters[2]["players"][11]: 3}, "settings": {"waiver_bid": 12}},
               {"transaction_id": f"{lid}w2", "type": "waiver", "status": "failed", "roster_ids": [4], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 4}, "drops": None, "settings": {"waiver_bid": 9}},
               {"transaction_id": f"{lid}w3", "type": "waiver", "status": "failed", "roster_ids": [5], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 5}, "drops": None, "settings": {"waiver_bid": 3}},
+              {"transaction_id": f"{lid}w4", "type": "waiver", "status": "failed", "roster_ids": [6], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 6}, "drops": None, "settings": {"waiver_bid": 12}, "metadata": {"notes": "Lost on waiver priority."}},
               {"transaction_id": f"{lid}f1", "type": "free_agent", "status": "complete", "roster_ids": [1], "leg": 4, "status_updated": NOW - 3600e3, "adds": {free[1]: 1}, "drops": None},
               {"transaction_id": f"{lid}d1", "type": "free_agent", "status": "complete", "roster_ids": [6], "leg": 4, "status_updated": NOW - 7200e3, "adds": None, "drops": {rosters[5]["players"][11]: 6}}]}
     # rosters as they are after these moves: team 3 claimed free[0] and dropped its last player, team 1 added free[1]
@@ -162,7 +163,23 @@ with sync_playwright() as p:
     ok(tx_filters == ["All", "Trades", "Waiver Wire"], f"Transaction filters: {tx_filters}")
     tags = sorted(t.strip().lower() for t in pg.locator(".mv-card .mv-tag:not(.bidders)").all_inner_texts())
     ok(tags == ["drop", "free agent", "waiver claim"], f"Each move card says what it was: {tags}")
-    ok(pg.locator(".mv-tag.bidders").first.inner_text().strip().lower() == "3 bidders", "Waiver claim counts 3 bidders from the failed claims")
+    ok(pg.locator(".mv-bidders").first.inner_text().strip().lower() == "4 bidders", "Waiver claim counts 4 bidders from the failed claims")
+    pg.locator(".mv-bidders").first.click(); pg.wait_for_timeout(300)
+    ok(pg.locator("#bids-dialog").is_visible(), "Clicking the bidder count opens the bids")
+    bids = [" | ".join(x.split()) for x in pg.locator("#bids-dialog .bids-list li").all_inner_texts()]
+    print("   bids:", bids)
+    ok(len(bids) == 4 and bids[0].startswith("$12") and "WON" in bids[0].upper() and "Team | 3" in bids[0], "Winner first, even when tied at the top bid")
+    ok("TIE-BREAK" in bids[1].upper() and "$12" in bids[1] and "OUTBID" in bids[2].upper() and bids[2].startswith("$9") and bids[3].startswith("$3"), "Tie shown as lost tie-break, then outbid bids high to low")
+    ok("tie at $12" in pg.inner_text("#bids-dialog").lower(), "The tie is explained, without inventing a waiver priority")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+    ok(not pg.locator("#bids-dialog").is_visible(), "Escape closes the bids")
+    pg.locator(".mv-bidders").first.click(); pg.wait_for_timeout(200); pg.mouse.click(10, 10); pg.wait_for_timeout(200)
+    ok(not pg.locator("#bids-dialog").is_visible(), "Clicking outside closes the bids")
+    pg.locator(".mv-bidders").first.click(); pg.wait_for_timeout(200); pg.click("#bids-close"); pg.wait_for_timeout(200)
+    ok(not pg.locator("#bids-dialog").is_visible(), "The X closes the bids")
+    fw = pg.evaluate("() => document.querySelector('.tx-feed').getBoundingClientRect().width")
+    ok(fw <= 960, f"Transactions feed stays compact on desktop ({fw:.0f}px)")
+    ok(pg.locator(".mv-card.free_agent .mv-body.one").count() == 1 and pg.locator(".mv-card.drop .mv-body.one .mv-col.add").count() == 0, "An add with no drop and a drop with no add collapse the empty side")
     ok("$12" in pg.inner_text(".mv-card.waiver"), "Waiver claim shows the FAAB bid")
     ok(pg.locator(".mv-card.waiver .mv-col.drop li").count() == 1, "Waiver claim shows the drop")
     ok(pg.locator(".th-tag.pre").count() == 1, "An old trade is labeled Pre-SPAM")
