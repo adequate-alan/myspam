@@ -1037,6 +1037,7 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 .rr-big { margin: 0; font-size: 1.05rem; font-weight: 750; color: var(--cream); font-variant-numeric: tabular-nums; }
 .rr-big span { font-size: 0.74rem; font-weight: 550; color: var(--muted); }
 .rr-text { margin: 2px 0 0; font-size: 0.78rem; color: var(--ink-2); }
+.rr-team { display: flex; align-items: center; gap: 10px; }
 .rr-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px 14px; flex-wrap: wrap; }
 .rr-list li { display: flex; align-items: baseline; gap: 6px; font-size: 0.8rem; white-space: nowrap; }
 .rr-name { font-weight: 650; color: var(--ink); }
@@ -3414,7 +3415,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T04:00Z";
+  const BUILD_ID = "2026-10-04T05:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3705,7 +3706,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     parts.push(sec(leagueView() && vl ? "Values for" : "Format", `<p class="rr-text">${esc(leagueView() && vl ? formatLabel(vl) : formatLabel())}</p>`));
     if (LG.active && LG.myRosterId != null) {
       const ev = evaluateTeams(), me = ev.list.find(x => x.team.mine);
-      if (me) parts.push(sec("Your team", `<p class="rr-big">#${me.power} <span>of ${ev.n}</span></p><p class="rr-text">${esc(me.team.name)} · power rank</p>`));
+      if (me) parts.push(sec("Your team", `<div class="rr-team">${teamFace(me.team, "sm")}<div><p class="rr-big">#${me.power} <span>of ${ev.n} · power rank</span></p><p class="rr-text">${esc(me.team.name)}</p></div></div>`));
     }
     // risers / fallers: overall rank now vs the latest history entry from an earlier day
     if (rankHistory && rankHistory.players) {
