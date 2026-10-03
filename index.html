@@ -1982,46 +1982,70 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mv-name { font-weight: 650; font-size: 0.86rem; color: var(--cream); }
 .mv-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--muted); }
 .mv-v { font-variant-numeric: tabular-nums; }
-.mx-list { display: flex; flex-direction: column; gap: 10px; }
-.mx-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); cursor: pointer; outline-offset: 2px; }
-.mx-card:hover { border-color: var(--line); }
-.mx-card.open { border-color: var(--line); }
-.mx-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 54px 84px minmax(0, 1fr) 16px; align-items: center; gap: 10px; padding: 12px 16px 6px; }
-.mx-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.mx-team.B { flex-direction: row-reverse; text-align: right; }
-.mx-tname { min-width: 0; display: flex; flex-direction: column; }
-.mx-tname b { font-size: 0.92rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mx-tname span { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+.mx-list { display: flex; flex-direction: column; gap: 12px; max-width: 1080px; }
+.mx-filters { max-width: 1080px; }
+.mx-source { font-size: 0.74rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.mx-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); overflow: hidden; }
+.mx-card.has-mine { box-shadow: inset 3px 0 0 var(--gold); }
+.mx-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px 72px 120px minmax(0, 1fr); align-items: center; gap: 12px; padding: 16px 20px 8px; }
+.mx-team { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mx-team.A { flex-direction: row-reverse; text-align: right; }
+.mx-team .face { width: 42px; height: 42px; flex: none; }
+.mx-tname { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mx-team.A .mx-tname { align-items: flex-end; }
+.mx-tname b { font-size: 0.98rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.mx-tname span { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
 .mx-team.mine .mx-tname b { color: var(--mine-accent); }
-.mx-team.win .mx-tname b::after { content: " ✓"; color: var(--rb); }
-.mx-team.B.win .mx-tname b::after { content: ""; }
-.mx-team.B.win .mx-tname b::before { content: "✓ "; color: var(--rb); }
-.mx-score { font-size: 1.45rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink-2); text-align: center; }
-.mx-score.win { color: var(--heading); }
-.mx-card.upcoming .mx-score { color: var(--muted); font-weight: 600; }
-.mx-mid { text-align: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.mx-live { color: var(--rb); }
-.mx-card .pr-caret { justify-self: end; }
-.mx-card.open .pr-caret { transform: rotate(-135deg) translate(-2px, -1px); border-color: var(--gold); }
-.mx-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 16px 10px; font-size: 0.74rem; color: var(--muted); }
-.mx-tops { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
-.mx-tops.b { justify-content: flex-end; text-align: right; }
-.mx-tops b { color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.mx-lbl { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-.mx-left { color: var(--gold); }
-.mx-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 4px 16px 14px; border-top: 1px solid var(--line-soft); cursor: default; }
-.mx-lineup h4 { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; font-size: 0.82rem; color: var(--cream); }
+.mx-pr { align-self: flex-start; font-size: 0.58rem !important; font-weight: 700; letter-spacing: 0.08em; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink-2) !important; }
+.mx-team.A .mx-pr { align-self: flex-end; }
+.mx-sc { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.mx-score { font-size: 1.9rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.mx-sc.win .mx-score, .mx-card.live .mx-score, .mx-card.upcoming .mx-score { color: var(--heading); }
+.mx-card.upcoming .mx-score { color: var(--muted); }
+.mx-proj { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.mx-proj b { font-size: 0.82rem; letter-spacing: 0; color: var(--gold); font-variant-numeric: tabular-nums; }
+.mx-res { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mx-res.win { color: var(--rb); }
+.mx-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mx-state { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); }
+.mx-state.live { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 50%, transparent); }
+.mx-vs { font-size: 0.7rem; color: var(--muted); }
+.mx-bar-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 10px; padding: 4px 20px 0; }
+.mx-pct { font-size: 0.74rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.mx-pct.B { text-align: right; }
+.mx-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line-soft); }
+.mx-bar-a { background: var(--accent-primary); }
+.mx-bar-b { flex: 1; background: color-mix(in srgb, var(--gold) 70%, transparent); margin-left: 2px; }
+.mx-bar-lbl { text-align: center; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.mx-left-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 20px 8px; font-size: 0.7rem; color: var(--muted); }
+.mx-show { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 7px; border-top: 1px solid var(--line-soft); font-size: 0.72rem; font-weight: 650; color: var(--ink-2); cursor: pointer; }
+.mx-show:hover { background: var(--hover-bg); color: var(--ink); }
+.mx-show:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.mx-chev { width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+.mx-card.open .mx-chev { transform: rotate(-135deg) translate(-1px, -1px); }
+.mx-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 4px 16px 14px; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--bg) 35%, var(--surface)); }
+.mx-lineup h4 { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; font-size: 0.8rem; color: var(--ink); }
+.mx-lineup h4 small { font-size: 0.7rem; font-weight: 500; color: var(--muted); }
 .mx-lineup h4 span { margin-left: auto; font-variant-numeric: tabular-nums; }
-.mx-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.mx-table td { padding: 5px 6px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
-.mx-slot { width: 44px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); }
+.mx-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.mx-table td { padding: 4px 5px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.mx-slot { width: 40px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); }
 .mx-pl { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.mx-name { font-weight: 600; color: var(--cream); }
+.mx-pl-t { min-width: 0; }
+.mx-name { font-weight: 600; color: var(--ink); }
 .mx-game { white-space: nowrap; color: var(--ink-2); }
-.mx-game small { display: block; font-size: 0.66rem; color: var(--muted); }
-.mx-game small.live { color: var(--rb); }
-.mx-pts { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--heading); }
-.mx-table tr.upcoming .mx-pts, .mx-table tr.bye .mx-pts { color: var(--muted); font-weight: 500; }
+.mx-opp { display: inline-flex; align-items: center; gap: 4px; }
+.mx-game small { display: block; font-size: 0.64rem; color: var(--muted); }
+.mx-game small.live { color: var(--rb); font-weight: 650; }
+.mx-game small.out, .mx-pts.off { color: var(--st-out, var(--st-dnp)); }
+.mx-game small.bye { color: var(--muted); }
+.mx-pts { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.mx-pts b { font-weight: 750; color: var(--heading); }
+.mx-pts small { display: block; font-size: 0.64rem; color: var(--muted); }
+.mx-pts.up { color: var(--muted); }
+.mx-pts.up b { color: var(--gold); font-weight: 650; }
+.mx-livetag { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rb); }
+.mx-table tr.bye, .mx-table tr.out { opacity: 0.65; }
 #fa-wrap { max-width: 1180px; }
 .fa-table td { padding-top: 8px; padding-bottom: 8px; }
 .fa-proj { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -2048,9 +2072,12 @@ th.fa-proj { text-align: right; }
 #fa-wrap .controls { flex-wrap: wrap; gap: 10px; }
 @media (max-width: 900px) {
   .mv-body, .mv-body.one { grid-template-columns: 1fr; }
-  .mx-row { grid-template-columns: minmax(0, 1fr) 62px 40px 62px minmax(0, 1fr) 12px; gap: 6px; padding: 10px 10px 6px; }
-  .mx-score { font-size: 1.1rem; }
+  .mx-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "ta mid tb" "sa mid sb"; gap: 4px 8px; padding: 12px 12px 6px; }
+  .mx-team.A { grid-area: ta; } .mx-team.B { grid-area: tb; } .mx-sc.A { grid-area: sa; } .mx-sc.B { grid-area: sb; } .mx-mid { grid-area: mid; }
   .mx-team .face { display: none; }
+  .mx-score { font-size: 1.4rem; }
+  .mx-bar-row, .mx-left-row { padding-left: 12px; padding-right: 12px; }
+  .mx-left-row { font-size: 0.64rem; }
   .mx-detail { grid-template-columns: 1fr; padding: 4px 10px 12px; }
   .mx-table td:nth-child(3) { display: none; }
   .mx-table td { padding: 5px 4px; }
@@ -2058,7 +2085,6 @@ th.fa-proj { text-align: right; }
   .mx-pl .face { display: none; }
   .mx-pl .pl-head { min-width: 0; }
   .mx-game { white-space: normal; font-size: 0.74rem; }
-  .mx-foot { padding: 0 10px 10px; }
   .st-mgr { display: none; }
   #fa-wrap .fa-fit, #fa-wrap .fa-srk, #fa-wrap .fa-num { display: none; }
 }
@@ -3679,7 +3705,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T22:30Z";
+  const BUILD_ID = "2026-10-04T23:15Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7440,8 +7466,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const kick = etMs(row[3], row[6]), now = Date.now(), opp = `${row[2] ? "vs" : "@"} ${row[1]}`;
     if (row[4] != null) return { kind: "final", opp, oppTeam: row[1], home: row[2], text: `Final ${row[4] > row[5] ? "W" : row[4] < row[5] ? "L" : "T"} ${row[4]}-${row[5]}` };
     if (now > kick + 4.5 * 3600e3) return { kind: "final", opp, oppTeam: row[1], home: row[2], text: "Final" };
-    if (now >= kick) return { kind: "live", opp, oppTeam: row[1], home: row[2], text: "In progress" };
-    return { kind: "upcoming", opp, oppTeam: row[1], home: row[2], text: kickoffText(row[3], row[6]).replace(/ ET$/, "") };
+    if (now >= kick) return { kind: "live", opp, oppTeam: row[1], home: row[2], kick, text: "Live" };
+    return { kind: "upcoming", opp, oppTeam: row[1], home: row[2], kick, text: kickoffText(row[3], row[6]).replace(/^(\w+), \w+ \d+/, "$1").replace(/ ET$/, "") };
   }
   const mxKey = (id, w) => id + "|" + w;
   async function loadMatchups(week, force) {
@@ -7469,17 +7495,42 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // Sleeper's current week (its NFL state), else the league's, else our schedule's
   const mxCurrentWeek = d => Math.max(1, Number((LT.nfl && LT.nfl !== "loading" && (LT.nfl.display_week || LT.nfl.week)) || (d.league.settings && d.league.settings.leg) || currentWeek() || 1));
+  // A starter's projection for the week (SPAM projection in the league's scoring, see weekProj): final = his points;
+  // live = points so far + his projection for the share of the game left (estimated from time since kickoff, ~3¼ h);
+  // not started = his projection; bye / out / empty = 0. Unranked starters use his season PPG when our stats have
+  // him, else null (the team's projection is then marked partial).
+  const GAME_MS = 3.25 * 3600e3;
+  function starterProj(x, w, cur) {
+    if (x.empty) return { v: 0 };
+    const g = x.g;
+    if (g.kind === "final") return { v: x.pts, actual: true };
+    if (g.kind === "bye" || g.kind === "none") return { v: 0, tag: g.kind === "bye" ? "Bye" : "" };
+    let per = null;
+    if (x.e.p) {
+      const rep = w === cur ? injuryReport(x.e.team) : null, inj = rep && rep.week === w ? injuryOf(x.e.team, x.e.sid) : null;
+      if (g.kind === "upcoming" && inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { v: 0, tag: "Out", out: true };   // once his game starts, his points speak
+      if (x.e.p.projPPG != null) { const R = projRatios(); per = x.e.p.projPPG * (R.get(x.e.p.id) ?? R.get("pos:" + x.e.p.pos) ?? 1); }
+    }
+    if (per == null) { const sn = seasonRanks().get(x.e.sid); per = sn && sn.g ? sn.ppg : null; }
+    // a QB/RB/WR/TE with no projection and no games this season isn't producing: 0. Other positions
+    // (K, DEF, IDP) SPAM doesn't project: left out of the projected comparison on both sides.
+    let noProj = false;
+    if (per == null && EDIT_POS.includes(x.e.pos)) { per = 0; noProj = true; }
+    if (per == null) return { v: g.kind === "live" ? x.pts : 0, missing: true };
+    if (g.kind === "live") { const left = Math.max(0, Math.min(1, 1 - (Date.now() - g.kick) / GAME_MS)); return { v: x.pts + per * left, per: noProj ? null : per, live: true }; }
+    return { v: per, per: noProj ? null : per };
+  }
   function matchupsHtml(ev, d) {
     if (slSource() !== "sleeper") return `<p class="empty-note">Matchups come from Sleeper, so they're available for Sleeper leagues.</p>`;
     const id = d.league.league_id;
     if (!LT.nfl || LT.nfl === "loading" || !LT.mWeek) return `<p class="empty-note lg-loading">Loading this week's matchups…</p>`;
     const cur = mxCurrentWeek(d), w = LT.mWeek, key = mxKey(id, w), data = LT.mx[key], err = LT.mxError[id];
     const lastWeek = Math.max(cur, 17, Number(d.league.settings && d.league.settings.playoff_week_start || 0) + 2);
-    const weekSel = `<div class="tx-filters"><span class="tx-selects">
+    const weekSel = `<div class="tx-filters mx-filters"><span class="tx-selects">
         <select class="select" id="mx-week" aria-label="Week">${Array.from({ length: Math.min(18, lastWeek) }, (_, i) => i + 1).map(n => `<option value="${n}"${n === w ? " selected" : ""}>Week ${n}${n === cur ? " · current" : ""}</option>`).join("")}</select>
         ${w !== cur ? `<button class="btn" type="button" data-mx-week="${cur}">Current week</button>` : ""}
         <button class="btn" type="button" data-mx-refresh${LT.mxLoading === key ? " disabled" : ""}>${LT.mxLoading === key ? "Loading…" : "Refresh scores"}</button></span>
-      <p class="method-note">Scores and lineups from Sleeper${data ? ` · updated ${esc(ago(data.at))}` : ""}. Sleeper's public data has no projections, so none are shown.</p></div>`;
+      <span class="mx-source">Scores: Sleeper · Projections: SPAM ${infoIcon("SPAM's weekly projection (usage, results and team outlook), rescored for this league's scoring. Live projection = points so far + each player's projection for the part of his game that's left, estimated from the time since kickoff. Not matchup-adjusted. The bar shows each team's share of the two projected totals, not a win probability.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
     if (err) return weekSel + `<div class="lg-error"><p>Couldn't load Week ${w} matchups from Sleeper (${esc(err)}).</p><button class="btn primary" type="button" data-mx-refresh>Retry</button></div>`;
     if (!data) return weekSel + `<p class="empty-note lg-loading">Loading Week ${w} matchups…</p>`;
     const groups = new Map();
@@ -7493,42 +7544,63 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         sid = String(sid);
         if (!sid || sid === "0") return { slot: slots[i] || "", empty: true };
         const e = rosterEntry(sid, map), g = nflGameState(e.team, w);
-        return { slot: slots[i] || "", e, g, pts: pp[sid] ?? sp[i] ?? 0 };
+        return { slot: slots[i] || "", e, g, pts: Number(pp[sid] ?? sp[i] ?? 0) };
       });
+      starters.forEach(x => { x.proj = starterProj(x, w, cur); });
       const live = starters.filter(x => !x.empty);
       const count = k => live.filter(x => x.g.kind === k).length;
       const x = ev.byRoster.get(String(m.roster_id));
       return { m, team, starters, pts: Number(m.custom_points ?? m.points ?? 0), power: x ? x.power : null,
-        done: count("final") + count("bye") + count("none"), playing: count("live"), toPlay: count("upcoming") };
+        proj: starters.reduce((a, s) => a + (s.proj.v || 0), 0), partial: starters.some(s => s.proj.missing),
+        done: count("final"), playing: count("live"), toPlay: count("upcoming"), off: count("bye") + count("none") };
     };
     const cards = [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([mid, ms]) => {
       const [A, B] = ms.map(side);
       if (!B) return "";
-      const started = [A, B].some(s => s.playing || s.starters.some(x => !x.empty && x.g.kind === "final"));
+      const started = [A, B].some(s => s.playing || s.done);
       const state = w < cur || (started && !A.playing && !B.playing && !A.toPlay && !B.toPlay) ? "final" : w > cur || !started ? "upcoming" : "live";
       const win = state === "final" ? (A.pts > B.pts ? "A" : B.pts > A.pts ? "B" : "T") : "";
       const k = mxKey(id, w) + "|" + mid, open = LT.mOpen.has(k);
-      const top = s => {
-        const list = s.starters.filter(x => !x.empty);
-        const best = state === "upcoming" ? list.filter(x => x.e.p).sort((a, b) => dv(b.e.p) - dv(a.e.p)).slice(0, 2) : list.slice().sort((a, b) => b.pts - a.pts).slice(0, 2);
-        return best.map(x => `<span>${esc(compactName(x.e.name))}${state === "upcoming" ? "" : ` <b>${fp(x.pts)}</b>`}</span>`).join("");
+      const team = (s, which) => `<div class="mx-team ${which}${s.team.mine ? " mine" : ""}">${teamFace(s.team)}
+          <div class="mx-tname">${s.power ? `<span class="mx-pr">SPAM PR #${s.power}</span>` : ""}<b>${esc(s.team.name)}</b>
+            <span>${esc([s.team.manager !== s.team.name ? s.team.manager : "", recordText(s.team.roster.settings) || "0-0"].filter(Boolean).join(" · "))}</span></div></div>`;
+      const score = (s, which) => `<div class="mx-sc ${which}${win === which ? " win" : ""}"><span class="mx-score">${fp(s.pts)}</span>
+          ${state === "final" ? (win === which ? `<span class="mx-res win">Win</span>` : win === "T" ? `<span class="mx-res">Tie</span>` : `<span class="mx-res">Final</span>`)
+            : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Doesn't include starters SPAM doesn't project (e.g. K, DEF)" : ""}">${state === "live" ? "Live proj" : "Proj"} <b>${fp(s.proj)}</b>${s.partial ? "*" : ""}</span>`}</div>`;
+      const mid2 = `<span class="mx-mid"><span class="mx-state ${state}">${state === "final" ? "Final" : state === "live" ? "Live" : "Upcoming"}</span><span class="mx-vs">vs</span></span>`;
+      // projected share over the lineup slots both teams have projections for (unprojected slots, e.g. K/DEF, left out on both sides)
+      const skip = new Set(); [A, B].forEach(S => S.starters.forEach((x, i) => { if (x.proj.missing) skip.add(i); }));
+      const pa = A.starters.reduce((a, x, i) => a + (skip.has(i) ? 0 : x.proj.v || 0), 0), pb = B.starters.reduce((a, x, i) => a + (skip.has(i) ? 0 : x.proj.v || 0), 0);
+      const tot = pa + pb, showBar = state !== "final" && tot > 0;
+      const shareA = showBar ? Math.round(100 * pa / tot) : 0;
+      const excl = [...new Set([...skip].map(i => SLOT_LABEL[slots[i]] || slots[i]))].join(", ");
+      const left = s => state === "upcoming" ? `${s.toPlay} to play` : `${s.done} played · ${s.playing} active · ${s.toPlay} remaining`;
+      const bar = showBar ? `<div class="mx-bar-row"><span class="mx-pct A">${shareA}%</span>
+          <div class="mx-bar" role="img" aria-label="Projected matchup: ${shareA}% to ${100 - shareA}%"><span class="mx-bar-a" style="width:${shareA}%"></span><span class="mx-bar-b"></span></div>
+          <span class="mx-pct B">${100 - shareA}%</span></div><div class="mx-bar-lbl">Projected matchup${excl ? ` <span>(excl. ${esc(excl)})</span>` : ""}</div>` : "";
+      // Expanded lineups: compact rows, final points or live points + projection, or the projection alone
+      const ptsCell = x => {
+        if (x.empty) return `<td class="mx-pts">—</td>`;
+        const P = x.proj, pj = P.per != null ? `<small>Proj ${fp(P.per)}</small>` : "";
+        if (x.g.kind === "final") return `<td class="mx-pts final"><b>${fp(x.pts)}</b></td>`;
+        if (x.g.kind === "live") return `<td class="mx-pts live"><b>${fp(x.pts)}</b> <span class="mx-livetag">Live</span>${pj}</td>`;
+        if (P.tag) return `<td class="mx-pts off">${esc(P.tag)}</td>`;
+        return `<td class="mx-pts up">${P.per != null ? `<span>Proj <b>${fp(P.per)}</b></span>` : "—"}</td>`;
       };
-      const status = s => state === "live" ? `<span class="mx-left">${s.done} played · ${s.playing} playing · ${s.toPlay} to play</span>` : "";
-      const team = (s, which) => `<div class="mx-team ${which}${win === which ? " win" : ""}${s.team.mine ? " mine" : ""}">${teamFace(s.team, "sm")}
-          <div class="mx-tname"><b>${esc(s.team.name)}</b><span>${esc([recordText(s.team.roster.settings) || "", s.power ? `SPAM PR #${s.power}` : ""].filter(Boolean).join(" · "))}</span></div></div>`;
-      const score = (s, which) => `<span class="mx-score${win === which ? " win" : ""}">${state === "upcoming" ? "–" : fp(s.pts)}</span>`;
-      const mid2 = `<span class="mx-mid">${state === "final" ? (win === "T" ? "Tie" : "Final") : state === "live" ? `<span class="mx-live">Live</span>` : "vs"}</span>`;
-      const row = x => x.empty ? `<tr class="mx-empty"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td><td colspan="3" class="muted">Empty</td><td></td></tr>`
-        : `<tr class="${x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
-            <td><div class="mx-pl">${face(x.e.sid, x.e.name, "xs")}<span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.e.sid, x.e.name, "mx-name") : `<span class="mx-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span></div></td>
+      const row = x => x.empty ? `<tr class="mx-empty"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td><td colspan="3" class="muted">Empty</td><td class="mx-pts">—</td></tr>`
+        : `<tr class="${x.proj.out ? "out" : x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
+            <td><div class="mx-pl">${face(x.e.sid, x.e.name, "xs")}<span class="mx-pl-t"><span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.e.sid, x.e.name, "mx-name") : `<span class="mx-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span></span></div></td>
             <td><span class="pos ${esc(x.e.pos)}">${esc(x.e.pos || "–")}</span></td>
-            <td class="mx-game"><span>${esc(x.g.opp || x.g.text)}</span>${x.g.opp ? `<small class="${x.g.kind}">${esc(x.g.text)}</small>` : ""}</td>
-            <td class="mx-pts">${x.g.kind === "upcoming" || x.g.kind === "bye" && !x.pts ? "–" : fp(x.pts)}</td></tr>`;
-      const lineup = s => `<div class="mx-lineup"><h4>${teamFace(s.team, "xs")}${esc(s.team.name)}<span>${state === "upcoming" ? "" : fp(s.pts)}</span></h4>
-          <table class="mx-table"><tbody>${s.starters.map(row).join("")}</tbody></table></div>`;
-      return `<article class="mx-card ${state}${open ? " open" : ""}" data-mx-toggle="${esc(k)}" role="button" tabindex="0" aria-expanded="${open}">
-        <div class="mx-row">${team(A, "A")}${score(A, "A")}${mid2}${score(B, "B")}${team(B, "B")}<span class="pr-caret" aria-hidden="true"></span></div>
-        <div class="mx-foot"><div class="mx-tops"><span class="mx-lbl">${state === "upcoming" ? "Top players" : "Top scorers"}</span>${top(A)}${status(A)}</div><div class="mx-tops b">${status(B)}${top(B)}</div></div>
+            <td class="mx-game">${x.g.oppTeam ? `<span class="mx-opp">${teamLogo(x.g.oppTeam, "xs")}${x.g.home ? "vs" : "@"} ${esc(x.g.oppTeam)}</span>` : ""}<small class="${x.proj.out ? "out" : x.g.kind}">${esc(x.proj.out ? "Out" : x.g.text || "")}</small></td>
+            ${ptsCell(x)}</tr>`;
+      const lineup = s => { const top = s.starters.filter(x => !x.empty && (x.g.kind === "final" || x.g.kind === "live")).sort((a, b) => b.pts - a.pts)[0];
+        return `<div class="mx-lineup"><h4>${teamFace(s.team, "xs")}${esc(s.team.name)}${top ? `<small>Top: ${esc(compactName(top.e.name))} ${fp(top.pts)}</small>` : ""}<span>${fp(s.pts)}</span></h4>
+          <table class="mx-table"><tbody>${s.starters.map(row).join("")}</tbody></table></div>`; };
+      return `<article class="mx-card ${state}${open ? " open" : ""}${A.team.mine || B.team.mine ? " has-mine" : ""}">
+        <div class="mx-row">${team(A, "A")}${score(A, "A")}${mid2}${score(B, "B")}${team(B, "B")}</div>
+        ${bar}
+        <div class="mx-left-row"><span>${left(A)}</span><span>${left(B)}</span></div>
+        <button class="mx-show" type="button" data-mx-toggle="${esc(k)}" aria-expanded="${open}">${open ? "Hide lineups" : "Show lineups"}<span class="mx-chev" aria-hidden="true"></span></button>
         ${open ? `<div class="mx-detail">${lineup(A)}${lineup(B)}</div>` : ""}
       </article>`;
     }).join("");
@@ -7565,9 +7637,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (mw) { LT.mWeek = Number(mw.dataset.mxWeek); LT.mOpen = new Set(); renderLeague(); return; }
     if (e.target.closest("[data-mx-refresh]")) { const d = activeData(); if (d) { LT.mxError[d.league.league_id] = ""; loadMatchups(LT.mWeek, true); } return; }
     const mx = e.target.closest("[data-mx-toggle]");
-    if (mx && !e.target.closest(".mx-detail") && !e.target.closest("button, a, input, select, label, .pl-link, .face")) {
-      const k = mx.dataset.mxToggle; if (LT.mOpen.has(k)) LT.mOpen.delete(k); else LT.mOpen.add(k); renderLeague(); return;
-    }
+    if (mx) { const k = mx.dataset.mxToggle; if (LT.mOpen.has(k)) LT.mOpen.delete(k); else LT.mOpen.add(k); renderLeague(); return; }
     const tw = e.target.closest("[data-trade-with]"), fw = e.target.closest("[data-find-with]");
     if (tw && LG.myRosterId != null) {
       TC.mode = "league"; saveTc(); setThree(false); $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
@@ -7596,8 +7666,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   });
   $("league-body").addEventListener("keydown", e => {
     if (e.key !== "Enter" && e.key !== " ") return;
-    const row = e.target.closest("[data-toggle-team]"), st = e.target.closest("[data-standing-team]"), mx = e.target.closest("[data-mx-toggle]");
-    if (mx && e.target === mx) { e.preventDefault(); const k = mx.dataset.mxToggle; if (LT.mOpen.has(k)) LT.mOpen.delete(k); else LT.mOpen.add(k); renderLeague(); return; }
+    const row = e.target.closest("[data-toggle-team]"), st = e.target.closest("[data-standing-team]");
     if (row && e.target === row) { e.preventDefault(); toggleTeam(row.dataset.toggleTeam, e.shiftKey); }
     else if (st && e.target === st) { e.preventDefault(); openTeam(st.dataset.standingTeam); }
   });

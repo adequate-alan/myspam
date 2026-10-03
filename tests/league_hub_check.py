@@ -49,8 +49,8 @@ def make_league(lid, name, teams, positions, scoring):
     return {"league": league, "users": users, "rosters": rosters, "tx": tx, "mx": mx, "free": free}
 
 SF = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SUPER_FLEX"] + ["BN"] * 6
-L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "bonus_rec_te": 0.5})
-L2 = make_league("L2", "Beta League", 10, ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6, {"rec": 0.5, "pass_td": 4})
+L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5})
+L2 = make_league("L2", "Beta League", 10, ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6, {"rec": 0.5, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2})
 LEAGUES = {"L1": L1, "L2": L2}
 
 def sleeper(route):
@@ -150,12 +150,21 @@ with sync_playwright() as p:
 
     pg.click("[data-lsub=matchups]"); pg.wait_for_timeout(1500)
     ok(pg.locator(".mx-card").count() == 6, f"Week 4 shows 6 matchups ({pg.locator('.mx-card').count()})")
-    pg.locator(".mx-card .mx-row").first.click(); pg.wait_for_timeout(400)
-    ok(pg.locator(".mx-card.open .mx-lineup").count() == 2, "A matchup expands into both starting lineups side by side")
+    card = pg.locator(".mx-card").first
+    ok(card.locator(".mx-pr").count() == 2 and card.locator(".mx-score").count() == 2, "Each side: SPAM PR badge and a big score")
+    projs = card.locator(".mx-proj").all_inner_texts()
+    ok(len(projs) == 2 and all(re.search(r"PROJ\s+\d+\.\d", t.upper()) for t in projs), f"Projected score under each score: {projs}")
+    pcts = [int(t.rstrip('%')) for t in card.locator(".mx-pct").all_inner_texts()]
+    ok(len(pcts) == 2 and sum(pcts) == 100 and "PROJECTED MATCHUP" in card.inner_text().upper(), f"Projected matchup bar: {pcts}")
+    ok("WIN PROBABILITY" not in pg.inner_text("#league-body").upper() and "TOP PLAYERS" not in pg.inner_text("#league-body").upper(), "No win probability label and no top-players clutter")
+    ok("PROJECTIONS: SPAM" in pg.inner_text(".mx-source").upper(), "Data source line: Scores Sleeper · Projections SPAM")
+    card.locator(".mx-show").click(); pg.wait_for_timeout(400)
+    ok(pg.locator(".mx-card.open .mx-lineup").count() == 2, "Show lineups expands both starting lineups side by side")
     ok(pg.locator(".mx-card.open .mx-table tr").count() >= 16, "Lineups list every starter")
-    if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_matchups.png")
+    ok(pg.locator(".mx-card.open .mx-pts.up b").count() >= 10, "Upcoming starters show their projection")
+    if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_matchups.png", full_page=True)
     pg.evaluate("() => { const s = document.getElementById('mx-week'); s.value = '3'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(1200)
-    ok(pg.locator(".mx-card.final").count() == 6 and pg.locator(".mx-team.win").count() >= 5, "A past week shows every matchup as final with its winner")
+    ok(pg.locator(".mx-card.final").count() == 6 and pg.locator(".mx-res.win").count() >= 5 and pg.locator(".mx-bar").count() == 0, "A past week: final scores, the winner marked, no projection bar")
     pg.click("[data-mx-week='4']"); pg.wait_for_timeout(800)
 
     pg.click("[data-lsub=tx]"); pg.wait_for_timeout(1500)
@@ -250,6 +259,24 @@ with sync_playwright() as p:
     ok(json.loads(pg.evaluate("() => localStorage.getItem('spm_sleeper')"))["activeId"] == "L2", "The selected league persists across refreshes")
     after = pg.evaluate("() => SPM.rankingSnapshot ? JSON.stringify(SPM.rankingSnapshot()) : ''")
     ok(after == base_board, "Base SPAM Board unchanged by any league data")
+    # live matchups: the browser clock at Sunday 2:30 PM ET of week 4 (1:00 PM games in progress)
+    saved = pg.evaluate("() => localStorage.getItem('spm_sleeper')")
+    pg2 = br.new_page(viewport={"width": 1440, "height": 1000})
+    pg2.on("pageerror", lambda e: errs.append(str(e)))
+    pg2.clock.install(time="2026-10-04T18:30:00Z")
+    pg2.route("https://api.sleeper.app/**", sleeper)
+    pg2.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com)/.*"), lambda r: r.abort())
+    pg2.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); localStorage.setItem('spm_sleeper', {json.dumps(saved)}); }}")
+    pg2.goto(f"http://127.0.0.1:{port}/#league"); pg2.wait_for_timeout(2500)
+    pg2.evaluate("() => { const x = document.createElement('button'); x.dataset.league = 'L1'; document.getElementById('league-menu').append(x); x.click(); }"); pg2.wait_for_timeout(2000)
+    pg2.click("#tab-league"); pg2.wait_for_timeout(300); pg2.click("[data-lsub=matchups]"); pg2.wait_for_timeout(1800)
+    ok(pg2.locator(".mx-card.live").count() >= 1 and pg2.locator(".mx-state.live").count() >= 1, f"Sunday afternoon: matchups are live ({pg2.locator('.mx-card.live').count()})")
+    lp = pg2.locator(".mx-card.live .mx-proj").first.inner_text().upper()
+    ok("LIVE PROJ" in lp, f"Live projection label: {lp}")
+    ok(re.search(r"\d+ played · \d+ active · \d+ remaining", pg2.inner_text(".mx-card.live .mx-left-row")) is not None, "Players played / active / remaining")
+    pg2.locator(".mx-card.live .mx-show").first.click(); pg2.wait_for_timeout(400)
+    ok(pg2.locator(".mx-card.open .mx-pts.live").count() >= 1 and pg2.locator(".mx-card.open .mx-livetag").count() >= 1, "Live starters show LIVE points with their projection")
+    if SHOTS: pg2.screenshot(path=f"{SHOTS}/hub_matchups_live.png", full_page=True)
     ok(not errs, f"No page errors {errs}")
     br.close()
 
