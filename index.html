@@ -193,7 +193,7 @@ Ladd McConkey,WR,LAC,76,22,5,,9.18,3,9.91,11635,manual
 Matthew Golden,WR,GB,78,23,5,,16.25,3,14.16,12501,manual
 Jaylen Waddle,WR,DEN,79,24,6,,11.21,3,11.13,7526,manual
 Luther Burden III,WR,CHI,80,25,6,,12.91,3,12.15,12519,manual
-A.J. Brown,WR,NE,81,26,15,,6.80,1,9.61,5859,manual
+A.J. Brown,WR,NE,81,26,90,,6.80,1,9.61,5859,manual
 Michael Wilson,WR,ARI,82,27,6,,17.53,3,14.92,10232,manual
 Mike Evans,WR,SF,94,28,6,,9.96,3,10.38,2216,manual
 Josh Downs,WR,IND,95,29,6,,13.40,3,12.44,9500,manual
@@ -393,7 +393,7 @@ const VALUE_MODEL = {
   tierMinDrop: 0.05, // minimum drop from one tier to the next (5%)
   overallMaxShift: 0.02, // the overall board's order can move a value at most 2% away from its tier value
   topSpotSoften: { WR: 0.5 }, // move a position's #1 curve spot this share of the way toward #2
-  tagTierFrom: 15,
+  tagTierFrom: 90,   // tiers 90+ are labels (e.g. Hurt), not part of the tier ladder
   autoDecay: 0.978,  // auto-added players (ranked under yours): each spot down is worth this share of the one above   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
   keepRankOrder: true, // values never break your positional order (see step 7)
   projection: {
@@ -589,7 +589,7 @@ const TIER_NAMES = {
     8: "WR3",
     9: "Flex",
     10: "Bench/Stash",
-    15: "Hurt/WR1-2 When Healthy"
+    90: "Hurt/WR1-2 When Healthy"
   },
 };
 
@@ -1392,6 +1392,24 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .tf-amp { margin: 0 2px; }
 .tf-pkgsum { margin-left: 4px; font-size: 0.86rem; }
 .tf-target { flex-wrap: wrap; row-gap: 4px; }
+
+/* Tier editing (editor mode, position tabs) */
+tr.tier-edit td { padding-top: 9px; padding-bottom: 7px; }
+.tier-row { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; min-height: 26px; }
+.tier-name { background: none; border: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: text; display: inline-flex; align-items: center; gap: 8px; }
+.tier-pen { font-size: 0.8rem; opacity: 0; color: var(--text-muted); transition: opacity 0.15s ease; }
+tr.tier-edit:hover .tier-pen, .tier-name:focus-visible .tier-pen { opacity: 1; }
+.tier-input { height: 28px; min-width: 240px; padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--accent-primary); background: var(--control-bg); color: var(--text-primary); font: inherit; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: none; outline: none; }
+.tier-tools { display: inline-flex; gap: 4px; margin-left: auto; opacity: 0; transition: opacity 0.15s ease; }
+tr.tier-edit:hover .tier-tools, tr.tier-edit:focus-within .tier-tools { opacity: 1; }
+.tier-tools button { height: 24px; padding: 0 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--control-bg); color: var(--text-secondary); font: inherit; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.tier-tools button:hover { border-color: var(--accent-primary); color: var(--text-strong); }
+.tier-tools button.danger:hover { border-color: var(--accent-secondary); color: var(--accent-secondary-text); }
+.tier-del-ask { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: none; color: var(--text-secondary); }
+.tier-del-ask .btn { height: 26px; font-size: 0.7rem; }
+tr.tier-drop td { padding: 14px 22px; text-align: center; font-size: 0.74rem; color: var(--text-muted); border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--accent-primary) 4%, transparent); }
+tr.tier-edit.drop-before td, tr.tier-edit.drop-after td, tr.tier-drop.drop-before td, tr.tier-drop.drop-after td { box-shadow: inset 0 -2px 0 var(--accent-primary); }
+@media (hover: none) { .tier-tools, .tier-pen { opacity: 1; } }
 
 /* ---------- Checkboxes and radios: one themed control everywhere (no native browser boxes) ---------- */
 :root, :root[data-theme="dark"] {
@@ -2775,6 +2793,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         pos: get("pos").toUpperCase(),
         team: get("team").toUpperCase(),
         tier: get("tier"),
+        tierName: String(get("tier_name") || "").trim(),   // custom tier name (editable on the site)
         overallTier: get("overall_tier"),
         projPPG: isFinite(parseFloat(get("proj_ppg"))) ? parseFloat(get("proj_ppg")) : null,
         projScore: isFinite(parseFloat(get("proj_score"))) ? parseFloat(get("proj_score")) : null,
@@ -3082,7 +3101,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T08:35Z";
+  const BUILD_ID = "2026-10-03T09:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3154,6 +3173,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- Rankings ---------- */
   const filters = ["ALL", "QB", "RB", "WR", "TE"].concat(hasPicks ? ["PICK"] : []);
   let posFilter = "ALL", query = "";
+  // tier editing state (see "Tier editing" in the editor section)
+  const TIER_EMPTY = {};          // pos -> [{ tier, name }]: tiers created while editing, still empty
+  let TIER_DEL = null, TIER_REN = null;
 
   $("pos-chips").innerHTML = filters.map(f =>
     `<button class="chip-btn" type="button" data-pos="${f}" aria-pressed="${f === posFilter}">${f === "ALL" ? "All" : f === "PICK" ? "Picks" : f}</button>`
@@ -3189,10 +3211,26 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return !!o && String(o.rosterId) === LG.ownerFilter;
   }
 
-  function tierLabel(pos, tier) {
+  // Tier names: the name typed on the site (tier_name, carried by the tier's players), else TIER_NAMES
+  function presetTierName(pos, tier) {
     const names = typeof TIER_NAMES === "object" && TIER_NAMES ? TIER_NAMES : {};
     const own = pos === "OVERALL" ? names.OVERALL : names[pos];
-    const name = (own && own[tier]) || (pos !== "OVERALL" && names.ALL && names.ALL[tier]) || "";
+    return (own && own[tier]) || (pos !== "OVERALL" && names.ALL && names.ALL[tier]) || "";
+  }
+  function tierNameOf(pos, tier) {
+    const t = String(tier);
+    const hit = players.find(p => p.pos === pos && String(p.tier) === t && p.tierName);
+    if (hit) return hit.tierName;
+    let empty = null;
+    try { empty = (TIER_EMPTY[pos] || []).find(e => String(e.tier) === t); } catch (e) {}
+    if (empty && empty.name) return empty.name;
+    return presetTierName(pos, tier);
+  }
+  const isTagTier = t => Number(t) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+  function tierLabel(pos, tier) {
+    const name = pos === "OVERALL" ? presetTierName(pos, tier) : tierNameOf(pos, tier);
+    if (isTagTier(tier)) return name || "Tagged";
+    if (/^tier\b/i.test(name)) return name;   // typed in full ("Tier 1 · Elite")
     return name ? `Tier ${tier} · ${name}` : `Tier ${tier}`;
   }
 
@@ -3282,10 +3320,28 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
     const out = [];
     let lastGroup = null;
+    // tier editing: position tabs on the SPAM Board, no search/filter
+    const tierEdit = editing && canReorder && EDIT_POS.includes(posFilter) && !query && !filtered;
+    const empties = tierEdit ? (TIER_EMPTY[posFilter] || []).slice().sort((a, b) => a.tier - b.tier) : [];
+    const tierHead = (t, label, empty) => {
+      if (!tierEdit) return `<tr class="tier"><td colspan="${cols}">${esc(label)}</td></tr>`;
+      const del = TIER_DEL && TIER_DEL.pos === posFilter && String(TIER_DEL.tier) === String(t);
+      const tag = isTagTier(t), nums = tierNums(posFilter), i = nums.indexOf(Number(t));
+      const hasAbove = i > 0, hasBelow = i >= 0 && i < nums.length - 1;
+      return `<tr class="tier tier-edit${del ? " deleting" : ""}" data-tier="${esc(String(t))}"><td colspan="${cols}"><div class="tier-row">
+        ${TIER_REN && TIER_REN.pos === posFilter && String(TIER_REN.tier) === String(t)
+          ? `<input class="tier-input" type="text" value="${esc(tierNameOf(posFilter, t))}" placeholder="Name this tier" aria-label="Tier name" maxlength="60">`
+          : `<button class="tier-name" type="button" data-tier-act="rename" title="Rename tier">${esc(label)}<span class="tier-pen" aria-hidden="true">✎</span></button>`}
+        ${del ? `<span class="tier-del-ask">Move its players to: ${hasAbove ? `<button class="btn" type="button" data-tier-act="del-up">Tier above</button>` : ""}${hasBelow ? `<button class="btn" type="button" data-tier-act="del-down">Tier below</button>` : ""}<button class="btn link" type="button" data-tier-act="del-cancel">Cancel</button></span>`
+          : `<span class="tier-tools">${tag ? "" : `<button type="button" data-tier-act="above">+ Tier above</button><button type="button" data-tier-act="below">+ Tier below</button><button type="button" class="danger" data-tier-act="delete">Delete</button>`}</span>`}
+      </div></td></tr>${empty ? `<tr class="tier-drop" data-tier="${esc(String(t))}"><td colspan="${cols}">Empty tier: drag players here</td></tr>` : ""}`;
+    };
+    const flushEmpties = upTo => { while (empties.length && empties[0].tier < upTo) { const e = empties.shift(); out.push(tierHead(e.tier, tierLabel(posFilter, e.tier), true)); } };
     list.forEach(p => {
       const g = group(p);
+      if (tierEdit && !isTagTier(p.tier)) flushEmpties(Number(p.tier));
       if (g && g !== lastGroup && !query && !filtered) {
-        out.push(`<tr class="tier"><td colspan="${cols}">${esc(g)}</td></tr>`);
+        out.push(tierEdit ? tierHead(p.tier, g, false) : `<tr class="tier"><td colspan="${cols}">${esc(g)}</td></tr>`);
       }
       lastGroup = g;
       const editCol = !editing ? "" : `<td class="edit-col">${canReorder && numOf(p) != null ? `
@@ -3297,6 +3353,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
+    if (tierEdit) flushEmpties(Infinity);
     $("rank-body").innerHTML = out.length ? out.join("") :
       `<tr><td class="empty" colspan="${cols}">${query ? `No players match “${esc(query)}”.` : "No ranked players here."}</td></tr>`;
     $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
@@ -4260,7 +4317,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      of these controls. */
   const REPO = SITE.repo, FILE = "index.html", BRANCH = "main", TOKEN_KEY = "spm_editor_token";
   const CSV_RE = /(const RANKINGS_CSV = `\n)([\s\S]*?)(\n`;)/;
-  const EDIT_COLS = ["rank", "pos_rank", "tier", "value", "source"];
+  const EDIT_COLS = ["rank", "pos_rank", "tier", "value", "source", "tier_name"];
   const LOCAL_KEY = "spm_local_edits";
   let publishedCsv = RANKINGS_CSV.trim();   // what everyone sees on the live site
   // savedCsv = published + edits saved in this browser; draft = unsaved work on top of that
@@ -4338,11 +4395,17 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   // Write an overall order: rank 1..N, every position rank re-derived, mover's tier
-  function writeOrder(order, me) {
+  function writeOrder(order, me, forceTier) {
     const iRank = colOf(draft, "rank"), iPos = colOf(draft, "pos_rank"), iTier = colOf(draft, "tier");
     const oldPos = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
     const newPos = order.filter(p => p.pos === me.pos);
-    draft.rows[me.id][iTier] = tierFor(me, newPos, oldPos);
+    const newTier = forceTier != null ? String(forceTier) : tierFor(me, newPos, oldPos);
+    if (newTier !== String(me.tier)) {   // joining a tier: take its name too
+      materializeTierNames(me.pos);
+      draft.rows[me.id][colOf(draft, "tier_name")] = tierNameOf(me.pos, newTier) || "";
+      if (TIER_EMPTY[me.pos]) TIER_EMPTY[me.pos] = TIER_EMPTY[me.pos].filter(e => String(e.tier) !== newTier);
+    }
+    draft.rows[me.id][iTier] = newTier;
     const counts = {};
     order.forEach((p, k) => {
       counts[p.pos] = (counts[p.pos] || 0) + 1;
@@ -4382,18 +4445,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   // Position tab: reorder within the position; those players keep the same set of overall spots
-  function movePlayer(id, targetNum) {
+  function movePlayer(id, targetNum, forceTier) {
     const me = byId.get(id);
     if (!me || me.posNum == null) return;
     const group = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
     const from = group.indexOf(me), to = Math.max(0, Math.min(group.length - 1, targetNum - 1));
-    if (from === to) return;
+    if (from === to && (forceTier == null || String(forceTier) === String(me.tier))) return;
     const newGroup = group.filter(p => p !== me); newGroup.splice(to, 0, me);
     const order = overallOrder();
     const slots = order.map((p, k) => p.pos === me.pos ? k : -1).filter(k => k >= 0);
     if (slots.length !== newGroup.length) return;
     slots.forEach((k, n) => { order[k] = newGroup[n]; });
-    writeOrder(order, me);
+    writeOrder(order, me, forceTier);
   }
 
   function setValue(id, v) {
@@ -4401,6 +4464,85 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     makeManual(id);
     rebuild();
   }
+
+  /* ---------- Tier editing (position tabs) ----------
+     Tiers are data: each player's tier number plus tier_name, saved and published like ranks.
+     Empty tiers exist only while editing (TIER_EMPTY) until a player is dragged in. */
+  function tierNums(pos) {
+    const set = new Set(players.filter(p => p.pos === pos && p.tier !== "" && !isTagTier(p.tier)).map(p => Number(p.tier)));
+    (TIER_EMPTY[pos] || []).forEach(e => set.add(Number(e.tier)));
+    return [...set].sort((a, b) => a - b);
+  }
+  // write every tier's current name onto its players, so names survive renumbering
+  function materializeTierNames(pos) {
+    const iN = colOf(draft, "tier_name");
+    players.filter(p => p.pos === pos && p.tier !== "").forEach(p => { if (!draft.rows[p.id][iN]) draft.rows[p.id][iN] = tierNameOf(pos, p.tier) || ""; });
+  }
+  function shiftTiers(pos, from, delta) {   // every (non-tag) tier >= from moves by delta (reads the draft, so earlier edits count)
+    const iT = colOf(draft, "tier");
+    players.filter(p => p.pos === pos).forEach(p => {
+      const cur = draft.rows[p.id][iT];
+      if (cur !== "" && cur != null && !isTagTier(cur) && Number(cur) >= from) draft.rows[p.id][iT] = String(Number(cur) + delta);
+    });
+    (TIER_EMPTY[pos] || []).forEach(e => { if (e.tier >= from) e.tier += delta; });
+  }
+  function tierAction(act, pos, tier, value) {
+    const t = Number(tier), iT = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
+    const members = players.filter(p => p.pos === pos && String(p.tier) === String(tier));
+    if (act === "rename") {
+      const name = String(value || "").trim().replace(/\s+/g, " ");
+      members.forEach(p => { draft.rows[p.id][iN] = name; });
+      const e = (TIER_EMPTY[pos] || []).find(x => x.tier === t); if (e) e.name = name;
+      TIER_REN = null; rebuild(); return;
+    }
+    if (act === "above" || act === "below") {
+      materializeTierNames(pos);
+      const at = act === "above" ? t : t + 1;
+      shiftTiers(pos, at, 1);
+      (TIER_EMPTY[pos] = TIER_EMPTY[pos] || []).push({ tier: at, name: "" });
+      rebuild(); return;
+    }
+    if (act === "delete") {
+      if (!members.length) {   // empty tier: just remove it
+        materializeTierNames(pos);
+        TIER_EMPTY[pos] = (TIER_EMPTY[pos] || []).filter(e => e.tier !== t);
+        shiftTiers(pos, t + 1, -1); TIER_DEL = null; rebuild(); return;
+      }
+      TIER_DEL = { pos, tier: t }; renderRankings(); return;   // ask where its players go
+    }
+    if (act === "del-cancel") { TIER_DEL = null; renderRankings(); return; }
+    if (act === "del-up" || act === "del-down") {
+      const nums = tierNums(pos), i = nums.indexOf(t), target = act === "del-up" ? nums[i - 1] : nums[i + 1];
+      if (target == null) return;
+      materializeTierNames(pos);
+      const name = tierNameOf(pos, target) || "";
+      members.forEach(p => { draft.rows[p.id][iT] = String(target); draft.rows[p.id][iN] = name; makeManual(p.id); });
+      TIER_EMPTY[pos] = (TIER_EMPTY[pos] || []).filter(e => e.tier !== target);
+      shiftTiers(pos, t + 1, -1);
+      TIER_DEL = null; rebuild(); toast(`Tier deleted. ${members.length} player${members.length > 1 ? "s" : ""} moved to the tier ${act === "del-up" ? "above" : "below"}.`);
+    }
+  }
+  $("rank-body").addEventListener("click", e => {
+    const b = e.target.closest("[data-tier-act]"); if (!b || !editor.on) return;
+    const row = b.closest("tr[data-tier]"); if (!row) return;
+    e.stopPropagation();
+    if (b.dataset.tierAct === "rename") {
+      TIER_REN = { pos: posFilter, tier: row.dataset.tier }; renderRankings();
+      const inp = $("rank-body").querySelector(".tier-input"); if (inp) { inp.focus(); inp.select(); }
+      return;
+    }
+    tierAction(b.dataset.tierAct, posFilter, row.dataset.tier);
+  });
+  $("rank-body").addEventListener("keydown", e => {
+    const inp = e.target.closest(".tier-input"); if (!inp) return;
+    if (e.key === "Enter") { e.preventDefault(); tierAction("rename", posFilter, inp.closest("tr[data-tier]").dataset.tier, inp.value); }
+    else if (e.key === "Escape") { e.preventDefault(); TIER_REN = null; renderRankings(); }
+  });
+  $("rank-body").addEventListener("focusout", e => {
+    const inp = e.target.closest && e.target.closest(".tier-input"); if (!inp || !TIER_REN) return;
+    const tier = inp.closest("tr[data-tier]").dataset.tier, v = inp.value;
+    setTimeout(() => { if (TIER_REN && String(TIER_REN.tier) === tier) tierAction("rename", posFilter, tier, v); }, 0);
+  });
 
   function toast(msg) {
     const t = $("toast");
@@ -4460,12 +4602,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     drag = null;
     clearMarks(); tr.classList.remove("dragging"); document.body.classList.remove("is-dragging");
     if (!commit || !target) return;
-    const me = byId.get(id), tp = byId.get(Number(target.dataset.id));
-    if (!me || !tp) return;
+    const me = byId.get(id);
+    if (!me) return;
+    if (target.dataset.tier != null && !target.classList.contains("player")) {   // a tier header or an empty tier
+      const t = Number(target.dataset.tier);
+      const rest = players.filter(p => p.pos === me.pos && p.posNum != null && p !== me).sort((a, b) => a.posNum - b.posNum);
+      const first = rest.findIndex(p => Number(p.tier) === t && !isTagTier(p.tier));
+      let idx = first;
+      if (idx < 0) { idx = 0; rest.forEach((p, k) => { if (!isTagTier(p.tier) && Number(p.tier) < t) idx = k + 1; }); }
+      movePlayer(id, idx + 1, t);
+      return;
+    }
+    const tp = byId.get(Number(target.dataset.id));
+    if (!tp) return;
     const all = posFilter === "ALL", key = p => all ? p.rank : p.posNum;
     let num = key(tp) + (after ? 1 : 0);
     if (key(me) < num) num -= 1;
-    if (all) moveOverall(id, num); else movePlayer(id, num);
+    // position tab: dropping next to a player puts you in his tier
+    if (all) moveOverall(id, num); else movePlayer(id, num, tp.tier !== "" ? tp.tier : null);
   }
   $("rank-body").addEventListener("pointerdown", e => {
     const h = e.target.closest(".handle");
@@ -4480,7 +4634,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!drag) return;
     clearMarks(); drag.target = null;
     const el = document.elementFromPoint(e.clientX, e.clientY);
-    const row = el && el.closest("#rank-body tr.player");
+    const row = el && (el.closest("#rank-body tr.player") || el.closest("#rank-body tr.tier-edit, #rank-body tr.tier-drop"));
     if (row && row !== drag.tr) {
       const r = row.getBoundingClientRect();
       drag.after = e.clientY > r.top + r.height / 2;
@@ -4646,6 +4800,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   $("eb-save").addEventListener("click", saveLocal);
   $("eb-cancel").addEventListener("click", () => {
+    for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k];
+    TIER_DEL = TIER_REN = null;
     draft = csvToTable(savedCsv); rebuild(); toast("Changes discarded.");
   });
   $("eb-publish").addEventListener("click", publishLive);
@@ -6875,7 +7031,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.posRank })), invert: true, title: "Position rank", fmt: v => info.pos + v });
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.value })), title: "SPAM Value", fmt: v => fmt(v) });
     }
-    const tierCell = (x, prev) => x.tier === "" || x.tier == null ? "–" : `T${esc(String(x.tier))}${prev && prev.tier !== "" && prev.tier != null && String(prev.tier) !== String(x.tier) ? ` <span class="mv ${Number(x.tier) < Number(prev.tier) ? "up" : "down"}">${Number(x.tier) < Number(prev.tier) ? "▲" : "▼"}</span>` : ""}`;
+    const tierCell = (x, prev) => x.tier === "" || x.tier == null ? "–" : isTagTier(x.tier) ? esc(tierLabel(info.pos, x.tier)) : `T${esc(String(x.tier))}${prev && prev.tier !== "" && prev.tier != null && String(prev.tier) !== String(x.tier) ? ` <span class="mv ${Number(x.tier) < Number(prev.tier) ? "up" : "down"}">${Number(x.tier) < Number(prev.tier) ? "▲" : "▼"}</span>` : ""}`;
     const rows = h.slice().reverse().map((x, i, arr) => {
       const prev = arr[i + 1];
       return `<tr><td class="gl-wk">${esc(longWhen(x.ts))}</td><td>#${x.rank}</td><td>${prev ? moveTag(prev.rank - x.rank) : "–"}</td>
