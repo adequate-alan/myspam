@@ -2011,7 +2011,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pm-pick-list .r-val { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .pm-head .pp-tabs { margin-top: 18px; border-bottom: 0; }
 .ov-grid {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; overflow: hidden;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden;
   background: var(--line-soft); border: 1px solid var(--line-soft); border-radius: var(--radius);
 }
 .ov-cell { display: flex; flex-direction: column; gap: 3px; padding: 12px 16px; background: var(--surface); min-width: 0; }
@@ -2045,6 +2045,31 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .pp-grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; }
 .st-note.free { white-space: normal; overflow: visible; margin-top: 6px; line-height: 1.4; }
+/* This week card: the first thing in the Overview. The grade only tints a thin edge and its own label. */
+.tw-card {
+  --tw: var(--line); position: relative; padding: 14px 18px 14px 20px; margin-bottom: 4px;
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius);
+  box-shadow: inset 3px 0 0 var(--tw);
+}
+.tw-card.good { --tw: color-mix(in srgb, var(--rb) 75%, transparent); }
+.tw-card.neutral { --tw: color-mix(in srgb, var(--gold) 60%, transparent); }
+.tw-card.tough { --tw: color-mix(in srgb, var(--qb) 70%, transparent); }
+.tw-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.tw-eyebrow { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
+.tw-grade { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em; padding: 2px 9px; border-radius: 999px; color: var(--tw); background: color-mix(in srgb, var(--tw) 12%, transparent); }
+.tw-card.neutral .tw-grade { color: var(--gold); }
+.tw-game { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 6px 0 12px; font-size: 0.84rem; color: var(--ink-2); }
+.tw-game b { font-size: 1.15rem; font-weight: 780; color: var(--cream); letter-spacing: -0.01em; }
+.tw-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.tw-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tw-label { font-size: 0.56rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-val { font-size: 1rem; font-weight: 720; color: var(--cream); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tw-sub { font-size: 0.66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-none { margin: 0; color: var(--muted); font-size: 0.86rem; }
+.tw-context { margin: 10px 0 0; font-size: 0.84rem; color: var(--ink-2); }
+.tw-context b { color: var(--cream); }
+.tw-context .pl-name { font-size: inherit; font-weight: 650; }
+@media (max-width: 640px) { .tw-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .pp-glance { margin: 16px 0 0; color: var(--ink-2); font-size: 0.86rem; line-height: 1.5; }
 .pp-glance b { color: var(--cream); }
 .pp-glance-label { font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-right: 8px; }
@@ -3186,7 +3211,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-03T18:30Z";
+  const BUILD_ID = "2026-10-03T20:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6842,13 +6867,63 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function nameLink(sid, name, cls = "pl-name") {   // every player name opens the player modal
     return sid ? `<span class="${cls} pl-link" data-player="${esc(sid)}" role="button" tabindex="0">${esc(name)}</span>` : `<span class="${cls}">${esc(name)}</span>`;
   }
-  const shortDate = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   function teamGames(season, team) { const d = statsCache[season]; return (d && d.schedule && d.schedule[team]) || []; }
+  // Schedule row: [week, opp, home, date, pf, pa, kickoff ET "HH:MM", team spread (− = favored), game total, roof, stadium]
   function nextGame(team) {
     const s = STATS_SEASONS[0], rows = teamGames(s, team);
     const g = rows.find(r => r[4] == null);
-    return g ? { week: g[0], opp: g[1], home: g[2], date: g[3] } : null;
+    return g ? { week: g[0], opp: g[1], home: g[2], date: g[3], time: g[6] || null, spread: g[7] ?? null, total: g[8] ?? null, roof: g[9] || null, stadium: g[10] || null } : null;
   }
+  // The week being played now: the earliest week any team still has to play
+  function currentWeek() {
+    const d = statsCache[STATS_SEASONS[0]]; if (!d || !d.schedule) return null;
+    const w = Object.values(d.schedule).map(rows => (rows.find(r => r[4] == null) || [Infinity])[0]);
+    const m = Math.min(...w); return isFinite(m) ? m : null;
+  }
+  /* Defense vs position: what each NFL defense has allowed to a position this season, in the current
+     scoring. Two signals, both ranked 1 = softest: fantasy points allowed per game, and points allowed
+     per opportunity (QB dropbacks + runs, RB carries + targets, WR/TE targets). The matchup grade
+     blends them (60/40) and splits the league into thirds: Good / Neutral / Tough. */
+  const DVP = { key: "", data: null };
+  function defenseVsPos() {
+    const season = STATS_SEASONS[0], d = statsCache[season];
+    if (!d || !d.players) return null;
+    const sc = scoringNow(), key = season + "|" + d.updated + "|" + JSON.stringify(sc);
+    if (DVP.key === key) return DVP.data;
+    const opps = (pos, g) => pos === "QB" ? (g.pass_att || 0) + (g.pass_sack || 0) + (g.rush_att || 0)
+      : pos === "RB" ? (g.rush_att || 0) + (g.rec_tgt || 0) : (g.rec_tgt || 0);
+    const acc = {};   // def -> pos -> { pts, opp, weeks:Set }
+    for (const pl of Object.values(d.players)) {
+      if (!EDIT_POS.includes(pl.p)) continue;
+      for (const a of pl.g) {
+        const g = {}; d.cols.forEach((c, i) => { g[c] = a[i]; });
+        if (!g.opp) continue;
+        const x = ((acc[g.opp] = acc[g.opp] || {})[pl.p] = acc[g.opp][pl.p] || { pts: 0, opp: 0, weeks: new Set() });
+        x.pts += gamePoints(g, pl.p, sc); x.opp += opps(pl.p, g); x.weeks.add(g.w);
+      }
+    }
+    const out = {};
+    for (const pos of EDIT_POS) {
+      const rows = Object.entries(acc).filter(([, v]) => v[pos] && v[pos].weeks.size)
+        .map(([def, v]) => ({ def, g: v[pos].weeks.size, ppg: v[pos].pts / v[pos].weeks.size, eff: v[pos].opp ? v[pos].pts / v[pos].opp : 0 }));
+      const n = rows.length; if (!n) continue;
+      [...rows].sort((a, b) => b.ppg - a.ppg).forEach((r, i) => { r.ppgRank = i + 1; });
+      [...rows].sort((a, b) => b.eff - a.eff).forEach((r, i) => { r.effRank = i + 1; });
+      [...rows].sort((a, b) => (0.6 * a.ppgRank + 0.4 * a.effRank) - (0.6 * b.ppgRank + 0.4 * b.effRank)).forEach((r, i) => { r.rank = i + 1; });
+      rows.forEach(r => { r.n = n; r.grade = r.rank <= Math.round(n / 3) ? "good" : r.rank > n - Math.round(n / 3) ? "tough" : "neutral"; });
+      out[pos] = Object.fromEntries(rows.map(r => [r.def, r]));
+    }
+    DVP.key = key; DVP.data = out;
+    return out;
+  }
+  const softTough = (r, n) => (r <= n / 2 ? `${ordinal(r)}-softest` : `${ordinal(n - r + 1)}-toughest`);
+  const ROOF_TEXT = { dome: "Dome", closed: "Roof closed", open: "Roof open", outdoors: "Outdoors" };
+  const kickoffText = (date, time) => {
+    const day = new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    if (!time) return day;
+    const [h, m] = time.split(":").map(Number);
+    return `${day} · ${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"} ET`;
+  };
 
   /* Player modal: opens over whatever you're doing (rankings, a trade in progress, a team page)
      and never changes the page underneath. Click any player name or photo to open or switch. */
@@ -6944,7 +7019,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </div>
         <div class="pm-stats">
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
-          ${stat("Position", p ? esc(posLabel(p)) : "–", p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "")}
+          ${stat("Position", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
           ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
           ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? `${curT.g} G · ${activeData() ? "league" : "site"} scoring` : "No games")}
         </div>
@@ -7013,7 +7088,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const t = cur ? totals(cur.games) : null, pt = prev ? totals(prev.games) : null;
     const last3 = recentGames(sid, pos, 3), last5 = recentGames(sid, pos, 5);
     const own = ownerOfSid(sid), ng = info.team ? nextGame(info.team) : null;
-    const thisWeek = statsCache[STATS_SEASONS[0]] ? statsCache[STATS_SEASONS[0]].through_week + 1 : null;
     let trend = "–", trendSub = "";
     if (t && t.g && pt && pt.g) {
       const d = t.ppg - pt.ppg;
@@ -7024,29 +7098,76 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       trend = Math.abs(b - a) < 1 ? "Steady" : b > a ? "Up" : "Down";
       trendSub = `${fp(b)} PPG lately vs ${fp(a)} earlier`;
     } else if (pt && pt.g) { trendSub = `${fp(pt.ppg)} PPG in ${STATS_SEASONS[1]}`; }
-    const nextTxt = ng ? `${ng.home ? "vs" : "@"} ${ng.opp}` : info.team ? "–" : "Free agent";
-    const nextSub = ng ? `Wk ${ng.week} · ${shortDate(ng.date)}${thisWeek && ng.week > thisWeek ? ` · bye wk ${thisWeek}` : ""}` : "";
     const glance = t && t.g ? glanceLine(pos, t) : "";
     if (cur && cur.games.length) PP.charts.push({ type: "bar", season: STATS_SEASONS[0], games: cur.games, pos, compact: true });
     const r3 = avgPts(last3), r5 = avgPts(last5);
+    // Rank, value, PPG and owner live in the header; the overview leads with this week, then the season
     return `
+      ${thisWeekCard(info, ng)}
+      ${lineupContext(info, own)}
+      <h3 class="section-label">${STATS_SEASONS[0]} season</h3>
       <div class="ov-grid">
-        ${cell("Overall rank", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "Unranked", p ? (leagueView() ? adjName() : "SPAM") : "")}
-        ${cell("Position rank", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
-        ${cell("SPAM Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? adjName() + (LG.factor.has(p.id) ? ` · ${LG.factor.get(p.id) > 1 ? "+" : "−"}${Math.abs(Math.round((LG.factor.get(p.id) - 1) * 1000) / 10)}% for his scoring profile` : "") : "Base") : "")}
-        ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"}` : "No games yet")}
-        ${cell("Points per game", t && t.g ? fp(t.ppg) : "–", esc(activeData() ? "League scoring" : "Site scoring"))}
-        ${cell("Recent production", last3.length ? last3.map(g => fp(g.pts)).join(" · ") : "–", last3.length ? "Last 3 games, newest first" : "")}
+        ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"} · ${esc(activeData() ? "league scoring" : "site scoring")}` : "No games yet")}
+        ${cell("Season trend", trend, esc(trendSub))}
         ${cell("Last 3 average", r3 != null ? fp(r3) : "–", r3 != null && t && t.g ? `${r3 >= t.ppg ? "+" : "−"}${fp(Math.abs(r3 - t.ppg))} vs season` : "")}
         ${cell("Last 5 average", r5 != null ? fp(r5) : "–", last5.some(g => g.season !== STATS_SEASONS[0]) ? `Includes ${STATS_SEASONS[1]} games` : "")}
-        ${cell("Season trend", trend, esc(trendSub))}
-        ${cell("Next opponent", esc(nextTxt), esc(nextSub))}
-        ${cell("League owner", LG.active ? esc(own === "fa" ? "Free agent" : own.mine ? "Your team" : own.name) : "–", LG.active ? esc(activeData().league.name) : "No league connected")}
-        ${cell("Roster status", LG.active ? esc(rosterStatus(sid, own)) : "–", "")}
+        ${cell("Recent production", last3.length ? last3.map(g => fp(g.pts)).join(" · ") : "–", last3.length ? "Last 3 games, newest first" : "")}
+        ${cell("Bye week", byeWeek(info.team) ? "Week " + byeWeek(info.team) : "–", byeWeek(info.team) ? (currentWeek() > byeWeek(info.team) ? "Already had it" : currentWeek() === byeWeek(info.team) ? "This week" : "Still to come") : "")}
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
       ${p && p.projPPG != null ? `<p class="pp-glance">SPAM projection: <b>${fp(p.projPPG)}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
       ${cur && cur.games.length ? `<h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><div class="chart-box" data-chart="0"></div>` : ""}`;
+  }
+  // This week: opponent, kickoff, lines, the opponent's defense vs his position and a matchup grade
+  function thisWeekCard(info, ng) {
+    if (!info.team) return "";
+    const wk = currentWeek();
+    if (!ng) return `<div class="tw-card"><p class="tw-none">No games left on ${esc(info.team)}'s schedule.</p></div>`;
+    const bye = wk && ng.week > wk;
+    const dvp = defenseVsPos(), dv0 = dvp && dvp[info.pos] && dvp[info.pos][ng.opp];
+    const grade = !bye && dv0 ? dv0.grade : null;
+    const gradeText = { good: "Good matchup", neutral: "Neutral matchup", tough: "Tough matchup" }[grade];
+    const spread = ng.spread != null ? `${esc(info.team)} ${ng.spread === 0 ? "PK" : (ng.spread > 0 ? "+" : "−") + Math.abs(ng.spread)}` : "–";
+    const implied = ng.total != null && ng.spread != null ? fp(ng.total / 2 - ng.spread / 2) : null;
+    const where = [ng.stadium, ROOF_TEXT[ng.roof]].filter(Boolean).join(" · ");
+    const tile = (label, val, sub) => `<div class="tw-stat"><span class="tw-label">${label}</span><span class="tw-val">${val}</span>${sub ? `<span class="tw-sub">${sub}</span>` : ""}</div>`;
+    const P = esc(info.pos) + "s";
+    return `<div class="tw-card${grade ? " " + grade : ""}">
+      <div class="tw-head">
+        <span class="tw-eyebrow">${bye ? `Week ${wk} · Bye` : `This week · Week ${ng.week}`}</span>
+        ${gradeText ? `<span class="tw-grade">${gradeText}</span>` : ""}
+      </div>
+      <div class="tw-game"><b>${bye ? "Next: " : ""}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}</div>
+      <div class="tw-stats">
+        ${tile("Spread", spread, "")}
+        ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
+        ${tile("Team total", implied ?? "–", implied ? "implied" : "")}
+        ${tile(`${esc(ng.opp)} vs ${esc(info.pos)}`, dv0 ? softTough(dv0.rank, dv0.n) : "–", dv0 ? `of ${dv0.n} defenses` : "No games yet")}
+        ${tile(`Pts allowed to ${P}`, dv0 ? fp(dv0.ppg) : "–", dv0 ? `per game · ${dv0.g} game${dv0.g === 1 ? "" : "s"}${dv0.g < 5 ? " · small sample" : ""}` : "")}
+      </div>
+    </div>`;
+  }
+  function byeWeek(team) {
+    const rows = team ? teamGames(STATS_SEASONS[0], team) : [];
+    if (!rows.length) return null;
+    const have = new Set(rows.map(r => r[0])), last = Math.max(...have);
+    for (let w = 1; w <= last; w++) if (!have.has(w)) return w;
+    return null;
+  }
+  // Start/sit context in a connected league: his slot in his fantasy team's best lineup and who's next up
+  function lineupContext(info, own) {
+    const p = info.p, d = activeData();
+    if (!p || !d || !own || own === "fa" || !EDIT_POS.includes(p.pos)) return "";
+    const r = own.roster, out = new Set([...(r.reserve || []), ...(r.taxi || [])].map(String));
+    if (out.has(String(p.sleeperId))) return "";
+    const map = bySleeper(), pool = (r.players || []).map(String).filter(x => !out.has(x)).map(x => map.get(x)).filter(Boolean);
+    const L = bestLineup(pool, leagueSlots(d.league), lineupOf(d.league).bench), labels = slotLabels(L);
+    const slot = labels.get(p.id), role = L.role.get(p.id);
+    const next = L.bench.filter(x => x.pos === p.pos && x !== p)[0];
+    const impact = !slot ? "Bench depth" : /^(FLEX|SF|W\/R|W\/T)$/.test(role) ? "Flex starter" : "Every-week starter";
+    const team = own.mine ? "your team" : own.name;
+    const status = rosterStatus(p.sleeperId, own);
+    return `<p class="tw-context"><span class="pp-glance-label">Start/sit</span>${slot ? `Best lineup: <b>${esc(slot)}</b> for ${esc(team)}` : `Best lineup: bench for ${esc(team)}`} · ${impact}${next ? ` · Next ${esc(p.pos)} up: ${nameLink(next.sleeperId, next.name)}` : ""}${status && status !== "–" ? ` · Sleeper: ${esc(status.toLowerCase())}` : ""}</p>`;
   }
   function glanceLine(pos, t) {
     const parts = [];
