@@ -3486,7 +3486,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T14:00Z";
+  const BUILD_ID = "2026-10-04T15:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -8349,17 +8349,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const moveList = (places, rid) => EDIT_POS.map(pos => ({ pos, b: places[rid][pos][0], a: places[rid][pos][1] }));
   const bestUp = list => list.filter(x => x.a < x.b).sort((x, y) => (y.b - y.a) - (x.b - x.a))[0];
   const worstDown = list => list.filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
-  function gainPhrase(person2, places, rid, incoming, afterL, outgoing = []) {
-    const v = (base, third) => (person2 ? base : third);
-    const ms = moveList(places, rid), up = bestUp(ms), down = worstDown(ms);
-    const starter = incoming.filter(p => afterL.role.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
-    if (up && down) return `${v("turn", "turns")} ${down.pos} depth into ${starter && starter.pos === up.pos ? "an immediate" : "a"} ${up.pos} upgrade`;
-    if (up) return `${v("upgrade", "upgrades")} at ${up.pos}${starter && starter.pos === up.pos ? ` with a new starter` : ""}`;
-    if (down) return `${v("take", "takes")} a small step back at ${down.pos} for the value`;
-    if (starter && outgoing.some(p => p.pos === starter.pos)) return `${v("swap", "swaps")} starting ${starter.pos}s`;
-    if (starter) return `${v("get", "receives")} a new starting ${starter.pos}`;
-    return `${v("add", "adds")} depth`;
-  }
   // Card headline, kept punchy: value verdict + lineup fit ("Fair + good fit", "Slight edge to you")
   function fitBadge0(it, v) {   // the long form, shown as a tooltip
     const S = it.S, sN = S.mine ? "you" : S.name, bad = [];
@@ -8381,23 +8370,42 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (it.fS.net >= 3 && it.fT.net >= 3) return `${base} + good fit`;
     return base;
   }
-  function shortWhy(it) {
-    const worst = it.fS.net <= it.fT.net ? { f: it.fS, name: it.S.mine ? "your" : it.S.name + "'s" } : { f: it.fT, name: it.team.name + "'s" };
-    if (worst.f.net <= -8) {
-      const b = worst.f.inc.filter(e => !e.starts).sort((x, y) => dv(y.p) - dv(x.p))[0];
-      if (b) return `${b.p.name} ${b.why.replace(/^Would be/, `would be ${worst.name}`)}, so most of that value would sit on the bench.`;
+  // Optional one-line roster insight under a card: why the deal makes sense, never what it is.
+  // Returns "" when there's nothing the card doesn't already show.
+  const possOf = t => (t.mine ? "your" : t.name + (/s$/i.test(t.name) ? "'" : "'s"));
+  const weakRoom = x => x && x.b > LG.teams.length - Math.ceil(LG.teams.length / 3);
+  function shortWhy(it, fair) {
+    const S = it.S, T = it.team, sm = moveList(it.places, S.rosterId), tm = moveList(it.places, T.rosterId);
+    const sUp = bestUp(sm), sDown = worstDown(sm), tUp = bestUp(tm);
+    // 1. One side would mostly bench what it gets
+    const bad = it.fS.net <= it.fT.net ? { f: it.fS, t: S } : { f: it.fT, t: T };
+    if (bad.f.net <= -8) {
+      const b = bad.f.inc.filter(e => !e.starts).sort((x, y) => dv(y.p) - dv(x.p))[0], slot = b && b.why.match(/^Would be (\w+?\d+)/);
+      if (slot) return `${fair ? "Fair on value, but " : ""}${b.p.name} would only be ${possOf(bad.t)} ${slot[1]}, so most of his value would sit on the bench.`;
     }
-    const S = it.S, T = it.team, sub = S.mine ? "You" : S.name;
-    return `${sub} ${gainPhrase(S.mine, it.places, S.rosterId, it.get, it.sAfter, it.give)} while ${T.name} ${gainPhrase(false, it.places, T.rosterId, it.give, it.tAfter, it.get)}.`;
+    // 2. Both teams fix a weak room
+    if (weakRoom(sUp) && weakRoom(tUp)) return `Fills a weak spot for both teams: ${possOf(S)} ${sUp.pos} room and ${possOf(T)} ${tUp.pos} room.`;
+    // 3. Even on value, uneven on fit
+    if (fair && Math.abs(it.fS.net - it.fT.net) >= 8) {
+      const w = it.fS.net > it.fT.net ? { t: S, up: sUp } : { t: T, up: tUp };
+      if (w.up) return `Fair on value, but it does more for ${possOf(w.t)} lineup: it ${weakRoom(w.up) ? "fills a weak" : "strengthens the"} ${w.up.pos} ${weakRoom(w.up) ? "spot" : "room"}.`;
+    }
+    // 4. The starting team's rooms
+    if (sUp && sDown && sDown.pos !== sUp.pos) {
+      if (weakRoom({ b: sDown.a }) && !weakRoom(sDown)) return `Upgrades ${possOf(S)} ${sUp.pos} room, but drops ${possOf(S)} ${sDown.pos} room into the league's bottom third.`;
+      return `Turns ${possOf(S)} ${sDown.pos} depth into a stronger ${sUp.pos} room.`;
+    }
+    if (sUp && !sDown) return `${weakRoom(sUp) ? "Shores up" : "Improves"} ${possOf(S)} ${weakRoom(sUp) ? "weak " : ""}${sUp.pos} room without opening a hole elsewhere.`;
+    return "";
   }
   function fullWhy(it) {
-    const S = it.S, T = it.team.name, you = S.mine, sN = you ? "you" : S.name, sPoss = you ? "your" : S.name + "'s";
+    const S = it.S, T = it.team.name, you = S.mine, sN = you ? "you" : S.name, sPoss = possOf(S), SPoss = sPoss.replace(/^./, c => c.toUpperCase()), TPoss = possOf(it.team);
     const arrow = x => `${ordinal(x.b)} → ${ordinal(x.a)}`;
     const sm = moveList(it.places, S.rosterId), tm = moveList(it.places, it.team.rosterId);
     const mu = bestUp(sm), md = worstDown(sm), tu = bestUp(tm), td = worstDown(tm);
     const lines = [];
-    lines.push(mu ? `${you ? "Your" : S.name + "'s"} ${mu.pos} room goes ${arrow(mu)}${md ? `, while ${sPoss} ${md.pos} room goes ${arrow(md)}` : ""}.` : it.dS > 0 ? `${you ? "Your" : S.name + "'s"} starting lineup gets stronger.` : `${you ? "Your" : S.name + "'s"} lineup stays about level.`);
-    lines.push(tu ? `${T}'s ${tu.pos} room goes ${arrow(tu)}${td ? ` and its ${td.pos} room ${arrow(td)}` : ""}.` : it.dT > 0 ? `${T}'s lineup gets stronger.` : `${T} gets the value but not a lineup upgrade, so they may need convincing.`);
+    lines.push(mu ? `${SPoss} ${mu.pos} room goes ${arrow(mu)}${md ? `, while ${sPoss} ${md.pos} room goes ${arrow(md)}` : ""}.` : it.dS > 0 ? `${SPoss} starting lineup gets stronger.` : `${SPoss} lineup stays about level.`);
+    lines.push(tu ? `${TPoss} ${tu.pos} room goes ${arrow(tu)}${td ? ` and its ${td.pos} room ${arrow(td)}` : ""}.` : it.dT > 0 ? `${TPoss} lineup gets stronger.` : `${T} gets the value but not a lineup upgrade, so they may need convincing.`);
     it.fS.inc.forEach(e => lines.push(`${e.p.name}: ${fmt(dv(e.p))} SPAM Value, worth ${fmt(e.tv)} to ${sN} (${e.why.toLowerCase()}).`));
     it.fT.inc.forEach(e => lines.push(`${e.p.name}: worth ${fmt(e.tv)} to ${T} (${e.why.toLowerCase()}).`));
     if (it.give.length > it.get.length) lines.push(`${you ? "You consolidate" : S.name + " consolidates"} into one stronger piece and ${you ? "open" : "opens"} a roster spot.`);
@@ -8405,9 +8413,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return lines;
   }
   function threeWhy(f) {
-    const nm = t => (t.mine ? "You" : t.name);
-    const part = (t, inc, L) => `${nm(t)} ${gainPhrase(t.mine, f.places, t.rosterId, [inc], L)}`;
-    return `${part(f.S, f.P3, f.after.get(f.S.rosterId))}, ${part(f.B, f.P2, f.after.get(f.B.rosterId))}, and ${part(f.C, f.P1, f.after.get(f.C.rosterId))}. A straight swap wouldn't work: ${f.B.name} has no use for ${f.P1.name}, but ${f.C.name} does.`;
+    const rooms = [f.S, f.B, f.C].map(t => { const u = bestUp(moveList(f.places, t.rosterId)); return u ? `${possOf(t)} ${u.pos} room` : ""; }).filter(Boolean);
+    const list = rooms.length > 2 ? rooms.slice(0, -1).join(", ") + " and " + rooms.at(-1) : rooms.join(" and ");
+    return `Straight up, ${f.P1.name} wouldn't help ${f.B.name} much. He does help ${f.C.name}, whose ${f.P2.name} fits ${f.B.name} better. ` +
+      (rooms.length ? `It strengthens ${list}.` : `All three lineups improve.`);
   }
 
   /* Controls */
@@ -8537,7 +8546,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => crow(p, "")).join("")}</ul></div>
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "get" : "gets"}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return crow(p, fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
         </div>
-        <p class="tf-why">${esc(shortWhy(it))}</p>
+        ${(w => w ? `<p class="tf-why">${esc(w)}</p>` : "")(shortWhy(it, v.fair))}
         ${full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
           <dl class="tf-nums"><div><dt>Raw · give vs get</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
           <div><dt>Adjusted · give vs get</dt><dd>${fmt(it.m.b)} <span>vs</span> ${fmt(it.m.a)}</dd></div></dl></div>` : ""}
