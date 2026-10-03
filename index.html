@@ -2986,7 +2986,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T00:05Z";
+  const BUILD_ID = "2026-10-03T00:50Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4505,7 +4505,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     } catch (err) {
       editor.saving = false; updateEditorBar();
       toast(err.status === 401 || err.status === 403
-        ? "Publish failed: GitHub didn't accept your token. Use Forget GitHub token, then publish again with a token that has Contents: Read and write."
+        ? `Publish failed: GitHub said "${err.message}". The token needs access to ${REPO} with Contents: Read and write (edit the token on GitHub, then publish again).`
         : "Publish failed: " + err.message);
     }
   }
