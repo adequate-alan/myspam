@@ -4,6 +4,8 @@ Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-pre
 
 **Live site:** https://stevenp36.github.io/spam/ (rankings: https://stevenp36.github.io/spam/#rankings)
 
+**Working on the code (people or AI assistants):** start with [`CLAUDE.md`](CLAUDE.md), the project handoff: product rules, data flow, publishing, scheduled jobs and what must never be overwritten.
+
 ### Hosting and moving to a custom domain
 The site is one static `index.html` served by GitHub Pages from the `main` branch of `stevenp36/spam`. Every asset, data file, script and link is a relative path (`data/…`, `favicon.svg`, `manifest.webmanifest`, `#rankings`), so the site works unchanged at `/spam/` or at the root of any domain. The public address appears in only two places, the `canonical` link and `og:url` in the page head. To move to a custom domain later:
 1. Buy the domain and point DNS at GitHub Pages (a `CNAME` record for `www` to `stevenp36.github.io`, and/or `A` records for the apex as listed in GitHub's Pages docs).

@@ -1,0 +1,242 @@
+# CLAUDE.md: SPAM project handoff
+
+Read this file first. It's the context an AI assistant (or a new developer) needs to keep building SPAM without undoing decisions that were already made. `README.md` has the feature-by-feature reference; this file has the **why**, the **rules**, and the **workflow**.
+
+Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, collaborator). Both edit the rankings; both may work on the code from their own Claude accounts. Keep this file current: when you make a product decision, add it here in the same commit.
+
+---
+
+## 1. What SPAM is
+
+- **SPAM** is the product: fantasy football rankings, values and trade tools. Brand mark is the one-word wordmark **`SPAM.`** (the period is part of the logo: burgundy word + warm accent dot in light mode, cream word in dark mode). The old name was SPMetrics. Never bring that name back in the UI, metadata or copy.
+- Live site: **https://stevenp36.github.io/spam/** (rankings at `#rankings`). Repo: **`stevenp36/spam`** (renamed from `spmetrics-fantasy`; the old Pages URL no longer resolves).
+- Base format: **12-team, Full PPR, Superflex, TE premium (+0.5), redraft.** That's what the SPAM Board means.
+- The **SPAM Board** (Steven & Alan's manual rankings, tiers and published values) is the **core source of truth**. Everything else (league-adjusted values, trade verdicts, power rankings, Trade Finder) is *derived* from it.
+
+## 2. Product rules that must not be undone
+
+1. **The base SPAM Board is never overwritten by derived calculations.** League-adjusted values, custom formats, Sleeper data, stats refreshes and projections are separate layers computed in the browser. They must never write back into `RANKINGS_CSV` or change rank/tier/value for anyone.
+2. **Manual rankings are locked.** Players with `source=manual` keep the order, tiers and values Steven/Alan set. Automatic processes (projections, Auto players, the weekly job) must never reorder them or push them down.
+3. **Auto players sit underneath.** `source=auto` players (70 added Oct 2, 2026) are ranked below every manual player (overall #184+), valued with a gentle tail that never exceeds anyone ranked above them. Moving, re-tiering or re-valuing an Auto player in the editor and saving makes him Manual. Players who only shift because someone else moved stay Auto.
+4. **Tiers first, then rank order, then format.** Tiers decide where the value gaps are; rank order inside a tier sets small gaps; format (league size, scoring, lineup) adjusts how much each tier is worth. No artificial cliffs just because a player crosses QB12→QB13 or WR36→WR37.
+5. **"Custom" means unpublished.** A typed value shows the CUSTOM label, striped bar and an Auto/Reset button only until it's published. Once published it's that player's official SPAM value and looks like every other player. It stays fixed (it doesn't follow the model) until someone edits it again.
+6. **Save → Publish workflow.** Before saving = unsaved edit. Save changes = saved (in the browser, and published automatically if the browser has a GitHub token). Publish to live site = committed to `index.html` on GitHub and becomes the master rankings. Tier changes follow the same workflow.
+7. **League-specific screens always show league-adjusted values and position ranks** (Trade Finder, My Team, League, Free Agents, the calculator in league mode, player pages opened from those). The SPAM Board / League-adjusted toggle only affects the Rankings board. Never show the base positional rank (e.g. superflex QB3) inside a 1QB league's trade recommendation.
+8. **Historical honesty in Trade History.** A trade is "Historical SPAM values" only if every player had a SPAM value on or before the trade date. Trades before SPAM existed are labeled **Pre-SPAM trade** and judged as a retrospective with today's values. Never present today's values as what a player was worth back then.
+9. **Stats never change rankings.** Stats refreshes update game logs and fantasy points only.
+10. **Design consistency.** Use the theme tokens; no default browser controls (selects, checkboxes, dialogs). No Patreon button or styling. Labels are sentence-case in copy, uppercase with letter spacing for small labels.
+
+## 3. How to run it
+
+It's a static site: **one HTML file** plus JSON data. No build step, no framework, no npm.
+
+```bash
+git clone https://github.com/stevenp36/spam.git && cd spam
+python3 -m http.server 8000          # then open http://localhost:8000/
+```
+
+Opening `index.html` straight from disk works for most things, but `fetch()` of `data/*.json` needs a local server.
+
+Pipeline scripts (Python 3.12, pandas, numpy): `cd pipeline && pip install pandas numpy`. They download public nflverse / DynastyProcess data.
+
+### Testing (how changes were verified so far)
+There's no committed test suite. Changes were verified with throwaway **Playwright** (Python) scripts:
+- Serve the repo locally, open the page with `chromium.launch()`, and read the rankings table from the DOM (`#rank-body tr.player`, `.pl-name`, `.pos-col .pos`, `.val .num` / `.val .num-btn`).
+- **Mock Sleeper** by routing `https://api.sleeper.app/**` to fake JSON (users, leagues, rosters, transactions) and connect through the UI (`#sl-connect` → Sleeper → username → pick league).
+- **Mock GitHub** by routing `https://api.github.com/**` to test the Save/Publish flow without touching the real repo.
+- Key regression checks:
+  - Manual players' ranks and values are identical before and after a model change, compared across several `?fmt=` formats.
+  - A league in the base format gives exactly the base values: all 253 match.
+  - No `pageerror` events.
+  - Light and dark screenshots look right.
+- `?fmt=` URL form: `t10_qb1_rec0.5_tep0` (keys: `t` teams, `qb` 1/sf/2, `sx` superflex spots, `rec`, `tep`, `ptd`, `pyd`, `int`, `fl` fumble, `fd`, `rb`, `wr`, `te`, `fx` flex, `bn` bench).
+
+Committing these as `tests/` would be a good first improvement.
+
+## 4. Where things are
+
+```
+index.html                     the whole site (HTML + CSS + JS, ~8k lines) AND the rankings data
+data/rank_history.json         ranking history (v2): {sleeper_id: [[ts, rank, posRank, tier, value, src]]}, src M/S/P
+data/stats/<season>.json       weekly game stats + team schedules for player pages (2026, 2025, 2024)
+data/sleeper_players.json      Sleeper ID → [name, pos, team, gsis_id, birthdate]
+data/platform_ids.json         ESPN/Yahoo ID → Sleeper ID (for ESPN/Yahoo imports)
+data/curve_components.json     points-by-rank curve inputs used to re-score other formats
+pipeline/                      Python data jobs (see §8)
+.github/workflows/site.yml     the only workflow: deploy on push + scheduled data refreshes
+favicon.svg, manifest.webmanifest
+README.md                      detailed feature reference
+CLAUDE.md                      this file
+```
+
+Inside `index.html` (search for these names):
+- **Settings at the top** (plain JS constants, meant to be tuned):
+  - `SITE`: name, repo, format text.
+  - `RANKINGS_CSV`: the data.
+  - `VALUE_MODEL`: curves, tiers, `tagTierFrom: 90`, `autoDecay`.
+  - Trade model constants, `TEAM_FIT`, `DEPTH_ADJUST`.
+  - `TIER_NAMES`: preset tier names.
+  - `STATS_SEASONS`.
+  - `FORMAT_ADJUST`: margin, maxPosMove, `tierKeep: 0.40`, `floor`.
+  - `TRADE_VERDICTS`.
+- **Value pipeline:**
+  - `loadPlayers` → `modelValue` → `keepRankOrderBySource` → `applyTiers` → `keepOverallOrder` (manual players above the tail only) → `autoValues` (the tail).
+  - League layer: `leagueRecalc` → `adjustValues(valueLeague())` → `smoothTiers` → `stickyOrder` → `LG.adj` / `LG.adjPos` / `LG.adjRank`.
+  - Display helpers: `dv(p)` = value in the current context, `posLabel(p)` = position rank in the current context, `leagueView()` decides which.
+- **Editor:**
+  - `editor`, `draft`, `writeOrder`, `moveOverall`, `movePlayer`, `setValue`, `makeManual`.
+  - Tier editing: `tierAction`, `shiftTiers`, `materializeTierNames`, `TIER_EMPTY`.
+  - Saving and publishing: `saveLocal`, `publishLive`, `mergeInto`.
+  - Data columns: `EDIT_COLS`.
+- **History:** `recordSave`, `saveHistory`, `addSnapshot`, `normalizeHistory`, `window.SPM` (used by `pipeline/snapshot_history.py`).
+- **Sleeper/ESPN/Yahoo:** `SL_KEY`, `slGet`, `leagueTeams`, `espnToLeague`, `parseYahooSettings`, `activeData()`, `syncedLeague()`.
+- **Custom format:** `FMT`, `FMT_DEFAULT`, `FMT_FIELDS`, `fmtLeague`, `FMT_SRC` (synced vs custom), `configText`.
+- **Tabs:**
+  - My Team: `renderMyTeam`.
+  - League: `renderLeague`, `powerHtml`, `teamExpand`, `standingsHtml`, `tradeHistoryHtml`, `evalTrade`, `valueAt`.
+  - Trade Finder: `renderFinder`, `findTrades`, `findThree`.
+  - Free Agents: `renderFA`.
+  - Calculator: `renderTrade`, `tradeModel`, `runModel`, `rosterContext`.
+  - Player modal: `openPlayer`, `renderPlayer`, `ppSection`, `statsStamp`.
+- **UI components:**
+  - Dropdowns: `SpamSelect` (end of file), which turns every `<select>` into a themed dropdown.
+  - Themed checkboxes and radios: global CSS.
+  - Theme: `setTheme`, `spm_theme`.
+  - Update prompt: `BUILD_ID` and `checkForUpdate`.
+
+## 5. How the rankings data flows
+
+1. **`RANKINGS_CSV`** (inside `index.html`) is the master data. Columns:
+   `player,pos,team,rank,pos_rank,tier,value,proj_ppg,games,proj_score,sleeper_id,source,tier_name`
+   - `rank` = overall rank (source of truth for order); `pos_rank` derived from it.
+   - `tier` = positional tier number; **90+ are tag tiers** (e.g. 90 = "Hurt"), not part of the ladder.
+   - `value` = blank → model value; a number → published official value (fixed).
+   - `source` = `manual` / `auto`. `tier_name` = editable tier name (falls back to `TIER_NAMES`).
+   - `proj_ppg/games/proj_score` = written weekly by the pipeline (projection blend). `sleeper_id` written by the pipeline.
+2. On load, `loadPlayers` builds player objects and values (base SPAM values, scaled so #1 = 10,000).
+3. Editor edits change a `draft` copy of the CSV and call `rebuild()`. Save stores the changed fields per player in `localStorage` (`spm_local_edits`); Publish merges only the edited fields onto the latest `index.html` from GitHub and commits it (so the weekly projection refresh is never clobbered).
+4. The **league layer** is computed after every rebuild from the base values: never stored.
+
+## 6. Publishing (rankings) and deploying (code)
+
+**Rankings edits** (no code): in the site's editor (currently open to every visitor, temporarily), make changes → **Save changes**. If that browser has a GitHub token, Save publishes immediately; otherwise click **Publish to live site** once and paste a token:
+- **Steven** (owner): a *fine-grained* token for `stevenp36/spam` with **Contents: Read and write** (+ **Actions: Read and write** for the Refresh stats button).
+- **Alan** (collaborator): fine-grained tokens can't reach repos owned by another personal account, so use a **classic** token with the **`repo`** scope (`public_repo` is enough for publishing; `repo` is needed to start the stats workflow).
+- Tokens live only in that browser's `localStorage` (`spm_editor_token`). **Never put a token in the code or the repo.**
+
+**Code changes**: commit to `main` and push. The `push` trigger in `site.yml` deploys the repo root to GitHub Pages in ~1 minute. **Bump `BUILD_ID`** (top of the main script) in every code change so open browsers get the "new version" prompt. Rankings publishes from the editor don't need it.
+
+Before pushing a code change, `git pull --rebase` first: the editor and the scheduled jobs commit to `main` too (`Rankings edit by @…`, `Ranking history: N changes`, `Player stats refresh`, `Weekly projections and stats refresh`).
+
+## 7. How to change rankings safely
+
+- Prefer the website editor. If editing `RANKINGS_CSV` by hand:
+  - Keep the columns.
+  - Keep ranks unique and contiguous.
+  - Put every Auto player after every Manual player.
+  - Quote any field containing a comma.
+  - Leave `proj_*` and `sleeper_id` alone (pipeline-owned).
+- After a model change, verify manual players' values are unchanged (or changed only as intended) in the base format and a few `?fmt=` formats.
+- Don't put the draft rankings of one person into the board without saying so: the board is Steven & Alan's combined ranking.
+- Ranking History records committed changes (Save/Publish), one entry per changed player, plus scheduled snapshots. Same-day separate publishes are separate entries; unchanged players get no duplicate. Tier changes are included.
+
+## 8. Scheduled jobs and data updates (`.github/workflows/site.yml`)
+
+| Trigger | What runs | Writes |
+|---|---|---|
+| push to `main` | deploy only | Pages |
+| **Tue 14:00 UTC** (weekly) | `project_players.py` → `merge_projections.py` → `build_sleeper_ids.py` → `build_stats.py 2026` → `stamp_date.py` → `snapshot_history.py` (headless browser) | `index.html` (proj columns, sleeper IDs, date), `data/sleeper_players.json`, `data/platform_ids.json`, `data/stats/2026.json`, `data/rank_history.json` |
+| **Fri 08:30 & 15:00, Sun 08:30 & 15:00, Mon 08:30 & 15:00, Tue 08:30, Thu 15:00 UTC** | **stats only**: `build_stats.py 2026` | `data/stats/2026.json` |
+| manual "Run workflow" (`stats_only` true/false) or editor **Refresh stats** button | stats-only or the full weekly job | as above |
+
+- Stats come from nflverse's weekly player stats, which usually appear the night of the games and sometimes the next morning. That's why each game day has a retry.
+- The stats file includes `updated` (UTC timestamp) and `through_week`; player pages show "Stats updated … · through Week N".
+- The weekly projection refresh changes `proj_*` columns, which feed the model's projection blend for *model-valued* players (not published fixed values). Rank order and tiers are never changed by it.
+- Season rollover: add the new season to `STATS_SEASONS` and the workflow's `build_stats.py <year>` and git-add lines.
+
+## 9. Sleeper and league data are separate from SPAM data
+
+- Connected leagues (Sleeper username → leagues; ESPN direct or paste; Yahoo/other paste) are stored in the **visitor's browser** (`spm_sleeper`). Nothing about a visitor's league is committed to the repo.
+- Every import becomes a Sleeper-shaped object `{league, users, rosters}`, so all features work the same way.
+- Ownership: `LG.ownerOf` maps players to fantasy teams for owner tags, the "Show" filter, Free Agents, rosters.
+- Trade History reads Sleeper `transactions` for each week (Sleeper only).
+- **League-adjusted values** come from the selected league's settings (Synced league) or the user's **Custom format** (`FMT`, saved per browser, also in `?fmt=`). League size + lineup set replacement levels; scoring re-scores the points-by-rank curves; tiers are re-priced as blocks; `tierKeep` limits tier-to-tier drops in shallow formats; a small `floor` prevents zeros; a per-player scoring-profile nudge (max ±10%) applies; order moves only when a value beats the player above by >3% (max 2 spots per position). **None of this touches the SPAM Board.**
+- League depth (`DEPTH_ADJUST`): shallow leagues (e.g. 10 teams × 7 starters) weight bench depth less.
+
+## 10. Features and the decisions behind them
+
+- **Rankings tab:**
+  - All / QB / RB / WR / TE.
+  - Board view toggle: SPAM Board vs League-adjusted.
+  - Tier headers: compact, muted guide labels (RK / RANK, PLAYER, POS, VALUE).
+  - Owner "Show" filter when a league is connected.
+- **Editor** (top bar, temporary: open to everyone):
+  - Drag or arrows to reorder.
+  - Click a value to type it.
+  - In position tabs, hover a tier header to rename it, add a tier above or below, or delete it (asks whether players move to the tier above or below; never drops players).
+  - Drag players onto tier headers or empty tiers.
+  - Empty tiers last only until you save.
+- **Player modal:**
+  - Overview, game log, stats, fantasy performance (charts), ranking history, compare.
+  - Photos come from `sleepercdn.com`, with an initials fallback.
+  - Shows both the league position rank and the SPAM Board rank when they differ.
+  - "Stats updated" line.
+- **My Team:** the connected user's roster with slots, league ranks and values.
+- **League tab:**
+  - Sub-tabs: Power Rankings / Trade History / Standings.
+  - Power Rankings: compact rows; the whole row expands into a roster board with position ranks vs the league.
+  - Gold accent on your own team.
+  - "Keep teams open to compare".
+  - Clicking a player, Trade With or Find Trades never toggles the row.
+  - Team score bar is scaled to the top team.
+  - Trade History: per-trade cards with verdict, meter, picks/FAAB, a 3-team layout, Analyze Trade, and labels for historical, pre-SPAM and current-value evaluations.
+  - Standings: record vs power rank.
+- **Trade Calculator:**
+  - 2-team, plus optional 3-team.
+  - League mode with roster context (lineup impact, team-specific value, position rooms).
+  - Verdict tiers in `TRADE_VERDICTS`.
+  - Consolidation bonus and roster-spot cost are small and capped.
+  - Rows read: name, then a position-rank badge with "from Team", then the value right-aligned.
+- **Trade Finder:**
+  - League-wide discovery for one player, or a **2-player package from one roster**.
+  - 1-for-1 or packages; 3-team cycles only for single players.
+  - Cards read: partner → short verdict ("FAIR + GOOD FIT") → muted numbers → give/get → one-line why. The full analysis expands.
+  - Always uses league-adjusted values.
+- **Free Agents:** unrostered ranked players in the connected league.
+- **Themes:**
+  - Light: cream `#F7F2EB`, burgundy `#5A1F32`, coral `#D96B5B`, peach `#F0B18A`, ink `#2E2A28`.
+  - Dark: near-black `#1A1314`, burgundy surfaces, cream `#F3EDE4`, gold `#F4B979`.
+  - All colors come from tokens at the top of the CSS.
+  - Archivo typography.
+  - Custom dropdowns, checkboxes and radios; no native controls.
+
+## 11. Known limitations and unfinished work
+
+- **Editor security:** editing is open to every visitor (Steven's temporary choice); only people with a GitHub token can publish. Real authentication is still to do.
+- **Tests:** no committed test suite (see §3).
+- **IR / taxi spots** aren't format options; they don't change values.
+- **Draft picks** are listed in trades but not valued.
+- **Trade History:** only for Sleeper leagues; ESPN/Yahoo imports have no transaction feed.
+- **Deep tiers in shallow formats:** a 10-team 1QB board values QB13+ at a few hundred by design (tiers keep ≥40% of the value above).
+- **Excel master workbook:** Steven & Alan's original Excel file (`StevenAlanRankings`, per-position Steven/Alan/Combined sheets) is **not synced** with the site. The website is now the source of truth. An Oct 2 copy with the 70 Auto players and a "SPAM Board" sheet was produced but isn't in the repo.
+- **Old URL:** `stevenp36.github.io/spmetrics-fantasy/` is dead. A redirect page can live in a new `spmetrics-fantasy` repo if wanted.
+- **Custom domain:** not set up. Every path is relative; only `canonical`/`og:url` would change.
+- **Player data:** some player-name matches use aliases (`pipeline/merge_projections.py` `ALIASES`, `pipeline/build_sleeper_ids.py` `ID_ALIASES`). Add an alias when a new player's projection or Sleeper ID comes up empty.
+
+## 12. Secrets, services, accounts
+
+- **No API keys or repository secrets.** The workflow uses GitHub's built-in `GITHUB_TOKEN` (`contents: write`, `pages: write`, `id-token: write`).
+- External services, all public and keyless:
+  - Sleeper API (`api.sleeper.app`), called from the visitor's browser.
+  - Sleeper CDN for photos.
+  - ESPN fantasy API for public leagues.
+  - nflverse data releases and DynastyProcess player IDs (pipeline).
+  - Google Fonts.
+- Pages source: **GitHub Actions** (`Build and deploy site` workflow). Custom domain: none.
+
+## 13. Working agreement for AI assistants
+
+- Make the change, test it locally (Playwright if it touches behavior), bump `BUILD_ID`, `git pull --rebase`, commit with a clear message, push.
+- Never rewrite or reorder `RANKINGS_CSV` as a side effect. Never commit tokens. Never remove Ranking History entries.
+- Ask before anything irreversible (deleting data, renaming the repo, rewriting history).
+- When you change a behavior described here, update this file in the same commit.
