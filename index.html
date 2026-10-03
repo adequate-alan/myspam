@@ -970,6 +970,14 @@ tbody tr.tier:first-child td { border-top: 0; }
 }
 .pos.QB { --c: var(--qb); } .pos.RB { --c: var(--rb); } .pos.WR { --c: var(--wr); } .pos.TE { --c: var(--te); } .pos.PICK { --c: var(--pick); }
 td.val { width: 42%; min-width: 230px; padding-left: 14px; }
+/* Rankings header: a quiet guide above the board, not a block of its own */
+#panel-rankings thead th {
+  padding-top: 10px; padding-bottom: 8px; background: none;
+  font-size: 0.6rem; font-weight: 600; letter-spacing: 0.16em; line-height: 1;
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+  border-bottom: 1px solid var(--line-soft);
+}
+#panel-rankings thead th.val { padding-left: 14px; }   /* starts where the value bar starts */
 .valbar { display: flex; align-items: center; gap: 12px; }
 .valbar .track { flex: 0 1 200px; height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
 .valbar .fill { height: 100%; background: var(--c, var(--cream)); border-radius: 2px; opacity: 0.9; }
@@ -2098,6 +2106,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   tbody td { padding-block: 15px; }
   td.rk { width: 44px; }
   td.val { min-width: 0; width: auto; padding-left: 8px; }
+  #panel-rankings thead th.val { padding-left: 8px; }
   .valbar .track { display: none; }
   .pl-name { white-space: nowrap; }
   .pl-team { display: block; margin-left: 0; margin-top: 2px; }
@@ -2313,7 +2322,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     <div class="table-scroll">
       <table>
         <thead>
-          <tr><th scope="col" id="edit-head" hidden><span class="sr-only">Reorder</span></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th></tr>
+          <tr><th scope="col" id="edit-head" hidden><span class="sr-only">Reorder</span></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="val">Value</th></tr>
         </thead>
         <tbody id="rank-body"></tbody>
       </table>
@@ -2986,7 +2995,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T01:00Z";
+  const BUILD_ID = "2026-10-03T01:20Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3169,7 +3178,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
     const filtered = LG.active && LG.ownerFilter !== "all";
     if (filtered) list = list.filter(ownerMatch);
     if (query) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(query));
-    $("rk-head").textContent = posFilter === "ALL" && hasOverall() ? "Rk" : posFilter === "PICK" ? "" : "Pos Rk";
+    $("rk-head").textContent = posFilter === "ALL" && hasOverall() ? "Rk" : posFilter === "PICK" ? "" : "Rank";
     $("edit-head").hidden = !editing;
     document.body.classList.toggle("editing", editing);
     const cols = editing ? 5 : 4;
