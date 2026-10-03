@@ -27,6 +27,10 @@ Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, col
 8. **Historical honesty in Trade History.** A trade is "Historical SPAM values" only if every player had a SPAM value on or before the trade date. Trades before SPAM existed are labeled **Pre-SPAM trade** and judged as a retrospective with today's values. Never present today's values as what a player was worth back then.
 9. **Stats never change rankings.** Stats refreshes update game logs and fantasy points only.
 10. **Design consistency.** Use the theme tokens; no default browser controls (selects, checkboxes, dialogs). No Patreon button or styling. Labels are sentence-case in copy, uppercase with letter spacing for small labels.
+11. **The website is the master source of truth for rankings** (from Alan). Don't sync the Excel file unless Alan or Steven asks.
+12. **Keep the layers separate** (from Alan). Don't overwrite manual rankings or published values, don't let stats or projection updates change rankings, and keep league calculations derived from the base board.
+13. **Stay in scope** (from Alan). Don't change unrelated parts of the site when doing a specific feature. Preserve the SPAM branding and design system.
+14. **Don't rename the `spm_` localStorage keys** (from Alan). Renaming them would wipe visitors' saved leagues, edits and tokens.
 
 ## 3. How to run it
 
@@ -59,7 +63,7 @@ Committing these as `tests/` would be a good first improvement.
 
 ```
 index.html                     the whole site (HTML + CSS + JS, ~8k lines) AND the rankings data
-data/rank_history.json         ranking history (v2): {sleeper_id: [[ts, rank, posRank, tier, value, src]]}, src M/S/P
+data/rank_history.json         ranking history: {note, version: 2, players: {sleeper_id: [[ts, rank, posRank, tier, value, src]]}}; the browser writes src M, the scheduler S; existing P entries come from older code
 data/stats/<season>.json       weekly game stats + team schedules for player pages (2026, 2025, 2024)
 data/sleeper_players.json      Sleeper ID → [name, pos, team, gsis_id, birthdate]
 data/platform_ids.json         ESPN/Yahoo ID → Sleeper ID (for ESPN/Yahoo imports)
@@ -109,7 +113,8 @@ Inside `index.html` (search for these names):
 ## 5. How the rankings data flows
 
 1. **`RANKINGS_CSV`** (inside `index.html`) is the master data. Columns:
-   `player,pos,team,rank,pos_rank,tier,value,proj_ppg,games,proj_score,sleeper_id,source,tier_name`
+   `player,pos,team,rank,pos_rank,tier,value,proj_ppg,games,proj_score,sleeper_id,source`
+   (`tier_name` is not in the current header; the editor's `colOf()` adds it as a 13th column the first time a tier is renamed.)
    - `rank` = overall rank (source of truth for order); `pos_rank` derived from it.
    - `tier` = positional tier number; **90+ are tag tiers** (e.g. 90 = "Hurt"), not part of the ladder.
    - `value` = blank → model value; a number → published official value (fixed).
@@ -118,6 +123,7 @@ Inside `index.html` (search for these names):
 2. On load, `loadPlayers` builds player objects and values (base SPAM values, scaled so #1 = 10,000).
 3. Editor edits change a `draft` copy of the CSV and call `rebuild()`. Save stores the changed fields per player in `localStorage` (`spm_local_edits`); Publish merges only the edited fields onto the latest `index.html` from GitHub and commits it (so the weekly projection refresh is never clobbered).
 4. The **league layer** is computed after every rebuild from the base values: never stored.
+5. Snapshot as of Oct 3, 2026: 253 players (183 Manual #1–183, 70 Auto #184–253), 4 published values (Bijan Robinson, Kenneth Walker III, Jacorey Croskey-Merritt, Jaxon Smith-Njigba), A.J. Brown in tag tier 90.
 
 ## 6. Publishing (rankings) and deploying (code)
 
@@ -138,6 +144,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Put every Auto player after every Manual player.
   - Quote any field containing a comma.
   - Leave `proj_*` and `sleeper_id` alone (pipeline-owned).
+- After resolving any `RANKINGS_CSV` merge or rebase conflict, check that ranks still run 1–N with no duplicates or gaps and that every Auto player is below every Manual player. Verify by parsing the CSV, not by eye.
 - After a model change, verify manual players' values are unchanged (or changed only as intended) in the base format and a few `?fmt=` formats.
 - Don't put the draft rankings of one person into the board without saying so: the board is Steven & Alan's combined ranking.
 - Ranking History records committed changes (Save/Publish), one entry per changed player, plus scheduled snapshots. Same-day separate publishes are separate entries; unchanged players get no duplicate. Tier changes are included.
@@ -224,6 +231,14 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Old URL:** `stevenp36.github.io/spmetrics-fantasy/` is dead. A redirect page can live in a new `spmetrics-fantasy` repo if wanted.
 - **Custom domain:** not set up. Every path is relative; only `canonical`/`og:url` would change.
 - **Player data:** some player-name matches use aliases (`pipeline/merge_projections.py` `ALIASES`, `pipeline/build_sleeper_ids.py` `ID_ALIASES`). Add an alias when a new player's projection or Sleeper ID comes up empty.
+- **Known issues, not yet fixed (found in an Oct 3 code review):**
+  - The publish error and Refresh stats error messages (and the token prompt) only describe fine-grained tokens ("Contents/Actions: Read and write"). They don't fit Alan's classic `repo` token.
+  - The README is stale: it says stats refresh weekly only (game-day runs exist), and its token section only mentions fine-grained tokens.
+  - `SITE.format` reads "12-Team · Full PPR · Superflex" and leaves out TE premium, even though the model default is +0.5 TEP.
+  - The scheduled workflow runs `git push` without pulling first. If someone publishes during the Tuesday job, the job's push is rejected and that run's deploy fails.
+  - `mergeInto` merges rank columns per row. If Steven and Alan publish overlapping rank moves from stale pages, the board could end up with duplicate ranks. The 409 retry only catches a changed file.
+  - The weekly projection refresh changes values for all model-valued players (all but the 4 with published values). Ranks and tiers stay fixed. This is by design.
+  - The `trade-boost-preview` and `alan-dev` branches are already merged or were only tests. Either can be deleted.
 
 ## 12. Secrets, services, accounts
 
