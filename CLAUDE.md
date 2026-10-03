@@ -191,10 +191,10 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Empty tiers last only until you save.
   - **Sign out** sits at the right of the editor bar whenever this browser has a saved GitHub token (next to `@login`); it removes the token from the browser. Unpublished edits stay saved.
 - **Player modal:**
-  - Tabs: Overview, Game log, Schedule, Injuries, Stats, Fantasy performance, Ranking history, Trade value, Compare.
+  - Tabs: Overview, Game log, Schedule, Practice report, Stats, Fantasy performance, Ranking history, Trade value, Compare.
   - Game log: every week of the season: result (W/L score), points, weekly position finish (`weeklyFinish`, current scoring), bye week, and upcoming games greyed with kickoff.
   - Schedule: every remaining week with the opponent's ranks vs his position (points allowed, EPA, success, explosive; 1 = softest) and a grade dot.
-  - Injuries: his team's and the next opponent's latest report grouped by position (game status, practice FP/LP/DNP, injury). nflverse keeps only the latest practice status per week, not Wed/Thu/Fri separately.
+  - Practice report: his team's and the next opponent's latest practice report grouped by position (game status, practice FP/LP/DNP, injury). nflverse keeps only the latest practice status per week, not Wed/Thu/Fri separately.
   - Overview order: identity → rank / value / PPG (header) → **This week** card → Start/sit line (league only) → season grid → season line → weekly chart.
   - This week: opponent, home/away, kickoff, stadium + roof, spread, game total, implied team total (from nflverse `games.csv` via `build_stats.py`), the opponent's rank vs the position and fantasy points allowed per game (computed in the browser from the weekly logs, current scoring: `defenseVsPos`). Matchup grade Good / Neutral / Tough = thirds of a blend: points allowed per game 45%, per opportunity 20%, EPA allowed 20%, success rate 15% (EPA from play-by-play: runs for RBs, dropbacks for QB/WR/TE); it only tints a thin edge and its label. The card also shows the opponent's EPA / success / explosive ranks and his own injury status. Bye weeks show "Week N · Bye". No player props (no keyless source) and no forecast weather yet (nflverse fills temp/wind only after games).
   - Start/sit (league): his slot in his fantasy team's best lineup, "Every-week starter / Flex starter / Bench depth", next player up at the position, and Sleeper's own lineup status.

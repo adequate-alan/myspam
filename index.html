@@ -3244,7 +3244,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-03T22:00Z";
+  const BUILD_ID = "2026-10-03T22:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6972,7 +6972,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* Player modal: opens over whatever you're doing (rankings, a trade in progress, a team page)
      and never changes the page underneath. Click any player name or photo to open or switch. */
   const PP = { sid: null, tab: "overview", perf: String(STATS_SEASONS[0]), season: STATS_SEASONS[0], trail: [], compare: null, picking: false, pickQuery: "", opener: null, charts: [] };
-  const PP_TABS = [["overview", "Overview"], ["log", "Game log"], ["schedule", "Schedule"], ["injuries", "Injuries"], ["stats", "Stats"], ["perf", "Fantasy performance"],
+  const PP_TABS = [["overview", "Overview"], ["log", "Game log"], ["schedule", "Schedule"], ["practice", "Practice report"], ["stats", "Stats"], ["perf", "Fantasy performance"],
                    ["history", "Ranking history"], ["value", "Trade value"]];
   const modal = $("player-modal");
   const modalOpen = () => modal.open;
@@ -7100,7 +7100,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     PP.charts = [];
     if (PP.tab === "log") return ppGameLog(info);
     if (PP.tab === "schedule") return ppSchedule(info);
-    if (PP.tab === "injuries") return ppInjuries(info);
+    if (PP.tab === "practice") return ppPractice(info);
     if (PP.tab === "stats") return ppStats(info);
     if (PP.tab === "perf") return ppPerformance(info);
     if (PP.tab === "history") return ppHistory(info);
@@ -7211,7 +7211,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   const PRACTICE_TEXT = { DNP: "did not practice", LP: "limited practice", FP: "full practice" };
   const statusCls = s => ({ Out: "out", Doubtful: "out", Questionable: "q" })[s] || "";
-  const injuryChip = r => `<span class="inj-chip ${statusCls(r.status) || (r.practice === "DNP" ? "q" : "")}">${esc([r.status || "On injury report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] || ""].filter(Boolean).join(" · "))}</span>`;
+  const injuryChip = r => `<span class="inj-chip ${statusCls(r.status) || (r.practice === "DNP" ? "q" : "")}">${esc([r.status || "On practice report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] || ""].filter(Boolean).join(" · "))}</span>`;
 
   /* Schedule tab: every remaining week, with the opponent defense's ranks vs his position */
   function ppSchedule(info) {
@@ -7238,18 +7238,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <p class="pp-note">Defense ranks vs ${esc(info.pos)}s, 1 = softest of 32, from ${STATS_SEASONS[0]} games so far${d && d.through_week ? ` (through Week ${d.through_week})` : ""}, in ${esc(scoringLabel())}. The dot is the matchup grade (green good, gold neutral, red tough). Early-season ranks rest on a few games.</p>`;
   }
 
-  /* Injuries tab: his team's and his next opponent's latest injury report */
+  /* Practice report tab: his team's and his next opponent's latest practice report */
   const POS_GROUPS = [["Quarterbacks", ["QB"]], ["Running backs", ["RB", "FB"]], ["Wide receivers", ["WR"]], ["Tight ends", ["TE"]],
     ["Offensive line", ["T", "OT", "G", "OG", "C", "OL"]], ["Defensive line", ["DE", "DT", "NT", "DL"]], ["Linebackers", ["LB", "OLB", "ILB", "MLB"]],
     ["Defensive backs", ["CB", "S", "FS", "SS", "DB", "SAF"]], ["Special teams", ["K", "P", "LS"]]];
-  function ppInjuries(info) {
+  function ppPractice(info) {
     if (!info.team) return `<p class="empty-note">${esc(info.name)} isn't on an NFL team.</p>`;
     const ng = nextGame(info.team), teams = [info.team].concat(ng ? [ng.opp] : []);
     const block = (team, opp) => {
       const rep = injuryReport(team);
-      if (!rep) return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}</h3><p class="pp-note">No one on ${esc(team)}'s latest injury report.</p>`;
+      if (!rep) return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}</h3><p class="pp-note">No one on ${esc(team)}'s latest practice report.</p>`;
       const groups = POS_GROUPS.map(([label, list]) => [label, rep.rows.filter(r => list.includes(r.pos))]).concat([["Other", rep.rows.filter(r => !POS_GROUPS.some(([, l]) => l.includes(r.pos)))]]).filter(([, rows]) => rows.length);
-      return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}<span class="tier-sub">Week ${rep.week} report</span></h3>
+      return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}<span class="tier-sub">Week ${rep.week} practice report</span></h3>
         <div class="table-scroll"><table class="gl-table inj-table"><thead><tr><th scope="col">Player</th><th scope="col">Game status</th><th scope="col">Practice</th><th scope="col">Injury</th></tr></thead>
         <tbody>${groups.map(([label, rows]) => `<tr class="tier"><td colspan="4">${esc(label)}</td></tr>` + rows.map(r =>
           `<tr class="${String(r.sid) === String(info.sid) ? "inj-me" : ""}"><td><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}</td>
@@ -7257,7 +7257,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <td>${r.practice ? `<span class="pr-chip ${r.practice}">${r.practice}</span>` : "–"}</td><td class="muted">${esc(r.injury || "")}</td></tr>`).join("")).join("")}</tbody></table></div>`;
     };
     return teams.map((t, i) => block(t, i > 0)).join("") +
-      `<p class="pp-note">Latest official report (nflverse). Practice shows the most recent day reported (FP full, LP limited, DNP did not practice). Refreshed Wednesday to Friday evenings.</p>`;
+      `<p class="pp-note">Latest official practice report (nflverse). Practice shows the most recent day reported (FP full, LP limited, DNP did not practice). Refreshed Wednesday to Friday evenings.</p>`;
   }
 
   /* Weekly position finish: his rank at his position among everyone's points that week (current scoring) */
