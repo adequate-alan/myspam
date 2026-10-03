@@ -31,10 +31,12 @@ def make_league(lid, name, teams, positions, scoring):
                "adds": {free[0]: 3}, "drops": {rosters[2]["players"][11]: 3}, "settings": {"waiver_bid": 12}},
               {"transaction_id": f"{lid}w2", "type": "waiver", "status": "failed", "roster_ids": [4], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 4}, "drops": None, "settings": {"waiver_bid": 9}},
               {"transaction_id": f"{lid}w3", "type": "waiver", "status": "failed", "roster_ids": [5], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 5}, "drops": None, "settings": {"waiver_bid": 3}},
-              {"transaction_id": f"{lid}f1", "type": "free_agent", "status": "complete", "roster_ids": [1], "leg": 4, "status_updated": NOW - 3600e3, "adds": {free[1]: 1}, "drops": None}]}
+              {"transaction_id": f"{lid}f1", "type": "free_agent", "status": "complete", "roster_ids": [1], "leg": 4, "status_updated": NOW - 3600e3, "adds": {free[1]: 1}, "drops": None},
+              {"transaction_id": f"{lid}d1", "type": "free_agent", "status": "complete", "roster_ids": [6], "leg": 4, "status_updated": NOW - 7200e3, "adds": None, "drops": {rosters[5]["players"][11]: 6}}]}
     # rosters as they are after these moves: team 3 claimed free[0] and dropped its last player, team 1 added free[1]
     rosters[2]["players"] = rosters[2]["players"][:11] + [free[0]]
     rosters[0]["players"] = rosters[0]["players"] + [free[1]]
+    rosters[5]["players"] = rosters[5]["players"][:11]   # team 6 dropped its last player
     # team 5 has two players on IR (still on the roster, as on Sleeper)
     rosters[4]["reserve"] = rosters[4]["players"][2:4]
     mx = []
@@ -155,15 +157,19 @@ with sync_playwright() as p:
     pg.click("[data-mx-week='4']"); pg.wait_for_timeout(800)
 
     pg.click("[data-lsub=tx]"); pg.wait_for_timeout(1500)
-    ok(pg.locator(".th-feed > article").count() == 3, f"Transactions: 1 trade + 1 waiver claim + 1 add ({pg.locator('.th-feed > article').count()})")
+    ok(pg.locator(".th-feed > article").count() == 4, f"Transactions: 1 trade + 1 waiver claim + 1 add + 1 drop ({pg.locator('.th-feed > article').count()})")
+    tx_filters = pg.locator("[data-tx-type]").all_inner_texts()
+    ok(tx_filters == ["All", "Trades", "Waivers / Adds & Drops"], f"Transaction filters: {tx_filters}")
+    tags = sorted(t.strip().lower() for t in pg.locator(".mv-card .mv-tag:not(.bidders)").all_inner_texts())
+    ok(tags == ["drop", "free agent", "waiver claim"], f"Each move card says what it was: {tags}")
     ok(pg.locator(".mv-tag.bidders").first.inner_text().strip().lower() == "3 bidders", "Waiver claim counts 3 bidders from the failed claims")
     ok("$12" in pg.inner_text(".mv-card.waiver"), "Waiver claim shows the FAAB bid")
     ok(pg.locator(".mv-card.waiver .mv-col.drop li").count() == 1, "Waiver claim shows the drop")
     ok(pg.locator(".th-tag.pre").count() == 1, "An old trade is labeled Pre-SPAM")
     pg.click("[data-tx-type=trade]"); pg.wait_for_timeout(300)
     ok(pg.locator(".th-feed > article").count() == 1 and pg.locator("[data-th-analyze]").count() == 1, "Trades filter shows the trade with Analyze trade")
-    pg.click("[data-tx-type=waiver]"); pg.wait_for_timeout(300)
-    ok(pg.locator(".th-feed > article.mv-card.waiver").count() == 1, "Waiver Wire filter")
+    pg.click("[data-tx-type=moves]"); pg.wait_for_timeout(300)
+    ok(pg.locator(".th-feed > article.mv-card").count() == 3 and pg.locator(".th-feed > article").count() == 3, "Waivers / Adds & Drops shows the claim, the add and the drop (no trades)")
     pg.click("[data-tx-type=all]"); pg.wait_for_timeout(300)
     pg.evaluate("() => { const s = document.getElementById('tx-week'); s.value = '1'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(300)
     ok(pg.locator(".th-feed > article").count() == 1, "Week filter")

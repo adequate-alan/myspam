@@ -1913,6 +1913,7 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mv-tag { padding: 3px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-2); }
 .mv-tag.waiver { color: var(--wr); border-color: color-mix(in srgb, var(--wr) 45%, transparent); background: color-mix(in srgb, var(--wr) 8%, transparent); }
 .mv-tag.free_agent { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 45%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
+.mv-tag.drop { color: var(--st-dnp, var(--accent-primary)); border-color: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 45%, transparent); background: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 7%, transparent); }
 .mv-tag.bidders { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, transparent); }
 .mv-body { display: grid; grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr) auto minmax(0, 1.2fr); align-items: center; gap: 12px 18px; padding: 10px 14px 12px; }
 .mv-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -3608,7 +3609,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T20:00Z";
+  const BUILD_ID = "2026-10-04T20:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7221,15 +7222,19 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     </article>`;
   }
   /* Transactions: trades (with the SPAM trade analysis), waiver claims, free-agent adds and drops, newest first */
-  const TX_TYPES = [["all", "All"], ["trade", "Trades"], ["waiver", "Waiver Wire"], ["free_agent", "Adds / Drops"]];
-  const TX_TAG = { trade: "Trade", waiver: "Waiver claim", free_agent: "Free agent", commissioner: "Commissioner" };
+  // Filters: All · Trades · Waivers / Adds & Drops (waiver claims, FAAB claims, free-agent adds, drops, commissioner moves).
+  // Each card still says what it was: Waiver claim, Free agent, Drop (or Commissioner).
+  const TX_TYPES = [["all", "All"], ["trade", "Trades"], ["moves", "Waivers / Adds & Drops"]];
+  const txKind = t => (t.type === "trade" ? "trade" : t.type === "waiver" ? "waiver" : !Object.keys(t.adds || {}).length ? "drop" : t.type === "commissioner" ? "commissioner" : "free_agent");
+  const TX_TAG = { trade: "Trade", waiver: "Waiver claim", free_agent: "Free agent", drop: "Drop", commissioner: "Commissioner" };
   const txWhen = ms => new Date(ms).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   function txHtml(ev, d) {
     if (slSource() !== "sleeper") return `<p class="empty-note">Transactions come from Sleeper's transaction log, so they're available for Sleeper leagues. ${esc(SOURCE_NAME[slSource()] === "pasted" ? "Pasted" : SOURCE_NAME[slSource()])} leagues show power rankings, standings and the waiver wire.</p>`;
     const id = d.league.league_id, loading = LT.loading === id, error = LT.error[id];
     const all = d.tx || [], weeks = [...new Set(all.map(t => t.week))].sort((a, b) => a - b);
     if (LT.txWeek !== "all" && !weeks.includes(Number(LT.txWeek))) LT.txWeek = "all";
-    const list = all.filter(t => (LT.txType === "all" || t.type === LT.txType || (LT.txType === "free_agent" && t.type === "commissioner"))
+    if (!TX_TYPES.some(([k]) => k === LT.txType)) LT.txType = "all";
+    const list = all.filter(t => (LT.txType === "all" || (LT.txType === "trade") === (t.type === "trade"))
       && (LT.txWeek === "all" || t.week === Number(LT.txWeek)) && (LT.txTeam === "all" || t.rosters.map(String).includes(LT.txTeam)));
     const head = `<div class="tx-filters">
         <div class="chips" role="group" aria-label="Transaction type">${TX_TYPES.map(([k, l]) => `<button class="chip-btn" type="button" data-tx-type="${k}" aria-pressed="${LT.txType === k}">${l}</button>`).join("")}</div>
@@ -7242,7 +7247,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!d.tx) return head + `<p class="empty-note lg-loading">Loading transactions for ${esc(d.league.name)}…</p>`;
     const tradeNote = LT.txType === "all" || LT.txType === "trade"
       ? `<p class="method-note">Trades are judged with SPAM values from the time of the trade when ranking history covers it. Trades from before SPAM rankings existed are labeled Pre-SPAM and evaluated as a retrospective with current values.</p>` : "";
-    if (!list.length) return head + `<p class="empty-note">No ${LT.txType === "all" ? "transactions" : TX_TYPES.find(x => x[0] === LT.txType)[1].toLowerCase()} match these filters.</p>`;
+    if (!list.length) return head + `<p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p>`;
     return head + tradeNote + `<div class="th-feed">${list.map(t => t.type === "trade" ? tradeCard(evalTrade(t)) : moveCard(t)).join("")}</div>
       <p class="count">${list.length} of ${all.length} transaction${all.length === 1 ? "" : "s"}</p>`;
   }
@@ -7257,8 +7262,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const adds = Object.keys(t.adds).filter(sid => t.adds[sid] === rid), drops = Object.keys(t.drops).filter(sid => t.drops[sid] === rid);
     const faabOn = activeData().league.settings && activeData().league.settings.waiver_type === 2;
     const bid = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0) ? `<div class="mv-bid"><b>$${t.bid}</b><span>FAAB</span></div>` : "";
-    return `<article class="th-card mv-card ${t.type}">
-      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${t.type}">${TX_TAG[t.type]}</span>${t.bidders ? `<span class="mv-tag bidders">${t.bidders} bidders</span>` : ""}</span>
+    return `<article class="th-card mv-card ${txKind(t)}">
+      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span>${t.bidders ? `<span class="mv-tag bidders">${t.bidders} bidders</span>` : ""}</span>
         <span class="th-date">Week ${t.week} · ${esc(txWhen(t.at))}</span></header>
       <div class="mv-body">
         <div class="mv-team">${teamFace(team, "sm")}<div><b>${esc(team.name)}</b>${team.manager && team.manager !== team.name ? `<span>${esc(team.manager)}</span>` : ""}</div></div>
