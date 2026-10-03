@@ -2050,7 +2050,10 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .fa-table td { padding-top: 8px; padding-bottom: 8px; }
 .fa-proj { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .fa-proj b { font-size: 0.98rem; font-weight: 800; color: var(--heading); }
-.fa-proj.bye, .fa-proj.none { color: var(--muted); }
+.fa-proj.bye, .fa-proj.none, .fa-proj.pending, .fa-proj.dnp { color: var(--muted); }
+.fa-proj small { display: block; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.fa-proj.final b { color: var(--ink); }
+.fa-mx-sub.live { color: var(--rb); font-weight: 650; }
 .fa-proj.out { color: var(--st-out, var(--st-dnp)); font-weight: 700; font-size: 0.78rem; }
 .fa-mx { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
 .fa-mx-top { display: inline-flex; align-items: center; gap: 5px; font-size: 0.84rem; color: var(--ink-2); }
@@ -3705,7 +3708,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T23:15Z";
+  const BUILD_ID = "2026-10-04T23:45Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7458,16 +7461,28 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     return Date.UTC(y, m - 1, d, h + 5, mi);
   }
-  // one NFL team's game in a week: { kind: "bye" | "upcoming" | "live" | "final", opp, home, text }
+  /* The one NFL game-status helper (Waiver Wire, Matchups, player modal This week / Schedule, projections).
+     A team's game in a given week from the schedule: no game that week = Bye (never "no game left this week");
+     scored = Final; past kickoff = Live (Final 4½ h after kickoff if the score isn't in yet); else Upcoming.
+     { kind: "bye" | "upcoming" | "live" | "final" | "none", week, opp, oppTeam, home, date, time, kick, pf, pa,
+       spread, total, roof, stadium, result ("W 24-17"), text } */
   function nflGameState(team, week) {
-    if (!team) return { kind: "none", text: "" };
-    const row = teamGames(STATS_SEASONS[0], team).find(r => r[0] === week);
-    if (!row) return { kind: teamGames(STATS_SEASONS[0], team).length ? "bye" : "none", text: teamGames(STATS_SEASONS[0], team).length ? "Bye" : "" };
-    const kick = etMs(row[3], row[6]), now = Date.now(), opp = `${row[2] ? "vs" : "@"} ${row[1]}`;
-    if (row[4] != null) return { kind: "final", opp, oppTeam: row[1], home: row[2], text: `Final ${row[4] > row[5] ? "W" : row[4] < row[5] ? "L" : "T"} ${row[4]}-${row[5]}` };
-    if (now > kick + 4.5 * 3600e3) return { kind: "final", opp, oppTeam: row[1], home: row[2], text: "Final" };
-    if (now >= kick) return { kind: "live", opp, oppTeam: row[1], home: row[2], kick, text: "Live" };
-    return { kind: "upcoming", opp, oppTeam: row[1], home: row[2], kick, text: kickoffText(row[3], row[6]).replace(/^(\w+), \w+ \d+/, "$1").replace(/ ET$/, "") };
+    const rows = team ? teamGames(STATS_SEASONS[0], team) : [];
+    if (!team || !rows.length || !week) return { kind: "none", week, text: "" };
+    const row = rows.find(r => r[0] === week);
+    if (!row) return { kind: "bye", week, text: "Bye" };
+    const kick = etMs(row[3], row[6]), now = Date.now();
+    const g = { week, oppTeam: row[1], opp: `${row[2] ? "vs" : "@"} ${row[1]}`, home: row[2], date: row[3], time: row[6] || null, kick,
+      pf: row[4], pa: row[5], spread: row[7] ?? null, total: row[8] ?? null, roof: row[9] || null, stadium: row[10] || null };
+    if (row[4] != null) return { ...g, kind: "final", result: `${row[4] > row[5] ? "W" : row[4] < row[5] ? "L" : "T"} ${row[4]}-${row[5]}`, text: `Final ${row[4] > row[5] ? "W" : row[4] < row[5] ? "L" : "T"} ${row[4]}-${row[5]}` };
+    if (now > kick + 4.5 * 3600e3) return { ...g, kind: "final", result: "", text: "Final" };
+    if (now >= kick) return { ...g, kind: "live", text: "Live" };
+    return { ...g, kind: "upcoming", text: kickoffText(row[3], row[6]).replace(/^(\w+), \w+ \d+/, "$1").replace(/ ET$/, "") };
+  }
+  // His fantasy points in a given week of this season (league scoring), or null if he has no stat line that week
+  function weekPoints(sid, pos, week) {
+    const log = sid ? seasonLog(STATS_SEASONS[0], sid, pos) : null, g = log && log.games.find(x => x.w === week);
+    return g ? g.pts : null;
   }
   const mxKey = (id, w) => id + "|" + w;
   async function loadMatchups(week, force) {
@@ -7778,15 +7793,22 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     projRatioCache = { key, map };
     return map;
   }
+  // This week's cell (shared game status): Bye (no game this week) · Final + his actual points (DNP if the stats
+  // include the week and he has no line; "pending" until they do) · Live + projection · Upcoming + projection · Out
   function weekProj(p) {
-    const wk = currentWeek(), ng = p.team ? nextGame(p.team) : null;
-    if (wk && (!ng || ng.week > wk) && p.team && teamGames(STATS_SEASONS[0], p.team).length) return { kind: "bye", text: "Bye", v: null };
+    const wk = currentWeek(), g = nflGameState(p.team, wk), d = statsCache[STATS_SEASONS[0]];
+    if (g.kind === "bye") return { kind: "bye", text: "Bye", v: null, sub: "" };
+    if (g.kind === "final") {
+      const pts = weekPoints(p.sleeperId, p.pos, wk);
+      if (pts != null) return { kind: "final", text: fp(pts), v: pts, sub: "Final" };
+      return d && d.through_week >= wk ? { kind: "dnp", text: "DNP", v: 0, sub: "Final" } : { kind: "pending", text: "—", v: null, sub: "Final · pts pending" };
+    }
     const rep = injuryReport(p.team), inj = rep && rep.week === wk ? injuryOf(p.team, p.sleeperId) : null;
-    if (inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", text: "Out", v: null };
-    if (p.projPPG == null) return { kind: "none", text: "—", v: null };
+    if (g.kind === "upcoming" && inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", text: "Out", v: null, sub: "" };
+    if (p.projPPG == null) return { kind: "none", text: "—", v: null, sub: g.kind === "live" ? "Live" : "" };
     const R = projRatios(), r = R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1;
     const v = Math.round(p.projPPG * r * 10) / 10;
-    return { kind: "ok", text: v.toFixed(1), v };
+    return { kind: "ok", text: v.toFixed(1), v, sub: g.kind === "live" ? "Live · proj" : "Proj" };
   }
   // Season production in the league's scoring: position finish by total points, points, points per game
   let seasonRankCache = { key: "", map: null };
@@ -7808,13 +7830,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // Matchup cell: opponent logo, vs/@, kickoff, and a quiet matchup word
   function faMatch(p) {
-    const ng = p.team ? nextGame(p.team) : null, wk = currentWeek();
-    if (!ng) return `<span class="muted">—</span>`;
-    if (wk && ng.week > wk) return `<span class="muted">Bye</span>`;
-    const x = ((defenseVsPos() || {})[p.pos] || {})[ng.opp];
+    const g = nflGameState(p.team, currentWeek());
+    if (g.kind === "none") return `<span class="muted">—</span>`;
+    if (g.kind === "bye") return `<span class="muted">Bye</span>`;
+    const x = g.kind === "upcoming" ? ((defenseVsPos() || {})[p.pos] || {})[g.oppTeam] : null;   // the matchup word only matters before kickoff
     const word = x ? { good: "Good", neutral: "Neutral", tough: "Tough" }[x.grade] : "";
-    return `<span class="fa-mx"><span class="fa-mx-top">${teamLogo(ng.opp, "xs")}${ng.home ? "vs" : "@"} <b>${esc(ng.opp)}</b></span>
-      <span class="fa-mx-sub">${esc(kickoffText(ng.date, ng.time).replace(/^(\w+), \w+ \d+/, "$1").replace(/ ET$/, ""))}${word ? ` · <span class="fa-mx-v ${x.grade}" title="${esc(VERDICT[x.grade])}">${word}</span>` : ""}</span></span>`;
+    return `<span class="fa-mx"><span class="fa-mx-top">${teamLogo(g.oppTeam, "xs")}${g.home ? "vs" : "@"} <b>${esc(g.oppTeam)}</b></span>
+      <span class="fa-mx-sub ${g.kind}">${esc(g.text)}${word ? ` · <span class="fa-mx-v ${x.grade}" title="${esc(VERDICT[x.grade])}">${word}</span>` : ""}</span></span>`;
   }
   let faFitSort = false;
   $("fa-fitsort").addEventListener("change", e => { faFitSort = e.target.checked; renderFA(); });
@@ -7829,7 +7851,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const form = new Map(list.map(p => [p.id, recentFormData(p.sleeperId, p.pos, p.team)]));
     const proj = new Map(list.map(p => [p.id, weekProj(p)])), season = seasonRanks();
     const D = defenseVsPos() || {}, wk = currentWeek();
-    const grade = p => { const ng = p.team ? nextGame(p.team) : null; if (!ng || (wk && ng.week > wk)) return 3; const x = D[p.pos] && D[p.pos][ng.opp]; return x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3; };
+    const grade = p => { const g = nflGameState(p.team, wk); if (g.kind !== "upcoming") return 3; const x = D[p.pos] && D[p.pos][g.oppTeam]; return x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3; };
     const me = LG.teams.find(t => t.mine), K = me ? leagueKit() : null;
     const fit = new Map(K ? list.map(p => [p.id, faFit(K, me, p)]) : []);
     // SPAM rank order (the RK shown). My team fit: a gentle nudge on that rank (starters ×0.85, bench depth ×1.1),
@@ -7846,7 +7868,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     };
     list.sort(sorts[faSort] || byRank);
     $("fa-head").innerHTML = `<tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th>
-      <th scope="col" class="fa-proj" title="SPAM projection for this week in ${esc(d.league.name)}'s scoring: rest-of-season points per game from usage, results and team outlook (not matchup-adjusted). — means no projection.">${wk ? `Wk ${wk} proj` : "Proj"}</th>
+      <th scope="col" class="fa-proj" title="This week in ${esc(d.league.name)}'s scoring: his actual points once his game is final, otherwise SPAM's projection (rest-of-season points per game from usage, results and team outlook; not matchup-adjusted). — means no projection.">${wk ? `Wk ${wk}` : "Proj"}</th>
       <th scope="col" class="fa-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th>
       <th scope="col" class="fa-wk">Matchup</th>
       <th scope="col" class="fa-srk" title="${STATS_SEASONS[0]} finish at his position by total fantasy points, in this league's scoring">Szn rk</th><th scope="col" class="fa-num">FPTS</th><th scope="col" class="fa-num">PPG</th>
@@ -7858,7 +7880,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
         <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span></div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
-      <td class="fa-proj ${pj.kind}">${pj.kind === "ok" ? `<b>${pj.text}</b>` : esc(pj.text)}</td>
+      <td class="fa-proj ${pj.kind}">${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
       <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
       <td class="fa-wk">${faMatch(p)}</td>
       <td class="fa-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${p.pos.toLowerCase()})">${p.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
@@ -8214,7 +8236,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <button class="btn" type="button" data-pm-compare aria-pressed="${PP.picking}">${PP.compare ? "Compare: change" : "Compare player"}</button>
           ${findHint ? `<span class="pp-hint">${esc(findHint)}</span>` : ""}
         </div>
-        </div>${loaded && info.team ? `<div class="pm-right">${thisWeekCard(info, nextGame(info.team), true)}</div>` : ""}</div>
+        </div>${loaded && info.team ? `<div class="pm-right">${thisWeekCard(info, true)}</div>` : ""}</div>
         ${PP.picking ? comparePicker() : ""}
         <div class="chips pp-tabs" role="tablist" aria-label="Player sections">
           ${tabsList.map(([k, label]) => `<button class="chip-btn" type="button" role="tab" data-pp-tab="${k}" aria-pressed="${PP.tab === k}">${label}</button>`).join("")}
@@ -8277,7 +8299,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const cur = seasonLog(STATS_SEASONS[0], sid, pos), prev = seasonLog(STATS_SEASONS[1], sid, pos);
     const t = cur ? totals(cur.games) : null, pt = prev ? totals(prev.games) : null;
     const last3 = recentGames(sid, pos, 3), last5 = recentGames(sid, pos, 5);
-    const own = ownerOfSid(sid), ng = info.team ? nextGame(info.team) : null;
+    const own = ownerOfSid(sid), ng = info.team ? nextGame(info.team) : null, wkNow = currentWeek();
     let trend = "–", trendSub = "";
     if (t && t.g && pt && pt.g) {
       const d = t.ppg - pt.ppg;
@@ -8292,9 +8314,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (cur && cur.games.length) PP.charts.push({ type: "bar", season: STATS_SEASONS[0], games: cur.games, pos, compact: true });
     const r3 = avgPts(last3), r5 = avgPts(last5);
     // Rank, value, PPG and owner live in the header; the overview leads with this week, then the season
-    const side = [lineupContext(info, own), ng ? nextWeeksLine(info, ng) : "", ng ? keyReportsLine(info, ng) : "", rankMoves(info)].filter(Boolean).join("");
+    const side = [lineupContext(info, own), info.team && wkNow ? nextWeeksLine(info, wkNow) : "", ng ? keyReportsLine(info, ng) : "", rankMoves(info)].filter(Boolean).join("");
     return `
-      <div class="ov-week-mobile">${thisWeekCard(info, ng, true)}</div>
+      <div class="ov-week-mobile">${thisWeekCard(info, true)}</div>
       <div class="ov-cols"><div class="ov-main">
       <h3 class="section-label">${STATS_SEASONS[0]} season</h3>
       <div class="ov-grid">
@@ -8324,11 +8346,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return rows.length ? `<div class="tw-line"><span class="tw-label">Ranking moves</span>${rows.join("")}<button class="btn link inline" type="button" data-pp-tab="history">History</button></div>` : "";
   }
   // This week: opponent, kickoff, lines, the opponent's defense vs his position and a matchup grade
-  function thisWeekCard(info, ng, inHeader = false) {
+  function thisWeekCard(info, inHeader = false) {
     if (!info.team) return "";
-    const wk = currentWeek();
+    const wk = currentWeek(), g = nflGameState(info.team, wk), bye = g.kind === "bye";
+    // this week's game whatever its state; on a bye, the card previews his next game
+    const ng = g.kind === "upcoming" || g.kind === "live" || g.kind === "final" ? { ...g, opp: g.oppTeam } : nextGame(info.team);
     if (!ng) return `<div class="tw-card"><p class="tw-none">No games left on ${esc(info.team)}'s schedule.</p></div>`;
-    const bye = wk && ng.week > wk;
+    const played = g.kind === "final", pts = played ? weekPoints(info.sid, info.pos, wk) : null;
     const dvp = defenseVsPos(), dv0 = dvp && dvp[info.pos] && dvp[info.pos][ng.opp];
     const grade = !bye && dv0 ? dv0.grade : null;
     const gradeText = VERDICT[grade];
@@ -8343,11 +8367,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const mt = teamMeta(info.team), mo = teamMeta(ng.opp);
     return `<div class="tw-card${grade ? " " + grade : ""}${inHeader ? " in-head" : ""}" style="${teamStyle(info.team).replace(/--tc-/g, "--ta-")};${teamStyle(ng.opp).replace(/--tc-/g, "--tb-")}">
       <div class="tw-head">
-        <span class="tw-eyebrow">${bye ? `Week ${wk} · Bye` : `This week · Week ${ng.week}`}</span>
+        <span class="tw-eyebrow">${bye ? `Week ${wk} · Bye` : `This week · Week ${ng.week}${g.kind === "final" ? " · Final" : g.kind === "live" ? " · Live" : ""}`}</span>
         ${gradeText ? `<span class="tw-grade">${gradeText}</span>` : ""}
       </div>
       <div class="tw-teams"><span class="tw-team">${teamLogo(info.team, "md")}<b>${esc(mt ? mt.nick : info.team)}</b></span><span class="tw-at">${ng.home ? "vs" : "@"}</span><span class="tw-team">${teamLogo(ng.opp, "md")}<b>${esc(mo ? mo.nick : ng.opp)}</b></span>${bye ? `<span class="tw-sub">next game</span>` : ""}</div>
-      <div class="tw-game"><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}${statusChip(info)}</div>
+      <div class="tw-game"><span>${played ? `<b>${esc(g.text)}</b>${pts != null ? ` · ${fp(pts)} pts` : ""}` : esc(kickoffText(ng.date, ng.time)) + (bye ? ` · Week ${ng.week}` : g.kind === "live" ? " · Live" : "")}</span>${where ? `<span>${esc(where)}</span>` : ""}${statusChip(info)}</div>
       <div class="tw-stats">
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
@@ -8363,11 +8387,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // His own status: the practice-report line, or "not on practice report" once his team's report is out
   const statusChip = info => { const r = injuryOf(info.team, info.sid); return r ? injuryChip(r) : injuryReport(info.team) ? stBadge("", "Not on practice report") : ""; };
   // The three weeks after this one, with each opponent's verdict dot
-  function nextWeeksLine(info, ng) {
+  function nextWeeksLine(info, thisWeek) {
     const rows = teamGames(STATS_SEASONS[0], info.team), D = (defenseVsPos() || {})[info.pos];
     if (!rows.length) return "";
     const byW = new Map(rows.map(r => [r[0], r])), last = Math.max(...rows.map(r => r[0])), out = [];
-    for (let w = ng.week + 1; w <= last && out.length < 3; w++) {
+    for (let w = thisWeek + 1; w <= last && out.length < 3; w++) {
       const r = byW.get(w);
       if (!r) { out.push(`<span class="tw-nx">Wk ${w} bye</span>`); continue; }
       const x = D && D[r[1]];
@@ -8431,11 +8455,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     for (let w = wk || 1; w <= last; w++) {
       const r = byW.get(w);
       if (!r) { out.push(`<tr class="sc-row off"><td class="gl-wk">${w}</td><td colspan="7">Bye week</td></tr>`); continue; }
-      if (r[4] != null) continue;   // already played
+      if (r[4] != null && w !== wk) continue;   // earlier weeks are in the game log; this week's game stays, as Final
       const x = D && D[r[1]], g = x ? x.grade : "";
       out.push(`<tr class="sc-row${w === wk ? " now" : ""}"><td class="gl-wk">${w}${w === wk ? `<span class="sc-now">Now</span>` : ""}</td>
         <td class="sc-opp tm" style="${teamStyle(r[1])}"><span class="sc-dot ${g}"></span>${teamLogo(r[1], "sm")}${r[2] ? "vs" : "@"} <b>${esc(r[1])}</b></td>
-        <td class="sc-when">${esc(kickoffText(r[3], r[6]))}</td>
+        <td class="sc-when">${r[4] != null ? `Final ${r[4] > r[5] ? "W" : r[4] < r[5] ? "L" : "T"} ${r[4]}-${r[5]}` : esc(kickoffText(r[3], r[6]))}</td>
         <td class="sc-verdict ${g}">${x ? VERDICT[g].split(" ")[0] : "–"}</td>
         <td>${x ? rankChip("", x.ppgRank, x.n) : "–"}</td><td>${x && x.epaRank ? rankChip("", x.epaRank, x.n) : "–"}</td>
         <td>${x && x.succRank ? rankChip("", x.succRank, x.n) : "–"}</td><td>${x && x.explRank ? rankChip("", x.explRank, x.n) : "–"}</td></tr>`);
