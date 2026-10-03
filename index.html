@@ -1411,6 +1411,14 @@ tr.tier-drop td { padding: 14px 22px; text-align: center; font-size: 0.74rem; co
 tr.tier-edit.drop-before td, tr.tier-edit.drop-after td, tr.tier-drop.drop-before td, tr.tier-drop.drop-after td { box-shadow: inset 0 -2px 0 var(--accent-primary); }
 @media (hover: none) { .tier-tools, .tier-pen { opacity: 1; } }
 
+.pp-updated { margin: 18px 0 0; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 0.7rem; color: var(--text-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.pp-updated .btn.link { font-size: 0.7rem; }
+
+.fmt-src { margin: 0 0 14px; }
+.fmt-ctl { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: flex-end; }
+.fmt-more { height: 30px; min-width: 0; font-size: 0.78rem; }
+.fmt-more.on { border-color: var(--accent-primary); }
+
 /* ---------- Checkboxes and radios: one themed control everywhere (no native browser boxes) ---------- */
 :root, :root[data-theme="dark"] {
   --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%231A1314' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -2654,6 +2662,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   <form id="fmt-form" method="dialog">
     <h2 id="fmt-title">League settings</h2>
     <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. The SPAM order stays put unless a player's value changes enough in your format to pass someone.</p>
+    <div class="fmt-src" id="fmt-src" hidden></div>
     <div class="fmt-locked" id="fmt-locked" hidden></div>
     <div class="fmt-presets" id="fmt-presets" role="group" aria-label="Common formats"></div>
     <div id="fmt-grid"></div>
@@ -3019,7 +3028,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   let sl = null, slPlayers = null, comps = null;
   /* League settings picked by hand (for anyone not connecting a league).
      null = the site's own format. A connected league's settings always win over these. */
-  const FMT_DEFAULT = { teams: 12, qb: "sf", rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 };
+  const FMT_DEFAULT = { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 };
   const FMT_PRESETS = [
     { id: "spm", label: "SPAM default", v: {} },
     { id: "1qb-ppr", label: "1QB · PPR", v: { qb: "1", tep: 0 } },
@@ -3030,11 +3039,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     { id: "sf-6pt", label: "Superflex · 6pt pass TD", v: { ptd: 6, tep: 0 } },
     { id: "2qb", label: "2QB · PPR", v: { qb: "2", tep: 0 } }
   ];
-  const FMT_KEY = "spm_format", FMT_VIEW_KEY = "spm_format_view";
+  const FMT_KEY = "spm_format", FMT_VIEW_KEY = "spm_format_view", FMT_SRC_KEY = "spm_format_src";
+  const FMT_TEAMS = [6, 8, 10, 12, 14, 16, 18, 20, 24, 32];
+  const FMT_REC = [[0, "Standard (0)"], [0.25, "0.25 PPR"], [0.5, "Half PPR (0.5)"], [0.75, "0.75 PPR"], [1, "Full PPR (1)"], [1.5, "1.5 PPR"], [2, "2 PPR"]];
+  const FMT_TEP = [[0, "None"], [0.25, "+0.25 per catch"], [0.5, "+0.5 per catch"], [0.75, "+0.75 per catch"], [1, "+1.0 per catch"], [1.5, "+1.5 per catch"]];
+  // with a league connected: use its own settings ("league") or your custom format ("custom")
+  let FMT_SRC = (() => { try { return localStorage.getItem(FMT_SRC_KEY) === "custom" ? "custom" : "league"; } catch (e) { return "league"; } })();
   const fmtFull = f => ({ ...FMT_DEFAULT, ...(f || {}) });
   const fmtSame = (a, b) => Object.keys(FMT_DEFAULT).every(k => String(fmtFull(a)[k]) === String(fmtFull(b)[k]));
   // compact URL form: t10_qb1_rec0.5_tep0_ptd4_pyd25_int-2_fl-2_fd0_rb2_wr3_te1_fx1_bn6
-  const FMT_URL = { teams: "t", qb: "qb", rec: "rec", tep: "tep", ptd: "ptd", pyd: "pyd", int: "int", fum: "fl", fd: "fd", rb: "rb", wr: "wr", te: "te", flex: "fx", bench: "bn" };
+  const FMT_URL = { teams: "t", qb: "qb", sx: "sx", rec: "rec", tep: "tep", ptd: "ptd", pyd: "pyd", int: "int", fum: "fl", fd: "fd", rb: "rb", wr: "wr", te: "te", flex: "fx", bench: "bn" };
   const fmtToUrl = f => Object.entries(FMT_URL).map(([k, s]) => s + fmtFull(f)[k]).join("_");
   function fmtFromUrl(str) {
     const out = {}, parts = String(str || "").split("_");
@@ -3050,9 +3064,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function fmtClean(f) {
     const v = fmtFull(f), pick = (x, list, d) => (list.map(String).includes(String(x)) ? (typeof d === "number" ? Number(x) : String(x)) : d);
     return {
-      teams: pick(v.teams, [8, 10, 12, 14, 16], 12), qb: pick(v.qb, ["1", "sf", "2"], "sf"),
-      rb: pick(v.rb, [1, 2, 3], 2), wr: pick(v.wr, [1, 2, 3, 4], 3), te: pick(v.te, [1, 2], 1), flex: pick(v.flex, [0, 1, 2, 3], 1),
-      bench: pick(v.bench, [3, 4, 5, 6, 7, 8, 9, 10, 12, 15], 6), rec: pick(v.rec, [0, 0.5, 1], 1), tep: pick(v.tep, [0, 0.5, 1], 0.5),
+      teams: pick(v.teams, FMT_TEAMS, 12), qb: pick(v.qb, ["1", "sf", "2"], "sf"), sx: pick(v.sx, [1, 2], 1),
+      rb: pick(v.rb, [0, 1, 2, 3, 4], 2), wr: pick(v.wr, [0, 1, 2, 3, 4, 5], 3), te: pick(v.te, [0, 1, 2], 1), flex: pick(v.flex, [0, 1, 2, 3, 4], 1),
+      bench: pick(v.bench, [3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20], 6), rec: pick(v.rec, FMT_REC.map(x => x[0]), 1), tep: pick(v.tep, FMT_TEP.map(x => x[0]), 0.5),
       ptd: pick(v.ptd, [4, 5, 6], 4), pyd: pick(v.pyd, [20, 25, 30], 25), int: pick(v.int, [-1, -2, -3], -2), fum: pick(v.fum, [0, -1, -2, -3], -2), fd: pick(v.fd, [0, 0.5, 1], 0)
     };
   }
@@ -3069,7 +3083,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function fmtLeague(f) {
     f = fmtFull(f);
     const rp = [].concat(Array(f.qb === "2" ? 2 : 1).fill("QB"), Array(f.rb).fill("RB"), Array(f.wr).fill("WR"), Array(f.te).fill("TE"),
-      Array(f.flex).fill("FLEX"), f.qb === "sf" ? ["SUPER_FLEX"] : [], Array(f.bench).fill("BN"));
+      Array(f.flex).fill("FLEX"), f.qb === "sf" ? Array(f.sx || 1).fill("SUPER_FLEX") : [], Array(f.bench).fill("BN"));
     const sc = { pass_yd: Math.round(10000 / f.pyd) / 10000, pass_td: f.ptd, pass_int: f.int, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
                  rec: f.rec, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: f.fum };
     if (f.tep) sc.bonus_rec_te = f.tep;
@@ -3078,7 +3092,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
              settings: { num_teams: f.teams, reserve_slots: 0, taxi_slots: 0, type: 0 } };
   }
   // The settings values are adjusted to: a connected league, else hand-picked settings, else none (base)
-  const valueLeague = () => (sl && sl.activeId && sl.data && sl.data[sl.activeId] ? sl.data[sl.activeId].league : FMT ? fmtLeague(FMT) : null);
+  const syncedLeague = () => (sl && sl.activeId && sl.data && sl.data[sl.activeId] ? sl.data[sl.activeId].league : null);
+  const valueLeague = () => {
+    const lg = syncedLeague();
+    if (lg && FMT_SRC !== "custom") return lg;
+    return FMT ? fmtLeague(FMT) : lg ? fmtLeague(FMT_DEFAULT) : null;   // custom format (SPAM default if none picked)
+  };
+  const usingCustom = () => !!syncedLeague() && FMT_SRC === "custom";
   // League-adjusted values and position ranks apply whenever a league (or hand-picked settings) is set,
   // everywhere except the Rankings board, where the SPAM Board / League-adjusted toggle decides.
   // Trade Finder, My Team, League, Free Agents, the calculator's league mode and player pages opened
@@ -3101,7 +3121,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T09:30Z";
+  const BUILD_ID = "2026-10-03T10:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4891,15 +4911,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   function formatParts(league) {
     const lu = lineupOf(league), sc = league.scoring_settings || {}, parts = [`${lu.teams}-Team`];
-    parts.push(lu.SUPER_FLEX ? "Superflex" : lu.QB >= 2 ? "2QB" : "1QB");
+    parts.push(lu.SUPER_FLEX ? (lu.SUPER_FLEX > 1 ? `${lu.SUPER_FLEX} Superflex` : "Superflex") : lu.QB >= 2 ? "2QB" : "1QB");
     const rec = Number(sc.rec || 0);
     parts.push(rec === 1 ? "Full PPR" : rec === 0.5 ? "Half PPR" : rec === 0 ? "Standard" : `${rec} PPR`);
-    if (Number(sc.bonus_rec_te) > 0) parts.push("TE Premium");
+    if (Number(sc.bonus_rec_te) > 0) parts.push(`TE Premium +${Number(sc.bonus_rec_te)}`);
     if (Number(sc.pass_td) >= 5) parts.push(`${Number(sc.pass_td)}pt Pass TD`);
     if (Number(sc.rush_fd) > 0 || Number(sc.rec_fd) > 0) parts.push("PPFD");
     const type = league.settings && league.settings.type;
     if (type === 2) parts.push("Dynasty"); else if (type === 1) parts.push("Keeper");
     return parts;
+  }
+  // One line for the active configuration: "12-Team · Superflex · Full PPR · TE Premium +0.5 · 2 RB · 3 WR · 2 FLEX"
+  function configText(league) {
+    const lu = lineupOf(league), parts = formatParts(league).filter(x => !/^(Dynasty|Keeper)$/.test(x));
+    parts.push(`${lu.RB} RB`, `${lu.WR} WR`);
+    if (lu.TE !== 1) parts.push(`${lu.TE} TE`);
+    const flex = lu.FLEX + lu.WRRB_FLEX + lu.REC_FLEX; if (flex) parts.push(`${flex} FLEX`);
+    parts.push(`${lu.bench} bench`);
+    return parts.join(" · ");
   }
   const trimLeague = l => ({
     league_id: l.league_id, name: l.name, season: l.season, status: l.status, total_rosters: l.total_rosters,
@@ -5205,7 +5234,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span>Adjusted for <b>${esc(formatParts(vl).join(" · "))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPAM Board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}${d ? "" : `<button class="btn link inline" type="button" data-open-fmt>Change</button>`}`
+      ? `<span>${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPAM Board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
       : `<span>Showing the SPAM Board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).join(" · "))}</b></span>`;
     if (!d) {
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
@@ -5393,15 +5422,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      (fmtLeague) and go through the same value code as a connected league. Saved in this browser
      and in the page address (?fmt=…), so a shared link opens with the same settings. */
   const FMT_FIELDS = [
-    { group: "Lineup", k: "teams", label: "Teams", opts: [[8], [10], [12], [14], [16]] },
+    { group: "Lineup", k: "teams", label: "League size", opts: [[8], [10], [12], [14], [16]], more: FMT_TEAMS.filter(n => ![8, 10, 12, 14, 16].includes(n)).map(n => [n, n + " teams"]) },
     { group: "Lineup", k: "qb", label: "Quarterbacks", opts: [["1", "1QB"], ["sf", "Superflex"], ["2", "2QB"]] },
-    { group: "Lineup", k: "rb", label: "RB starters", opts: [[1], [2], [3]] },
-    { group: "Lineup", k: "wr", label: "WR starters", opts: [[1], [2], [3], [4]] },
-    { group: "Lineup", k: "te", label: "TE starters", opts: [[1], [2]] },
-    { group: "Lineup", k: "flex", label: "FLEX (RB/WR/TE)", opts: [[0], [1], [2], [3]] },
-    { group: "Lineup", k: "bench", label: "Bench spots", select: [3, 4, 5, 6, 7, 8, 9, 10, 12, 15] },
-    { group: "Scoring", k: "rec", label: "Points per catch", opts: [[0, "Standard"], [0.5, "Half PPR"], [1, "Full PPR"]] },
-    { group: "Scoring", k: "tep", label: "TE premium", opts: [[0, "None"], [0.5, "+0.5"], [1, "+1"]] },
+    { group: "Lineup", k: "sx", label: "Superflex spots", opts: [[1], [2]], show: f => f.qb === "sf" },
+    { group: "Lineup", k: "rb", label: "RB starters", opts: [[0], [1], [2], [3], [4]] },
+    { group: "Lineup", k: "wr", label: "WR starters", opts: [[0], [1], [2], [3], [4], [5]] },
+    { group: "Lineup", k: "te", label: "TE starters", opts: [[0], [1], [2]] },
+    { group: "Lineup", k: "flex", label: "FLEX (RB/WR/TE)", opts: [[0], [1], [2], [3], [4]] },
+    { group: "Lineup", k: "bench", label: "Bench spots", select: [3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20] },
+    { group: "Scoring", k: "rec", label: "Points per catch", opts: [[0, "Standard"], [0.5, "Half PPR"], [1, "Full PPR"]], more: FMT_REC.filter(x => ![0, 0.5, 1].includes(x[0])) },
+    { group: "Scoring", k: "tep", label: "TE premium", opts: [[0, "None"], [0.5, "+0.5"], [1, "+1.0"]], more: FMT_TEP.filter(x => ![0, 0.5, 1].includes(x[0])) },
     { group: "Scoring", k: "ptd", label: "Passing TD", opts: [[4, "4 pts"], [5, "5 pts"], [6, "6 pts"]] },
     { group: "Scoring", k: "pyd", label: "Passing yards", opts: [[25, "25 per pt"], [20, "20 per pt"], [30, "30 per pt"]] },
     { group: "Scoring", k: "int", label: "Interception", opts: [[-1, "−1"], [-2, "−2"], [-3, "−3"]] },
@@ -5411,29 +5441,47 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const fdialog = $("fmt-dialog");
   let fmtDraft = fmtFull(FMT);
   const showDialog = dlg => { if (dlg.open) return; if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); };
+  let fmtSrcDraft = FMT_SRC;
   function openFormat() {
-    const d = activeData();
     fmtDraft = fmtFull(FMT);
-    $("fmt-locked").hidden = !d;
-    ["fmt-presets", "fmt-grid", "fmt-reset", "fmt-apply", "fmt-intro", "fmt-summary"].forEach(id => { $(id).hidden = !!d; });
-    $("fmt-cancel").textContent = d ? "Close" : "Cancel";
-    $("fmt-import").hidden = !!d;
-    if (d) {
-      $("fmt-locked").innerHTML = `<p>Values follow <b>${esc(d.league.name)}</b>'s own settings from ${esc(SOURCE_NAME[slSource()] === "pasted" ? "your pasted league" : SOURCE_NAME[slSource()])}:</p>
-        <p class="fmt-summary">${esc(formatParts(d.league).join(" · "))}</p><p>${esc(lineupText(d.league))}</p>
-        <p class="hint">To pick settings by hand instead, disconnect the league from the league menu at the top.</p>`;
-    } else renderFmtForm();
+    fmtSrcDraft = FMT_SRC;
+    renderFormatDialog();
     showDialog(fdialog);
   }
+  // With a league connected: Synced league (its own settings) or Custom format (pick everything)
+  function renderFormatDialog() {
+    const d = activeData(), locked = !!d && fmtSrcDraft !== "custom";
+    $("fmt-src").hidden = !d;
+    if (d) $("fmt-src").innerHTML = `<div class="seg" role="radiogroup" aria-label="Format source">
+        <button type="button" role="radio" data-fmt-src="league" aria-checked="${fmtSrcDraft !== "custom"}">Synced league</button>
+        <button type="button" role="radio" data-fmt-src="custom" aria-checked="${fmtSrcDraft === "custom"}">Custom format</button></div>`;
+    $("fmt-locked").hidden = !locked;
+    ["fmt-presets", "fmt-grid", "fmt-reset", "fmt-intro", "fmt-summary"].forEach(id => { $(id).hidden = locked; });
+    $("fmt-apply").hidden = false;
+    $("fmt-apply").textContent = locked ? "Use league settings" : "Apply & save";
+    $("fmt-cancel").textContent = "Cancel";
+    $("fmt-import").hidden = !!d;
+    if (locked) {
+      $("fmt-locked").innerHTML = `<p>Values follow <b>${esc(d.league.name)}</b>'s own settings from ${esc(SOURCE_NAME[slSource()] === "pasted" ? "your pasted league" : SOURCE_NAME[slSource()])}:</p>
+        <p class="fmt-summary">${esc(configText(d.league))}</p>
+        <p class="hint">Pick <b>Custom format</b> to try other settings. Your rosters stay; only the values change. Your SPAM Board never changes.</p>`;
+    } else renderFmtForm();
+  }
+  $("fmt-src").addEventListener("click", e => {
+    const b = e.target.closest("[data-fmt-src]"); if (!b) return;
+    fmtSrcDraft = b.dataset.fmtSrc; renderFormatDialog();
+  });
   function renderFmtForm() {
     const cur = fmtClean(fmtDraft);
     $("fmt-presets").innerHTML = FMT_PRESETS.map(pr => `<button class="fmt-preset" type="button" data-preset="${pr.id}" aria-pressed="${fmtSame(cur, { ...FMT_DEFAULT, ...pr.v })}">${esc(pr.label)}</button>`).join("");
-    const groups = ["Lineup", "Scoring"].map(g => `<div class="fmt-group"><h3>${g}</h3>${FMT_FIELDS.filter(f => f.group === g).map(f => {
+    const groups = ["Lineup", "Scoring"].map(g => `<div class="fmt-group"><h3>${g}</h3>${FMT_FIELDS.filter(f => f.group === g && (!f.show || f.show(cur))).map(f => {
       const val = String(cur[f.k]);
+      const inMore = f.more && f.more.some(([v]) => String(v) === val);
       const ctl = f.select
         ? `<select class="select" data-fmt="${f.k}" aria-label="${esc(f.label)}">${f.select.map(o => `<option value="${o}"${String(o) === val ? " selected" : ""}>${o}</option>`).join("")}</select>`
-        : `<div class="seg" role="radiogroup" aria-label="${esc(f.label)}">${f.opts.map(([v, lab]) => `<button type="button" role="radio" data-fmt="${f.k}" data-v="${v}" aria-checked="${String(v) === val}">${esc(lab ?? v)}</button>`).join("")}</div>`;
-      return `<div class="fmt-row"><span>${esc(f.label)}</span>${ctl}</div>`;
+        : `<div class="seg" role="radiogroup" aria-label="${esc(f.label)}">${f.opts.map(([v, lab]) => `<button type="button" role="radio" data-fmt="${f.k}" data-v="${v}" aria-checked="${String(v) === val}">${esc(lab ?? v)}</button>`).join("")}</div>`
+          + (f.more ? `<select class="select fmt-more${inMore ? " on" : ""}" data-fmt="${f.k}" aria-label="${esc(f.label)}: custom"><option value="">Custom…</option>${f.more.map(([v, lab]) => `<option value="${v}"${String(v) === val ? " selected" : ""}>${esc(lab)}</option>`).join("")}</select>` : "");
+      return `<div class="fmt-row"><span>${esc(f.label)}</span><span class="fmt-ctl">${ctl}</span></div>`;
     }).join("")}</div>`).join("");
     $("fmt-grid").innerHTML = groups;
     const lg = fmtLeague(cur);
@@ -5448,7 +5496,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     renderFmtForm();
   });
   $("fmt-grid").addEventListener("change", e => {
-    const sel = e.target.closest("select[data-fmt]"); if (!sel) return;
+    const sel = e.target.closest("select[data-fmt]"); if (!sel || sel.value === "") return;
     fmtDraft[sel.dataset.fmt] = Number(sel.value); renderFmtForm();
   });
   $("fmt-presets").addEventListener("click", e => {
@@ -5476,6 +5524,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   $("fmt-form").addEventListener("submit", e => {
     e.preventDefault();
+    if (activeData()) {
+      FMT_SRC = fmtSrcDraft;
+      try { localStorage.setItem(FMT_SRC_KEY, FMT_SRC); } catch (err) {}
+      if (FMT_SRC !== "custom") { renderLeagueAll(); fdialog.close(); toast(`Using ${activeData().league.name}'s own settings.`); return; }
+    }
     setFormat(fmtDraft);
     fdialog.close();
     toast(FMT ? `Using ${formatParts(fmtLeague(FMT)).join(" · ")}. Your settings are saved in this browser and in the page link.` : "Back to the SPAM default format.");
@@ -6589,7 +6642,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function loadSeason(season) {
     if (statsCache[season] !== undefined) return Promise.resolve(statsCache[season]);
     if (!statsLoading[season]) {
-      statsLoading[season] = fetch(`data/stats/${season}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null)
+      statsLoading[season] = fetch(`data/stats/${season}.json`, { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
         .then(d => { statsCache[season] = d; return d; });
     }
     return statsLoading[season];
@@ -6808,7 +6861,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           ${tabsList.map(([k, label]) => `<button class="chip-btn" type="button" role="tab" data-pp-tab="${k}" aria-pressed="${PP.tab === k}">${label}</button>`).join("")}
         </div>
       </div>
-      <div class="pm-body">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}</div>`;
+      <div class="pm-body">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}${loaded ? statsStamp() : ""}</div>`;
     const bar = box.querySelector(".pp-tabs"), on = bar && bar.querySelector('[aria-pressed="true"]');
     if (on) {   // keep the open section in view on phones
       const x = on.getBoundingClientRect().left - bar.getBoundingClientRect().left;
@@ -6904,6 +6957,34 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     else parts.push(`${t.rec}/${t.rec_tgt} catches`, `${fmt(t.rec_yd)} yds`, `${t.rec_td} TD`, t.tgtShare != null ? `${(100 * t.tgtShare).toFixed(1)}% target share` : "");
     return `<span class="pp-glance-label">${STATS_SEASONS[0]} so far</span> ${parts.filter(Boolean).map(esc).join(" · ")}`;
   }
+
+  // "Stats updated …" line in the player modal, with a refresh button for editors
+  function statsStamp() {
+    const d = statsCache[STATS_SEASONS[0]];
+    if (!d || !d.updated) return "";
+    const t = /T/.test(d.updated) ? new Date(d.updated.replace(/Z?$/, "Z")) : new Date(d.updated + "T12:00:00");
+    const when = /T/.test(d.updated)
+      ? t.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+      : t.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `<p class="pp-updated">Stats updated ${esc(when)}${d.through_week ? ` · through Week ${d.through_week}` : ""}
+      ${editor.on && editor.token ? `<button class="btn link inline" type="button" data-refresh-stats>Refresh stats</button>` : ""}</p>`;
+  }
+  // Editors: start the stats-only refresh on GitHub (needs a token with Actions: Read and write)
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-refresh-stats]"); if (!b) return;
+    if (!editor.token) { toast("Connect GitHub first: click Publish to live site once."); return; }
+    b.disabled = true;
+    try {
+      const res = await fetch(`https://api.github.com/repos/${SITE.repo}/actions/workflows/site.yml/dispatches`, {
+        method: "POST", headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + editor.token },
+        body: JSON.stringify({ ref: "main", inputs: { stats_only: true } })
+      });
+      if (res.status === 204) toast("Stats refresh started. New games show up in about 5 minutes; reload the page then.");
+      else if (res.status === 403 || res.status === 404) toast("GitHub didn't allow it. Edit your token and give it Actions: Read and write, then try again.");
+      else toast("Couldn't start the refresh (GitHub said " + res.status + ").");
+    } catch (err) { toast("Couldn't reach GitHub: " + err.message); }
+    b.disabled = false;
+  });
 
   /* Game log */
   const LOG_COLS = {
