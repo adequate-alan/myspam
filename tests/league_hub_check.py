@@ -16,7 +16,7 @@ name_of = {r["sleeper_id"]: r["player"] for r in rows}
 NOW = int(time.time() * 1000)
 
 def make_league(lid, name, teams, positions, scoring):
-    pool = sids[:teams * 12]
+    pool = [x for x in sids if x != "7600"][:teams * 12]   # Pat Freiermuth (PIT, played Thursday of week 4) stays available
     rosters = [{"roster_id": i + 1, "owner_id": f"{lid}u{i+1}", "co_owners": [], "players": pool[i::teams], "starters": [], "reserve": [], "taxi": [],
                 "settings": {"wins": (i * 7) % 4, "losses": 3 - (i * 7) % 4, "ties": 0, "fpts": 380 + 9 * i, "fpts_against": 400 - 5 * i}, "metadata": {"streak": "2W" if i % 2 else "1L"}} for i in range(teams)]
     users = [{"user_id": f"{lid}u{i+1}", "display_name": f"manager{i+1}", "metadata": {"team_name": f"{name} Team {i+1}"}} for i in range(teams)]
@@ -226,10 +226,10 @@ with sync_playwright() as p:
     ok(pg.locator(".fa-fit-t").count() == n_fa, "Each available player shows where he'd fit on your team")
     ok(pg.locator(".fa-avail.waivers").count() >= 1, "A recently dropped player shows as on waivers")
     head = [h.strip().upper() for h in pg.locator("#fa-head th").all_inner_texts()]
-    ok(head == ["RK", "PLAYER", "POS", "WK 4 PROJ", "RECENT FORM", "MATCHUP", "SZN RK", "FPTS", "PPG", "FIT"], f"Waiver Wire columns: {head}")
+    ok(head == ["RK", "PLAYER", "POS", "WK 4", "RECENT FORM", "MATCHUP", "SZN RK", "FPTS", "PPG", "FIT"], f"Waiver Wire columns: {head}")
     ok(pg.locator("#fa-body .val, #fa-body .valbar").count() == 0, "No SPAM value column or value bar on Waiver Wire")
-    projs = [t.strip() for t in pg.locator("#fa-body td.fa-proj").all_inner_texts()]
-    ok(all(re.fullmatch(r"\d+\.\d|—|Bye|Out", t) for t in projs) and "0.0" not in projs[:5] and sum(bool(re.fullmatch(r"\d+\.\d", t)) for t in projs) > 10, f"Weekly projections shown (— when missing, never a fake zero): {projs[:8]}")
+    projs = [t.strip().split("\n")[0] for t in pg.locator("#fa-body td.fa-proj").all_inner_texts()]
+    ok(all(re.fullmatch(r"\d+\.\d|—|Bye|Out|DNP", t) for t in projs) and "0.0" not in projs[:5] and sum(bool(re.fullmatch(r"\d+\.\d", t)) for t in projs) > 10, f"Weekly projections shown (— when missing, never a fake zero): {projs[:8]}")
     ranks = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
     ok(ranks == sorted(ranks), "Sorted by SPAM rank by default")
     fw = pg.evaluate("() => document.getElementById('fa-wrap').getBoundingClientRect().width")
@@ -238,8 +238,22 @@ with sync_playwright() as p:
         pg.evaluate(f"() => {{ const s = document.getElementById('fa-sort'); s.value = '{opt}'; s.dispatchEvent(new Event('change', {{ bubbles: true }})); }}"); pg.wait_for_timeout(250)
         ok(pg.locator("#fa-body tr.player").count() == n_fa, f"Sort by {opt}")
     pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'proj'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(250)
-    pv = [float(t) for t in pg.locator("#fa-body td.fa-proj").all_inner_texts() if re.fullmatch(r"\d+\.\d", t.strip())]
+    pv = [float(t.split("\n")[0]) for t in pg.locator("#fa-body td.fa-proj").all_inner_texts() if re.fullmatch(r"\d+\.\d", t.strip().split("\n")[0])]
     ok(pv == sorted(pv, reverse=True), "Projection sort is highest first")
+    # a player whose team already played this week (Thursday) shows Final + his points, never Bye
+    import json as _j
+    stats = _j.load(open(os.path.join(ROOT, "data/stats/2026.json")))
+    played = sorted(t for t, rows in stats["schedule"].items() if any(r[0] == stats["through_week"] and r[4] is not None for r in rows))
+    early = next((r for r in pg.locator("#fa-body tr.player").all() if r.locator(".pl-head").inner_text().split()[-1] in played), None)
+    if early is None:
+        print("   (no available player from a team that already played this week; skipped)")
+    else:
+        cell, mx = early.locator("td.fa-proj").inner_text().upper(), early.locator("td.fa-wk").inner_text().upper()
+        ok("FINAL" in cell and "BYE" not in cell and "FINAL" in mx and "BYE" not in mx, f"Already played this week: Final, not Bye ({early.locator('.pl-name').inner_text()}: {' '.join(cell.split())} | {' '.join(mx.split())})")
+        early.locator(".pl-name").click(); pg.wait_for_timeout(1500)
+        tw = pg.locator(".pm-right .tw-card").inner_text().upper()
+        ok("FINAL" in tw and "BYE" not in tw, f"Player modal This week shows the played game as Final: {' '.join(tw.split())[:80]}")
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
     pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'rank'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(250)
     pg.locator("#fa-fitsort").check(force=True); pg.wait_for_timeout(300)
     ranks2 = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
