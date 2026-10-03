@@ -50,7 +50,6 @@
 const SITE = {
   name: "SPAM",
   tagline: "Fantasy Football Rankings",
-  format: "12-Team · Full PPR · Superflex",
   updated: "Oct 1, 2026",
   author: "SPAM",
   repo: "stevenp36/spam", // editors need write access to this GitHub repo
@@ -844,7 +843,9 @@ button { -webkit-tap-highlight-color: transparent; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .mono { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--cream); }
 
-.wrap { max-width: 1160px; margin: 0 auto; padding-inline: 32px; }
+/* Page width: a wide app layout on large desktops (capped so ultrawide screens don't stretch), centered and a
+   little tighter on laptops, single column on tablets, fully stacked on phones. Side padding scales 16–40px. */
+.wrap { max-width: 1560px; margin: 0 auto; padding-inline: clamp(16px, 2.6vw, 40px); }
 
 /* ---------- Masthead ---------- */
 .masthead {
@@ -988,6 +989,37 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
   border-bottom: 1px solid var(--line-soft);
 }
 #panel-rankings thead th.val { padding-left: 14px; }   /* starts where the value bar starts */
+.rk-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.rk-main { min-width: 0; }
+/* summary: a status strip above the table up to large desktop, then a slim right rail */
+.rk-rail { order: -1; display: flex; flex-wrap: wrap; gap: 12px 32px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.rk-rail[hidden] { display: none; }
+.rr-sec { min-width: 0; }
+.rr-label { margin: 0 0 4px; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
+.rr-when { letter-spacing: 0.04em; text-transform: none; font-weight: 500; }
+.rr-big { margin: 0; font-size: 1.05rem; font-weight: 750; color: var(--cream); font-variant-numeric: tabular-nums; }
+.rr-big span { font-size: 0.74rem; font-weight: 550; color: var(--muted); }
+.rr-text { margin: 2px 0 0; font-size: 0.78rem; color: var(--ink-2); }
+.rr-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px 14px; flex-wrap: wrap; }
+.rr-list li { display: flex; align-items: baseline; gap: 6px; font-size: 0.8rem; white-space: nowrap; }
+.rr-name { font-weight: 650; color: var(--ink); }
+.rr-sub { font-size: 0.68rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rr-mv { font-size: 0.68rem; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 26px; }
+.rr-mv.up { color: var(--rb); } .rr-mv.down { color: var(--qb); }
+@media (min-width: 1440px) {
+  .rk-layout { grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
+  .rk-rail { order: 0; position: sticky; top: calc(var(--mast-h, 0px) + 16px); flex-direction: column; flex-wrap: nowrap; gap: 18px; padding: 16px 18px; }
+  .rr-list { flex-direction: column; gap: 6px; }
+}
+@media (max-width: 640px) { .rk-rail { display: none; } }
+/* desktop column balance: compact rank/controls, roomy player, value bar + number ~third */
+@media (min-width: 1024px) {
+  #panel-rankings td.val { width: 34%; }
+  #panel-rankings .pos-col { width: 10%; }
+  #panel-rankings .valbar .track { flex: 1 1 auto; max-width: 340px; }
+  #panel-rankings .valbar .num { min-width: 64px; }
+  #panel-rankings tbody tr.player td { padding-block: 12px; }
+}
 /* The column guide stays visible under the masthead while you scroll the board (--mast-h is set from JS).
    overflow-x: clip keeps the rounded box without making it a scroll container, so sticky works. */
 #panel-rankings .table-scroll { overflow-x: clip; }
@@ -2038,6 +2070,10 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pp-hint { font-size: 0.74rem; color: var(--muted); }
 .pp-tabs { display: flex; max-width: 100%; flex-wrap: nowrap; margin-top: 22px; gap: 26px; border-bottom: 1px solid var(--line-soft); overflow-x: auto; scrollbar-width: none; }
 .pp-tabs::-webkit-scrollbar { display: none; }
+/* Scrollable tab rows (main nav on phones, player-modal tabs): fade the edge that has more tabs past it */
+.scroll-hint.more-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.scroll-hint.more-l { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px); mask-image: linear-gradient(to right, transparent, #000 36px); }
+.scroll-hint.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
 .pp-tabs .chip-btn { flex: none; white-space: nowrap; }
 .pp-tabs .chip-btn::after { bottom: 0; }
 .pp-sub { gap: 20px; margin-bottom: 16px; border-bottom: 0 !important; }
@@ -2321,11 +2357,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
 /* ---------- Small screens ---------- */
 @media (max-width: 760px) {
-  .wrap { padding-inline: 18px; }
+  .wrap { padding-inline: 16px; }
   .masthead-top { padding-block: 18px 0; }
   .brand-name { font-size: 1.5rem; }
   .meta { font-size: 0.6rem; letter-spacing: 0.08em; }
-  .tabs { gap: 16px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -18px; padding-inline: 18px; }
+  .tabs { gap: 20px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; flex-wrap: nowrap; }
+  .tabs .tab { flex: none; white-space: nowrap; }
   .tabs::-webkit-scrollbar { display: none; }
   .tab { flex: none; white-space: nowrap; font-size: 0.72rem; letter-spacing: 0.05em; }
   body.has-league .tab-long { display: none; }
@@ -2557,15 +2594,20 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <select class="select" id="owner-filter" aria-label="Filter by owner"></select>
       </label>
     </div>
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr><th scope="col" id="edit-head" hidden><span class="sr-only">Reorder</span></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="val">Value</th></tr>
-        </thead>
-        <tbody id="rank-body"></tbody>
-      </table>
+    <div class="rk-layout">
+      <div class="rk-main">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th scope="col" id="edit-head" hidden><span class="sr-only">Reorder</span></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="val">Value</th></tr>
+            </thead>
+            <tbody id="rank-body"></tbody>
+          </table>
+        </div>
+        <p class="count" id="rank-count"></p>
+      </div>
+      <aside class="rk-rail" id="rk-rail" aria-label="Rankings summary" hidden></aside>
     </div>
-    <p class="count" id="rank-count"></p>
   </section>
 
   <section id="panel-myteam" role="tabpanel" aria-labelledby="tab-myteam" hidden>
@@ -3253,19 +3295,32 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const nm = esc(SITE.name);
   $("brand-name").innerHTML = nm;   // one strong word; the small accent mark comes from CSS
   $("brand-tag").textContent = SITE.tagline;
-  $("meta").textContent = [SITE.format, "Updated " + SITE.updated].filter(Boolean).join("  ·  ");
-  $("footer-text").textContent = "Rankings and trade model by " + SITE.author + ". Values reflect " + SITE.format + " scoring.";
+  $("meta").textContent = SITE.updated ? "Updated " + SITE.updated : "";
+  $("footer-text").textContent = "Rankings and trade model by " + SITE.author + ". Base values reflect " + formatLabel() + " scoring.";
   $("sample-notice").hidden = !SITE.sampleData;
   if (SITE.sampleNote) $("sample-note").textContent = SITE.sampleNote;
 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
+  // Scroll hints for tab rows that can scroll sideways: fade whichever edge has more tabs past it,
+  // and keep the selected tab in view
+  function scrollHints(el) {
+    if (!el || el._hints) return; el._hints = true; el.classList.add("scroll-hint");
+    const set = () => { el.classList.toggle("more-l", el.scrollLeft > 4); el.classList.toggle("more-r", el.scrollLeft + el.clientWidth < el.scrollWidth - 4); };
+    el.addEventListener("scroll", set, { passive: true }); window.addEventListener("resize", set); set(); el._setHints = set;
+  }
+  function keepTabInView(el) {
+    if (!el) return; const on = el.querySelector('[aria-selected="true"], [aria-pressed="true"]');
+    if (on && el.scrollWidth > el.clientWidth) { const x = on.offsetLeft - el.offsetLeft; if (x < el.scrollLeft || x + on.offsetWidth > el.scrollLeft + el.clientWidth) el.scrollLeft = x - 24; }
+    if (el._setHints) el._setHints();
+  }
+  scrollHints(document.querySelector(".tabs"));
   // Masthead height, so sticky table headers sit just under it
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T00:00Z";
+  const BUILD_ID = "2026-10-04T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3317,6 +3372,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     const was = currentTab;
     currentTab = name;
+    keepTabInView(document.querySelector(".tabs"));
     // with the SPAM Board view on, values differ between the Rankings board (base) and every
     // league view (adjusted), and views drawn in the background used the Rankings context: redraw on open
     const flip = was !== name && typeof LG === "object" && LG.fmtOn && LG.mode !== "league";
@@ -3538,6 +3594,42 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       `<tr><td class="empty" colspan="${cols}">${query ? `No players match “${esc(query)}”.` : "No ranked players here."}</td></tr>`;
     $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
     updateEditorBar();
+    queueRail();
+  }
+  // Rankings summary (rail on large desktops, strip above the table on laptops/tablets, hidden on phones):
+  // last update, active format, your power rank (league only), biggest risers and fallers since the last snapshot day
+  let railTimer = 0;
+  function queueRail() { clearTimeout(railTimer); railTimer = setTimeout(renderRail, 0); }
+  function renderRail() {
+    const el = $("rk-rail"); if (!el) return;
+    if (rankHistory === undefined) { loadHistory().then(renderRail); }
+    const sec = (label, body) => body ? `<section class="rr-sec"><h3 class="rr-label">${label}</h3>${body}</section>` : "";
+    const parts = [];
+    const ts = rankHistory && rankHistory.players ? Math.max(0, ...Object.values(rankHistory.players).flatMap(l => l.map(e => Date.parse(e[0]) || 0))) : 0;
+    parts.push(sec("Last updated", `<p class="rr-big">${esc(ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : SITE.updated)}</p>`));
+    const vl = valueLeague();
+    parts.push(sec(leagueView() && vl ? "Values for" : "Format", `<p class="rr-text">${esc(leagueView() && vl ? formatLabel(vl) : formatLabel())}</p>`));
+    if (LG.active && LG.myRosterId != null) {
+      const ev = evaluateTeams(), me = ev.list.find(x => x.team.mine);
+      if (me) parts.push(sec("Your team", `<p class="rr-big">#${me.power} <span>of ${ev.n}</span></p><p class="rr-text">${esc(me.team.name)} · power rank</p>`));
+    }
+    // risers / fallers: overall rank now vs the latest history entry from an earlier day
+    if (rankHistory && rankHistory.players) {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }), moves = [];
+      let since = "";
+      players.forEach(p => {
+        if (p.pos === "PICK" || p.rank == null || !p.sleeperId) return;
+        const prev = historyOf(p.sleeperId).filter(x => x.date < today && x.rank != null).pop();
+        if (prev && prev.rank !== p.rank) { moves.push({ p, d: prev.rank - p.rank }); if (prev.date > since) since = prev.date; }
+      });
+      const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span>${nameLink(m.p.sleeperId, m.p.name, "rr-name")}<span class="rr-sub">#${m.p.rank}</span></li>`;
+      const up = moves.filter(m => m.d > 0).sort((a, b) => b.d - a.d).slice(0, 3), dn = moves.filter(m => m.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
+      const when = since ? ` <span class="rr-when">since ${esc(new Date(since + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }))}</span>` : "";
+      if (up.length) parts.push(sec("Biggest risers" + when, `<ul class="rr-list">${up.map(row).join("")}</ul>`));
+      if (dn.length) parts.push(sec("Biggest fallers" + when, `<ul class="rr-list">${dn.map(row).join("")}</ul>`));
+    }
+    el.innerHTML = parts.join("");
+    el.hidden = !parts.length;
   }
   renderRankings();
 
@@ -5083,6 +5175,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       taxi: (league.settings && league.settings.taxi_slots) || 0
     };
   }
+  // The one place format labels come from: the SPAM base format, or a league / your custom settings
+  function formatLabel(league) { return formatParts(league || fmtLeague(FMT_DEFAULT)).join(" · "); }
   function formatParts(league) {
     const lu = lineupOf(league), sc = league.scoring_settings || {}, parts = [`${lu.teams}-Team`];
     parts.push(lu.SUPER_FLEX ? (lu.SUPER_FLEX > 1 ? `${lu.SUPER_FLEX} Superflex` : "Superflex") : lu.QB >= 2 ? "2QB" : "1QB");
@@ -5395,7 +5489,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("league-pick").hidden = !d;
     $("meta").hidden = !!d;
     $("fmt-chip").hidden = !!d;
-    $("meta").textContent = (FMT ? [] : [SITE.format]).concat(SITE.updated ? ["Updated " + SITE.updated] : []).join("  ·  ");
+    $("meta").textContent = SITE.updated ? "Updated " + SITE.updated : "";
     $("fc-format").textContent = formatParts(FMT ? fmtLeague(FMT) : fmtLeague(FMT_DEFAULT)).join(" · ");
     $("fmt-chip").classList.toggle("custom", !!FMT);
     $("fmt-chip").title = FMT ? "Values follow the settings you picked. Click to change." : "Pick your league's scoring and lineup";
@@ -6837,7 +6931,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const DEFAULT_SCORING = { pass_yd: 0.04, pass_td: 4, pass_int: -2, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
                             rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: -2, bonus_rec_te: 0.5 };
   const scoringNow = () => { const d = activeData(); return d ? d.league.scoring_settings || {} : FMT ? fmtLeague(FMT).scoring_settings : (comps && comps.base_scoring) || DEFAULT_SCORING; };
-  const scoringLabel = () => (activeData() ? `${activeData().league.name} scoring` : FMT ? `Your scoring (${formatParts(fmtLeague(FMT)).slice(1).join(" · ")})` : "SPAM scoring (" + SITE.format.replace(/^12-Team · /, "") + ")");
+  const scoringLabel = () => (activeData() ? `${activeData().league.name} scoring` : FMT ? `Your scoring (${formatParts(fmtLeague(FMT)).slice(1).join(" · ")})` : "SPAM scoring (" + formatParts(fmtLeague(FMT_DEFAULT)).slice(1).join(" · ") + ")");
   const STAT_KEYS = ["pass_cmp", "pass_att", "pass_yd", "pass_td", "pass_int", "pass_2pt", "pass_sack", "pass_fd",
                      "rush_att", "rush_yd", "rush_td", "rush_2pt", "rush_fd", "rec_tgt", "rec", "rec_yd", "rec_td", "rec_2pt", "rec_fd", "fum_lost"];
   const THRESHOLDS = [
@@ -7102,10 +7196,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>
       <div class="pm-body">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}${loaded ? statsStamp() : ""}</div>`;
     const bar = box.querySelector(".pp-tabs"), on = bar && bar.querySelector('[aria-pressed="true"]');
+    scrollHints(bar);
     if (on) {   // keep the open section in view on phones
       const x = on.getBoundingClientRect().left - bar.getBoundingClientRect().left;
       if (x + on.offsetWidth > bar.clientWidth) bar.scrollLeft = x - 18;
     }
+    if (bar && bar._setHints) bar._setHints();
     if (PP.picking) { const inp = box.querySelector("#pm-pick"); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }
     drawCharts();
   }
