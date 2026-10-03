@@ -1344,6 +1344,31 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .lm-divider { height: 1px; background: var(--line); margin: 6px 4px; }
 .lm-foot { font-size: 0.7rem; color: var(--muted); padding: 8px 10px 6px; border-top: 1px solid var(--line); margin-top: 6px; }
 
+/* Trade Finder hierarchy: partner, then verdict, then the two sides; numbers stay quiet */
+#panel-finder .tf-controls { padding: 20px 22px 16px; gap: 16px 20px; }
+#panel-finder .tf-type { align-self: flex-end; }
+#panel-finder .tf-more { padding-top: 12px; border-top: 1px solid var(--line-soft); }
+#panel-finder .tf-more-row { gap: 12px 26px; align-items: center; }
+#panel-finder .tf-more-row .tf-check { height: 34px; }
+#panel-finder .tf-card { gap: 10px; padding: 14px 16px 12px; }
+#panel-finder .tf-head { gap: 10px; }
+#panel-finder .tf-team b { font-size: 1.02rem; }
+#panel-finder .tf-vline { flex-direction: column; align-items: flex-start; gap: 3px; }
+#panel-finder .tf-verdict-big { font-size: 1.12rem; letter-spacing: 0.01em; }
+#panel-finder .tf-verdict-big.fair { color: var(--text-strong); }
+#panel-finder .tf-diff { font-size: 0.7rem; color: color-mix(in srgb, var(--muted) 85%, transparent); letter-spacing: 0.01em; }
+#panel-finder .tf-sides { gap: 12px 16px; padding: 10px 0 2px; border-top: 1px solid var(--line-soft); }
+#panel-finder .tf-side h4 { margin-bottom: 6px; }
+#panel-finder .tf-side ul { gap: 7px; }
+#panel-finder .tf-cpl { grid-template-columns: auto minmax(0, 1fr) auto; gap: 9px; }
+#panel-finder .tf-cpl .tf-name { font-size: 0.88rem; }
+#panel-finder .tf-cpl .tf-tag { font-size: 0.66rem; margin-top: 2px; }
+#panel-finder .tf-pr { font-weight: 700; color: var(--c, var(--muted)); letter-spacing: 0.02em; }
+#panel-finder .tf-cpl .tf-v { font-size: 0.86rem; color: var(--text-strong); align-self: start; padding-top: 1px; }
+#panel-finder .tf-why { font-size: 0.8rem; line-height: 1.45; color: var(--text-secondary); }
+#panel-finder .tf-foot { padding-top: 4px; }
+#panel-finder .tf-foot .btn { height: 30px; font-size: 0.76rem; }
+
 /* ---------- Checkboxes and radios: one themed control everywhere (no native browser boxes) ---------- */
 :root, :root[data-theme="dark"] {
   --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%231A1314' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -2372,7 +2397,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>
     </div>
     <div class="tf-controls">
-      <div class="tf-field tf-player"><span class="ctl-label">Player</span>
+      <div class="tf-field tf-player"><span class="sr-only">Player</span>
         <div class="view-toggle tf-src" id="tf-src" role="group" aria-label="Player source">
           <button class="chip-btn" type="button" data-src="mine" aria-pressed="true">My team</button><button class="chip-btn" type="button" data-src="any" aria-pressed="false">Any player</button><button class="chip-btn" type="button" data-src="team" aria-pressed="false">By team</button>
         </div>
@@ -2382,15 +2407,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <label class="tf-field"><span class="ctl-label">Against</span><select class="select" id="tf-against"></select></label>
       <label class="tf-field"><span class="ctl-label" id="tf-pos-label">Position wanted</span><select class="select" id="tf-pos">
         <option value="ANY">Any position</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option></select></label>
-      <div class="tf-field"><span class="ctl-label">Trade type</span>
+      <div class="tf-field tf-type"><span class="sr-only">Trade type</span>
         <div class="view-toggle" id="tf-size" role="group" aria-label="Trade type">
           <button class="chip-btn" type="button" data-size="1" aria-pressed="false">1-for-1</button><button class="chip-btn" type="button" data-size="pkg" aria-pressed="true">Packages</button>
         </div>
-        <label class="tf-check sm"><input type="checkbox" id="tf-three"> Include 3-team trades</label>
       </div>
       <details class="tf-more">
         <summary>More filters</summary>
         <div class="tf-more-row">
+          <label class="tf-check"><input type="checkbox" id="tf-three"> Include 3-team trades</label>
           <label class="tf-field"><span class="ctl-label">Max value difference</span><select class="select" id="tf-gap">
             <option value="5">5%</option><option value="10" selected>10%</option><option value="15">15%</option><option value="20">20%</option></select></label>
           <label class="tf-check"><input type="checkbox" id="tf-fair"> Fair trades only</label>
@@ -3021,7 +3046,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T01:35Z";
+  const BUILD_ID = "2026-10-03T01:45Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7189,13 +7214,26 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (starter) return `${v("get", "receives")} a new starting ${starter.pos}`;
     return `${v("add", "adds")} depth`;
   }
-  // Verdict that also flags lineup fit: "Fair on value, bad fit for X"
-  function fitBadge(it, v) {
+  // Card headline, kept punchy: value verdict + lineup fit ("Fair + good fit", "Slight edge to you")
+  function fitBadge0(it, v) {   // the long form, shown as a tooltip
     const S = it.S, sN = S.mine ? "you" : S.name, bad = [];
     if (it.fS.net <= -8) bad.push(sN);
     if (it.fT.net <= -8) bad.push(it.team.name);
     if (!bad.length) return v.fair && it.fS.net >= 3 && it.fT.net >= 3 ? `${v.label}, good fit for both` : v.label;
     return `${v.fair ? "Fair on value" : v.label}, bad fit for ${bad.length === 2 ? "both" : bad[0]}`;
+  }
+  const SHORT_VERDICT = ["Even", "Fair", "Slight edge", "Wins", "Clear win", "Steal", "Robbery"];
+  function fitBadge(it, v) {
+    const S = it.S, sN = S.mine ? "you" : S.name, sAhead = it.m.a >= it.m.b;
+    const i = Math.max(0, TRADE_VERDICTS.findIndex(t => it.more < t.upTo)), word = SHORT_VERDICT[Math.min(i, SHORT_VERDICT.length - 1)];
+    const who = sAhead ? sN : "them";
+    const base = i <= 1 ? word : i === 2 ? `${word} to ${who}` : i === 3 ? `${who === "you" ? "You" : who === "them" ? "They" : who} ${who === "you" || who === "them" ? "win" : "wins"}` : `${word} for ${who}`;
+    const bad = [];
+    if (it.fS.net <= -8) bad.push(S.mine ? "you" : S.name);
+    if (it.fT.net <= -8) bad.push("them");
+    if (bad.length) return `${base} + bad fit for ${bad.length === 2 ? "both" : bad[0]}`;
+    if (it.fS.net >= 3 && it.fT.net >= 3) return `${base} + good fit`;
+    return base;
   }
   function shortWhy(it) {
     const worst = it.fS.net <= it.fT.net ? { f: it.fS, name: it.S.mine ? "your" : it.S.name + "'s" } : { f: it.fT, name: it.team.name + "'s" };
@@ -7327,17 +7365,19 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const ownerTag = t => `<span class="tf-own${t.mine ? " mine" : ""}">${esc(t.mine ? "Your team" : t.name)}</span>`;
     const prow = (p, from, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
       <span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag">${ownerTag(from)}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+    // compact row: photo · name · value, then "RB2 · starts at RB1"
+    const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(p.posRank)}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     const cards = ideas.map((it, i) => {
       const sAhead = it.m.a >= it.m.b, v = finderVerdict(it.more, sAhead, S, it.team);
       const full = TF.openFull.has(i), fw = fullWhy(it);
       return `<article class="tf-card">
         <header class="tf-head">${teamFace(it.team, "sm")}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size">${it.give.length}-for-${it.get.length}</span></header>
-        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}">${esc(fitBadge(it, v))}</span><span class="tf-diff">${it.more.toFixed(1)}% raw · roster-adjusted ${esc(S.mine ? "you" : S.name)} ${fmtNet(it.fS.net)}, ${esc(it.team.name)} ${fmtNet(it.fT.net)}</span></div>
+        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}" title="${esc(fitBadge0(it, v))}">${esc(fitBadge(it, v))}</span><span class="tf-diff">${it.more.toFixed(1)}% raw difference · ${fmtNet(it.fS.net)} fit for ${esc(S.mine ? "you" : S.name)} · ${fmtNet(it.fT.net)} fit for them</span></div>
         <div class="tf-sides">
-          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => prow(p, S, "")).join("")}</ul></div>
-          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "receive" : "receives"}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return prow(p, it.team, fe ? `worth ${fmt(fe.tv)} to ${you ? "you" : S.name} · ${fe.starts ? "starts at " + fe.role : "bench"}` : ""); }).join("")}</ul></div>
+          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => crow(p, "")).join("")}</ul></div>
+          <div class="tf-side"><h4>${esc(sLabel)} ${you ? "get" : "gets"}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return crow(p, fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
         </div>
-        <p class="tf-why"><span>Why it works</span>${esc(shortWhy(it))}</p>
+        <p class="tf-why">${esc(shortWhy(it))}</p>
         ${full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
           <dl class="tf-nums"><div><dt>Raw · give vs get</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
           <div><dt>Adjusted · give vs get</dt><dd>${fmt(it.m.b)} <span>vs</span> ${fmt(it.m.a)}</dd></div></dl></div>` : ""}
