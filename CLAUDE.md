@@ -20,17 +20,18 @@ Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, col
 1. **The base SPAM Board is never overwritten by derived calculations.** League-adjusted values, custom formats, Sleeper data, stats refreshes and projections are separate layers computed in the browser. They must never write back into `RANKINGS_CSV` or change rank/tier/value for anyone.
 2. **Manual rankings are locked.** Players with `source=manual` keep the order, tiers and values Steven/Alan set. Automatic processes (projections, Auto players, the weekly job) must never reorder them or push them down.
 3. **Auto players sit underneath.** `source=auto` players (70 added Oct 2, 2026) are ranked below every manual player (overall #184+), valued with a gentle tail that never exceeds anyone ranked above them. Moving, re-tiering or re-valuing an Auto player in the editor and saving makes him Manual. Players who only shift because someone else moved stay Auto.
-4. **Tiers first, then rank order, then format.** Tiers decide where the value gaps are; rank order inside a tier sets small gaps; format (league size, scoring, lineup) adjusts how much each tier is worth. No artificial cliffs just because a player crosses QB12→QB13 or WR36→WR37.
-5. **"Custom" means unpublished.** A typed value shows the CUSTOM label, striped bar and an Auto/Reset button only until it's published. Once published it's that player's official SPAM value and looks like every other player. It stays fixed (it doesn't follow the model) until someone edits it again.
-6. **Save → Publish workflow.** Before saving = unsaved edit. Save changes = saved (in the browser, and published automatically if the browser has a GitHub token). Publish to live site = committed to `index.html` on GitHub and becomes the master rankings. Tier changes follow the same workflow.
-7. **League-specific screens always show league-adjusted values and position ranks** (Trade Finder, My Team, League, Free Agents, the calculator in league mode, player pages opened from those). The SPAM Board / League-adjusted toggle only affects the Rankings board. Never show the base positional rank (e.g. superflex QB3) inside a 1QB league's trade recommendation.
-8. **Historical honesty in Trade History.** A trade is "Historical SPAM values" only if every player had a SPAM value on or before the trade date. Trades before SPAM existed are labeled **Pre-SPAM trade** and judged as a retrospective with today's values. Never present today's values as what a player was worth back then.
-9. **Stats never change rankings.** Stats refreshes update game logs and fantasy points only.
-10. **Design consistency.** Use the theme tokens; no default browser controls (selects, checkboxes, dialogs). No Patreon button or styling. Labels are sentence-case in copy, uppercase with letter spacing for small labels.
-11. **The website is the master source of truth for rankings** (from Alan). Don't sync the Excel file unless Alan or Steven asks.
-12. **Keep the layers separate** (from Alan). Don't overwrite manual rankings or published values, don't let stats or projection updates change rankings, and keep league calculations derived from the base board.
-13. **Stay in scope** (from Alan). Don't change unrelated parts of the site when doing a specific feature. Preserve the SPAM branding and design system.
-14. **Don't rename the `spm_` localStorage keys** (from Alan). Renaming them would wipe visitors' saved leagues, edits and tokens.
+4. **Values follow the overall rank (decided by Alan, Oct 3, 2026).** On the SPAM Board no player is ever valued above someone ranked ahead of him. `keepOverallOrder` enforces it over the whole board (Auto tail included) by adjusting values, never ranks: pool-adjacent-violators toward the tier values with a 0.5% step inside a pooled group. Published values are fixed anchors; the model values between two of them stay between them. (This replaced the old 2% `overallMaxShift` cap, which left 33 inversions.)
+5. **Tiers first, then rank order, then format.** Tiers decide where the value gaps are; rank order inside a tier sets small gaps; format (league size, scoring, lineup) adjusts how much each tier is worth. No artificial cliffs just because a player crosses QB12→QB13 or WR36→WR37.
+6. **"Custom" means unpublished.** A typed value shows the CUSTOM label, striped bar and an Auto/Reset button only until it's published. Once published it's that player's official SPAM value and looks like every other player. It stays fixed (it doesn't follow the model) until someone edits it again.
+7. **Save → Publish workflow.** Before saving = unsaved edit. Save changes = saved (in the browser, and published automatically if the browser has a GitHub token). Publish to live site = committed to `index.html` on GitHub and becomes the master rankings. Tier changes follow the same workflow.
+8. **League-specific screens always show league-adjusted values and position ranks** (Trade Finder, My Team, League, Free Agents, the calculator in league mode, player pages opened from those). The SPAM Board / League-adjusted toggle only affects the Rankings board. Never show the base positional rank (e.g. superflex QB3) inside a 1QB league's trade recommendation.
+9. **Historical honesty in Trade History.** A trade is "Historical SPAM values" only if every player had a SPAM value on or before the trade date. Trades before SPAM existed are labeled **Pre-SPAM trade** and judged as a retrospective with today's values. Never present today's values as what a player was worth back then.
+10. **Stats never change rankings.** Stats refreshes update game logs and fantasy points only.
+11. **Design consistency.** Use the theme tokens; no default browser controls (selects, checkboxes, dialogs). No Patreon button or styling. Labels are sentence-case in copy, uppercase with letter spacing for small labels.
+12. **The website is the master source of truth for rankings** (from Alan). Don't sync the Excel file unless Alan or Steven asks.
+13. **Keep the layers separate** (from Alan). Don't overwrite manual rankings or published values, don't let stats or projection updates change rankings, and keep league calculations derived from the base board.
+14. **Stay in scope** (from Alan). Don't change unrelated parts of the site when doing a specific feature. Preserve the SPAM branding and design system.
+15. **Don't rename the `spm_` localStorage keys** (from Alan). Renaming them would wipe visitors' saved leagues, edits and tokens.
 
 ## 3. How to run it
 
@@ -86,7 +87,7 @@ Inside `index.html` (search for these names):
   - `FORMAT_ADJUST`: margin, maxPosMove, `tierKeep: 0.40`, `floor`.
   - `TRADE_VERDICTS`.
 - **Value pipeline:**
-  - `loadPlayers` → `modelValue` → `keepRankOrderBySource` → `applyTiers` → `keepOverallOrder` (manual players above the tail only) → `autoValues` (the tail).
+  - `loadPlayers` → `modelValue` → `keepRankOrderBySource` → `applyTiers` → `autoValues` (the tail) → `keepOverallOrder` (whole board: values never increase down the overall rank).
   - League layer: `leagueRecalc` → `adjustValues(valueLeague())` → `smoothTiers` → `stickyOrder` → `LG.adj` / `LG.adjPos` / `LG.adjRank`.
   - Display helpers: `dv(p)` = value in the current context, `posLabel(p)` = position rank in the current context, `leagueView()` decides which.
 - **Editor:**

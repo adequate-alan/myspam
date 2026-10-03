@@ -391,7 +391,7 @@ const VALUE_MODEL = {
   tierBlend: 0.80,   // 0 = tiers ignored, 1 = everyone in a tier gets the same value (0.80: a tier keeps 20% of its rank-by-rank spread)
   tierMaxSpread: 0.15, // a tier's top player is at most 15% above its bottom player (tiermates stay close)
   tierMinDrop: 0.05, // minimum drop from one tier to the next (5%)
-  overallMaxShift: 0.02, // the overall board's order can move a value at most 2% away from its tier value
+  // the overall board: values never increase down your overall rank (see keepOverallOrder)
   topSpotSoften: { WR: 0.5 }, // move a position's #1 curve spot this share of the way toward #2
   tagTierFrom: 90,   // tiers 90+ are labels (e.g. Hurt), not part of the tier ladder
   autoDecay: 0.978,  // auto-added players (ranked under yours): each spot down is worth this share of the one above   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
@@ -2903,9 +2903,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrderBySource(mv);
     applyTiers(mv);
     if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrderBySource(mv);
-    const tailFrom = Math.min(Infinity, ...players.filter(p => p.source === "auto" && p.rank != null).map(p => p.rank));
-    keepOverallOrder(mv.filter(p => p.rank != null && p.rank < tailFrom));   // the board above the tail
     autoValues(players);
+    keepOverallOrder(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // the whole board, tail included
     players.forEach(p => { if (p.modelValued) p.value = Math.round(p.value); });
 
     // Overall order: hand-set ranks first, then everyone else by value
@@ -2997,31 +2996,42 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     });
   }
 
-  // Overall order: where an editor has placed a player above someone with a higher
-  // value, their values meet in the middle (same method as keepRankOrder). Tiers come
-  // first, so this can move a value at most overallMaxShift from its tier value: small
-  // disagreements are smoothed out, but the overall board can't break up a tier.
-  // Custom values are left alone.
+  // Overall order: values never go up as you go down the overall board. Your rank is the truth, so a
+  // player valued above someone ranked ahead of him meets the players above in the middle (closest values
+  // to the tier values that never increase, pool-adjacent-violators, same as keepRankOrder), with a 0.5%
+  // step inside each pooled group so the player ranked higher stays ahead. Published (typed) values are
+  // fixed anchors: the model values between two of them are kept between them.
   function keepOverallOrder(list) {
     if (!(typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) || list.length < 2) return;
     list.sort((a, b) => a.rank - b.rank);
-    const tierV = new Map(list.map(p => [p, p.value])), cap = Number(VALUE_MODEL.overallMaxShift);
-    const blocks = [];
+    const pav = seg => {
+      const blocks = [];
+      seg.forEach(p => {
+        blocks.push({ sum: p.value, n: 1, members: [p] });
+        while (blocks.length > 1) {
+          const b = blocks[blocks.length - 1], a = blocks[blocks.length - 2];
+          if (a.sum / a.n >= b.sum / b.n) break;
+          a.sum += b.sum; a.n += b.n; a.members.push(...b.members); blocks.pop();
+        }
+      });
+      blocks.forEach(b => {
+        if (b.n === 1) return;
+        const mean = b.sum / b.n;
+        b.members.forEach((p, k) => { p.value = mean * (1 + 0.005 * ((b.n - 1) / 2 - k)); });
+      });
+    };
+    let seg = [], hi = Infinity;
+    const close = lo => {
+      pav(seg);
+      seg.forEach(p => { p.value = Math.max(lo, Math.min(hi, p.value)); });
+      seg = [];
+    };
     list.forEach(p => {
-      blocks.push({ sum: p.value, n: 1, members: [p] });
-      while (blocks.length > 1) {
-        const b = blocks[blocks.length - 1], a = blocks[blocks.length - 2];
-        if (a.sum / a.n >= b.sum / b.n) break;
-        a.sum += b.sum; a.n += b.n; a.members.push(...b.members); blocks.pop();
-      }
+      if (p.modelValued) { seg.push(p); return; }
+      close(p.value); hi = p.value;   // a published value: fixed
     });
-    blocks.forEach(b => {
-      if (b.n === 1) return;
-      const mean = b.sum / b.n;
-      b.members.forEach((p, k) => { p.value = mean * (1 + 0.005 * ((b.n - 1) / 2 - k)); });
-    });
-    for (let k = 1; k < list.length; k++) list[k].value = Math.min(list[k].value, list[k - 1].value);
-    if (cap >= 0) list.forEach(p => { const t = tierV.get(p); p.value = Math.max(t * (1 - cap), Math.min(t * (1 + cap), p.value)); });
+    close(0);
+    for (let k = 1; k < list.length; k++) if (list[k].modelValued) list[k].value = Math.min(list[k].value, list[k - 1].value);
   }
 
   // Tier adjustment for model values: pull each tier toward its average,
@@ -3176,7 +3186,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-03T17:30Z";
+  const BUILD_ID = "2026-10-03T18:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
