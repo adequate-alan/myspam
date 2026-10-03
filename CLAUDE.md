@@ -175,6 +175,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 
 ## 10. Features and the decisions behind them
 
+- **Format labels** come only from `formatLabel()` / `formatParts()` (no hard-coded format text). TE premium is shown as shorthand (Alan's call): one "+" per 0.5 per catch ("TE Premium +" = +0.5, "++" = +1.0, "+++" = +1.5, "++++" = +2.0), nothing at all without TE premium; values that aren't a multiple of 0.5 keep the number. `tepLabel()` does this; calculations always use the real number.
 - **Player identity layout (every screen that lists players):** line 1 is the player name (strongest) with the NFL team as a small muted abbreviation right beside it (`nflTag`, `.pl-team`). Line 2 is the fantasy owner as smaller secondary text (`ownPill` / `ownerTag`, `.own-tag`): "Owned by X" muted, **My team** in warm gold (`--mine-accent`), **Free agent** in muted green. Never put the owner on the NFL team's line. A player with no NFL team shows no team (not "FA"), so "Free agent" always means the fantasy league. Screens where the owner is already obvious (My Team, a team's roster board, a Trade History side) show no owner line.
 - **Rankings tab:**
   - All / QB / RB / WR / TE.
@@ -254,7 +255,6 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Known issues, not yet fixed (found in an Oct 3 code review):**
   - The publish error and Refresh stats error messages (and the token prompt) only describe fine-grained tokens ("Contents/Actions: Read and write"). They don't fit Alan's classic `repo` token.
   - The README is stale: it says stats refresh weekly only (game-day runs exist), and its token section only mentions fine-grained tokens.
-  - `SITE.format` reads "12-Team · Full PPR · Superflex" and leaves out TE premium, even though the model default is +0.5 TEP.
   - The scheduled workflow runs `git push` without pulling first. If someone publishes during the Tuesday job, the job's push is rejected and that run's deploy fails.
   - `mergeInto` merges rank columns per row. If Steven and Alan publish overlapping rank moves from stale pages, the board could end up with duplicate ranks. The 409 retry only catches a changed file.
   - The weekly projection refresh changes values for all model-valued players (all but the 4 with published values). Ranks and tiers stay fixed. This is by design.

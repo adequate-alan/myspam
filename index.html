@@ -3340,7 +3340,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const FMT_KEY = "spm_format", FMT_VIEW_KEY = "spm_format_view", FMT_SRC_KEY = "spm_format_src";
   const FMT_TEAMS = [6, 8, 10, 12, 14, 16, 18, 20, 24, 32];
   const FMT_REC = [[0, "Standard (0)"], [0.25, "0.25 PPR"], [0.5, "Half PPR (0.5)"], [0.75, "0.75 PPR"], [1, "Full PPR (1)"], [1.5, "1.5 PPR"], [2, "2 PPR"]];
-  const FMT_TEP = [[0, "None"], [0.25, "+0.25 per catch"], [0.5, "+0.5 per catch"], [0.75, "+0.75 per catch"], [1, "+1.0 per catch"], [1.5, "+1.5 per catch"]];
+  const FMT_TEP = [[0, "None"], [0.25, "+0.25 per catch"], [0.5, "+ (0.5 per catch)"], [0.75, "+0.75 per catch"], [1, "++ (1.0 per catch)"], [1.5, "+++ (1.5 per catch)"], [2, "++++ (2.0 per catch)"]];
   // with a league connected: use its own settings ("league") or your custom format ("custom")
   let FMT_SRC = (() => { try { return localStorage.getItem(FMT_SRC_KEY) === "custom" ? "custom" : "league"; } catch (e) { return "league"; } })();
   const fmtFull = f => ({ ...FMT_DEFAULT, ...(f || {}) });
@@ -3457,7 +3457,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T09:00Z";
+  const BUILD_ID = "2026-10-04T10:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3980,7 +3980,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ? `<span class="tc-dot" aria-hidden="true"></span>League context: <b>${esc(activeData().league.name)}</b> ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
       : !LG.active && leagueView()
         ? `<span class="tc-dot" aria-hidden="true"></span>Your settings · ${esc(formatParts(fmtLeague(FMT)).join(" · "))} ${infoIcon("Values are adjusted for the league settings you picked. Connect a league to also use its rosters.", "About your settings")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
-        : `SPAM Values ${infoIcon("Base SPAM values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick your league's settings, or connect a league to use its rosters and scoring.", "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
+        : `SPAM Values ${infoIcon(`Base SPAM values for the site's format (${formatLabel()}). Pick your league's settings, or connect a league to use its rosters and scoring.`, "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
     $("tc-badge").classList.toggle("on", on || (!LG.active && leagueView()));
     ["A", "B", "C"].forEach(s => {
       $("search-" + s).placeholder = on ? (sideTeam(s === "A" ? "B" : s === "B" ? "A" : s) && !TC3.on ? "Or search any player (hypothetical)" : "Search any player") : "Search players";
@@ -4697,7 +4697,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const lu = lineupOf(league), parts = [];
     if (lu.QB) parts.push(`${lu.QB} QB`); if (lu.RB) parts.push(`${lu.RB} RB`); if (lu.WR) parts.push(`${lu.WR} WR`); if (lu.TE) parts.push(`${lu.TE} TE`);
     const flex = lu.FLEX + lu.WRRB_FLEX + lu.REC_FLEX; if (flex) parts.push(`${flex} FLEX`); if (lu.SUPER_FLEX) parts.push(`${lu.SUPER_FLEX} SF`);
-    if (Number((league.scoring_settings || {}).bonus_rec_te) > 0) parts.push("TE premium");
+    if (Number((league.scoring_settings || {}).bonus_rec_te) > 0) parts.push(tepLabel(league.scoring_settings.bonus_rec_te));
     return parts.join(" · ");
   }
   function renderLeagueBalance(lb, res, names) {
@@ -5314,19 +5314,27 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // The one place format labels come from: the SPAM base format, or a league / your custom settings
   function formatLabel(league) { return formatParts(league || fmtLeague(FMT_DEFAULT)).join(" · "); }
+  // TE premium shorthand for display: one "+" per 0.5 points per catch (+0.5 → "TE Premium +", +1.0 → "++").
+  // Values that aren't a multiple of 0.5 keep the number. Calculations always use the real value.
+  function tepLabel(n) {
+    n = Number(n) || 0; if (n <= 0) return "";
+    const k = Math.round(n / 0.5);
+    return k > 0 && Math.abs(k * 0.5 - n) < 0.01 ? "TE Premium " + "+".repeat(k) : `TE Premium +${n}`;
+  }
+  const tepShort = n => { const t = tepLabel(n); return t ? t.replace(/^TE Premium /, "") : ""; };
   function formatParts(league) {
     const lu = lineupOf(league), sc = league.scoring_settings || {}, parts = [`${lu.teams}-Team`];
     parts.push(lu.SUPER_FLEX ? (lu.SUPER_FLEX > 1 ? `${lu.SUPER_FLEX} Superflex` : "Superflex") : lu.QB >= 2 ? "2QB" : "1QB");
     const rec = Number(sc.rec || 0);
     parts.push(rec === 1 ? "Full PPR" : rec === 0.5 ? "Half PPR" : rec === 0 ? "Standard" : `${rec} PPR`);
-    if (Number(sc.bonus_rec_te) > 0) parts.push(`TE Premium +${Number(sc.bonus_rec_te)}`);
+    if (Number(sc.bonus_rec_te) > 0) parts.push(tepLabel(sc.bonus_rec_te));
     if (Number(sc.pass_td) >= 5) parts.push(`${Number(sc.pass_td)}pt Pass TD`);
     if (Number(sc.rush_fd) > 0 || Number(sc.rec_fd) > 0) parts.push("PPFD");
     const type = league.settings && league.settings.type;
     if (type === 2) parts.push("Dynasty"); else if (type === 1) parts.push("Keeper");
     return parts;
   }
-  // One line for the active configuration: "12-Team · Superflex · Full PPR · TE Premium +0.5 · 2 RB · 3 WR · 2 FLEX"
+  // One line for the active configuration: "12-Team · Superflex · Full PPR · TE Premium + · 2 RB · 3 WR · 2 FLEX"
   function configText(league) {
     const lu = lineupOf(league), parts = formatParts(league).filter(x => !/^(Dynasty|Keeper)$/.test(x));
     parts.push(`${lu.RB} RB`, `${lu.WR} WR`);
@@ -5640,7 +5648,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
       ? `<span>${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPAM Board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
-      : `<span>Showing the SPAM Board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).map(x => x.replace(/^TE Premium .*/, "TE Premium")).join(" · "))}</b></span>`;
+      : `<span>Showing the SPAM Board · <b>${esc(formatLabel())}</b></span>`;
     if (!d) {
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
       if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
@@ -5836,7 +5844,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     { group: "Lineup", k: "flex", label: "FLEX (RB/WR/TE)", opts: [[0], [1], [2], [3], [4]] },
     { group: "Lineup", k: "bench", label: "Bench spots", select: [3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20] },
     { group: "Scoring", k: "rec", label: "Points per catch", opts: [[0, "Standard"], [0.5, "Half PPR"], [1, "Full PPR"]], more: FMT_REC.filter(x => ![0, 0.5, 1].includes(x[0])) },
-    { group: "Scoring", k: "tep", label: "TE premium", opts: [[0, "None"], [0.5, "+0.5"], [1, "+1.0"]], more: FMT_TEP.filter(x => ![0, 0.5, 1].includes(x[0])) },
+    { group: "Scoring", k: "tep", label: "TE premium", opts: [[0, "None"], [0.5, "+"], [1, "++"]], more: FMT_TEP.filter(x => ![0, 0.5, 1].includes(x[0])) },
     { group: "Scoring", k: "ptd", label: "Passing TD", opts: [[4, "4 pts"], [5, "5 pts"], [6, "6 pts"]] },
     { group: "Scoring", k: "pyd", label: "Passing yards", opts: [[25, "25 per pt"], [20, "20 per pt"], [30, "30 per pt"]] },
     { group: "Scoring", k: "int", label: "Interception", opts: [[-1, "−1"], [-2, "−2"], [-3, "−3"]] },
@@ -5891,7 +5899,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("fmt-grid").innerHTML = groups;
     const lg = fmtLeague(cur);
     const dep = leagueDepth(lg);
-    $("fmt-summary").textContent = formatParts(lg).join(" · ") + " · " + lineupText(lg).replace(/ · TE premium$/, "")
+    $("fmt-summary").textContent = formatParts(lg).join(" · ") + " · " + lineupText(lg).replace(/ · TE Premium.*$/, "")
       + (depthWord(dep) ? ` · ${depthWord(dep) === "shallow" ? "Shallow" : "Deep"} league: depth counts ×${dep.toFixed(2)}` : Math.abs(dep - 1) > 0.02 ? ` · Depth counts ×${dep.toFixed(2)}` : "");
   }
   $("fmt-grid").addEventListener("click", e => {
