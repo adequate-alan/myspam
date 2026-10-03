@@ -38,6 +38,7 @@ def make_league(lid, name, teams, positions, scoring):
     rosters[2]["players"] = rosters[2]["players"][:11] + [free[0]]
     rosters[0]["players"] = rosters[0]["players"] + [free[1]]
     rosters[5]["players"] = rosters[5]["players"][:11]   # team 6 dropped its last player
+    rosters[0]["settings"]["waiver_budget_used"] = 40      # Sleeper's own FAAB used for team 1
     # team 5 has two players on IR (still on the roster, as on Sleeper)
     rosters[4]["reserve"] = rosters[4]["players"][2:4]
     mx = []
@@ -164,6 +165,18 @@ with sync_playwright() as p:
     tags = sorted(t.strip().lower() for t in pg.locator(".mv-card .mv-tag:not(.bidders)").all_inner_texts())
     ok(tags == ["drop", "free agent", "waiver claim"], f"Each move card says what it was: {tags}")
     ok(pg.locator(".mv-bidders").first.inner_text().strip().lower() == "4 bidders", "Waiver claim counts 4 bidders from the failed claims")
+    ok(pg.locator(".mv-card.waiver .th-head .mv-bidders").count() == 1 and pg.locator(".mv-card.waiver .mv-faab .mv-bidders").count() == 0, "Bidder count sits beside WAIVER CLAIM at the top, FAAB stays with the claim")
+    rail = pg.locator(".tx-rail")
+    ok(rail.is_visible() and pg.evaluate("() => document.querySelector('.tx-rail').getBoundingClientRect().left > document.querySelector('.tx-feed').getBoundingClientRect().right"), "League Activity rail sits beside the feed on desktop")
+    faab = [" ".join(x.split()) for x in rail.locator(".rail-card").first.locator("li").all_inner_texts()]
+    left = [int(re.search(r"\$(\d+)", x).group(1)) for x in faab]
+    ok(len(faab) == 12 and left == sorted(left, reverse=True), f"FAAB remaining for all 12 teams, highest first: {faab[:3]} … {faab[-2:]}")
+    ok(any("Team 1" in x and "$60" in x for x in faab) and any("Team 3" in x and "$88" in x for x in faab), "FAAB uses Sleeper's budget used, else winning bids in the log")
+    ok(rail.locator("li.mine").count() >= 1, "Your team is highlighted in the rail")
+    act = rail.locator(".rail-card").nth(1).inner_text()
+    ok("WEEK 4" in act.upper() and "1 claim" in act and "1 drop" in act, f"Most active this week with a summary line: {' '.join(act.split())[:90]}")
+    top = rail.locator(".rail-card").nth(2).inner_text()
+    ok("$12" in top and name_of[L1["free"][0]] in top, "Top waiver claims for the week")
     pg.locator(".mv-bidders").first.click(); pg.wait_for_timeout(300)
     ok(pg.locator("#bids-dialog").is_visible(), "Clicking the bidder count opens the bids")
     bids = [" | ".join(x.split()) for x in pg.locator("#bids-dialog .bids-list li").all_inner_texts()]

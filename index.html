@@ -1915,6 +1915,27 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mv-tag.free_agent { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 45%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
 .mv-tag.drop { color: var(--st-dnp, var(--accent-primary)); border-color: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 45%, transparent); background: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 7%, transparent); }
 .th-feed.tx-feed, .tx-feed + .count { max-width: 960px; }
+.tx-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 28px; align-items: start; }
+@media (min-width: 1320px) { .tx-layout { grid-template-columns: minmax(0, 960px) 300px; } }
+@media (max-width: 1319px) { .tx-rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; max-width: 960px; } }
+.tx-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rail-card { border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); padding: 10px 12px 8px; }
+.rail-title { margin: 0 0 8px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.rail-title span { margin-left: 4px; font-weight: 600; letter-spacing: 0.04em; text-transform: none; color: var(--muted); }
+.rail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rail-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; border-top: 1px solid var(--line-soft); }
+.rail-list li:first-child { border-top: 0; }
+.rail-list li.mine { box-shadow: inset 2px 0 0 var(--gold); padding-left: 6px; }
+.rail-list li.mine .rail-name { color: var(--mine-accent); font-weight: 650; }
+.rail-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.rail-name small { display: block; font-size: 0.68rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.rail-v { font-variant-numeric: tabular-nums; font-weight: 650; color: var(--ink-2); white-space: nowrap; }
+.rail-list.claims li { grid-template-columns: 42px minmax(0, 1fr); }
+.rail-amt { font-weight: 800; color: var(--heading); font-variant-numeric: tabular-nums; }
+.rail-pl { font-weight: 600; }
+.rail-bids { all: unset; cursor: pointer; color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
+.rail-sum { margin: -2px 0 6px; font-size: 0.74rem; color: var(--ink-2); }
+.rail-empty { margin: 0 0 4px; font-size: 0.76rem; color: var(--muted); }
 .mv-body { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 10px 22px; padding: 10px 14px 12px; }
 .mv-body.one { grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); }
 .mv-faab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 7px; font-size: 0.74rem; color: var(--muted); }
@@ -3658,7 +3679,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T22:00Z";
+  const BUILD_ID = "2026-10-04T22:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6101,7 +6122,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         settings: (st => ({
           wins: st.wins || 0, losses: st.losses || 0, ties: st.ties || 0,
           pf: (st.fpts || 0) + (st.fpts_decimal || 0) / 100, pa: (st.fpts_against || 0) + (st.fpts_against_decimal || 0) / 100,
-          streak: (r.metadata && r.metadata.streak) || ""
+          streak: (r.metadata && r.metadata.streak) || "",
+          faabUsed: st.waiver_budget_used != null ? Number(st.waiver_budget_used) : null
         }))(r.settings || {})
       })),
       syncedAt: Date.now()
@@ -7306,9 +7328,49 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!d.tx) return head + `<p class="empty-note lg-loading">Loading transactions for ${esc(d.league.name)}…</p>`;
     const tradeNote = LT.txType === "all" || LT.txType === "trade"
       ? `<p class="method-note">Trades are judged with SPAM values from the time of the trade when ranking history covers it. Trades from before SPAM rankings existed are labeled Pre-SPAM and evaluated as a retrospective with current values.</p>` : "";
-    if (!list.length) return head + `<p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p>`;
-    return head + tradeNote + `<div class="th-feed tx-feed">${list.map(t => t.type === "trade" ? tradeCard(evalTrade(t)) : moveCard(t)).join("")}</div>
-      <p class="count">${list.length} of ${all.length} transaction${all.length === 1 ? "" : "s"}</p>`;
+    if (!list.length) return head + `<div class="tx-layout"><div class="tx-main"><p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p></div>${txRail(d)}</div>`;
+    return head + tradeNote + `<div class="tx-layout"><div class="tx-main"><div class="th-feed tx-feed">${list.map(t => t.type === "trade" ? tradeCard(evalTrade(t)) : moveCard(t)).join("")}</div>
+      <p class="count">${list.length} of ${all.length} transaction${all.length === 1 ? "" : "s"}</p></div>${txRail(d)}</div>`;
+  }
+  /* League Activity rail beside the Transactions feed (wide desktop; below the feed on smaller screens):
+     FAAB remaining, most active teams and top waiver claims for the week in view (the Week filter, else the latest
+     week with moves). All from this league's Sleeper data in the browser. */
+  function txRail(d) {
+    const all = d.tx || [], moves = all.filter(t => t.type !== "trade");
+    const weeks = all.map(t => t.week), wk = LT.txWeek !== "all" ? Number(LT.txWeek) : weeks.length ? Math.max(...weeks) : null;
+    const box = (title, sub, body) => `<section class="rail-card"><h3 class="rail-title">${title}${sub ? ` <span>${sub}</span>` : ""}</h3>${body}</section>`;
+    const tline = (t, right, mine) => `<li class="${mine ? "mine" : ""}">${teamFace(t, "xs")}<span class="rail-name">${esc(t.name)}</span><span class="rail-v">${right}</span></li>`;
+    const out = [];
+    // FAAB remaining: Sleeper's budget used per team; older saved data falls back to winning bids in the log
+    const S = d.league.settings || {}, budget = Number(S.waiver_budget);
+    if (S.waiver_type === 2 && budget > 0) {
+      const spent = new Map();
+      all.forEach(t => {
+        if (t.type === "waiver" && t.bid) spent.set(t.rosters[0], (spent.get(t.rosters[0]) || 0) + t.bid);
+        if (t.type === "trade") t.faab.forEach(b => { spent.set(b.sender, (spent.get(b.sender) || 0) + b.amount); spent.set(b.receiver, (spent.get(b.receiver) || 0) - b.amount); });
+      });
+      const rows = LG.teams.map(t => { const used = t.roster.settings && t.roster.settings.faabUsed; return { t, left: budget - (used != null ? used : spent.get(t.rosterId) || 0) }; })
+        .sort((a, b) => b.left - a.left || a.t.name.localeCompare(b.t.name));
+      out.push(box("FAAB remaining", `of $${budget}`, `<ol class="rail-list">${rows.map(r => tline(r.t, `$${r.left}`, r.t.mine)).join("")}</ol>`));
+    }
+    if (wk != null) {
+      const wkTx = all.filter(t => t.week === wk), count = new Map();
+      wkTx.forEach(t => t.rosters.forEach(rid => count.set(rid, (count.get(rid) || 0) + 1)));
+      const busy = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const n = k => wkTx.filter(t => txKind(t) === k).length;
+      const summary = [[n("waiver"), "claim"], [n("free_agent") + n("commissioner"), "add"], [n("drop"), "drop"], [n("trade"), "trade"]].filter(([c]) => c).map(([c, w]) => `${c} ${w}${c === 1 ? "" : "s"}`).join(" · ");
+      out.push(box("Most active", `Week ${wk}`, (summary ? `<p class="rail-sum">${summary}</p>` : "") + (busy.length
+        ? `<ol class="rail-list">${busy.map(([rid, c]) => { const t = teamByRid(rid); return tline(t, `${c} move${c === 1 ? "" : "s"}`, t.mine); }).join("")}</ol>` : `<p class="rail-empty">No moves this week.</p>`)));
+      const claims = moves.filter(t => t.week === wk && t.type === "waiver" && t.bid > 0).sort((a, b) => b.bid - a.bid).slice(0, 5);
+      if (S.waiver_type === 2) {
+        const map = bySleeper();
+        out.push(box("Top waiver claims", `Week ${wk}`, claims.length ? `<ol class="rail-list claims">${claims.map(t => {
+          const e = rosterEntry(Object.keys(t.adds)[0], map), tm = teamByRid(t.rosters[0]);
+          return `<li><span class="rail-amt">$${t.bid}</span><span class="rail-name">${EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name, "rail-pl") : esc(e.name)}<small>${esc(tm.name)}${t.bids && t.bids.length > 1 ? ` · <button class="rail-bids" type="button" data-bids="${esc(t.id)}">${t.bids.length} bidders</button>` : ""}</small></span></li>`;
+        }).join("")}</ol>` : `<p class="rail-empty">No paid claims this week.</p>`));
+      }
+    }
+    return out.length ? `<aside class="tx-rail" aria-label="League activity">${out.join("")}</aside>` : "";
   }
   // A waiver claim, free-agent pickup or drop: team | adds (+ FAAB and bidders) | drops. An empty side collapses.
   function moveCard(t) {
@@ -7321,15 +7383,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const adds = Object.keys(t.adds).filter(sid => t.adds[sid] === rid), drops = Object.keys(t.drops).filter(sid => t.drops[sid] === rid);
     const faabOn = activeData().league.settings && activeData().league.settings.waiver_type === 2;
     const faab = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0) ? `<span class="mv-faab-amt"><b>$${t.bid}</b> FAAB</span>` : "";
-    const bidders = t.bids && t.bids.length > 1 ? `<button class="mv-bidders" type="button" data-bids="${esc(t.id)}" aria-haspopup="dialog">${t.bids.length} bidders</button>` : "";
+    const bidders = t.bids && t.bids.length > 1 ? `<button class="mv-bidders" type="button" data-bids="${esc(t.id)}" aria-haspopup="dialog" title="See every bid">${t.bids.length} bidders</button>` : "";
     const col = (cls, label, list, extra) => `<div class="mv-col ${cls}"><span class="mv-label">${label}</span><ul>${list.map(line).join("")}</ul>${extra}</div>`;
     return `<article class="th-card mv-card ${txKind(t)}">
-      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span></span>
+      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span>${bidders}</span>
         <span class="th-date">Week ${t.week} · ${esc(txWhen(t.at))}</span></header>
       <div class="mv-body${adds.length && drops.length ? "" : " one"}">
         <div class="mv-team">${teamFace(team, "sm")}<div><b>${esc(team.name)}</b>${team.manager && team.manager !== team.name ? `<span>${esc(team.manager)}</span>` : ""}</div></div>
-        ${adds.length ? col("add", "Adds", adds, faab || bidders ? `<div class="mv-faab">${faab}${bidders}</div>` : "") : ""}
-        ${drops.length ? col("drop", "Drops", drops, !adds.length && (faab || bidders) ? `<div class="mv-faab">${faab}${bidders}</div>` : "") : ""}
+        ${adds.length ? col("add", "Adds", adds, faab ? `<div class="mv-faab">${faab}</div>` : "") : ""}
+        ${drops.length ? col("drop", "Drops", drops, !adds.length && faab ? `<div class="mv-faab">${faab}</div>` : "") : ""}
       </div>
     </article>`;
   }
