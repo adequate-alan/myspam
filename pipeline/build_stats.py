@@ -81,7 +81,7 @@ def build(season, ids, games, stats_src=STATS_URL):
     return {
         "season": season,
         "through_week": int(d.week.max()) if len(d) else 0,
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),   # when this file was built (UTC)
         "cols": COLS,
         "players": players,
         "schedule": schedule(games, season),

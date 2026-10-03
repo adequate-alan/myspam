@@ -4,9 +4,25 @@ on:
   push:
     branches: [main]
   schedule:
-    # Tuesdays 14:00 UTC = 10 AM Eastern (9 AM once clocks fall back), after Monday Night Football
+    # Weekly full refresh: Tuesdays 14:00 UTC = 10 AM Eastern (9 AM once clocks fall back), after Monday Night Football.
+    # Projections, Sleeper IDs, stats and the ranking-history snapshot. Never changes your rankings.
     - cron: "0 14 * * 2"
+    # Stats-only refreshes after every NFL game day (game logs, totals, fantasy points). Two tries each,
+    # because nflverse usually posts a day's stats overnight but sometimes later in the morning.
+    - cron: "30 8 * * 5"    # Fri 4:30 AM ET: after Thursday Night Football
+    - cron: "0 15 * * 5"    # Fri 11 AM ET: retry
+    - cron: "30 8 * * 0"    # Sun 4:30 AM ET: after Saturday games (late season)
+    - cron: "0 15 * * 0"    # Sun 11 AM ET: retry
+    - cron: "30 8 * * 1"    # Mon 4:30 AM ET: after Sunday's games
+    - cron: "0 15 * * 1"    # Mon 11 AM ET: retry
+    - cron: "30 8 * * 2"    # Tue 4:30 AM ET: after Monday Night Football
+    - cron: "0 15 * * 4"    # Thu 11 AM ET: catch stat corrections before the next game day
   workflow_dispatch:
+    inputs:
+      stats_only:
+        description: "Only refresh player stats (game logs), not projections or ranking history"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -28,8 +44,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh projections and stats (weekly / manual runs only)
+      - name: Pick refresh type
         if: github.event_name != 'push'
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "0 14 * * 2" ]; then echo "stats=true" >> "$GITHUB_OUTPUT";
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.stats_only }}" = "true" ]; then echo "stats=true" >> "$GITHUB_OUTPUT";
+          else echo "stats=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Refresh player stats only (after game days / editor refresh)
+        if: github.event_name != 'push' && steps.mode.outputs.stats == 'true'
+        working-directory: pipeline
+        run: |
+          pip install pandas numpy
+          python build_stats.py 2026
+
+      - name: Refresh projections and stats (weekly / manual runs only)
+        if: github.event_name != 'push' && steps.mode.outputs.stats != 'true'
         working-directory: pipeline
         run: |
           pip install pandas numpy
@@ -40,7 +71,7 @@ jobs:
           python stamp_date.py ../index.html
 
       - name: Scheduled ranking-history snapshot (weekly / manual runs only)
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && steps.mode.outputs.stats != 'true'
         working-directory: pipeline
         run: |
           pip install playwright
@@ -53,7 +84,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html data/sleeper_players.json data/platform_ids.json data/stats/2026.json data/rank_history.json
-          git diff --cached --quiet || git commit -m "Weekly projections and stats refresh"
+          git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
           git push
 
       - uses: actions/configure-pages@v5

@@ -65,6 +65,9 @@ The calculator compares the adjusted value each side receives: raw player value 
 
 The exact gap is shown under the verdict, along with the raw player value gap when the roster adjustment changed it. With a Sleeper league connected, verdicts use the team names. Tiers and wording are in `TRADE_VERDICTS` in `index.html`.
 
+## Player stats refresh
+Player game logs, season totals, fantasy points and performance charts come from `data/stats/<season>.json` (`pipeline/build_stats.py`, nflverse). A stats-only run of the site workflow fires after every NFL game day (Friday after Thursday night, Sunday after Saturday games, Monday after Sunday, Tuesday after Monday night, each with a retry, plus Thursday for stat corrections). It only rewrites the stats file; rankings, tiers and values are never touched. The Tuesday job still refreshes projections and the ranking-history snapshot. Player pages show "Stats updated …" and, for editors with a GitHub token that has **Actions: Read and write**, a **Refresh stats** button that starts the stats-only run.
+
 ## Ranking history
 
 Every player's Ranking History (player pop-up → Ranking history) is a log of **committed changes**, stored in `data/rank_history.json` as `[timestamp, overall rank, position rank, tier, base SPAM value, source]` per player:
@@ -185,7 +188,9 @@ While the rankings system is being built, the editing controls are on for every 
 - **Publish to live site:** writes the browser-saved edits to `index.html` on GitHub so everyone sees them (site redeploys in about a minute). Publishing needs a GitHub fine-grained token for an account with write access (**Contents: Read and write**, this repository only); the page asks once and remembers it in that browser. Only the edited fields are merged onto the latest version, so the weekly projection refresh is kept.
 - **Discard browser edits:** drops everything saved in the browser and shows the live rankings again.
 
-## League settings (no league connected)
+## League settings (no league connected, or Custom format)
+
+With a league connected, League settings offers **Synced league** (the league's own settings) or **Custom format** (pick everything by hand; your rosters stay, only values change). The active setup is shown above the rankings. Options: league size 6–32, 1QB / Superflex (1 or 2 spots) / 2QB, RB/WR/TE/FLEX starters, bench, points per catch (standard, half, full or custom), TE premium amount, and passing/turnover/first-down scoring. League size and lineup set replacement level, so the same player is worth more in a deep league than a shallow one; tiers are priced as blocks.
 
 **League settings** (top right) lets anyone pick their format without connecting a league: teams, 1QB / superflex / 2QB, RB/WR/TE/FLEX starters, bench, points per catch, TE premium, passing TD and yardage points, interceptions, fumbles lost and first-down points, plus one-click presets. The rankings, values, player pages and trade calculator then use those settings. The choice is saved in the browser and in the page address (`?fmt=…`), so a shared link opens with the same settings. A connected league's own settings always take over.
 
