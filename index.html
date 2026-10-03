@@ -1888,7 +1888,7 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .rf-trend.hot { color: var(--rb); } .rf-trend.cool { color: var(--qb); } .rf-trend.steady { color: var(--muted); }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
 .fa-opp .sc-dot { margin-right: 4px; }
-@media (max-width: 760px) { #panel-fa .fa-wk { display: none; } }
+@media (max-width: 760px) { #fa-wrap .fa-wk { display: none; } }
 .pr-head {
   white-space: nowrap; padding: 0 18px 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
 }
@@ -2645,13 +2645,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .team-table .pl-text > span + span { margin-top: 3px; }
   .team-table .role-inline { margin-left: 0; }
   .mt-table td.mt-val { width: auto; }
-  .team-table .pl-name, #panel-myteam .pl-name, #panel-fa .pl-name { white-space: normal; }
-  #panel-myteam .mt-table td, #panel-myteam .mt-table th, #panel-fa td, #panel-fa th { padding-inline: 6px; }
-  #panel-myteam .mt-table td:first-child, #panel-myteam .mt-table th:first-child, #panel-fa td:first-child, #panel-fa th:first-child { padding-left: 14px; }
+  .team-table .pl-name, #panel-myteam .pl-name, #fa-wrap .pl-name { white-space: normal; }
+  #panel-myteam .mt-table td, #panel-myteam .mt-table th, #fa-wrap td, #fa-wrap th { padding-inline: 6px; }
+  #panel-myteam .mt-table td:first-child, #panel-myteam .mt-table th:first-child, #fa-wrap td:first-child, #fa-wrap th:first-child { padding-left: 14px; }
   #panel-myteam .mt-table td.slot { width: 40px; }
   .mt-table .pos { min-width: 38px; padding: 0 5px; }
   .mt-table .face { width: 26px; height: 26px; }
-  .mt-table thead th, #panel-fa thead th { letter-spacing: 0.06em; font-size: 0.6rem; }
+  .mt-table thead th, #fa-wrap thead th { letter-spacing: 0.06em; font-size: 0.6rem; }
   .mt-table .pl-cell { gap: 8px; }
   .mt-table td.mt-val { font-size: 0.86rem; }
   #panel-myteam .mt-table td.slot:first-child { padding-left: 12px; padding-right: 4px; width: 1%; font-size: 0.62rem; }
@@ -2699,7 +2699,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <button class="tab" role="tab" id="tab-myteam" aria-controls="panel-myteam" aria-selected="false" hidden>My Team</button>
       <button class="tab" role="tab" id="tab-league" aria-controls="panel-league" aria-selected="false" hidden>League</button>
       <button class="tab" role="tab" id="tab-finder" aria-controls="panel-finder" aria-selected="false" hidden><span class="tab-long">Trade </span>Finder</button>
-      <button class="tab" role="tab" id="tab-fa" aria-controls="panel-fa" aria-selected="false" hidden>Free Agents</button>
       <button class="tab" role="tab" id="tab-trade" aria-controls="panel-trade" aria-selected="false">Trade<span class="tab-long"> Calculator</span></button>
     </nav>
   </div>
@@ -2767,6 +2766,20 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   <section id="panel-league" role="tabpanel" aria-labelledby="tab-league" hidden>
     <div id="league-body"></div>
+    <!-- League → Free Agents (shown by renderLeague when that sub-tab is open) -->
+    <div id="fa-wrap" hidden>
+    <div class="controls">
+      <div class="chips" id="fa-chips" role="group" aria-label="Filter free agents by position"></div>
+      <input class="search" id="fa-search" type="search" placeholder="Search free agents" aria-label="Search free agents">
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col" class="fa-wk">This week</th><th scope="col">Value</th></tr></thead>
+        <tbody id="fa-body"></tbody>
+      </table>
+    </div>
+    <p class="count" id="fa-count"></p>
+    </div>
   </section>
 
   <section id="panel-finder" role="tabpanel" aria-labelledby="tab-finder" hidden>
@@ -2809,25 +2822,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     <div id="tf-body"></div>
   </section>
 
-  <section id="panel-fa" role="tabpanel" aria-labelledby="tab-fa" hidden>
-    <div class="panel-head">
-      <div>
-        <h2 class="panel-title">Free agents</h2>
-        <p class="panel-sub" id="fa-sub"></p>
-      </div>
-    </div>
-    <div class="controls">
-      <div class="chips" id="fa-chips" role="group" aria-label="Filter free agents by position"></div>
-      <input class="search" id="fa-search" type="search" placeholder="Search free agents" aria-label="Search free agents">
-    </div>
-    <div class="table-scroll">
-      <table>
-        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="His last three weeks, newest first (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col" class="fa-wk">This week</th><th scope="col">Value</th></tr></thead>
-        <tbody id="fa-body"></tbody>
-      </table>
-    </div>
-    <p class="count" id="fa-count"></p>
-  </section>
 
   <section id="panel-trade" role="tabpanel" aria-labelledby="tab-trade" hidden>
     <div class="tc-bar">
@@ -3492,7 +3486,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T13:00Z";
+  const BUILD_ID = "2026-10-04T14:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3533,9 +3527,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   window.addEventListener("storage", e => { if (e.key === "spm_theme" && (e.newValue === "light" || e.newValue === "dark")) setTheme(e.newValue, true); });
 
   /* ---------- Tabs ---------- */
-  const tabs = { rankings: $("tab-rankings"), myteam: $("tab-myteam"), league: $("tab-league"), finder: $("tab-finder"), fa: $("tab-fa"), trade: $("tab-trade") };
+  const tabs = { rankings: $("tab-rankings"), myteam: $("tab-myteam"), league: $("tab-league"), finder: $("tab-finder"), trade: $("tab-trade") };
   let currentTab = "rankings";
   function showTab(name) {
+    if (name === "fa") { name = "league"; try { LT.sub = "fa"; } catch (e) { window.spmWantFA = true; } }   // Free Agents lives in League now (old #fa links; LT may not exist yet at start-up)
     if (!tabs[name] || tabs[name].hidden) name = "rankings";
     for (const [k, btn] of Object.entries(tabs)) {
       const on = k === name;
@@ -3550,7 +3545,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const flip = was !== name && typeof LG === "object" && LG.fmtOn && LG.mode !== "league";
     if (flip) {
       try {
-        ({ myteam: renderMyTeam, league: renderLeague, fa: renderFA, trade: renderTrade, rankings: renderRankings }[name] || (() => {}))();
+        ({ myteam: renderMyTeam, league: renderLeague, trade: renderTrade, rankings: renderRankings }[name] || (() => {}))();
         if ($("player-modal").open) renderPlayer();
       } catch (e) { console.warn("tab redraw", e); }
     }
@@ -5673,7 +5668,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("fc-format").textContent = formatParts(FMT ? fmtLeague(FMT) : fmtLeague(FMT_DEFAULT)).join(" · ");
     $("fmt-chip").classList.toggle("custom", !!FMT);
     $("fmt-chip").title = FMT ? "Values follow the settings you picked. Click to change." : "Pick your league's scoring and lineup";
-    tabs.myteam.hidden = tabs.league.hidden = tabs.finder.hidden = tabs.fa.hidden = !d;
+    tabs.myteam.hidden = tabs.league.hidden = tabs.finder.hidden = !d;
     document.body.classList.toggle("has-league", !!d);
     // Rankings view row: shown for a connected league or hand-picked settings
     $("league-controls").hidden = !LG.fmtOn;
@@ -5686,7 +5681,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       : `<span>Showing the SPAM Board · <b>${esc(formatLabel())}</b></span>`;
     if (!d) {
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
-      if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
+      if (["myteam", "league"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
       return;
     }
     $("lc-name").textContent = d.league.name;
@@ -6495,7 +6490,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="mt-dash"><div class="mt-main">
       <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are SPAM's best lineup</span>` : ""}</h3>
       <div class="table-scroll"><table class="mt-table">
-        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col" title="His last three weeks, newest first (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
       <aside class="mt-side">
@@ -6655,7 +6650,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- League tab: Power Rankings (expandable teams), Trade History, Standings ----------
      Clicking a team opens its roster board right under its row (one at a time, unless "Keep teams open"
      is on or Shift/Cmd/Ctrl is held). Nothing navigates away from the list. */
-  const LT = { sub: "power", open: new Set(), keep: false, tradesFull: new Set(), loading: null, error: {} };   // loading/error are per league id
+  const LT = { sub: window.spmWantFA ? "fa" : "power", open: new Set(), keep: false, tradesFull: new Set(), loading: null, error: {} };   // loading/error are per league id
   function openTeam(rosterId) {   // My Team's "Position breakdown" and others: open that team in place
     LT.sub = "power"; LT.open = new Set([String(rosterId)]);
     showTab("league"); history.replaceState(null, "", "#league");
@@ -6666,11 +6661,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function renderLeague() {
     const box = $("league-body"), d = activeData();
     if (!d) { box.innerHTML = ""; return; }
-    const subs = [["power", "Power Rankings"], ["trades", "Trade History"], ["standings", "Standings"]];
+    const subs = [["power", "Power Rankings"], ["trades", "Trade History"], ["standings", "Standings"], ["fa", "Free Agents"]];
+    const faOn = LT.sub === "fa";
+    $("fa-wrap").hidden = !faOn;
     let body;
     try {
       const ev = evaluateTeams();
-      body = LT.sub === "trades" ? tradeHistoryHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : powerHtml(ev, d);
+      body = faOn ? "" : LT.sub === "trades" ? tradeHistoryHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : powerHtml(ev, d);
     } catch (err) {   // never leave the old view up silently
       console.error(err);
       body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
@@ -6678,14 +6675,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     box.innerHTML = `
       <div class="panel-head lg-head">
         <div>
-          <h2 class="panel-title">${LT.sub === "trades" ? "Trade History" : LT.sub === "standings" ? "Standings" : "Power Rankings"}</h2>
-          <p class="panel-sub">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))} · ${leagueView() ? "League-adjusted" : "Base"} SPAM values</p>
+          <h2 class="panel-title">${faOn ? "Free Agents" : LT.sub === "trades" ? "Trade History" : LT.sub === "standings" ? "Standings" : "Power Rankings"}</h2>
+          <p class="panel-sub">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))} · ${faOn ? `available in this league, sorted by SPAM ${leagueView() ? "league-adjusted" : "base"} values` : `${leagueView() ? "League-adjusted" : "Base"} SPAM values`}</p>
         </div>
       </div>
       <div class="lg-subtabs chips" role="tablist" aria-label="League views">${subs.map(([k, l]) =>
         `<button class="chip-btn" type="button" role="tab" data-lsub="${k}" aria-selected="${LT.sub === k}" aria-pressed="${LT.sub === k}">${l}</button>`).join("")}</div>
       ${body}`;
     if (LT.sub === "trades") ensureTrades();
+    if (faOn) renderFA();
   }
 
   /* Power Rankings: compact rows that expand into a roster board */
@@ -7083,16 +7081,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   function renderFA() {
     const d = activeData();
-    if (!d) { $("fa-body").innerHTML = ""; return; }
+    if (!d) { $("fa-body").innerHTML = ""; $("fa-wrap").hidden = true; return; }
     let list = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && !LG.ownerOf.has(p.id));
     if (faPos !== "ALL") list = list.filter(p => p.pos === faPos);
     if (faQuery) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(faQuery));
     list.sort((a, b) => dv(b) - dv(a));
     const mx = Math.max(1, ...players.map(dv));
-    $("fa-sub").textContent = `${d.league.name} · sorted by SPAM ${leagueView() ? "league-adjusted" : "base"} values`;
     $("fa-body").innerHTML = list.length ? list.map(p => `<tr class="player">
       <td class="rk">${overallRank(p)}</td>
-      <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>${ownPill("fa")}</div></div></td>
+      <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span></div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
       <td class="fa-l3">${recentForm(p.sleeperId, p.pos, p.team)}</td>
       <td class="fa-wk">${faWeek(p)}</td>

@@ -176,7 +176,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 ## 10. Features and the decisions behind them
 
 - **Format labels** come only from `formatLabel()` / `formatParts()` (no hard-coded format text). TE premium is shown as shorthand (Alan's call): one "+" per 0.5 per catch ("TE Premium +" = +0.5, "++" = +1.0, "+++" = +1.5, "++++" = +2.0), nothing at all without TE premium; values that aren't a multiple of 0.5 keep the number. `tepLabel()` does this; calculations always use the real number.
-- **Player identity layout (every screen that lists players):** line 1 is the player name (strongest) with the NFL team as a small muted abbreviation right beside it (`nflTag`, `.pl-team`). Line 2 is the fantasy owner as smaller secondary text (`ownPill` / `ownerTag`, `.own-tag`): "Owned by X" muted, **My team** in warm gold (`--mine-accent`), **Free agent** in muted green. Never put the owner on the NFL team's line. A player with no NFL team shows no team (not "FA"), so "Free agent" always means the fantasy league. Screens where the owner is already obvious (My Team, a team's roster board, a Trade History side) show no owner line.
+- **Player identity layout (every screen that lists players):** line 1 is the player name (strongest) with the NFL team as a small muted abbreviation right beside it (`nflTag`, `.pl-team`). Line 2 is the fantasy owner as smaller secondary text (`ownPill` / `ownerTag`, `.own-tag`): "Owned by X" muted, **My team** in warm gold (`--mine-accent`), **Free agent** in muted green. Never put the owner on the NFL team's line. A player with no NFL team shows no team (not "FA"), so "Free agent" always means the fantasy league. Screens where the owner is already obvious (My Team, a team's roster board, a Trade History side, Free Agents) show no owner line.
 - **Rankings tab:**
   - All / QB / RB / WR / TE.
   - Board view toggle: SPAM Board vs League-adjusted.
@@ -212,7 +212,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Roster sections (Starters / Bench / Injured reserve / Taxi) are tinted full-width bands with a player count; a **Recent form** column (`recentForm`, also on Free Agents): his last three team weeks, oldest to newest with a small muted "Wk N" under each score (BYE / OUT instead of zeros, still with their week), "Avg" of the games played, and ▲ Hot / → Steady / ▼ Cooling vs his season PPG (last season's while this season has ≤3 games; ±15% and ±2 pts; no trend without a baseline); when Sleeper has no lineup set, starters are SPAM's best lineup (labelled).
   - Slim outline-only right rail (260px): position-rank badges (best/worst highlighted) with a needs/strengths line, Hot lately (last 3 games), and "Trade with" as one themed dropdown.
 - **League tab:**
-  - Sub-tabs: Power Rankings / Trade History / Standings.
+  - Sub-tabs: Power Rankings / Trade History / Standings / **Free Agents** (Alan, Oct 4: Free Agents is part of the League hub, not top-level nav).
   - Power Rankings: compact rows; the whole row expands into a roster board with position ranks vs the league.
   - Gold accent on your own team.
   - "Keep teams open to compare".
@@ -236,7 +236,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - 1-for-1 or packages; 3-team cycles only for single players.
   - Cards read: partner → short verdict ("FAIR + GOOD FIT") → muted numbers → give/get → one-line why. The full analysis expands.
   - Always uses league-adjusted values.
-- **Free Agents:** unrostered ranked players in the connected league.
+- **Free Agents** (League → Free Agents; top nav is Rankings · My Team · League · Trade Finder · Trade Calculator): unrostered ranked players in the selected league, with position chips, search, Recent form and This week. It lives in `#fa-wrap` inside the League panel, shown by `renderLeague` when `LT.sub === "fa"`; old `#fa` links open League → Free Agents. No owner line on its rows (they're all free agents).
 - **Themes:**
   - Light: cream `#F7F2EB`, burgundy `#5A1F32`, coral `#D96B5B`, peach `#F0B18A`, ink `#2E2A28`.
   - Dark: near-black `#1A1314`, burgundy surfaces, cream `#F3EDE4`, gold `#F4B979`.
