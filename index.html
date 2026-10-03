@@ -1068,11 +1068,15 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 @media (min-width: 760px) { .trade-grid { grid-template-columns: 1fr 1fr; } }
 .side {
   background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius);
-  padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
   box-shadow: inset 0 2px 0 var(--side-color);
 }
 .side.A { --side-color: var(--side-a); } .side.B { --side-color: var(--side-b); }
-.side-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.side-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+/* Team identity at the top of each card: avatar, name, then "Manager · Needs · Strong" in one short line */
+.side-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.side-face[hidden] { display: none; }
+.side-idtext { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .side-title {
   font-weight: 800; font-stretch: 110%; font-size: 1.05rem; letter-spacing: 0.02em; text-transform: uppercase;
   margin: 0; color: var(--cream);
@@ -1116,6 +1120,8 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .tc-pl > .remove { grid-area: x; }
 .tc-pl-name { font-weight: 720; font-size: 0.95rem; letter-spacing: -0.005em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tc-pl-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.7rem; color: var(--muted); }
+.tc-pl-meta .pl-team { margin-left: 0; }
+.tc-pl-meta .own-tag { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .tc-pl-meta .pos { min-width: 0; height: 18px; padding: 0 6px; font-size: 0.62rem; }
 .tc-pl-dot { color: var(--muted); }
 .tc-pl-v { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
@@ -1136,21 +1142,21 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .roster-empty { color: var(--muted); font-size: 0.86rem; padding: 8px 0 !important; border: 0 !important; }
 
 .verdict {
-  margin-top: 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 22px 24px;
-  display: flex; flex-direction: column; gap: 16px;
+  margin-top: 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 18px 22px;
+  display: flex; flex-direction: column; gap: 12px;
 }
 .verdict-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 20px; }
 .verdict h2 {
-  margin: 0; font-weight: 850; font-stretch: 112%; font-size: 1.85rem; line-height: 1.05;
+  margin: 0; font-weight: 850; font-stretch: 112%; font-size: 1.55rem; line-height: 1.05;
   letter-spacing: -0.01em; text-transform: uppercase; text-wrap: balance; color: var(--cream);
 }
 .verdict h2.fair { color: var(--heading); }
 .verdict h2.win-A { color: var(--side-a); }
 .verdict h2.win-B { color: var(--side-b); }
 .verdict-main { min-width: 0; }
-.verdict-gap { color: var(--ink-2); margin: 8px 0 0; font-size: 0.98rem; font-variant-numeric: tabular-nums; }
+.verdict-gap { color: var(--ink-2); margin: 6px 0 0; font-size: 0.98rem; font-variant-numeric: tabular-nums; }
 .verdict-gap b { color: var(--cream); font-weight: 750; }
-.verdict-sub { color: var(--muted); margin: 6px 0 0; font-size: 0.86rem; max-width: 70ch; }
+.verdict-sub { color: var(--muted); margin: 4px 0 0; font-size: 0.86rem; max-width: 70ch; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .meter { position: relative; height: 5px; border-radius: 3px; overflow: hidden; display: flex; background: var(--track); }
@@ -1184,7 +1190,14 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .bal-or { align-self: center; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
 
 /* ---------- Trade calculator: toolbar, cards, progressive disclosure ---------- */
-.tc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 18px; }
+.tc-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 16px;
+  padding: 10px 14px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius);
+}
+.tc-field { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.tc-lbl { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.tc-bar .add-third { margin: 0; display: inline-flex; align-items: center; height: 34px; }
+.tc-badge b { color: var(--cream); font-weight: 700; letter-spacing: 0.06em; }
 .tc-sel { height: 34px; max-width: 240px; }
 .tc-teams { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .tc-vs { font-size: 0.64rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
@@ -1203,13 +1216,20 @@ body.editing #panel-rankings td.val { min-width: 330px; }
   background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); box-shadow: 0 14px 30px -14px var(--shadow-color);
   font: 500 0.76rem/1.4 "Archivo", "Inter", system-ui, sans-serif; font-style: normal; letter-spacing: 0;
 }
-.side-needs { margin: -6px 0 0; font-size: 0.76rem; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.side-needs { margin: 0; font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .side-needs b { color: var(--ink-2); font-weight: 650; }
 .roster-toggle {
   align-self: flex-start; background: none; border: 0; padding: 2px 0; cursor: pointer;
   font-size: 0.7rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
 }
 .roster-toggle::before { content: "+ "; color: var(--gold); }
+/* League mode: adding from the trade partner's roster is the main way to build a trade */
+.roster-toggle.main {
+  align-self: stretch; text-align: center; padding: 9px 12px; border: 1px dashed var(--border-strong); border-radius: 8px;
+  color: var(--ink-2); font-size: 0.72rem;
+}
+.roster-toggle.main:hover { border-color: var(--gold); }
+.side.has-team .picker input { height: 34px; font-size: 0.84rem; }
 .roster-toggle[aria-expanded="true"]::before { content: "– "; }
 .roster-toggle:hover { color: var(--cream); }
 .team-roster .tr-list { max-height: 260px; }
@@ -2295,6 +2315,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .tc-teams { flex: 1 1 100%; }
   .tc-teams .tc-sel { flex: 1 1 0; min-width: 0; max-width: none; }
   .tc-badge { margin-left: 0; }
+  .tc-teams { display: flex; flex-wrap: wrap; width: 100%; gap: 8px; }
+  .tc-teams .tc-vs { display: none; }
+  .tc-field, .tc-teamC { flex: 1 1 100%; min-width: 0; }
+  .tc-teamC { display: flex; }
+  .tc-teamC[hidden] { display: none; }
+  .tc-field .tc-lbl { flex: 0 0 52px; }
+  .tc-field .tc-sel { flex: 1; max-width: none; }
   .side { padding: 18px; }
   .ri-row { grid-template-columns: 1fr auto; }
   .ri-row .ri-bar { grid-column: 1 / -1; }
@@ -2524,13 +2551,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   <section id="panel-trade" role="tabpanel" aria-labelledby="tab-trade" hidden>
     <div class="tc-bar">
-      <select class="select tc-sel" id="tc-league" aria-label="League context"></select>
+      <span class="tc-field"><span class="tc-lbl">League</span><select class="select tc-sel" id="tc-league" aria-label="League context"></select></span>
       <span class="tc-teams" id="tc-teams" hidden>
-        <select class="select tc-sel" id="team-A" aria-label="Left team"></select>
+        <span class="tc-field"><span class="tc-lbl">Team 1</span><select class="select tc-sel" id="team-A" aria-label="Team 1"></select></span>
         <span class="tc-vs">vs</span>
-        <select class="select tc-sel" id="team-B" aria-label="Right team"></select>
-        <span class="tc-teamC" id="tc-teamC" hidden><span class="tc-vs">+</span><select class="select tc-sel" id="team-C" aria-label="Third team"></select></span>
+        <span class="tc-field"><span class="tc-lbl">Team 2</span><select class="select tc-sel" id="team-B" aria-label="Team 2"></select></span>
+        <span class="tc-teamC" id="tc-teamC" hidden><span class="tc-vs">+</span><span class="tc-field"><span class="tc-lbl">Team 3</span><select class="select tc-sel" id="team-C" aria-label="Team 3"></select></span></span>
       </span>
+      <button class="add-third" type="button" id="add-third">+ Add third team</button>
       <span class="tc-badge" id="tc-badge"></span>
     </div>
     <div class="tc-warn" id="tc-warn" role="status" hidden></div>
@@ -2538,49 +2566,48 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     <div class="trade-grid">
       <div class="side A">
         <div class="side-head">
-          <h2 class="side-title" id="side-title-A">You <small>get</small></h2>
+          <div class="side-id"><span class="side-face" id="face-A" hidden></span>
+            <div class="side-idtext"><h2 class="side-title" id="side-title-A">You <small>get</small></h2><p class="side-needs" id="needs-A" hidden></p></div></div>
           <div class="side-total">Total<b id="total-A">0</b></div>
         </div>
-        <p class="side-needs" id="needs-A" hidden></p>
         <ul class="roster" id="roster-A"></ul>
+        <button class="roster-toggle" type="button" id="rtoggle-A" aria-expanded="false" aria-controls="teamroster-A" hidden>Add from roster</button>
+        <div class="team-roster" id="teamroster-A" hidden></div>
         <div class="picker">
           <input class="search" id="search-A" type="search" placeholder="Search players" autocomplete="off" aria-label="Add a player to the left side" style="width:100%">
           <ul class="results" id="results-A" hidden></ul>
         </div>
-        <button class="roster-toggle" type="button" id="rtoggle-A" aria-expanded="false" aria-controls="teamroster-A" hidden>Add from roster</button>
-        <div class="team-roster" id="teamroster-A" hidden></div>
       </div>
       <div class="side B">
         <div class="side-head">
-          <h2 class="side-title" id="side-title-B">They <small>get</small></h2>
+          <div class="side-id"><span class="side-face" id="face-B" hidden></span>
+            <div class="side-idtext"><h2 class="side-title" id="side-title-B">They <small>get</small></h2><p class="side-needs" id="needs-B" hidden></p></div></div>
           <div class="side-total">Total<b id="total-B">0</b></div>
         </div>
-        <p class="side-needs" id="needs-B" hidden></p>
         <ul class="roster" id="roster-B"></ul>
+        <button class="roster-toggle" type="button" id="rtoggle-B" aria-expanded="false" aria-controls="teamroster-B" hidden>Add from roster</button>
+        <div class="team-roster" id="teamroster-B" hidden></div>
         <div class="picker">
           <input class="search" id="search-B" type="search" placeholder="Search players" autocomplete="off" aria-label="Add a player to the right side" style="width:100%">
           <ul class="results" id="results-B" hidden></ul>
         </div>
-        <button class="roster-toggle" type="button" id="rtoggle-B" aria-expanded="false" aria-controls="teamroster-B" hidden>Add from roster</button>
-        <div class="team-roster" id="teamroster-B" hidden></div>
       </div>
       <div class="side C" id="side-C" hidden>
         <div class="side-head">
-          <h2 class="side-title" id="side-title-C">Team C <small>gets</small></h2>
+          <div class="side-id"><span class="side-face" id="face-C" hidden></span>
+            <div class="side-idtext"><h2 class="side-title" id="side-title-C">Team C <small>gets</small></h2><p class="side-needs" id="needs-C" hidden></p></div></div>
           <div class="side-total">Total<b id="total-C">0</b></div>
         </div>
-        <p class="side-needs" id="needs-C" hidden></p>
         <ul class="roster" id="roster-C"></ul>
+        <button class="roster-toggle" type="button" id="rtoggle-C" aria-expanded="false" aria-controls="teamroster-C" hidden>Add from roster</button>
+        <div class="team-roster" id="teamroster-C" hidden></div>
         <div class="picker">
           <input class="search" id="search-C" type="search" placeholder="Search players" autocomplete="off" aria-label="Add a player to the third team" style="width:100%">
           <ul class="results" id="results-C" hidden></ul>
         </div>
-        <button class="roster-toggle" type="button" id="rtoggle-C" aria-expanded="false" aria-controls="teamroster-C" hidden>Add from roster</button>
-        <div class="team-roster" id="teamroster-C" hidden></div>
         <button class="footer-link remove-third" type="button" id="remove-third">Remove third team</button>
       </div>
     </div>
-    <button class="add-third" type="button" id="add-third">+ Add third team</button>
 
     <div class="verdict" aria-live="polite">
       <div class="verdict-top">
@@ -2594,6 +2621,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <div class="view-toggle tc-lens" id="tc-lens" role="group" aria-label="Value lens" hidden>
             <button class="chip-btn" type="button" data-lens="market" aria-pressed="true">Market value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false">League fit</button>
           </div>
+          <button class="btn balance-btn" id="balance-btn" type="button" aria-expanded="false" aria-controls="balance" hidden>Balance this trade</button>
           <button class="btn" id="swap-btn" type="button">Swap sides</button>
           <button class="btn" id="clear-btn" type="button">Clear</button>
         </div>
@@ -2602,7 +2630,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <div class="meter idle" id="meter"><div class="ma" id="meter-a" style="width:50%"></div><div class="mb"></div></div>
         <div class="meter-labels"><span id="score-A">You</span><span id="score-B">They</span></div>
       </div>
-      <button class="btn balance-btn" id="balance-btn" type="button" aria-expanded="false" aria-controls="balance" hidden>Balance this trade</button>
       <div class="balance" id="balance" hidden>
         <p class="balance-sub" id="balance-sub"></p>
         <div class="balance-list" id="balance-list"></div>
@@ -3137,7 +3164,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T14:30Z";
+  const BUILD_ID = "2026-10-03T16:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3524,14 +3551,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const value = fe && fitView ? fe.tv : tv(p);
       const tip = fe ? (fitView ? `${fe.why}. Market value ${fmt(tv(p))}.` : `Worth ${fmt(fe.tv)} to ${team}: ${fe.why}.`) : "";
       const cls = fe && fitView ? (fe.f < 0.9 ? " low" : fe.f > 1.0 ? " high" : "") : "";
+      const dot = `<span class="tc-pl-dot" aria-hidden="true">·</span>`;
+      const meta = [p.team ? `<span class="pl-team">${esc(p.team)}</span>` : "", TC3.on ? fromMenu(id, side) : tcOwner(p, side)].filter(Boolean).join(dot);
       return `<li class="tc-pl">${face(p.sleeperId, p.name, "sm")}
-        <span class="pl-head">${nameLink(p.sleeperId, p.name, "tc-pl-name")}${nflTag(p.team)}</span>
-        <span class="tc-pl-meta"><span class="pos ${esc(p.pos)}">${esc(tcAdjusted() ? posLabel(p) : p.posRank)}</span>${TC3.on ? `<span class="tc-pl-dot" aria-hidden="true">·</span>${fromMenu(id, side)}` : tcLeague() ? ownerTag(p, "inline") : ""}</span>
+        <span class="pl-head">${nameLink(p.sleeperId, p.name, "tc-pl-name")}</span>
+        <span class="tc-pl-meta"><span class="pos ${esc(p.pos)}">${esc(tcAdjusted() ? posLabel(p) : p.posRank)}</span>${meta}</span>
         <span class="tc-pl-v${cls}"${tip ? ` title="${esc(tip)}"` : ""}>${fmt(value)}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
     }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
   }
 
+  // Who owns a player in a league trade: just the partner's team name when he comes from the trade partner,
+  // else "Owned by X" / "My team" / "Free agent"
+  function tcOwner(p, side) {
+    if (!tcLeague() || !p.sleeperId) return "";
+    const o = LG.ownerOf.get(p.id), giver = sideTeam(side === "A" ? "B" : "A");
+    if (o && giver && o.rosterId === giver.rosterId && !o.mine) return `<span class="own-tag inline">${esc(o.name)}</span>`;
+    return ownPill(o, "inline");
+  }
   function fromMenu(id, recv) {
     const o = originOf(id, recv);
     return `<label class="from-menu">from <select data-from="${id}" data-recv="${recv}" aria-label="Who sends this player">${others3(recv).map(x => `<option value="${x}"${x === o ? " selected" : ""}>${esc(sideName(x))}</option>`).join("")}</select></label>`;
@@ -3602,13 +3639,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("tc-teams").hidden = !on;
     $("tc-teamC").hidden = !(on && TC3.on);
     $("tc-badge").innerHTML = on
-      ? `<span class="tc-dot" aria-hidden="true"></span>League context ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
+      ? `<span class="tc-dot" aria-hidden="true"></span>League context: <b>${esc(activeData().league.name)}</b> ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
       : !LG.active && leagueView()
         ? `<span class="tc-dot" aria-hidden="true"></span>Your settings · ${esc(formatParts(fmtLeague(FMT)).join(" · "))} ${infoIcon("Values are adjusted for the league settings you picked. Connect a league to also use its rosters.", "About your settings")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
         : `SPAM Values ${infoIcon("Base SPAM values for the site's 12-team, full-PPR, superflex, TE-premium format. Pick your league's settings, or connect a league to use its rosters and scoring.", "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
     $("tc-badge").classList.toggle("on", on || (!LG.active && leagueView()));
     ["A", "B", "C"].forEach(s => {
-      $("search-" + s).placeholder = on ? "Search any player" : "Search players";
+      $("search-" + s).placeholder = on ? (sideTeam(s === "A" ? "B" : s === "B" ? "A" : s) && !TC3.on ? "Or search any player (hypothetical)" : "Search any player") : "Search players";
       if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; $("rtoggle-" + s).hidden = true; }
     });
     // players in the trade who aren't on the roster they're supposedly coming from (kept as hypothetical)
@@ -3620,7 +3657,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     renderCardNeeds();
   }
-  // Subtle needs line in each card: league position ranks, or your roster-needs settings
+  // Card heading: the picked team's avatar and name (league mode), else Team A / You
+  function sideHead(s) {
+    const n = sideName(s), t = $("side-title-" + s), team = sideTeam(s), f = $("face-" + s);
+    t.innerHTML = `<span class="st-name">${esc(n)}</span> <small>${isYouThey(n) ? "get" : "gets"}</small>`;
+    t.title = n;
+    f.hidden = !team; f.innerHTML = team ? teamFace(team, "sm") : "";
+    t.closest(".side").classList.toggle("has-team", !!team);
+  }
+  // One short line under each card's name: manager, then league position needs/strengths (or your roster-needs settings)
   function renderCardNeeds() {
     const ev = tcLeague() ? evaluateTeams() : null;
     (TC3.on ? ["A", "B", "C"] : ["A", "B"]).forEach(s => {
@@ -3635,8 +3680,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         needs = EDIT_POS.filter(pos => NEEDS[pos] <= 2); strong = EDIT_POS.filter(pos => NEEDS[pos] >= 4);
         tip = "From your roster needs (Roster impact, below).";
       }
-      el.hidden = !needs.length && !strong.length;
-      el.innerHTML = el.hidden ? "" : [needs.length ? `Needs <b>${needs.join(", ")}</b>` : "", strong.length ? `Strong <b>${strong.join(", ")}</b>` : ""].filter(Boolean).join(" · ") + " " + infoIcon(tip, "Where this comes from");
+      const mgr = t && t.manager && t.manager !== t.name ? `Manager: <b>${esc(t.manager)}</b>` : "";
+      el.hidden = !mgr && !needs.length && !strong.length;
+      el.innerHTML = el.hidden ? "" : [mgr, needs.length ? `Needs <b>${needs.join(", ")}</b>` : "", strong.length ? `Strong <b>${strong.join(", ")}</b>` : ""].filter(Boolean).join(" · ") + (needs.length || strong.length ? " " + infoIcon(tip, "Where this comes from") : "");
     });
   }
   const uniq = list => [...new Set(list)];
@@ -3929,11 +3975,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     renderRoster("B");
     if (typeof renderTeamRosters === "function") renderTeamRosters();
     const res = runModel(sides.A, sides.B);
-    ["A", "B"].forEach(s => {
-      const n = sideName(s), t = $("side-title-" + s);
-      t.innerHTML = `<span class="st-name">${esc(n)}</span> <small>${isYouThey(n) ? "get" : "gets"}</small>`;
-      t.title = n;
-    });
+    ["A", "B"].forEach(sideHead);
     $("total-A").textContent = fmt(res.rawA ?? res.a);
     $("total-B").textContent = fmt(res.rawB ?? res.b);
     $("score-A").textContent = sideName("A") + " · " + fmt(res.a);
@@ -4117,8 +4159,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!skipNeedsRender) renderNeeds();
     const names = Object.fromEntries(SIDES3.map(s => [s, sideName(s)]));
     SIDES3.forEach(s => {
-      const t = $("side-title-" + s), n = names[s];
-      t.innerHTML = `<span class="st-name">${esc(n)}</span> <small>${isYouThey(n) ? "get" : "gets"}</small>`;
+      sideHead(s);
       $("total-" + s).textContent = fmt(sides[s].reduce((a, id) => a + tv(byId.get(id)), 0));
     });
     const res = threeResults(), box = $("three-verdicts");
@@ -6615,12 +6656,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function renderTeamRosters() {
     const map = bySleeper();
     (TC3.on ? ["A", "B", "C"] : ["A", "B"]).forEach(s => {
-      const box = $("teamroster-" + s), tog = $("rtoggle-" + s), id = $("team-" + s).value;
+      // 2-team: a card lists what its team gets, so it adds from the partner's roster. 3-team: its own roster, sent with buttons.
+      const src = TC3.on ? s : s === "A" ? "B" : "A";
+      const box = $("teamroster-" + s), tog = $("rtoggle-" + s), id = $("team-" + src).value;
       const team = tcLeague() && id ? LG.teams.find(t => String(t.rosterId) === id) : null;
       const open = !!team && TC_UI.open[s];
+      const whose = team ? (team.mine ? "your" : team.name + "'s") : "";
       tog.hidden = !team;
+      tog.classList.toggle("main", !!team && !TC3.on);
       tog.setAttribute("aria-expanded", open);
-      tog.textContent = open ? "Hide roster" : "Add from roster";
+      tog.textContent = TC3.on ? (open ? "Hide roster" : "Add from roster") : open ? `Hide ${whose} roster` : `Add from ${whose} roster`;
       box.hidden = !open;
       if (!open) { box.innerHTML = ""; return; }
       const entries = (team.roster.players || []).map(sid => rosterEntry(sid, map))
@@ -6631,9 +6676,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             ${others3(s).map(x => `<button class="tr-send" type="button" data-id="${e.p.id}" data-side="${x}" data-origin="${s}"${inTrade(e.p.id) ? " disabled" : ""} title="Send to ${esc(sideName(x))}">${esc(shortName(sideName(x)))}</button>`).join("")}</div>`).join("")}</div>`;
         return;
       }
-      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Sends to ${esc(sideName(s === "A" ? "B" : "A"))}</span></div>
+      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Goes to ${esc(sideName(s))}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
-          ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s === "A" ? "B" : "A"}"${inTrade(e.p.id) ? " disabled" : ""}>
+          ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s}"${inTrade(e.p.id) ? " disabled" : ""}>
               ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(posLabel(e.p))}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span></button>`
           : `<div class="tr-player unranked">${face(e.sid, e.name, "sm")}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">Unranked</span></div>`).join("")}</div>`;
     });

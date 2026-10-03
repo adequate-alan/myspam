@@ -207,7 +207,12 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - League mode with roster context (lineup impact, team-specific value, position rooms).
   - Verdict tiers in `TRADE_VERDICTS`.
   - Consolidation bonus and roster-spot cost are small and capped.
-  - Rows read: name, then a position-rank badge with "from Team", then the value right-aligned.
+  - One compact setup bar: League · Team 1 vs Team 2 (· Team 3) · + Add third team · "League context: <league>" indicator.
+  - Each card's head (league mode with a team picked): team avatar, team name + "gets", one short line "Manager: X · Needs QB · Strong RB, TE", and the total it receives.
+  - Cards keep "gets" semantics. In a 2-team league trade, each card's main button is "+ Add from <partner>'s roster" (the players it receives come from the other team); "Or search any player (hypothetical)" is secondary. 3-team mode keeps each team's own roster with send-to buttons.
+  - Rows read: name on line 1; line 2 = position badge · NFL team · owner (just the partner's team name when he comes from the trade partner, else "Owned by X" / My team / Free agent; 3-team shows the "from" menu instead). Value right-aligned.
+  - Verdict card is compact: verdict, adjusted difference, one-line reason, then Balance / Swap / Clear on one row; Why?, Roster impact (lineup changes) and Value breakdown stay collapsed.
+  - Universal mode (No league) drops team names, avatars and ownership and goes back to You / They.
 - **Trade Finder:**
   - League-wide discovery for one player, or a **2-player package from one roster**.
   - 1-for-1 or packages; 3-team cycles only for single players.
