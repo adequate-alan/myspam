@@ -1344,6 +1344,30 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .lm-divider { height: 1px; background: var(--line); margin: 6px 4px; }
 .lm-foot { font-size: 0.7rem; color: var(--muted); padding: 8px 10px 6px; border-top: 1px solid var(--line); margin-top: 6px; }
 
+/* ---------- Checkboxes and radios: one themed control everywhere (no native browser boxes) ---------- */
+:root, :root[data-theme="dark"] {
+  --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%231A1314' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+:root[data-theme="light"] {
+  --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%23F7F2EB' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+input[type="checkbox"], input[type="radio"] {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; padding: 0;
+  width: 16px; height: 16px; border-radius: 4px; cursor: pointer; vertical-align: middle;
+  background: var(--control-bg) no-repeat center / 12px 12px;
+  border: 1px solid var(--border-strong);
+  transition: background-color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]:hover, input[type="radio"]:hover { border-color: var(--accent-primary); background-color: var(--hover-bg); }
+input[type="checkbox"]:checked { background-color: var(--accent-primary); border-color: var(--accent-primary); background-image: var(--check-mark); }
+input[type="radio"]:checked { border-color: var(--accent-primary); background: var(--control-bg); box-shadow: inset 0 0 0 4px var(--accent-primary); }
+input[type="checkbox"]:checked:hover { background-color: var(--accent-hover); border-color: var(--accent-hover); }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent-primary) 55%, transparent); outline-offset: 2px; }
+input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: default; background-color: var(--disabled-bg); border-color: var(--disabled-border); }
+input[type="checkbox"]:disabled:checked { background-color: var(--disabled-border); }
+:root[data-theme="light"] input[type="checkbox"]:not(:checked), :root[data-theme="light"] input[type="radio"]:not(:checked) { border-color: color-mix(in srgb, var(--burgundy-1) 28%, var(--border-strong)); }
+
 /* ---------- Dropdowns: every <select> becomes a themed SPAM dropdown (see SpamSelect) ---------- */
 .dd-native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 .dd-btn { display: inline-flex; align-items: center; max-width: 100%; text-align: left; white-space: nowrap; font-family: inherit; }
@@ -1576,7 +1600,7 @@ dialog.signin label.im-file input { height: auto; border: 0; padding: 4px 0 0; b
 .im-team-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 dialog.signin .im-team-top input.im-team-name { flex: 1; min-width: 160px; width: auto; height: 32px; }
 dialog.signin label.im-mine { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
-dialog.signin label.im-mine input { width: auto; height: auto; accent-color: var(--gold); }
+dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .im-team-found { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; font-size: 0.74rem; color: var(--muted); align-items: center; }
 .im-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: 999px; background: var(--control); border: 1px solid var(--line); color: var(--ink-2); }
 .im-chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0 3px; }
@@ -1646,8 +1670,8 @@ dialog.signin label.im-mine input { width: auto; height: auto; accent-color: var
 .lg-subtabs { margin: 6px 0 16px; border-bottom: 1px solid var(--line-soft); width: 100%; }
 .lg-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 20px; margin-bottom: 12px; }
 .lg-toolbar .method-note { margin: 0; }
-.lg-keep { display: inline-flex; align-items: center; gap: 8px; font-size: 0.74rem; color: var(--muted); cursor: pointer; white-space: nowrap; }
-.lg-keep input { accent-color: var(--gold); }
+.lg-keep { display: inline-flex; align-items: center; gap: 8px; height: 28px; font-size: 0.74rem; font-weight: 550; line-height: 1; color: var(--muted); cursor: pointer; white-space: nowrap; user-select: none; }
+.lg-keep:hover { color: var(--text-secondary); }
 /* expanded team */
 .tx-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding: 14px 0 12px; }
 .tx-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -1942,7 +1966,6 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .ctl-label { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .tf-check { display: inline-flex; align-items: center; gap: 8px; height: 34px; font-size: 0.84rem; font-weight: 550; color: var(--ink-2); cursor: pointer; }
 .tf-controls .view-toggle .chip-btn { white-space: nowrap; }
-.tf-check input { accent-color: var(--gold); width: 15px; height: 15px; }
 .select:disabled { opacity: 0.55; cursor: default; }
 .tf-lead { margin: 0 0 14px; color: var(--ink-2); font-size: 0.9rem; }
 .tf-lead b { color: var(--cream); }
@@ -2076,11 +2099,11 @@ dialog.signin h2 { margin: 0 0 10px; font-weight: 850; font-stretch: 110%; font-
 dialog.signin p { margin: 0 0 10px; font-size: 0.88rem; color: var(--ink-2); }
 dialog.signin .hint { color: var(--muted); font-size: 0.82rem; }
 dialog.signin label { display: block; font-weight: 600; font-size: 0.64rem; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); margin: 16px 0 6px; }
-dialog.signin input {
+dialog.signin input:not([type="checkbox"]):not([type="radio"]) {
   width: 100%; height: 38px; border: 1px solid var(--line); border-radius: 5px; padding: 0 12px;
   background: var(--bg); font-size: 0.86rem; color: var(--cream);
 }
-dialog.signin input:focus { outline: none; border-color: var(--gold); }
+dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: none; border-color: var(--gold); }
 .signin-error { color: var(--rose-ink) !important; min-height: 1.2em; margin-top: 8px !important; font-size: 0.82rem !important; }
 .signin-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
 .toast {
@@ -2998,7 +3021,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T01:30Z";
+  const BUILD_ID = "2026-10-03T01:35Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
