@@ -3121,7 +3121,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T12:00Z";
+  const BUILD_ID = "2026-10-03T12:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5235,7 +5235,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
       ? `<span>${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPAM Board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
-      : `<span>Showing the SPAM Board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).join(" · "))}</b></span>`;
+      : `<span>Showing the SPAM Board · <b>${esc(formatParts(fmtLeague(FMT_DEFAULT)).map(x => x.replace(/^TE Premium .*/, "TE Premium")).join(" · "))}</b></span>`;
     if (!d) {
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
       if (["myteam", "league", "fa"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
