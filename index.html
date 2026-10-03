@@ -1369,6 +1369,19 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 #panel-finder .tf-foot { padding-top: 4px; }
 #panel-finder .tf-foot .btn { height: 30px; font-size: 0.76rem; }
 
+/* Power Rankings row polish: whole-row hover, your-team accent, quieter method note */
+:root, :root[data-theme="dark"] { --mine-accent: #F4B979; }
+:root[data-theme="light"] { --mine-accent: #C58A3D; }
+#league-body .pr-row:hover { background: var(--row-hover); }
+#league-body .pr-row:hover .pr-name, #league-body .pr-row:hover .pr-score { color: var(--heading); }
+#league-body .pr-row:hover .pr-score { color: var(--text-strong); }
+#league-body .pr-row:hover .pr-bar span { opacity: 1; }
+#league-body .pr-item.mine > .pr-row { box-shadow: inset 3px 0 0 var(--mine-accent); background: color-mix(in srgb, var(--mine-accent) 6%, transparent); }
+#league-body .pr-item.mine > .pr-row:hover, #league-body .pr-item.mine.open > .pr-row { background: color-mix(in srgb, var(--mine-accent) 10%, var(--row-hover)); }
+#league-body .pr-item.mine .pr-name .owner.mine { color: var(--mine-accent); }
+#league-body .pr-stars .face[data-player]:hover { position: relative; z-index: 1; }
+#league-body .lg-toolbar .method-note { font-size: 0.74rem; color: color-mix(in srgb, var(--muted) 85%, transparent); }
+
 /* ---------- Checkboxes and radios: one themed control everywhere (no native browser boxes) ---------- */
 :root, :root[data-theme="dark"] {
   --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%231A1314' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -1810,7 +1823,8 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .pr-pos-item { display: flex; align-items: center; gap: 8px; }
 .pr-pos-label { width: 52px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .pr-pos .pos { min-width: 34px; height: 19px; font-size: 0.64rem; }
-.pr-place { font-size: 0.74rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pr-place { font-size: 0.8rem; font-weight: 750; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.pr-pos-label { color: color-mix(in srgb, var(--muted) 85%, transparent); }
 .pr-stars { display: flex; justify-content: flex-end; }
 .pr-head span:last-child { text-align: right; }
 .role-inline { display: none; }
@@ -3046,7 +3060,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T01:45Z";
+  const BUILD_ID = "2026-10-03T01:55Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5948,7 +5962,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <span class="pr-strength"><span class="pr-score">${fmt(x.score)}</span><span class="pr-bar"><span style="width:${(100 * x.score / topScore).toFixed(1)}%"></span></span></span>
           <span class="pr-pos"><span class="pr-pos-item"><span class="pr-pos-label">Best</span><span class="pos ${x.best[0]}">${x.best[0]}</span><span class="pr-place">${ordinal(x.best[1])}</span></span>
             <span class="pr-pos-item"><span class="pr-pos-label">Weakest</span><span class="pos ${x.worst[0]}">${x.worst[0]}</span><span class="pr-place">${ordinal(x.worst[1])}</span></span></span>
-          <span class="pr-stars">${stars.map(p => face(p.sleeperId, p.name, "sm")).join("")}</span>
+          <span class="pr-stars">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span>
           <span class="pr-caret" aria-hidden="true"></span>
         </div>
         ${open ? `<div class="pr-detail">${teamExpand(x, ev, d)}</div>` : ""}
