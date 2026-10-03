@@ -2027,7 +2027,8 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 4px 16px 14px; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--bg) 35%, var(--surface)); }
 .mx-lineup h4 { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; font-size: 0.8rem; color: var(--ink); }
 .mx-lineup h4 small { font-size: 0.7rem; font-weight: 500; color: var(--muted); }
-.mx-lineup h4 span { margin-left: auto; font-variant-numeric: tabular-nums; }
+.mx-lineup h4 span { margin-left: auto; font-variant-numeric: tabular-nums; text-align: right; }
+.mx-lu-proj { display: block; font-size: 0.64rem; font-weight: 600; color: var(--muted); }
 .mx-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 .mx-table td { padding: 4px 5px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
 .mx-slot { width: 40px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); }
@@ -3709,7 +3710,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T00:15Z";
+  const BUILD_ID = "2026-10-05T01:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7511,6 +7512,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // Sleeper's current week (its NFL state), else the league's, else our schedule's
   const mxCurrentWeek = d => Math.max(1, Number((LT.nfl && LT.nfl !== "loading" && (LT.nfl.display_week || LT.nfl.week)) || (d.league.settings && d.league.settings.leg) || currentWeek() || 1));
+  const LIVE_PROJ_TIP = "Live proj = projected final score. Before kickoff it's the expected final score; during games it's points so far plus each player's projection for the part of his game that's left (an estimate from time since kickoff, not a real-time game model). Final games count their actual points.";
+  // inputs behind one player's projection, for tooltips (sources, not weights)
+  const projTip = o => (o && o.inputs ? o.inputs.join(" · ") : "");
   // A starter's week for Matchups: the shared weekOutlook with Sleeper's live/final points; an empty slot is 0
   function starterProj(x, w) {
     if (x.empty) return { est: 0, kind: "empty" };
@@ -7526,7 +7530,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <select class="select" id="mx-week" aria-label="Week">${Array.from({ length: Math.min(18, lastWeek) }, (_, i) => i + 1).map(n => `<option value="${n}"${n === w ? " selected" : ""}>Week ${n}${n === cur ? " · current" : ""}</option>`).join("")}</select>
         ${w !== cur ? `<button class="btn" type="button" data-mx-week="${cur}">Current week</button>` : ""}
         <button class="btn" type="button" data-mx-refresh${LT.mxLoading === key ? " disabled" : ""}>${LT.mxLoading === key ? "Loading…" : "Refresh scores"}</button></span>
-      <span class="mx-source">Scores: Sleeper · Projections: ${esc(projSource())} ${infoIcon("SPAM's weekly projection (usage, results and team outlook), rescored for this league's scoring and summed over each starting lineup. Live projections are approximate: points so far plus each player's projection for the part of his game that's left, estimated from the time since kickoff (no real-time game clock). Not matchup-adjusted. Starters SPAM doesn't project use their season PPG when our stats have them; otherwise the total is marked partial and the bar is hidden. The bar shows each team's share of the two projected totals, not a win probability.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
+      <span class="mx-source">Scores: Sleeper · Projections: ${esc(projSource())} ${infoIcon("Live proj is each team's projected final score: SPAM's weekly projection (usage and recent production, calibrated with the Vegas team total, the matchup and player props when available), scored with this league's settings and summed over the starting lineup. Before kickoff it's the expected final score; during games it updates with points so far plus each player's projection for the part of his game that's left, estimated from the time since kickoff, so it's an estimate, not a real-time game model. Starters SPAM can't project use their season PPG when our stats have them; otherwise the total is marked partial and the bar is hidden. The bar shows each team's share of the two projected totals, not a win probability. Hover a player's projection to see its inputs.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
     if (err) return weekSel + `<div class="lg-error"><p>Couldn't load Week ${w} matchups from Sleeper (${esc(err)}).</p><button class="btn primary" type="button" data-mx-refresh>Retry</button></div>`;
     if (!data) return weekSel + `<p class="empty-note lg-loading">Loading Week ${w} matchups…</p>`;
     const groups = new Map();
@@ -7562,7 +7566,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <span>${esc([s.team.manager !== s.team.name ? s.team.manager : "", recordText(s.team.roster.settings) || "0-0"].filter(Boolean).join(" · "))}</span></div></div>`;
       const score = (s, which) => `<div class="mx-sc ${which}${win === which ? " win" : ""}"><span class="mx-score">${fp(s.pts)}</span>
           ${state === "final" ? (win === which ? `<span class="mx-res win">Win</span>` : win === "T" ? `<span class="mx-res">Tie</span>` : `<span class="mx-res">Final</span>`)
-            : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Partial: one or more starters could not be projected" : state === "live" ? "Approximate: points so far plus each player's projection for the part of his game that's left, estimated from time since kickoff. Not a real-time game model." : ""}">${state === "live" ? "Approx. live proj" : "Proj"} <b>${fp(s.proj)}</b>${s.partial ? "*" : ""}</span>`}</div>`;
+            : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Partial: one or more starters could not be projected. " : ""}${esc(LIVE_PROJ_TIP)}">Live proj <b>${fp(s.proj)}</b>${s.partial ? "*" : ""}</span>`}</div>`;
       const mid2 = `<span class="mx-mid"><span class="mx-state ${state}">${state === "final" ? "Final" : state === "live" ? "Live" : "Upcoming"}</span><span class="mx-vs">vs</span></span>`;
       // projected share of the two totals; only when both lineups are fully projected (a partial total would mislead)
       const tot = A.proj + B.proj, partial = A.partial || B.partial, showBar = state !== "final" && tot > 0 && !partial;
@@ -7577,10 +7581,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         const P = x.proj;
         if (x.empty) return `<td class="mx-pts">—</td>`;
         if (P.kind === "final") return `<td class="mx-pts final"><b>${P.pts != null ? fp(P.pts) : "—"}</b><small>${P.dnp ? "DNP" : P.pending ? "pts pending" : "Final"}</small></td>`;
-        if (P.kind === "live") return `<td class="mx-pts live"><b>${fp(P.pts)}</b> <span class="mx-livetag">Live</span>${P.proj != null ? `<small title="Approximate: estimated from time since kickoff">Approx. proj ${fp(P.est)}</small>` : `<small>No projection</small>`}</td>`;
+        if (P.kind === "live") return `<td class="mx-pts live"><b>${fp(P.pts)}</b> <span class="mx-livetag">Live</span>${P.proj != null ? `<small title="${esc(projTip(P))}">Live proj ${fp(P.est)}</small>` : `<small>No projection</small>`}</td>`;
         if (P.kind === "bye" || P.kind === "out") return `<td class="mx-pts off">${esc(P.text)}</td>`;
         if (P.missing) return `<td class="mx-pts up" title="No SPAM projection and no ${STATS_SEASONS[0]} games in our stats">No proj</td>`;
-        return `<td class="mx-pts up"><span>Proj <b>${fp(P.proj)}</b></span>${P.fallback ? `<small title="Season points per game, used because SPAM has no projection for him">season PPG</small>` : ""}</td>`;
+        return `<td class="mx-pts up" title="${esc(projTip(P))}"><span>Live proj <b>${fp(P.proj)}</b></span>${P.fallback ? `<small>season PPG</small>` : ""}</td>`;
       };
       const row = x => x.empty ? `<tr class="mx-empty"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td><td colspan="3" class="muted">Empty</td><td class="mx-pts">—</td></tr>`
         : `<tr class="${x.proj.kind === "out" ? "out" : x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
@@ -7589,7 +7593,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <td class="mx-game">${x.g.oppTeam ? `<span class="mx-opp">${teamLogo(x.g.oppTeam, "xs")}${x.g.home ? "vs" : "@"} ${esc(x.g.oppTeam)}</span>` : ""}<small class="${x.proj.kind === "out" ? "out" : x.g.kind}">${esc(x.proj.kind === "out" ? "Out" : x.g.text || "")}</small></td>
             ${ptsCell(x)}</tr>`;
       const lineup = s => { const top = s.starters.filter(x => !x.empty && (x.g.kind === "final" || x.g.kind === "live")).sort((a, b) => b.pts - a.pts)[0];
-        return `<div class="mx-lineup"><h4>${teamFace(s.team, "xs")}${esc(s.team.name)}${top ? `<small>Top: ${esc(compactName(top.e.name))} ${fp(top.pts)}</small>` : ""}<span>${fp(s.pts)}</span></h4>
+        return `<div class="mx-lineup"><h4>${teamFace(s.team, "xs")}${esc(s.team.name)}${top ? `<small>Top: ${esc(compactName(top.e.name))} ${fp(top.pts)}</small>` : ""}<span>${fp(s.pts)}${state !== "final" ? `<small class="mx-lu-proj" title="${esc(LIVE_PROJ_TIP)}">Live proj ${fp(s.proj)}${s.partial ? "*" : ""}</small>` : ""}</span></h4>
           <table class="mx-table"><tbody>${s.starters.map(row).join("")}</tbody></table></div>`; };
       return `<article class="mx-card ${state}${open ? " open" : ""}${A.team.mine || B.team.mine ? " has-mine" : ""}">
         <div class="mx-row">${team(A, "A")}${score(A, "A")}${mid2}${score(B, "B")}${team(B, "B")}</div>
@@ -7799,6 +7803,85 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const ppg = e.sid ? seasonPpg(e.sid, e.pos, sc) : null;
     return ppg != null ? { pts: ppg, source: "season", fallback: true } : null;
   }
+  /* Weekly calibration (projections only; never rankings, values, tiers or history):
+     1. Vegas: his team's implied total this week vs its average over the games the rest-of-season projection
+        covers, ^0.75, capped ±15% (nflverse lines, keyless, already in our schedule data).
+     2. Matchup: what the opponent allows his position per game vs the league average, shrunk by sample
+        (35% weight at full sample), capped ±10%.
+     3. Player props, when a props file exists (data/props/<season>.json, see CLAUDE.md): consensus lines become
+        expected stats (receptions, yards, attempts, passing TDs; anytime-TD probability → expected TDs, split
+        rush/receiving by his history), the rest of his stat line comes from his recent per-game averages, all
+        scored with the league's settings, then blended with the calibrated SPAM projection (more markets, more
+        weight, at most 60%). No props → the SPAM projection alone; missing props never count as zero. */
+  function gameContext(e, g) {
+    const out = { env: 1, mx: 1, inputs: [] };
+    if (!g || !g.oppTeam || !e.team) return out;
+    const imp = (total, spread) => (total != null && spread != null ? total / 2 - spread / 2 : null);
+    const now = imp(g.total, g.spread);
+    const avgs = teamGames(STATS_SEASONS[0], e.team).filter(r => r[4] == null).map(r => imp(r[8], r[7])).filter(v => v != null);
+    if (now != null && avgs.length >= 2) {
+      const avg = avgs.reduce((a, v) => a + v, 0) / avgs.length;
+      out.env = Math.max(0.85, Math.min(1.15, Math.pow(now / avg, 0.75)));
+      out.inputs.push(`Vegas team total ${fp(now)} (${fp(avg)} avg)`);
+    } else if (now != null) out.inputs.push(`Vegas team total ${fp(now)}`);
+    const D = (defenseVsPos() || {})[e.pos], x = D && D[g.oppTeam];
+    if (x && x.g) {
+      const all = Object.values(D), avgD = all.reduce((a, r) => a + r.ppg, 0) / all.length;
+      if (avgD > 0) {
+        const w = 0.35 * x.g / (x.g + 4), rel = x.ppg / avgD - 1;
+        out.mx = Math.max(0.9, Math.min(1.1, 1 + w * rel));
+        out.inputs.push(`Matchup: ${g.oppTeam} allows ${Math.abs(Math.round(rel * 100))}% ${rel >= 0 ? "more" : "less"} than average to ${e.pos}s`);
+      }
+    }
+    return out;
+  }
+  // Player props (optional file written by a future pipeline job; nothing fetched from sportsbooks in the browser)
+  const PROPS = { data: undefined, loading: null };
+  function loadProps() {
+    if (PROPS.data !== undefined) return Promise.resolve(PROPS.data);
+    if (!PROPS.loading) PROPS.loading = fetch(`data/props/${STATS_SEASONS[0]}.json`, { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
+      .then(d => { PROPS.data = d; if (d && typeof renderLeagueAll === "function") renderLeagueAll(); return d; });
+    return PROPS.loading;
+  }
+  const propsFor = (sid, week) => { const d = PROPS.data; return d && d.week === week && d.players ? d.players[sid] || null : null; };
+  // his per-game stat line over his last games (this season first), the base a props line overrides
+  function recentStatAvg(sid, n = 8) {
+    const acc = {}; let k = 0;
+    for (const y of STATS_SEASONS.slice(0, 2)) {
+      const d = statsCache[y], pl = d && d.players && d.players[sid];
+      if (!pl) continue;
+      for (let i = pl.g.length - 1; i >= 0 && k < n; i--, k++) d.cols.forEach((c, j) => { if (STAT_KEYS.includes(c)) acc[c] = (acc[c] || 0) + (pl.g[i][j] || 0); });
+    }
+    if (!k) return null;
+    Object.keys(acc).forEach(c => { acc[c] /= k; });
+    return acc;
+  }
+  const PROP_STATS = { rec: "rec", rec_yd: "rec_yd", rush_yd: "rush_yd", rush_att: "rush_att", pass_yd: "pass_yd", pass_td: "pass_td", pass_att: "pass_att", pass_cmp: "pass_cmp" };
+  function propsProjection(e, sc, props) {
+    if (!props) return null;
+    const base = recentStatAvg(e.sid) || {}, st = { ...base };
+    let markets = 0;
+    for (const [k, stat] of Object.entries(PROP_STATS)) if (props[k] != null && isFinite(props[k])) { st[stat] = Number(props[k]); markets++; }
+    if (props.atd != null && props.atd > 0 && props.atd < 1) {
+      const exp = -Math.log(1 - Math.min(props.atd, 0.95));   // anytime-TD probability → expected TDs (Poisson)
+      const hist = (base.rush_td || 0) + (base.rec_td || 0), rushShare = hist > 0.05 ? (base.rush_td || 0) / hist : { QB: 1, RB: 0.75, WR: 0.05, TE: 0 }[e.pos] ?? 0.5;
+      st.rush_td = exp * rushShare; st.rec_td = exp * (1 - rushShare); markets++;
+    }
+    return markets ? { pts: gamePoints(st, e.pos, sc), markets } : null;
+  }
+  // The calibrated weekly projection for a game: SPAM base × Vegas × matchup, blended with props when available.
+  // opts.props / opts.ctx override the inputs (tests); returns { pts, source, fallback, inputs } or null.
+  function contextProjection(e, g, sc, opts = {}) {
+    const P = weeklyProjection(e, sc);
+    if (!P) return null;
+    const ctx = opts.ctx || gameContext(e, g), inputs = [P.fallback ? `Season PPG (no SPAM projection)` : "SPAM projection: usage, results, team outlook", ...ctx.inputs];
+    let pts = P.pts * ctx.env * ctx.mx;
+    const pr = propsProjection(e, sc, opts.props !== undefined ? opts.props : (g && g.week ? propsFor(e.sid, g.week) : null));
+    if (pr) { const w = Math.min(0.6, 0.15 + 0.15 * pr.markets); pts = w * pr.pts + (1 - w) * pts; inputs.push(`Player props: ${pr.markets} market${pr.markets === 1 ? "" : "s"}${PROPS.data && PROPS.data.books ? ` (consensus of ${PROPS.data.books.length} books)` : ""}`); }
+    else inputs.push("Player props: not available");
+    return { pts, source: P.source, fallback: P.fallback, inputs };
+  }
+
   /* One player's week (shared by every page): game status from nflGameState + points + projection.
      final = actual points (Sleeper's when given, else our stat line; DNP / pending without one), no projection;
      live = points so far + projection for the share of the game left, estimated from time since kickoff
@@ -7820,14 +7903,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", game: g, est: 0, text: "Out" };   // once his game starts, his points speak
     }
     if (g.kind === "none" && !e.team) return { kind: "none", game: g, est: 0, missing: true, text: "" };
-    const P = weeklyProjection(e, sc);
+    if (PROPS.data === undefined) loadProps();
+    const P = contextProjection(e, g, sc);
     const so = g.kind === "live" ? (sleeperPts ?? 0) : null;
     if (!P) return { kind: g.kind, game: g, pts: so, est: g.kind === "live" ? so : null, missing: true, text: g.text };
     if (g.kind === "live") {
       const left = Math.max(0, Math.min(1, 1 - (Date.now() - g.kick) / GAME_MS));
-      return { kind: "live", game: g, pts: so, proj: P.pts, est: so + P.pts * left, approx: true, fallback: P.fallback, source: P.source, text: "Live" };
+      return { kind: "live", game: g, pts: so, proj: P.pts, est: so + P.pts * left, approx: true, fallback: P.fallback, source: P.source, inputs: P.inputs, text: "Live" };
     }
-    return { kind: g.kind, game: g, proj: P.pts, est: P.pts, fallback: P.fallback, source: P.source, text: g.text };
+    return { kind: g.kind, game: g, proj: P.pts, est: P.pts, fallback: P.fallback, source: P.source, inputs: P.inputs, text: g.text };
   }
   // Self-test: projections follow the league's scoring (SPM.projectionCheck() in the console, tests/format_check.py)
   async function projectionCheck() {
@@ -7851,6 +7935,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     check(`${wr.name}: first-down points raise his projection`, fd, fd[1] > fd[0]);
     const bonusSc = { ...scOf({}), bonus_rec_yd_100: 3 }, wrE = entry(wr), b0 = Math.round(10 * weeklyProjection(wrE, scOf({})).pts) / 10, b1 = Math.round(10 * weeklyProjection(wrE, bonusSc).pts) / 10;
     check(`${wr.name}: a 100-yard receiving bonus never lowers his projection`, [b0, b1], b1 >= b0);
+    // calibration layer: Vegas, matchup and props move the weekly projection; missing props change nothing
+    const g0 = { oppTeam: "KC", week: 99, total: 47, spread: 0 }, sc0 = scOf({}), we = entry(wr), te0 = entry(te);
+    const cp = (e, g, o = {}) => Math.round(10 * contextProjection(e, g, o.sc || sc0, { props: o.props === undefined ? null : o.props, ctx: o.ctx }).pts) / 10;
+    const hiLo = [cp(we, { ...g0, total: 56, spread: -7 }), cp(we, { ...g0, total: 38, spread: 7 })];
+    check(`${wr.name}: a higher Vegas team total raises his projection`, hiLo, hiLo[0] > hiLo[1]);
+    const mxv = [cp(we, g0, { ctx: { env: 1, mx: 1.08, inputs: [] } }), cp(we, g0, { ctx: { env: 1, mx: 0.92, inputs: [] } })];
+    check(`${wr.name}: a soft matchup beats a tough one`, mxv, mxv[0] > mxv[1]);
+    const flat = { env: 1, mx: 1, inputs: [] };
+    const yd = [cp(we, g0, { ctx: flat, props: { rec_yd: 110 } }), cp(we, g0, { ctx: flat, props: { rec_yd: 40 } })];
+    check(`${wr.name}: a higher receiving-yards prop raises his projection`, yd, yd[0] > yd[1]);
+    const td = [cp(we, g0, { ctx: flat, props: { atd: 0.6 } }), cp(we, g0, { ctx: flat, props: { atd: 0.2 } })];
+    check(`${wr.name}: stronger anytime-TD odds raise his projection`, td, td[0] > td[1]);
+    const tp = [0, 0.5, 1].map(x => cp(te0, g0, { ctx: flat, props: { rec: 7 }, sc: scOf({ tep: x }) }));
+    check(`${te.name}: a receptions prop still follows TE premium none → + → ++`, tp, tp[0] < tp[1] && tp[1] < tp[2]);
+    const pp = [0, 1].map(x => cp(we, g0, { ctx: flat, props: { rec: 8, rec_yd: 90 }, sc: scOf({ rec: x, tep: 0 }) }));
+    check(`${wr.name}: props are scored with the league's PPR setting`, pp, pp[1] > pp[0]);
+    const nop = [cp(we, g0, { ctx: flat, props: null }), cp(we, g0, { ctx: flat, props: {} })];
+    check(`${wr.name}: no props (or an empty props line) leaves the SPAM projection unchanged`, nop, nop[0] === nop[1] && nop[0] === Math.round(10 * weeklyProjection(we, sc0).pts) / 10);
     const none = weeklyProjection({ sid: "0", pos: "K", team: "BUF", p: null }, scOf({}));
     check("A kicker with no projection and no stats isn't given a made-up projection", [String(none)], none === null);
     if (out.some(c => !c.pass)) console.warn("SPAM projection check failed", out); else console.info("SPAM projection check passed", out);
@@ -7864,7 +7966,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (o.kind === "final") return o.dnp ? { kind: "dnp", text: "DNP", v: 0, sub: "Final" } : o.pending ? { kind: "pending", text: "—", v: null, sub: "Final · pts pending" } : { kind: "final", text: fp(o.pts), v: o.pts, sub: "Final" };
     if (o.missing) return { kind: "none", text: "—", v: null, sub: o.kind === "live" ? "Live" : "" };
     const v = Math.round(o.proj * 10) / 10;
-    return { kind: "ok", text: v.toFixed(1), v, sub: (o.kind === "live" ? "Live · proj" : "Proj") + (o.fallback ? " (season PPG)" : "") };
+    return { kind: "ok", text: v.toFixed(1), v, sub: (o.kind === "live" ? "Live · proj" : "Proj") + (o.fallback ? " (season PPG)" : ""), tip: projTip(o) };
   }
   // Season production in the league's scoring: position finish by total points, points, points per game
   let seasonRankCache = { key: "", map: null };
@@ -7936,7 +8038,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
         <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span></div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
-      <td class="fa-proj ${pj.kind}">${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
+      <td class="fa-proj ${pj.kind}"${pj.tip ? ` title="${esc(pj.tip)}"` : ""}>${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
       <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
       <td class="fa-wk">${faMatch(p)}</td>
       <td class="fa-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${p.pos.toLowerCase()})">${p.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
@@ -8434,7 +8536,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             : o.kind === "out" ? tile(`Wk ${wk} proj`, "Out", "Ruled out")
             : o.missing ? tile(`Wk ${wk} proj`, "–", "No projection")
             : o.kind === "live" ? tile(`Wk ${wk} proj`, fp(o.proj), "Game in progress")
-            : tile(`Wk ${wk} proj`, fp(o.proj), o.fallback ? "Season PPG" : `${esc(projSource())} · ${activeData() ? "league" : "site"} scoring`); })()}
+            : `<div class="tw-stat" title="${esc(projTip(o))}"><span class="tw-label">Wk ${wk} proj</span><span class="tw-val">${fp(o.proj)}</span><span class="tw-sub">${o.fallback ? "Season PPG" : `${esc(projSource())} · ${activeData() ? "league" : "site"} scoring`}</span></div>`; })()}
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
         ${tile("Team total", implied ?? "–", implied ? "implied" : "")}

@@ -153,7 +153,8 @@ with sync_playwright() as p:
     card = pg.locator(".mx-card").first
     ok(card.locator(".mx-pr").count() == 2 and card.locator(".mx-score").count() == 2, "Each side: SPAM PR badge and a big score")
     projs = card.locator(".mx-proj").all_inner_texts()
-    ok(len(projs) == 2 and all(re.search(r"PROJ\s+\d+\.\d", t.upper()) for t in projs), f"Projected score under each score: {projs}")
+    ok(len(projs) == 2 and all(re.search(r"^LIVE PROJ\s+\d+\.\d", t.upper().strip()) for t in projs), f"Live proj under each score before kickoff: {projs}")
+    ok(all(t.upper().strip().startswith("LIVE PROJ") for t in pg.locator(".mx-proj").all_inner_texts()) and "APPROX" not in pg.inner_text("#league-body").upper(), "One label everywhere: Live proj")
     full_cards = partial_cards = 0
     for c in pg.locator(".mx-card").all():
         pj = c.locator(".mx-proj").all_inner_texts()
@@ -296,7 +297,9 @@ with sync_playwright() as p:
     pg2.click("#tab-league"); pg2.wait_for_timeout(300); pg2.click("[data-lsub=matchups]"); pg2.wait_for_timeout(1800)
     ok(pg2.locator(".mx-card.live").count() >= 1 and pg2.locator(".mx-state.live").count() >= 1, f"Sunday afternoon: matchups are live ({pg2.locator('.mx-card.live').count()})")
     lp = pg2.locator(".mx-card.live .mx-proj").first.inner_text().upper()
-    ok("APPROX. LIVE PROJ" in lp, f"Live projection is labeled approximate: {lp}")
+    ok(lp.strip().startswith("LIVE PROJ") and "approximate" not in lp.lower(), f"During games the total still reads Live proj: {lp}")
+    tip = pg2.locator(".mx-card.live .mx-proj").first.get_attribute("title") or ""
+    ok("estimate" in tip.lower(), "Its tooltip explains it's an estimate")
     ok(re.search(r"\d+ played · \d+ active · \d+ remaining", pg2.inner_text(".mx-card.live .mx-left-row")) is not None, "Players played / active / remaining")
     pg2.locator(".mx-card.live .mx-show").first.click(); pg2.wait_for_timeout(400)
     ok(pg2.locator(".mx-card.open .mx-pts.live").count() >= 1 and pg2.locator(".mx-card.open .mx-livetag").count() >= 1, "Live starters show LIVE points with their projection")
