@@ -1796,7 +1796,12 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .th-diff { margin: 12px 0 0; font-size: 0.8rem; color: var(--ink-2); }
 .th-diff b { color: var(--cream); }
 .th-basis { color: var(--muted); }
-.th-basis.current { font-weight: 650; color: var(--rose-ink); }
+ .th-basis.current { color: var(--muted); }
+.th-tag { display: inline-block; margin-left: 10px; padding: 2px 7px; border-radius: 999px; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; vertical-align: 1px; border: 1px solid var(--line); color: var(--muted); }
+.th-tag.pre { color: var(--mine-accent); border-color: color-mix(in srgb, var(--mine-accent) 45%, transparent); background: color-mix(in srgb, var(--mine-accent) 8%, transparent); }
+.th-tag.now { color: var(--accent-secondary-text); border-color: color-mix(in srgb, var(--accent-secondary) 40%, transparent); }
+.th-context { margin: -4px 0 12px; font-size: 0.76rem; line-height: 1.45; color: var(--muted); max-width: 80ch; }
+.th-verdict.lookback small { display: block; text-align: right; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); font-stretch: 100%; margin-bottom: 1px; }
 .th-note { margin: 6px 0 0; font-size: 0.84rem; color: var(--ink-2); line-height: 1.5; }
 .th-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
 .th-actions .btn.link { padding-inline: 0; }
@@ -3061,7 +3066,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T02:05Z";
+  const BUILD_ID = "2026-10-03T02:15Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6047,10 +6052,20 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   /* Trade History: completed trades from Sleeper, judged with the calculator's verdicts.
-     Values are the SPAM values on the trade date when ranking history has every player on or near
-     that day (closest entry at or before it, or within HIST_NEAR_DAYS after); otherwise current values,
-     labeled as such. Draft picks are listed but not valued. */
-  const HIST_NEAR_DAYS = 3;
+     Three cases, always labeled:
+       historical  every player has a SPAM value on or before the trade date (the closest prior snapshot)
+       pre-SPAM    the trade happened before SPAM rankings were first published: judged with today's
+                   values as a retrospective lookback, never as how players were valued at the time
+       current     after SPAM existed, but ranking history doesn't cover every player: today's values
+     Draft picks are listed but not valued. */
+  const HIST_GRACE_MS = 6 * 3600e3;   // a snapshot from the same day (a few hours later) still counts
+  // when SPAM values were first published: the earliest ranking-history entry
+  function spamStart() {
+    const h = histNow();
+    let first = Infinity;
+    Object.values((h && h.players) || {}).forEach(list => list.forEach(e => { const t = whenDate(e[0]).getTime(); if (t < first) first = t; }));
+    return first;
+  }
   let histNorm = { src: undefined, h: null };
   const histNow = () => { if (histNorm.src !== rankHistory) histNorm = { src: rankHistory, h: normalizeHistory(rankHistory || null) }; return histNorm.h; };
   function valueAt(sid, ms) {
@@ -6058,9 +6073,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!list || !list.length) return null;
     let best = null;
     list.forEach(e => { const t = whenDate(e[0]).getTime(); if (t <= ms + 6 * 3600e3 && (!best || t >= best.t)) best = { t, v: e[4], ts: e[0], pr: e[2] }; });
-    if (best) return best;
-    const after = list.map(e => ({ t: whenDate(e[0]).getTime(), v: e[4], ts: e[0], pr: e[2] })).filter(x => x.t > ms && x.t - ms <= HIST_NEAR_DAYS * 864e5).sort((a, b) => a.t - b.t)[0];
-    return after || null;
+    return best;   // only a value known on or before the trade date counts
   }
   // one Sleeper call with a time limit, so a request that never answers can't leave the view stuck
   const slGetTimed = (path, ms = 12000) => Promise.race([slGet(path), new Promise((_, rej) => setTimeout(() => rej(new Error("Sleeper took too long to answer")), ms))]);
@@ -6112,13 +6125,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const hist = new Map(valued.map(sid => [sid, valueAt(sid, t.at)]));
     const historical = valued.length > 0 && valued.every(sid => hist.get(sid));
     const basisTs = historical ? valued.map(sid => hist.get(sid).ts).sort().pop() : null;
+    const preSpam = !historical && t.at + HIST_GRACE_MS < spamStart();
     const val = sid => { const p = map.get(sid); if (!p) return 0; return historical ? hist.get(sid).v : dv(p); };
     parts.forEach(s => {
       s.items = s.get.map(sid => { const e = rosterEntry(sid, map), p = map.get(sid), hv = historical ? hist.get(sid) : null; return { sid, e, p, v: val(sid), now: p ? dv(p) : null, posThen: hv && hv.pr ? e.pos + hv.pr : null }; }).sort((a, b) => b.v - a.v);
       s.total = s.items.reduce((a, x) => a + x.v, 0);
       s.sent = s.give.reduce((a, sid) => a + val(sid), 0);
     });
-    const res = { t, parts, historical, basisTs };
+    const res = { t, parts, historical, basisTs, preSpam };
     if (parts.length === 2) {
       LEAGUE_DEPTH = historical ? 1 : (leagueView() ? LG.depth || 1 : 1);
       const m = tradeModel(parts[0].items.map(x => ({ value: x.v })), parts[1].items.map(x => ({ value: x.v })));
@@ -6149,9 +6163,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function tradeCard(r) {
     const t = r.t, P = r.parts, full = LT.tradesFull.has(t.id);
     const when = new Date(t.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const lookback = !r.historical;   // judged with today's values, not values known at the time
     const verdict = P.length === 2
       ? (r.a > 0 && r.b > 0
-          ? `<span class="th-verdict${r.fair ? " fair" : ""}">${esc(r.tier.title(P[r.ahead].team.name, P[1 - r.ahead].team.name))}</span>`
+          ? `<span class="th-verdict${r.fair ? " fair" : ""}${lookback ? " lookback" : ""}">${lookback ? `<small>Today's values</small>` : ""}${esc(r.tier.title(P[r.ahead].team.name, P[1 - r.ahead].team.name))}</span>`
           : `<span class="th-verdict">One-sided in SPAM values</span>`)
       : `<span class="th-verdict fair">${P.length}-team trade</span>`;
     const side = s => `<div class="th-side">
@@ -6171,18 +6186,30 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <div class="meter${P.length > 2 ? " three" : ""}">${shares.map((v, i) => `<div class="m${"abc"[i] || "c"}" style="width:${(100 * v / tot).toFixed(1)}%"></div>`).join("")}</div>
         <div class="meter-labels">${P.map((s, i) => `<span class="ml-${"abc"[i] || "c"}">${esc(s.team.name)} · ${fmt(shares[i])}${Math.round(shares[i]) !== Math.round(s.total) ? ` <small title="Includes the calculator's best-player bonus and roster-spot adjustment">adjusted</small>` : ""}</span>`).join("")}</div>
       </div>` : "";
-    const basis = r.historical ? `SPAM values from ${esc(longWhen(r.basisTs))} (base values)` : "Evaluated using current SPAM values";
+    const tradeDay = new Date(t.at).toDateString(), basisDay = r.basisTs ? whenDate(r.basisTs).toDateString() : "";
+    const basisDate = r.basisTs ? whenDate(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+    const tag = r.historical ? `<span class="th-tag hist">Historical SPAM values</span>`
+      : r.preSpam ? `<span class="th-tag pre">Pre-SPAM trade</span>` : `<span class="th-tag now">Current-value evaluation</span>`;
+    const basis = r.historical
+      ? (basisDay === tradeDay ? `Evaluated using SPAM values from ${esc(basisDate)}` : `Evaluated using the nearest prior SPAM snapshot (${esc(basisDate)})`)
+      : r.preSpam ? "Retrospective evaluation using current SPAM values" : "Evaluated using current SPAM values (no ranking history for every player on this date)";
+    const winTxt = P.length === 2 && r.a > 0 && r.b > 0
+      ? (r.fair ? "Using today's values, this trade is about even" : `Using today's values, ${esc(P[r.ahead].team.name)} would win this trade by ${r.more.toFixed(1)}%`) : "";
+    const context = r.historical ? "" : `<p class="th-context">${r.preSpam
+      ? `This trade was completed before SPAM rankings were published, so the verdict is a lookback with today's SPAM values, not how the players were valued at the time.${winTxt ? " " + winTxt + "." : ""}`
+      : `SPAM's ranking history doesn't cover every player in this trade on its date, so it's judged with today's values.${winTxt ? " " + winTxt + "." : ""}`}</p>`;
     const anyPicks = P.some(s => s.picks.length);
     const diff = P.length === 2 && r.a > 0 && r.b > 0 ? `<b>Difference ${r.more.toFixed(1)}%</b> · ` : "";
     const fullHtml = !full ? "" : `<div class="th-full">
         ${P.length === 2 && r.model && r.model.adj ? `<p>Raw value ${fmt(r.model.rawA)} vs ${fmt(r.model.rawB)}. ${r.model.adj.bonus ? `${esc(P[r.model.adj.best === "A" ? 0 : 1].team.name)} gets a ${fmt(r.model.adj.bonus)} best-player bonus. ` : ""}${r.model.adj.spot ? `${esc(P[r.model.adj.more === "A" ? 0 : 1].team.name)} pays ${fmt(r.model.adj.spot)} for taking on extra players. ` : ""}</p>` : ""}
         ${P.length === 2 && r.a > 0 && r.b > 0 ? `<p>${esc(r.tier.text(P[r.ahead].team.name, P[1 - r.ahead].team.name, r.more.toFixed(1) + "%"))}</p>` : ""}
-        ${r.historical ? `<p><b>Since the trade</b> (current SPAM values): ${P.map(s => `${esc(s.team.name)} ${fmt(s.items.reduce((a, x) => a + (x.now || 0), 0))}`).join(" · ")}</p>` : ""}
+        ${r.historical ? `<p><b>With today's values</b> (current SPAM values): ${P.map(s => `${esc(s.team.name)} ${fmt(s.items.reduce((a, x) => a + (x.now || 0), 0))}`).join(" · ")}</p>` : ""}
         ${P.length > 2 ? `<p>Each team is judged on what it received against what it sent: ${P.map(s => `${esc(s.team.name)} got ${fmt(s.total)} for ${fmt(s.sent)}`).join("; ")}.</p>` : ""}
         ${anyPicks ? `<p class="muted">Draft picks aren't valued by SPAM yet, so they're listed but left out of the totals.</p>` : ""}
       </div>`;
     return `<article class="th-card">
-      <header class="th-head"><span class="th-date">${esc(when)}${t.week ? ` · Week ${t.week}` : ""}</span>${verdict}</header>
+      <header class="th-head"><span class="th-date">${esc(when)}${t.week ? ` · Week ${t.week}` : ""}${tag}</span>${verdict}</header>
+      ${context}
       <div class="th-sides n${Math.min(P.length, 3)}">${P.map(side).join("")}</div>
       ${meter}
       <p class="th-diff">${diff}<span class="th-basis${r.historical ? "" : " current"}">${basis}</span>${anyPicks ? ` · <span class="muted">picks not valued</span>` : ""}</p>
@@ -6195,7 +6222,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function tradeHistoryHtml(ev, d) {
     if (slSource() !== "sleeper") return `<p class="empty-note">Trade history comes from Sleeper's transaction log, so it's available for Sleeper leagues. ${esc(SOURCE_NAME[slSource()] === "pasted" ? "Pasted" : SOURCE_NAME[slSource()])} leagues show power rankings and standings.</p>`;
     const id = d.league.league_id, loading = LT.loading === id, error = LT.error[id];
-    const head = `<div class="lg-toolbar"><p class="method-note">Completed trades this season, judged with the trade calculator's verdicts. SPAM values from the trade date are used when ranking history covers it.</p>
+    const head = `<div class="lg-toolbar"><p class="method-note">Completed trades are evaluated using SPAM values from the time of the trade when historical data is available. Trades that occurred before SPAM rankings existed are shown as retrospective evaluations using current values.</p>
       <button class="btn" type="button" data-th-refresh${loading ? " disabled" : ""}>${loading ? "Loading…" : "Refresh"}</button></div>`;
     if (error) return head + `<div class="lg-error"><p>Couldn't load trades for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div>`;
     if (!d.trades) return head + `<p class="empty-note lg-loading">Loading completed trades for ${esc(d.league.name)}…</p>`;
