@@ -2001,6 +2001,24 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-game small.live { color: var(--rb); }
 .mx-pts { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--heading); }
 .mx-table tr.upcoming .mx-pts, .mx-table tr.bye .mx-pts { color: var(--muted); font-weight: 500; }
+#fa-wrap { max-width: 1180px; }
+.fa-table td { padding-top: 8px; padding-bottom: 8px; }
+.fa-proj { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fa-proj b { font-size: 0.98rem; font-weight: 800; color: var(--heading); }
+.fa-proj.bye, .fa-proj.none { color: var(--muted); }
+.fa-proj.out { color: var(--st-out, var(--st-dnp)); font-weight: 700; font-size: 0.78rem; }
+.fa-mx { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
+.fa-mx-top { display: inline-flex; align-items: center; gap: 5px; font-size: 0.84rem; color: var(--ink-2); }
+.fa-mx-top b { color: var(--ink); }
+.fa-mx-sub { font-size: 0.68rem; color: var(--muted); }
+.fa-mx-v.good { color: var(--rb); }
+.fa-mx-v.tough { color: var(--st-dnp, var(--accent-primary)); }
+.fa-srk { white-space: nowrap; }
+.fa-srk-b { font-size: 0.7rem; font-weight: 700; color: var(--ink-2); padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, var(--c) 12%, transparent); }
+.fa-num { text-align: right; white-space: nowrap; }
+td.fa-num { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 0.84rem; }
+th.fa-proj { text-align: right; }
+.fa-fitlbl { margin-left: auto; }
 .fa-avail { font-size: 0.7rem; color: var(--muted); }
 .fa-avail.waivers { color: var(--mine-accent); }
 .fa-fit-t { font-size: 0.78rem; color: var(--ink-2); white-space: nowrap; }
@@ -2021,7 +2039,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
   .mx-game { white-space: normal; font-size: 0.74rem; }
   .mx-foot { padding: 0 10px 10px; }
   .st-mgr { display: none; }
-  #fa-wrap .fa-fit { display: none; }
+  #fa-wrap .fa-fit, #fa-wrap .fa-srk, #fa-wrap .fa-num { display: none; }
 }
 .pr-head {
   white-space: nowrap; padding: 0 18px 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
@@ -2916,12 +2934,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="chips" id="fa-chips" role="group" aria-label="Filter available players by position"></div>
       <input class="search" id="fa-search" type="search" placeholder="Search available players" aria-label="Search available players">
       <select class="select" id="fa-sort" aria-label="Sort available players">
-        <option value="rank">Sort: SPAM rank</option><option value="form">Sort: recent production</option><option value="matchup">Sort: this week's matchup</option>
+        <option value="rank">Sort: SPAM rank</option><option value="proj">Sort: weekly projection</option><option value="form">Sort: recent form</option>
+        <option value="ppg">Sort: season PPG</option><option value="matchup">Sort: matchup</option><option value="posrank">Sort: position rank</option>
       </select>
+      <label class="lg-keep fa-fitlbl" title="Nudges players who'd start for you up the list. SPAM rank still leads."><input type="checkbox" id="fa-fitsort"> My team fit</label>
     </div>
     <div class="table-scroll">
       <table class="fa-table">
-        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col" class="fa-wk">This week</th><th scope="col" class="fa-fit" title="Where he'd fit on your roster in this league's lineup. SPAM value stays the main guide.">For your team</th><th scope="col">Value</th></tr></thead>
+        <thead id="fa-head"></thead>
         <tbody id="fa-body"></tbody>
       </table>
     </div>
@@ -3638,7 +3658,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T21:30Z";
+  const BUILD_ID = "2026-10-04T22:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6942,7 +6962,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
     }
     const title = LEAGUE_SUBS.find(([k]) => k === LT.sub)[1];
-    const sub = faOn ? `Available in this league · sorted by ${leagueView() ? "league-adjusted" : "base"} SPAM value`
+    const sub = faOn ? "Available players in this league · sorted by SPAM rank"
       : LT.sub === "tx" ? "Trades, waiver claims, adds and drops"
       : LT.sub === "matchups" ? "This league's weekly matchups, scored by Sleeper"
       : `${leagueView() ? "League-adjusted" : "Base"} SPAM values`;
@@ -7582,14 +7602,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const cell = x => `<span class="rf-col">${x.tag ? `<b class="rf-tag ${x.tag.toLowerCase()}" title="Week ${x.w}: ${x.tag === "BYE" ? "bye week" : "didn't play"}">${x.tag}</b>` : `<span class="rf-v">${fp(x.pts)}</span>`}<span class="rf-wk">Wk ${x.w}</span></span>`;
     return `<span class="rf"><span class="rf-scores">${weeks.slice().reverse().map(cell).join("")}</span>${avg != null ? `<span class="rf-sub">Avg ${fp(avg)}${trend ? " · " + trend : ""}</span>` : ""}</span>`;
   }
-  // Free agents: this week's opponent with the matchup verdict dot
-  function faWeek(p) {
-    const ng = p.team ? nextGame(p.team) : null, wk = currentWeek();
-    if (!ng) return `<span class="muted">–</span>`;
-    if (wk && ng.week > wk) return `<span class="muted">Bye</span>`;
-    const D = (defenseVsPos() || {})[p.pos], x = D && D[ng.opp];
-    return `<span class="fa-opp" title="${x ? esc(VERDICT[x.grade]) : ""}"><span class="sc-dot ${x ? x.grade : ""}"></span>${teamLogo(ng.opp, "xs")}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</span>`;
-  }
+
   /* Waiver Wire: ranked players nobody in the selected league rosters. SPAM value leads (default sort = SPAM
      rank); recent form, this week's matchup and where he'd fit on your roster are context, never the ranking. */
   let faSort = "rank";
@@ -7606,40 +7619,124 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Where he'd land on your team in this league's lineup: starts (slot) or depth (QB2, WR4, bench depth)
   function faFit(K, me, p) {
     const L = K.after(me, [], [p], [me]), role = L.labels.get(p.id);
-    if (role) return { text: `Would start at ${role}`, cls: "start" };
+    if (role) return /FLEX|SF|W\/R|W\/T/.test(role) ? { text: `Starts at ${role}`, cls: "start" } : { text: `${p.pos} upgrade`, cls: "start" };
     const ahead = K.healthy(me).filter(x => x.pos === p.pos && dv(x) > dv(p)).length;
     const benchAhead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
-    return benchAhead >= 2 && p.pos !== "QB" ? { text: "Bench depth only", cls: "deep" } : { text: `Would be your ${p.pos}${ahead + 1}`, cls: "" };
+    return benchAhead >= 2 && p.pos !== "QB" ? { text: "Bench depth", cls: "deep" } : { text: `Your ${p.pos}${ahead + 1}`, cls: "" };
   }
+  // This week's projection in the league's scoring: SPAM's projection (rest-of-season points per game from usage,
+  // results and team outlook, written by the weekly pipeline in the site's scoring) rescored with the player's
+  // own league/site scoring ratio over his recent games (his position's average ratio when he has too few).
+  // Bye → "Bye", ruled Out on this week's report → "Out", no projection → null (shown as —). Not matchup-adjusted.
+  let projRatioCache = { key: "", map: null };
+  function projRatios() {
+    const sc = scoringNow(), base = (comps && comps.base_scoring) || DEFAULT_SCORING, key = JSON.stringify(sc) + "|" + STATS_SEASONS.map(y => statsCache[y] ? statsCache[y].updated : "").join();
+    if (projRatioCache.key === key) return projRatioCache.map;
+    const map = new Map(), sums = {};
+    players.forEach(p => {
+      if (!EDIT_POS.includes(p.pos) || !p.sleeperId) return;
+      let l = 0, b = 0, n = 0;
+      for (const y of STATS_SEASONS.slice(0, 2)) {
+        const d = statsCache[y], pl = d && d.players && d.players[p.sleeperId];
+        if (!pl) continue;
+        for (let i = pl.g.length - 1; i >= 0 && n < 17; i--) { const g = {}; d.cols.forEach((c, k) => { g[c] = pl.g[i][k]; }); l += gamePoints(g, p.pos, sc); b += gamePoints(g, p.pos, base); n++; }
+      }
+      if (n >= 3 && b / n >= 3) { map.set(p.id, l / b); const t = sums[p.pos] || (sums[p.pos] = { r: 0, n: 0 }); t.r += l / b; t.n++; }
+    });
+    EDIT_POS.forEach(pos => { if (sums[pos]) map.set("pos:" + pos, sums[pos].r / sums[pos].n); });
+    projRatioCache = { key, map };
+    return map;
+  }
+  function weekProj(p) {
+    const wk = currentWeek(), ng = p.team ? nextGame(p.team) : null;
+    if (wk && (!ng || ng.week > wk) && p.team && teamGames(STATS_SEASONS[0], p.team).length) return { kind: "bye", text: "Bye", v: null };
+    const rep = injuryReport(p.team), inj = rep && rep.week === wk ? injuryOf(p.team, p.sleeperId) : null;
+    if (inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", text: "Out", v: null };
+    if (p.projPPG == null) return { kind: "none", text: "—", v: null };
+    const R = projRatios(), r = R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1;
+    const v = Math.round(p.projPPG * r * 10) / 10;
+    return { kind: "ok", text: v.toFixed(1), v };
+  }
+  // Season production in the league's scoring: position finish by total points, points, points per game
+  let seasonRankCache = { key: "", map: null };
+  function seasonRanks() {
+    const y = STATS_SEASONS[0], d = statsCache[y], sc = scoringNow();
+    if (!d || !d.players) return new Map();
+    const key = y + "|" + d.updated + "|" + JSON.stringify(sc);
+    if (seasonRankCache.key === key) return seasonRankCache.map;
+    const rows = [];
+    Object.entries(d.players).forEach(([sid, pl]) => {
+      if (!EDIT_POS.includes(pl.p)) return;
+      let pts = 0; pl.g.forEach(a => { const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; }); pts += gamePoints(g, pl.p, sc); });
+      rows.push({ sid, pos: pl.p, pts, g: pl.g.length });
+    });
+    const map = new Map();
+    EDIT_POS.forEach(pos => rows.filter(r => r.pos === pos).sort((a, b) => b.pts - a.pts).forEach((r, i) => map.set(r.sid, { ...r, rank: i + 1, ppg: r.g ? r.pts / r.g : null })));
+    seasonRankCache = { key, map };
+    return map;
+  }
+  // Matchup cell: opponent logo, vs/@, kickoff, and a quiet matchup word
+  function faMatch(p) {
+    const ng = p.team ? nextGame(p.team) : null, wk = currentWeek();
+    if (!ng) return `<span class="muted">—</span>`;
+    if (wk && ng.week > wk) return `<span class="muted">Bye</span>`;
+    const x = ((defenseVsPos() || {})[p.pos] || {})[ng.opp];
+    const word = x ? { good: "Good", neutral: "Neutral", tough: "Tough" }[x.grade] : "";
+    return `<span class="fa-mx"><span class="fa-mx-top">${teamLogo(ng.opp, "xs")}${ng.home ? "vs" : "@"} <b>${esc(ng.opp)}</b></span>
+      <span class="fa-mx-sub">${esc(kickoffText(ng.date, ng.time).replace(/^(\w+), \w+ \d+/, "$1").replace(/ ET$/, ""))}${word ? ` · <span class="fa-mx-v ${x.grade}" title="${esc(VERDICT[x.grade])}">${word}</span>` : ""}</span></span>`;
+  }
+  let faFitSort = false;
+  $("fa-fitsort").addEventListener("change", e => { faFitSort = e.target.checked; renderFA(); });
   function renderFA() {
     const d = activeData();
     if (!d) { $("fa-body").innerHTML = ""; $("fa-wrap").hidden = true; return; }
-    if (!statsCache[STATS_SEASONS[0]]) loadSeason(STATS_SEASONS[0]).then(() => { if (!$("fa-wrap").hidden) renderFA(); });
+    const need = STATS_SEASONS.slice(0, 2).filter(y => !statsCache[y]);
+    if (need.length) Promise.all(need.map(loadSeason)).then(() => { if (!$("fa-wrap").hidden) renderFA(); });
     let list = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && !LG.ownerOf.has(p.id));
     if (faPos !== "ALL") list = list.filter(p => p.pos === faPos);
     if (faQuery) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(faQuery));
     const form = new Map(list.map(p => [p.id, recentFormData(p.sleeperId, p.pos, p.team)]));
+    const proj = new Map(list.map(p => [p.id, weekProj(p)])), season = seasonRanks();
     const D = defenseVsPos() || {}, wk = currentWeek();
     const grade = p => { const ng = p.team ? nextGame(p.team) : null; if (!ng || (wk && ng.week > wk)) return 3; const x = D[p.pos] && D[p.pos][ng.opp]; return x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3; };
-    const byVal = (a, b) => dv(b) - dv(a);
-    list.sort(faSort === "form" ? (a, b) => ((form.get(b.id).avg ?? -1) - (form.get(a.id).avg ?? -1)) || byVal(a, b)
-      : faSort === "matchup" ? (a, b) => (grade(a) - grade(b)) || byVal(a, b) : byVal);
     const me = LG.teams.find(t => t.mine), K = me ? leagueKit() : null;
-    const mx = Math.max(1, ...players.map(dv));
+    const fit = new Map(K ? list.map(p => [p.id, faFit(K, me, p)]) : []);
+    // SPAM rank order (the RK shown). My team fit: a gentle nudge on that rank (starters ×0.85, bench depth ×1.1),
+    // never a re-sort by fit alone
+    const rkOf = p => { const r = Number(overallRank(p)); return isFinite(r) ? r : 9999; };
+    const key = p => rkOf(p) * (faFitSort && fit.has(p.id) ? (fit.get(p.id).cls === "start" ? 0.85 : fit.get(p.id).cls === "deep" ? 1.1 : 1) : 1);
+    const byRank = (a, b) => (key(a) - key(b)) || (dv(b) - dv(a));
+    const num = (m, f) => (a, b) => ((f(m.get(b.id)) ?? -1) - (f(m.get(a.id)) ?? -1)) || byRank(a, b);
+    const sorts = {
+      rank: byRank, proj: num(proj, x => x.v), form: num(form, x => x.avg),
+      ppg: (a, b) => (((season.get(b.sleeperId) || {}).ppg ?? -1) - ((season.get(a.sleeperId) || {}).ppg ?? -1)) || byRank(a, b),
+      matchup: (a, b) => (grade(a) - grade(b)) || byRank(a, b),
+      posrank: (a, b) => ((LG.adjPos.get(a.id) ?? a.posNum ?? 999) - (LG.adjPos.get(b.id) ?? b.posNum ?? 999)) || byRank(a, b)
+    };
+    list.sort(sorts[faSort] || byRank);
+    $("fa-head").innerHTML = `<tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th>
+      <th scope="col" class="fa-proj" title="SPAM projection for this week in ${esc(d.league.name)}'s scoring: rest-of-season points per game from usage, results and team outlook (not matchup-adjusted). — means no projection.">${wk ? `Wk ${wk} proj` : "Proj"}</th>
+      <th scope="col" class="fa-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th>
+      <th scope="col" class="fa-wk">Matchup</th>
+      <th scope="col" class="fa-srk" title="${STATS_SEASONS[0]} finish at his position by total fantasy points, in this league's scoring">Szn rk</th><th scope="col" class="fa-num">FPTS</th><th scope="col" class="fa-num">PPG</th>
+      <th scope="col" class="fa-fit" title="Where he'd fit on your roster in this league's lineup. Context only: it never changes his SPAM rank.">Fit</th></tr>`;
     $("fa-body").innerHTML = list.length ? list.map(p => {
-      const wv = waiverUntil(p), fit = K ? faFit(K, me, p) : null;
+      const wv = waiverUntil(p), f = fit.get(p.id), pj = proj.get(p.id), sn = season.get(p.sleeperId);
       return `<tr class="player">
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
         <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span></div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
+      <td class="fa-proj ${pj.kind}">${pj.kind === "ok" ? `<b>${pj.text}</b>` : esc(pj.text)}</td>
       <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
-      <td class="fa-wk">${faWeek(p)}</td>
-      <td class="fa-fit">${fit ? `<span class="fa-fit-t ${fit.cls}">${esc(fit.text)}</span>` : `<span class="muted">–</span>`}</td>
-      <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td></tr>`;
+      <td class="fa-wk">${faMatch(p)}</td>
+      <td class="fa-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${p.pos.toLowerCase()})">${p.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
+      <td class="fa-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
+      <td class="fa-num">${sn && sn.g ? fp(sn.ppg) : "—"}</td>
+      <td class="fa-fit">${f ? `<span class="fa-fit-t ${f.cls}">${esc(f.text)}</span>` : `<span class="muted">—</span>`}</td></tr>`;
     }).join("")
-      : `<tr><td class="empty" colspan="7">No ranked players available${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
-    $("fa-count").textContent = `${list.length} ranked player${list.length === 1 ? "" : "s"} available in ${d.league.name}. Roster percentages aren't shown: Sleeper's public data doesn't include them.`;
+      : `<tr><td class="empty" colspan="10">No ranked players available${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
+    $("fa-count").textContent = `${list.length} ranked player${list.length === 1 ? "" : "s"} available in ${d.league.name}. Projections are SPAM's (rescored for this league), not matchup-adjusted. Roster % isn't shown: Sleeper's public data doesn't include it.`;
   }
 
   /* Trade calculator: pick teams and click players from their rosters */
