@@ -22,7 +22,10 @@
 <meta property="og:site_name" content="SPAM">
 <meta property="og:title" content="SPAM Fantasy Rankings">
 <meta property="og:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football. Connect Sleeper, ESPN or Yahoo, or pick your league settings.">
-<meta property="og:url" content="https://stevenp36.github.io/spmetrics-fantasy/">
+<!-- The site's public address lives only here (canonical + og:url); every asset and link below is relative,
+     so moving to a custom domain later only means a CNAME file and these two lines. -->
+<link rel="canonical" href="https://stevenp36.github.io/spam/">
+<meta property="og:url" content="https://stevenp36.github.io/spam/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SPAM Fantasy Rankings">
 <meta name="twitter:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football.">
@@ -50,7 +53,7 @@ const SITE = {
   format: "12-Team · Full PPR · Superflex",
   updated: "Oct 1, 2026",
   author: "SPAM",
-  repo: "stevenp36/spmetrics-fantasy", // editors need write access to this GitHub repo
+  repo: "stevenp36/spam", // editors need write access to this GitHub repo
   sampleData: false,          // set to true to show the work-in-progress banner
   sampleNote: "WR rankings are final. QB, RB and TE are Steven's rankings until Alan's are in."
 };
@@ -2995,7 +2998,7 @@ dialog.signin input:focus { outline: none; border-color: var(--gold); }
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T01:20Z";
+  const BUILD_ID = "2026-10-03T01:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;

@@ -2,7 +2,14 @@
 
 Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-premium, superflex redraft league. Rankings by Steven ([stevenp36](https://github.com/stevenp36)) and Alan; player values come from a model that blends those rankings with this season's usage and betting-market team outlooks.
 
-**Live site:** https://stevenp36.github.io/spmetrics-fantasy/
+**Live site:** https://stevenp36.github.io/spam/ (rankings: https://stevenp36.github.io/spam/#rankings)
+
+### Hosting and moving to a custom domain
+The site is one static `index.html` served by GitHub Pages from the `main` branch of `stevenp36/spam`. Every asset, data file, script and link is a relative path (`data/…`, `favicon.svg`, `manifest.webmanifest`, `#rankings`), so the site works unchanged at `/spam/` or at the root of any domain. The public address appears in only two places, the `canonical` link and `og:url` in the page head. To move to a custom domain later:
+1. Buy the domain and point DNS at GitHub Pages (a `CNAME` record for `www` to `stevenp36.github.io`, and/or `A` records for the apex as listed in GitHub's Pages docs).
+2. In the repo: Settings → Pages → Custom domain, enter it (GitHub adds a `CNAME` file to the repo), then tick **Enforce HTTPS** once it's offered.
+3. Update the `canonical` and `og:url` lines to the new address.
+Browser-saved data (league connection, theme, editor token and unpublished edits) is stored per web address, so visitors and editors start fresh on a new domain: publish any browser edits before switching.
 
 ## Updates reaching visitors
 
