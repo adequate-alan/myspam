@@ -1142,7 +1142,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select:
 body.editing #panel-rankings td.val { min-width: 330px; }
 
 /* ---------- Trade calculator ---------- */
-.trade-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.trade-grid { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
 @media (min-width: 760px) { .trade-grid { grid-template-columns: 1fr 1fr; } }
 .side {
   background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius);
@@ -1456,7 +1456,7 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 #panel-finder .tf-head { gap: 10px; }
 #panel-finder .tf-team b { font-size: 1.02rem; }
 #panel-finder .tf-vline { flex-direction: column; align-items: flex-start; gap: 3px; }
-#panel-finder .tf-verdict-big { font-size: 1.12rem; letter-spacing: 0.01em; }
+#panel-finder .tf-verdict-big { font-size: 1.12rem; }
 #panel-finder .tf-verdict-big.fair { color: var(--text-strong); }
 #panel-finder .tf-diff { font-size: 0.7rem; color: color-mix(in srgb, var(--muted) 85%, transparent); letter-spacing: 0.01em; }
 #panel-finder .tf-sides { gap: 12px 16px; padding: 10px 0 2px; border-top: 1px solid var(--line-soft); }
@@ -1833,6 +1833,27 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
   display: grid; align-items: center; gap: 14px;
   grid-template-columns: 30px minmax(170px, 1.7fr) 52px 92px minmax(110px, 1fr) 132px 78px 14px;
 }
+/* large screens: the team column stops hogging the row; top players get names */
+@media (min-width: 1280px) {
+  .pr-head, .pr-row { grid-template-columns: 34px minmax(220px, 1.2fr) 60px 100px minmax(160px, 1fr) 150px minmax(200px, 0.9fr) 14px; gap: 18px; }
+  .pr-row .pr-stars { justify-content: flex-start; align-items: center; gap: 10px; }
+  .pr-row .pr-star-names { display: block; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+}
+/* My Team: strength in one row, roster beside a slim side panel on wide screens */
+@media (min-width: 1024px) { .mt-strength { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.mt-dash { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.mt-main { min-width: 0; }
+.mt-side { display: flex; flex-direction: column; gap: 12px; }
+.mt-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.mt-card .rr-text b { color: var(--cream); }
+.mt-card .rr-sub { display: block; margin-top: 6px; }
+.mt-card .trade-with { margin-top: 6px; }
+.mt-card .rr-list { flex-direction: column; gap: 6px; }
+@media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; } .mt-side { margin-top: 38px; } }
+.mt-l3, .fa-l3 { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
+.fa-opp .sc-dot { margin-right: 4px; }
+@media (max-width: 760px) { #panel-fa .fa-wk { display: none; } }
 .pr-head {
   white-space: nowrap; padding: 0 18px 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
 }
@@ -1985,10 +2006,12 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .pr-pos .pos { min-width: 34px; height: 19px; font-size: 0.64rem; }
 .pr-place { font-size: 0.8rem; font-weight: 750; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .pr-pos-label { color: color-mix(in srgb, var(--muted) 85%, transparent); }
-.pr-stars { display: flex; justify-content: flex-end; }
+.pr-stars { display: flex; justify-content: flex-end; min-width: 0; }
+.pr-star-faces { display: flex; flex: none; }
+.pr-star-names { display: none; }
 .pr-head span:last-child { text-align: right; }
 .role-inline { display: none; }
-.pr-stars .face { box-shadow: 0 0 0 2px var(--surface); }
+.pr-star-faces .face { box-shadow: 0 0 0 2px var(--surface); }
 .pr-stars .face + .face { margin-left: -6px; }
 .pr-row:hover .pr-stars .face { box-shadow: 0 0 0 2px var(--surface-hover); }
 
@@ -2038,6 +2061,8 @@ html.modal-open { overflow: hidden; }
 dialog.pm {
   padding: 0; border: 0; background: transparent; color: var(--ink); overflow: visible;
   width: min(1100px, calc(100vw - 48px)); max-width: none; height: min(900px, calc(100vh - 48px)); max-height: none; margin: auto;
+}
+@media (min-width: 1440px) { dialog.pm { width: min(1280px, calc(100vw - 96px)); height: min(960px, calc(100vh - 48px)); }
 }
 dialog.pm::backdrop { background: var(--backdrop); }
 dialog.pm[open] { animation: pm-in 0.16s ease-out; }
@@ -2156,8 +2181,6 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pm-head.tm { box-shadow: inset 0 3px 0 var(--tc); }
 .pm-head.tm .face.xl { box-shadow: inset 0 0 0 1px var(--line), 0 0 0 3px var(--surface), 0 0 0 5px color-mix(in srgb, var(--tc) 70%, transparent); }
 .pp-meta .tlogo { margin-right: -4px; }
-.pm-week-top .tlogo { align-self: center; }
-.pm-at { font-size: 0.72rem; color: var(--muted); }
 .tw-card { --ta: var(--ta-d, var(--line)); --tb: var(--tb-d, var(--line)); }
 :root[data-theme="light"] .tw-card { --ta: var(--ta-l, var(--line)); --tb: var(--tb-l, var(--line)); }
 .tw-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; background: linear-gradient(to right, var(--ta) 50%, var(--tb) 50%); opacity: 0.85; }
@@ -2215,20 +2238,38 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tw-nx { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .tw-nx i { font-style: normal; color: var(--muted); font-size: 0.72rem; }
 .tw-line .sc-dot { margin-right: 0; }
-.pm-week { --tw: var(--line); margin-left: auto; display: flex; flex-direction: column; gap: 7px; min-width: 0; max-width: 460px; padding: 10px 16px; border-radius: var(--radius); border: 1px solid var(--line-soft); background: color-mix(in srgb, var(--surface) 70%, transparent); box-shadow: inset 3px 0 0 var(--tw); }
-.pm-week.good { --tw: color-mix(in srgb, var(--rb) 75%, transparent); }
-.pm-week.neutral { --tw: color-mix(in srgb, var(--gold) 60%, transparent); }
-.pm-week.tough { --tw: color-mix(in srgb, var(--qb) 70%, transparent); }
-.pm-week b { font-size: 1.05rem; color: var(--cream); }
-.pm-week-sub { font-size: 0.74rem; color: var(--muted); }
-.pm-week-top, .pm-week-tags { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-.pm-week-tags { align-items: center; }
-.pm-week.neutral .tw-grade { color: var(--gold); }
-@media (max-width: 760px) { .pm-week { display: none; } }
 .sc-key { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 0.76rem; color: var(--muted); }
 .sc-help { cursor: help; text-decoration: underline dotted color-mix(in srgb, var(--muted) 60%, transparent); text-underline-offset: 3px; }
 .sc-verdict { font-size: 0.74rem; font-weight: 650; color: var(--muted); }
 .sc-verdict.good { color: var(--rb); } .sc-verdict.neutral { color: var(--gold); } .sc-verdict.tough { color: var(--qb); }
+/* Modal top: identity, numbers and actions left; this week's matchup right (desktop). On narrower screens the
+   matchup card moves to the top of the Overview instead, so the header stays short. */
+.pm-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.pm-left { min-width: 0; }
+.pm-right { display: none; min-width: 0; }
+.ov-week-mobile { display: block; margin-bottom: 16px; }
+@media (min-width: 1100px) {
+  .pm-top { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; padding-right: 44px; }
+  .pm-top .pm-stat { padding: 0 16px; }
+  .pm-top .pm-stat:first-child { padding-left: 0; }
+  .pm-right { display: block; }
+  .ov-week-mobile { display: none; }
+  .pm-id { padding-right: 0; }
+}
+.tw-card.in-head { padding: 12px 16px 12px 18px; margin: 0; }
+.tw-card.in-head .tw-stats { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px 12px; padding-top: 10px; }
+.tw-card.in-head .tw-val { font-size: 0.92rem; }
+.tw-card.in-head .tw-game { margin-bottom: 8px; font-size: 0.78rem; }
+.tw-card.in-head .tw-def { margin-top: 8px; padding-top: 8px; }
+.tw-card.in-head .tw-team b { font-size: 0.98rem; }
+.ov-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.ov-main { min-width: 0; }
+.ov-side-card { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.ov-side-card .tw-line, .ov-side-card .tw-context { margin: 0; flex-direction: column; align-items: flex-start; gap: 6px; }
+.ov-side-card .tw-line + .tw-line, .ov-side-card .tw-context + .tw-line { padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.ov-side-card .tw-nx { white-space: normal; }
+.ov-side-card .tw-nx b { color: var(--cream); }
+@media (min-width: 1100px) { .ov-cols { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; } .ov-cols .ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .tw-none { margin: 0; color: var(--muted); font-size: 0.86rem; }
 .tw-context { margin: 10px 0 0; font-size: 0.84rem; color: var(--ink-2); }
 .tw-context b { color: var(--cream); }
@@ -2280,6 +2321,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tf-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; padding: 16px 18px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
 .tf-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tf-player { flex: 1 1 260px; }
+@media (min-width: 1280px) { .tf-player { flex: 0 1 440px; } }
 .tf-player .select { width: 100%; }
 .ctl-label { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .tf-check { display: inline-flex; align-items: center; gap: 8px; height: 34px; font-size: 0.84rem; font-weight: 550; color: var(--ink-2); cursor: pointer; }
@@ -2385,7 +2427,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tf-sort { display: inline-flex; align-items: center; gap: 8px; }
 .tf-size { flex: none; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .tf-vline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
-.tf-verdict-big { font-weight: 850; font-stretch: 110%; font-size: 1.25rem; line-height: 1.1; text-transform: uppercase; color: var(--cream); }
+.tf-verdict-big { font-weight: 820; font-stretch: 106%; font-size: 1.2rem; line-height: 1.15; letter-spacing: -0.01em; color: var(--cream); }
 .tf-verdict-big.you { color: var(--gold-bright); } .tf-verdict-big.them { color: var(--rose); }
 .tf-verdict-big.sm { font-size: 0.95rem; }
 .tf-diff { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -2745,7 +2787,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="Average fantasy points, last 3 games">Last 3</th><th scope="col" class="fa-wk">This week</th><th scope="col">Value</th></tr></thead>
         <tbody id="fa-body"></tbody>
       </table>
     </div>
@@ -3415,7 +3457,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T05:00Z";
+  const BUILD_ID = "2026-10-04T08:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6361,7 +6403,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const slots = d.league.roster_positions.filter(s => s !== "BN");
     const used = new Set([...r.starters, ...r.reserve, ...r.taxi].filter(x => x && x !== "0"));
     const row = (slot, sid) => {
-      if (!sid || sid === "0") return `<tr class="mt-row empty-slot"><td class="slot">${esc(slot)}</td><td colspan="4" class="muted">Empty</td></tr>`;
+      if (!sid || sid === "0") return `<tr class="mt-row empty-slot"><td class="slot">${esc(slot)}</td><td colspan="5" class="muted">Empty</td></tr>`;
       const e = rosterEntry(sid, map);
       const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? posLabel(e.p) : e.pos)}</span>` : "";
       return `<tr class="mt-row">
@@ -6369,10 +6411,20 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflTag(e.team)}</div></div></td>
         <td class="pos-col">${badge}</td>
         <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
+        <td class="mt-l3">${(() => { const g = recentGames(e.sid, e.pos, 3); return g.length ? fp(avgPts(g)) : `<span class="muted">–</span>`; })()}</td>
         <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
     };
-    const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier"><td colspan="5">${title}</td></tr>${rowsHtml}` : "";
-    const starters = slots.map((s, i) => row(SLOT_LABEL[s] || s, r.starters[i])).join("");
+    const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier"><td colspan="6">${title}</td></tr>${rowsHtml}` : "";
+    // Sleeper's lineup; before one is set (all slots empty), SPAM's best lineup by value
+    const ev = evaluateTeams(), mineEv = ev.list.find(x => x.team.mine);
+    const noLineup = !(r.starters || []).some(x => x && x !== "0");
+    let starterIds = r.starters;
+    if (noLineup && mineEv) {
+      const left = mineEv.starters.slice();
+      starterIds = slots.map(sl => { const lab = SLOT_LABEL[sl] || sl, i = left.findIndex(p => (mineEv.role.get(p.id) || "") === lab); return i >= 0 ? String(left.splice(i, 1)[0].sleeperId) : "0"; });
+      starterIds.forEach(x => { if (x !== "0") used.add(x); });
+    }
+    const starters = slots.map((s, i) => row(SLOT_LABEL[s] || s, starterIds[i])).join("");
     const benchIds = r.players.filter(x => !used.has(x))
       .sort((a, b) => { const pa = map.get(a), pb = map.get(b); return (pb ? dv(pb) : -1) - (pa ? dv(pa) : -1); });
     const bench = benchIds.map(x => row("BN", x)).join("");
@@ -6380,8 +6432,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const taxi = r.taxi.map(x => row("TAXI", x)).join("");
 
     // Roster strength: same evaluation as the League power rankings
-    const ev = evaluateTeams(), mineEv = ev.list.find(x => x.team.mine);
     const strength = strengthCards(mineEv, ev);
+    const n = ev.n, third = Math.max(1, Math.floor(n / 3));
+    const needs = EDIT_POS.filter(pos => mineEv.place[pos] > n - third), strong = EDIT_POS.filter(pos => mineEv.place[pos] <= third);
+    const hot = r.players.map(x => map.get(String(x))).filter(Boolean).map(p => ({ p, g: recentGames(p.sleeperId, p.pos, 3) })).filter(x => x.g.length)
+      .map(x => ({ ...x, a: avgPts(x.g) })).sort((a, b) => b.a - a.a).slice(0, 5);
     const wl = recordText(r.settings) ? ` · ${recordText(r.settings)}` : "";
     const others = LG.teams.filter(t => !t.mine);
     box.innerHTML = `
@@ -6393,15 +6448,21 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <button class="btn" type="button" data-open-team="${me.rosterId}">Power rank ${mineEv.power} of ${ev.list.length} · Position breakdown</button>
       </div>
       <h3 class="section-label">Roster strength</h3>
-      <div class="strength-grid">${strength}</div>
-      <h3 class="section-label">Roster</h3>
+      <div class="strength-grid mt-strength">${strength}</div>
+      <div class="mt-dash"><div class="mt-main">
+      <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are SPAM's best lineup</span>` : ""}</h3>
       <div class="table-scroll"><table class="mt-table">
-        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col" title="Average fantasy points, last 3 games">Last 3</th><th scope="col">Value</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
-      </table></div>
-      <h3 class="section-label">Trade with</h3>
-      <div class="trade-with">${others.map(t => `<button class="tw-btn" type="button" data-roster="${t.rosterId}">
-        <span class="tw-name">${esc(t.name)}</span>${t.name !== t.manager ? `<span class="tw-manager">${esc(t.manager)}</span>` : ""}</button>`).join("")}</div>`;
+      </table></div></div>
+      <aside class="mt-side">
+        <section class="mt-card"><h3 class="rr-label">Power rank</h3><div class="rr-team">${teamFace(me, "sm")}<div><p class="rr-big">#${mineEv.power} <span>of ${n}</span></p><p class="rr-text">Team score ${fmt(mineEv.score)}${wl}</p></div></div></section>
+        ${needs.length || strong.length ? `<section class="mt-card"><h3 class="rr-label">Needs and strengths</h3>${needs.length ? `<p class="rr-text">Needs <b>${needs.join(", ")}</b></p>` : ""}${strong.length ? `<p class="rr-text">Strong at <b>${strong.join(", ")}</b></p>` : ""}<p class="rr-sub">${EDIT_POS.map(pos => `${pos} ${ordinal(mineEv.place[pos])}`).join(" · ")}</p></section>` : ""}
+        ${hot.length ? `<section class="mt-card"><h3 class="rr-label">Hot lately <span class="rr-when">last 3 games</span></h3><ul class="rr-list">${hot.map(x => `<li><span class="rr-mv up">${fp(x.a)}</span>${nameLink(x.p.sleeperId, x.p.name, "rr-name")}<span class="rr-sub">${esc(posLabel(x.p))}</span></li>`).join("")}</ul></section>` : ""}
+        <section class="mt-card"><h3 class="rr-label">Trade with</h3>
+        <div class="trade-with">${others.map(t => `<button class="tw-btn" type="button" data-roster="${t.rosterId}">
+          <span class="tw-name">${esc(t.name)}</span>${t.name !== t.manager ? `<span class="tw-manager">${esc(t.manager)}</span>` : ""}</button>`).join("")}</div></section>
+      </aside></div>`;
   }
   $("myteam-body").addEventListener("click", e => {
     const ot = e.target.closest("[data-open-team]");
@@ -6592,7 +6653,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <span class="pr-strength"><span class="pr-score">${fmt(x.score)}</span><span class="pr-bar"><span style="width:${(100 * x.score / topScore).toFixed(1)}%"></span></span></span>
           <span class="pr-pos"><span class="pr-pos-item"><span class="pr-pos-label">Best</span><span class="pos ${x.best[0]}">${x.best[0]}</span><span class="pr-place">${ordinal(x.best[1])}</span></span>
             <span class="pr-pos-item"><span class="pr-pos-label">Weakest</span><span class="pos ${x.worst[0]}">${x.worst[0]}</span><span class="pr-place">${ordinal(x.worst[1])}</span></span></span>
-          <span class="pr-stars">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span>
+          <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${stars.map(p => esc(p.name.split(" ").slice(-1)[0])).join(" · ")}</span></span>
           <span class="pr-caret" aria-hidden="true"></span>
         </div>
         ${open ? `<div class="pr-detail">${teamExpand(x, ev, d)}</div>` : ""}
@@ -6932,6 +6993,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     renderFA();
   });
   $("fa-search").addEventListener("input", e => { faQuery = e.target.value.trim().toLowerCase(); renderFA(); });
+  // Free agents: this week's opponent with the matchup verdict dot
+  function faWeek(p) {
+    const ng = p.team ? nextGame(p.team) : null, wk = currentWeek();
+    if (!ng) return `<span class="muted">–</span>`;
+    if (wk && ng.week > wk) return `<span class="muted">Bye</span>`;
+    const D = (defenseVsPos() || {})[p.pos], x = D && D[ng.opp];
+    return `<span class="fa-opp" title="${x ? esc(VERDICT[x.grade]) : ""}"><span class="sc-dot ${x ? x.grade : ""}"></span>${teamLogo(ng.opp, "xs")}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</span>`;
+  }
   function renderFA() {
     const d = activeData();
     if (!d) { $("fa-body").innerHTML = ""; return; }
@@ -6945,8 +7014,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>${ownPill("fa")}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
+      <td class="fa-l3">${(() => { const g = recentGames(p.sleeperId, p.pos, 3); return g.length ? fp(avgPts(g)) : `<span class="muted">–</span>`; })()}</td>
+      <td class="fa-wk">${faWeek(p)}</td>
       <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td></tr>`).join("")
-      : `<tr><td class="empty" colspan="4">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
+      : `<tr><td class="empty" colspan="6">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
     $("fa-count").textContent = `${list.length} ranked free agent${list.length === 1 ? "" : "s"}`;
   }
 
@@ -7263,6 +7334,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="pm-head tm" style="${teamStyle(info.team)}">
         ${closeBtn}
         ${prevName ? `<button class="pm-back" type="button" data-pm-back>← ${esc(prevName)}</button>` : ""}
+        <div class="pm-top"><div class="pm-left">
         <div class="pm-id">
           ${face(sid, info.name, "xl", false)}
           <div class="pm-id-text">
@@ -7270,7 +7342,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <div class="pp-meta">${pos ? `<span class="pos ${esc(pos)}">${esc(pos)}</span>` : ""}${info.team ? teamLogo(info.team, "sm") : ""}<span>${esc(info.team && teamMeta(info.team) ? teamMeta(info.team).nick + " · " : "")}${meta.map(esc).join(" · ")}</span></div>
             ${LG.active ? `<div class="pm-owner">${ownPill(own)}</div>` : ""}
           </div>
-          ${loaded ? headerWeek(info) : ""}
         </div>
         <div class="pm-stats">
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
@@ -7284,6 +7355,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <button class="btn" type="button" data-pm-compare aria-pressed="${PP.picking}">${PP.compare ? "Compare: change" : "Compare player"}</button>
           ${findHint ? `<span class="pp-hint">${esc(findHint)}</span>` : ""}
         </div>
+        </div>${loaded && info.team ? `<div class="pm-right">${thisWeekCard(info, nextGame(info.team), true)}</div>` : ""}</div>
         ${PP.picking ? comparePicker() : ""}
         <div class="chips pp-tabs" role="tablist" aria-label="Player sections">
           ${tabsList.map(([k, label]) => `<button class="chip-btn" type="button" role="tab" data-pp-tab="${k}" aria-pressed="${PP.tab === k}">${label}</button>`).join("")}
@@ -7361,9 +7433,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (cur && cur.games.length) PP.charts.push({ type: "bar", season: STATS_SEASONS[0], games: cur.games, pos, compact: true });
     const r3 = avgPts(last3), r5 = avgPts(last5);
     // Rank, value, PPG and owner live in the header; the overview leads with this week, then the season
+    const side = [lineupContext(info, own), ng ? nextWeeksLine(info, ng) : "", ng ? keyReportsLine(info, ng) : "", rankMoves(info)].filter(Boolean).join("");
     return `
-      ${thisWeekCard(info, ng)}
-      ${lineupContext(info, own)}
+      <div class="ov-week-mobile">${thisWeekCard(info, ng, true)}</div>
+      <div class="ov-cols"><div class="ov-main">
       <h3 class="section-label">${STATS_SEASONS[0]} season</h3>
       <div class="ov-grid">
         ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"} · ${esc(activeData() ? "league scoring" : "site scoring")}` : "No games yet")}
@@ -7375,10 +7448,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
       ${p && p.projPPG != null ? `<p class="pp-glance">SPAM projection: <b>${fp(p.projPPG)}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
-      ${cur && cur.games.length ? `<h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><div class="chart-box" data-chart="0"></div>` : ""}`;
+      ${cur && cur.games.length ? `<h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><div class="chart-box" data-chart="0"></div>` : ""}
+      </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
+  }
+  // Last few committed ranking changes for this player (newest first)
+  function rankMoves(info) {
+    if (!info.p) return "";
+    const h = historyOf(info.sid).filter(x => x.rank != null);
+    if (h.length < 2) return "";
+    const rows = [];
+    for (let i = h.length - 1; i > 0 && rows.length < 3; i--) {
+      const a = h[i - 1], b = h[i]; if (a.rank === b.rank && a.value === b.value) continue;
+      const d = a.rank - b.rank;
+      rows.push(`<span class="tw-nx">${esc(new Date(b.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }))} <b>#${b.rank}</b>${d ? `<span class="rr-mv ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>` : ""} <i>${fmt(b.value)}</i></span>`);
+    }
+    return rows.length ? `<div class="tw-line"><span class="tw-label">Ranking moves</span>${rows.join("")}<button class="btn link inline" type="button" data-pp-tab="history">History</button></div>` : "";
   }
   // This week: opponent, kickoff, lines, the opponent's defense vs his position and a matchup grade
-  function thisWeekCard(info, ng) {
+  function thisWeekCard(info, ng, inHeader = false) {
     if (!info.team) return "";
     const wk = currentWeek();
     if (!ng) return `<div class="tw-card"><p class="tw-none">No games left on ${esc(info.team)}'s schedule.</p></div>`;
@@ -7395,7 +7482,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const defRow = dv0 && dv0.epaRank ? `<div class="tw-def"><span class="tw-label">${esc(ng.opp)} defense vs ${info.pos === "RB" ? "the run" : "the pass"}</span>
         ${rankChip(`EPA/${run}`, dv0.epaRank, dv0.n)}${rankChip("Success", dv0.succRank, dv0.n)}${rankChip("Explosive", dv0.explRank, dv0.n)}<span class="tw-sub">rank of ${dv0.n} · 1 = softest</span></div>` : "";
     const mt = teamMeta(info.team), mo = teamMeta(ng.opp);
-    return `<div class="tw-card${grade ? " " + grade : ""}" style="${teamStyle(info.team).replace(/--tc-/g, "--ta-")};${teamStyle(ng.opp).replace(/--tc-/g, "--tb-")}">
+    return `<div class="tw-card${grade ? " " + grade : ""}${inHeader ? " in-head" : ""}" style="${teamStyle(info.team).replace(/--tc-/g, "--ta-")};${teamStyle(ng.opp).replace(/--tc-/g, "--tb-")}">
       <div class="tw-head">
         <span class="tw-eyebrow">${bye ? `Week ${wk} · Bye` : `This week · Week ${ng.week}`}</span>
         ${gradeText ? `<span class="tw-grade">${gradeText}</span>` : ""}
@@ -7410,8 +7497,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         ${tile(`Pts allowed to ${P}`, dv0 ? fp(dv0.ppg) : "–", dv0 ? `per game · ${dv0.g} game${dv0.g === 1 ? "" : "s"}${dv0.g < 5 ? " · small sample" : ""}` : "")}
       </div>
       ${defRow}
-      ${nextWeeksLine(info, ng)}
-      ${keyReportsLine(info, ng)}
+      ${inHeader ? "" : nextWeeksLine(info, ng) + keyReportsLine(info, ng)}
     </div>`;
   }
   const VERDICT = { good: "Favorable matchup", neutral: "Neutral matchup", tough: "Tough matchup" };
@@ -7451,16 +7537,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!key.length) return "";
     return `<div class="tw-line"><span class="tw-label">Practice notes</span>${key.map(r =>
       `<span class="tw-nx">${teamLogo(r.team, "xs")}${esc(r.name)} <i>${esc(r.pos)}</i> ${stBadge(r.status || r.practice, r.status || r.practice)}</span>`).join("")}<button class="btn link inline" type="button" data-pp-tab="practice">Practice report</button></div>`;
-  }
-  // Compact matchup summary for the modal header (fills the space right of the name)
-  function headerWeek(info) {
-    const ng = info.team ? nextGame(info.team) : null; if (!ng) return "";
-    const wk = currentWeek(), bye = wk && ng.week > wk, D = (defenseVsPos() || {})[info.pos], x = !bye && D && D[ng.opp];
-    const lines = [ng.spread != null ? `${esc(info.team)} ${ng.spread === 0 ? "PK" : (ng.spread > 0 ? "+" : "−") + Math.abs(ng.spread)}` : "", ng.total != null ? `O/U ${fp(ng.total)}` : ""].filter(Boolean).join(" · ");
-    return `<div class="pm-week${x ? " " + x.grade : ""}">
-      <div class="pm-week-top"><span class="tw-eyebrow">${bye ? `Week ${wk} bye · next` : `Week ${ng.week}`}</span>${teamLogo(info.team, "sm")}<span class="pm-at">${ng.home ? "vs" : "@"}</span>${teamLogo(ng.opp, "sm")}<b>${esc(ng.opp)}</b><span class="pm-week-sub">${esc(kickoffText(ng.date, ng.time))}</span></div>
-      <div class="pm-week-tags">${x ? `<span class="tw-grade">${VERDICT[x.grade]}</span>` : ""}${lines ? `<span class="pm-week-sub">${lines}</span>` : ""}${statusChip(info)}</div>
-    </div>`;
   }
   // A defense rank (1 = softest): the number with a short bar, tinted by third
   const gradeOf = (r, n) => (r <= Math.round(n / 3) ? "good" : r > n - Math.round(n / 3) ? "tough" : "neutral");
