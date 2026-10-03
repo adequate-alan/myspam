@@ -8,7 +8,8 @@ For each QB/RB/WR/TE with a Sleeper ID, every regular-season game:
 Fantasy points are calculated in the browser, so league scoring can be applied.
 
 Also each team's schedule (opponent, home/away, date, score) for bye weeks and
-upcoming opponents.
+upcoming opponents, plus the betting context nflverse carries for each game:
+kickoff time (ET), the team's spread (negative = favored), game total, roof and stadium.
 
 Sources: nflverse player stats (weekly) and nflverse schedules, matched to Sleeper
 IDs with the DynastyProcess player ID table.
@@ -49,6 +50,19 @@ def sleeper_map(src=IDS_URL):
     return dict(zip(d.gsis_id, d.sleeper_id.astype("int64").astype(str)))
 
 
+def num(x):
+    return None if pd.isna(x) else float(x)
+
+
+def text(x):
+    return None if pd.isna(x) else str(x)
+
+
+# Schedule row: [week, opponent, home (1/0), date, points for, points against,
+#                kickoff ET "HH:MM", team spread (negative = favored), game total, roof, stadium]
+SCHEDULE_COLS = ["w", "opp", "home", "date", "pf", "pa", "time", "spread", "total", "roof", "stadium"]
+
+
 def schedule(games, season):
     g = games[(games.season == season) & (games.game_type == "REG")]
     out = {}
@@ -56,9 +70,15 @@ def schedule(games, season):
         a, h = team(r.away_team), team(r.home_team)
         sa = None if pd.isna(r.away_score) else int(r.away_score)
         sh = None if pd.isna(r.home_score) else int(r.home_score)
-        out.setdefault(a, []).append([int(r.week), h, 0, r.gameday, sa, sh])
-        out.setdefault(h, []).append([int(r.week), a, 1, r.gameday, sh, sa])
-    return {t: sorted(v) for t, v in sorted(out.items())}
+        line = num(getattr(r, "spread_line", None))   # nflverse: home team's expected margin
+        extra = [text(getattr(r, "gametime", None)), None, num(getattr(r, "total_line", None)),
+                 text(getattr(r, "roof", None)), text(getattr(r, "stadium", None))]
+        away, home = list(extra), list(extra)
+        if line is not None:
+            away[1], home[1] = line, -line
+        out.setdefault(a, []).append([int(r.week), h, 0, r.gameday, sa, sh] + away)
+        out.setdefault(h, []).append([int(r.week), a, 1, r.gameday, sh, sa] + home)
+    return {t: sorted(v, key=lambda x: x[0]) for t, v in sorted(out.items())}
 
 
 def build(season, ids, games, stats_src=STATS_URL):
@@ -84,6 +104,7 @@ def build(season, ids, games, stats_src=STATS_URL):
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),   # when this file was built (UTC)
         "cols": COLS,
         "players": players,
+        "schedule_cols": SCHEDULE_COLS,
         "schedule": schedule(games, season),
     }
 

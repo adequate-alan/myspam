@@ -65,7 +65,7 @@ Committing these as `tests/` would be a good first improvement.
 ```
 index.html                     the whole site (HTML + CSS + JS, ~8k lines) AND the rankings data
 data/rank_history.json         ranking history: {note, version: 2, players: {sleeper_id: [[ts, rank, posRank, tier, value, src]]}}; the browser writes src M, the scheduler S; existing P entries come from older code
-data/stats/<season>.json       weekly game stats + team schedules for player pages (2026, 2025, 2024)
+data/stats/<season>.json       weekly game stats + team schedules for player pages (2026, 2025, 2024); schedule rows also carry kickoff (ET), team spread, game total, roof, stadium (see `schedule_cols`)
 data/sleeper_players.json      Sleeper ID → [name, pos, team, gsis_id, birthdate]
 data/platform_ids.json         ESPN/Yahoo ID → Sleeper ID (for ESPN/Yahoo imports)
 data/curve_components.json     points-by-rank curve inputs used to re-score other formats
@@ -192,6 +192,9 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - **Sign out** sits at the right of the editor bar whenever this browser has a saved GitHub token (next to `@login`); it removes the token from the browser. Unpublished edits stay saved.
 - **Player modal:**
   - Overview, game log, stats, fantasy performance (charts), ranking history, compare.
+  - Overview order: identity → rank / value / PPG (header) → **This week** card → Start/sit line (league only) → season grid → season line → weekly chart.
+  - This week: opponent, home/away, kickoff, stadium + roof, spread, game total, implied team total (from nflverse `games.csv` via `build_stats.py`), the opponent's rank vs the position and fantasy points allowed per game (computed in the browser from the weekly logs, current scoring: `defenseVsPos`). Matchup grade Good / Neutral / Tough = thirds of a 60/40 blend of points allowed per game and per opportunity; it only tints a thin edge and its label. Bye weeks show "Week N · Bye". No player props (no keyless source) and no forecast weather yet (nflverse fills temp/wind only after games).
+  - Start/sit (league): his slot in his fantasy team's best lineup, "Every-week starter / Flex starter / Bench depth", next player up at the position, and Sleeper's own lineup status.
   - Photos come from `sleepercdn.com`, with an initials fallback.
   - Shows both the league position rank and the SPAM Board rank when they differ.
   - "Stats updated" line.
