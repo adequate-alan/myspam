@@ -1110,7 +1110,7 @@ body.editing #panel-rankings td.val { min-width: 330px; }
   align-items: center; gap: 3px 12px; padding: 9px 0;
 }
 .tc-pl > .face { grid-area: face; }
-.tc-pl > .tc-pl-name { grid-area: name; }
+.tc-pl > .pl-head { grid-area: name; }
 .tc-pl > .tc-pl-meta { grid-area: meta; }
 .tc-pl > .tc-pl-v { grid-area: val; }
 .tc-pl > .remove { grid-area: x; }
@@ -1522,6 +1522,25 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 .owner.mine { color: var(--gold); }
 .owner.fa { color: var(--cream); opacity: 0.75; }
 .owner.status { margin-left: 0; }
+/* Player identity, everywhere a player is listed:
+     line 1: player name (strongest) + NFL team (small muted abbreviation right beside it, .pl-team)
+     line 2: fantasy owner (smaller secondary text, .own-tag), never on the NFL team's line.
+   My team = warm gold, Free agent = muted green, other owners = muted. */
+.pl-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.pl-head > :first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-head .pl-team { margin-left: 0; flex: none; }
+.own-tag {
+  display: block; margin-top: 3px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 0.6rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.own-tag .own-by { font-weight: 500; margin-right: 4px; opacity: 0.8; }
+.own-tag.mine { color: var(--mine-accent); font-weight: 750; }
+.own-tag.fa { color: color-mix(in srgb, var(--rb) 60%, var(--muted)); }
+.own-tag.inline { display: inline; margin-top: 0; }
+.r-stack { display: flex; flex-direction: column; }
+.r-stack .pl-head > :first-child { font-weight: 680; }
+.tf-who { display: inline-flex; flex-direction: column; min-width: 0; }
+.pm-owner .own-tag { margin-top: 8px; font-size: 0.68rem; }
 .src-auto {
   display: inline-block; margin-left: 8px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px;
   font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); vertical-align: 2px;
@@ -2145,7 +2164,6 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tf-lead { display: flex; flex-direction: column; gap: 4px; margin: 0; }
 .tf-target { display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; }
 .tf-target b { color: var(--cream); }
-.tf-target .owner { margin-left: 4px; }
 .tf-persp { font-size: 0.82rem; color: var(--muted); }
 .tf-sort { display: inline-flex; align-items: center; gap: 8px; }
 .tf-size { flex: none; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -2154,7 +2172,6 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tf-verdict-big.you { color: var(--gold-bright); } .tf-verdict-big.them { color: var(--rose); }
 .tf-verdict-big.sm { font-size: 0.95rem; }
 .tf-diff { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.tf-own { color: var(--muted); } .tf-own.mine { color: var(--gold); }
 .tf-full { border-top: 1px solid var(--line-soft); padding-top: 10px; }
 .tf-full ul { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--ink-2); }
 .tf-full .tf-nums { border-top: 0; padding-top: 0; }
@@ -2327,7 +2344,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .team-table .role-inline { margin-left: 0; }
   .mt-table td.mt-val { width: auto; }
   .team-table .pl-name, #panel-myteam .pl-name, #panel-fa .pl-name { white-space: normal; }
-  #panel-fa .fa-status { display: none; }
   #panel-myteam .mt-table td, #panel-myteam .mt-table th, #panel-fa td, #panel-fa th { padding-inline: 6px; }
   #panel-myteam .mt-table td:first-child, #panel-myteam .mt-table th:first-child, #panel-fa td:first-child, #panel-fa th:first-child { padding-left: 14px; }
   #panel-myteam .mt-table td.slot { width: 40px; }
@@ -2499,7 +2515,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th><th scope="col" class="fa-status">Status</th></tr></thead>
+        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th></tr></thead>
         <tbody id="fa-body"></tbody>
       </table>
     </div>
@@ -3121,7 +3137,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T12:30Z";
+  const BUILD_ID = "2026-10-03T14:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3216,12 +3232,20 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <span class="num">${fmt(v)}</span></div>`;
   }
 
-  // Who owns a player in the active Sleeper league
-  function ownerTag(p) {
+  // NFL team: a muted abbreviation right beside the player's name
+  const nflTag = team => (team ? `<span class="pl-team" title="NFL team">${esc(team)}</span>` : "");
+  // Fantasy owner: a separate pill ("Owned by X" / "My team" / "Free agent"), never styled like an NFL team.
+  // o = a league team, or "fa"/null for a free agent. cls: "" (its own line under the name) or "inline" (inside a second line).
+  function ownPill(o, cls = "", nameOf = t => t.name) {
+    const c = "own-tag" + (cls ? " " + cls : "");
+    if (!o || o === "fa") return `<span class="${c} fa">Free agent</span>`;
+    if (o.mine) return `<span class="${c} mine">My team</span>`;
+    return `<span class="${c}" title="Fantasy team: ${esc(o.name)}"><span class="own-by">Owned by</span>${esc(nameOf(o))}</span>`;
+  }
+  // Who owns a player in the active league (rankings rows use the shorter manager name)
+  function ownerTag(p, cls = "") {
     if (!LG.active || !p.sleeperId) return "";
-    const o = LG.ownerOf.get(p.id);
-    if (!o) return `<span class="owner fa">FA</span>`;
-    return o.mine ? `<span class="owner mine">My Team</span>` : `<span class="owner">${esc(o.short)}</span>`;
+    return ownPill(LG.ownerOf.get(p.id), cls, t => t.short || t.name);
   }
   function ownerMatch(p) {
     if (!LG.active || LG.ownerFilter === "all") return true;
@@ -3368,7 +3392,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>⠿</button><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${numOf(p) <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${numOf(p) >= lastNum ? " disabled" : ""}>▼</button>` : ""}</td>`;
       out.push(`<tr class="player" data-id="${p.id}">${editCol}
         <td class="rk">${rk(p)}</td>
-        <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}${ownerTag(p)}</div></div></td>
+        <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
@@ -3430,7 +3454,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       list.innerHTML = current.length ? current.map((p, i) =>
         `<li><button type="button" data-id="${p.id}" class="${i === hl ? "hl" : ""}">
           ${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>
-          <span class="r-name">${esc(p.name)}${ownerTag(p)}</span>
+          <span class="r-name r-stack"><span class="pl-head"><span>${esc(p.name)}</span>${nflTag(p.team)}</span>${ownerTag(p)}</span>
           <span class="r-val">${fmt(tv(p))}</span></button></li>`).join("")
         : `<li class="empty" style="padding:10px">No match</li>`;
       list.hidden = false;
@@ -3501,8 +3525,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const tip = fe ? (fitView ? `${fe.why}. Market value ${fmt(tv(p))}.` : `Worth ${fmt(fe.tv)} to ${team}: ${fe.why}.`) : "";
       const cls = fe && fitView ? (fe.f < 0.9 ? " low" : fe.f > 1.0 ? " high" : "") : "";
       return `<li class="tc-pl">${face(p.sleeperId, p.name, "sm")}
-        ${nameLink(p.sleeperId, p.name, "tc-pl-name")}
-        <span class="tc-pl-meta"><span class="pos ${esc(p.pos)}">${esc(tcAdjusted() ? posLabel(p) : p.posRank)}</span>${TC3.on ? `<span class="tc-pl-dot" aria-hidden="true">·</span>${fromMenu(id, side)}` : ""}</span>
+        <span class="pl-head">${nameLink(p.sleeperId, p.name, "tc-pl-name")}${nflTag(p.team)}</span>
+        <span class="tc-pl-meta"><span class="pos ${esc(p.pos)}">${esc(tcAdjusted() ? posLabel(p) : p.posRank)}</span>${TC3.on ? `<span class="tc-pl-dot" aria-hidden="true">·</span>${fromMenu(id, side)}` : tcLeague() ? ownerTag(p, "inline") : ""}</span>
         <span class="tc-pl-v${cls}"${tip ? ` title="${esc(tip)}"` : ""}>${fmt(value)}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
     }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
@@ -6003,7 +6027,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? posLabel(e.p) : e.pos)}</span>` : "";
       return `<tr class="mt-row">
         <td class="slot">${esc(slot)}</td>
-        <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${e.team ? `<span class="pl-team">${esc(e.team)}</span>` : ""}</div></div></td>
+        <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflTag(e.team)}</div></div></td>
         <td class="pos-col">${badge}</td>
         <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
         <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
@@ -6258,7 +6282,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const line = e => {
       const role = x.role.get(e.p.id);
       return `<div class="tx-pl${role ? " start" : ""}">${face(e.sid, e.name, "sm")}
-        <div class="tx-pl-text">${nameLink(e.sid, e.name, "tx-name")}<span class="tx-sub">${esc(e.team || "FA")} · ${esc(posLabel(e.p))} · #${overallRank(e.p)}</span></div>
+        <div class="tx-pl-text">${nameLink(e.sid, e.name, "tx-name")}<span class="tx-sub">${esc([e.team, posLabel(e.p), "#" + overallRank(e.p)].filter(Boolean).join(" · "))}</span></div>
         <span class="tx-role${role ? "" : " bn"}">${esc(role || "BN")}</span><span class="tx-val">${fmt(dv(e.p))}</span></div>`;
     };
     const cols = EDIT_POS.map(pos => {
@@ -6432,7 +6456,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       : `<span class="th-verdict fair">${P.length}-team trade</span>`;
     const side = s => `<div class="th-side">
         <div class="th-team">${teamFace(s.team, "sm")}<div><b>${esc(s.team.name)}</b><span>receives</span></div></div>
-        <ul class="th-list">${s.items.map(x => `<li>${face(x.sid, x.e.name, "xs")}${EDIT_POS.includes(x.e.pos) ? nameLink(x.sid, x.e.name, "th-name") : `<span class="th-name">${esc(x.e.name)}</span>`}
+        <ul class="th-list">${s.items.map(x => `<li>${face(x.sid, x.e.name, "xs")}<span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.sid, x.e.name, "th-name") : `<span class="th-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span>
             <span class="pos ${esc(x.e.pos)}">${esc(x.posThen || (x.p ? posLabel(x.p) : x.e.pos || ""))}</span><span class="th-v">${x.p ? fmt(x.v) : "–"}</span></li>`).join("")}
           ${s.picks.map(pk => `<li class="th-pick"><span class="th-name">${esc(pickText(pk, P))}</span><span class="th-v">pick</span></li>`).join("")}
           ${s.faab ? `<li class="th-pick"><span class="th-name">$${s.faab} FAAB</span><span class="th-v"></span></li>` : ""}
@@ -6580,11 +6604,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("fa-sub").textContent = `${d.league.name} · sorted by SPAM ${leagueView() ? "league-adjusted" : "base"} values`;
     $("fa-body").innerHTML = list.length ? list.map(p => `<tr class="player">
       <td class="rk">${overallRank(p)}</td>
-      <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}</div></div></td>
+      <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>${ownPill("fa")}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
-      <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td>
-      <td class="fa-status"><span class="owner fa status">Free agent</span></td></tr>`).join("")
-      : `<tr><td class="empty" colspan="5">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
+      <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td></tr>`).join("")
+      : `<tr><td class="empty" colspan="4">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
     $("fa-count").textContent = `${list.length} ranked free agent${list.length === 1 ? "" : "s"}`;
   }
 
@@ -6826,7 +6849,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const p = info.p, pos = info.pos;
     const age = ageFrom(info.birth), own = ownerOfSid(sid);
     const cur = seasonLog(STATS_SEASONS[0], sid, pos), curT = cur ? totals(cur.games) : null;
-    const meta = [info.team || "Free agent", age != null ? `Age ${age}` : ""].filter(Boolean);
+    const meta = [info.team || "No NFL team", age != null ? `Age ${age}` : ""].filter(Boolean);
     const prevName = PP.trail.length ? playerInfo(PP.trail[PP.trail.length - 1]).name : "";
     const inTradeNow = p && inTrade(p.id);
     const findHint = !LG.active ? "Connect a league to find trades" : !p ? "Unranked players can't be valued yet" : own === "fa" ? "Free agent in your league" : "";
@@ -6841,6 +6864,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <div class="pm-id-text">
             <h2 class="pm-name" id="pm-name">${esc(info.name)}</h2>
             <div class="pp-meta">${pos ? `<span class="pos ${esc(pos)}">${esc(pos)}</span>` : ""}<span>${meta.map(esc).join(" · ")}</span></div>
+            ${LG.active ? `<div class="pm-owner">${ownPill(own)}</div>` : ""}
           </div>
         </div>
         <div class="pm-stats">
@@ -6848,7 +6872,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           ${stat("Position", p ? esc(posLabel(p)) : "–", p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "")}
           ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
           ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? `${curT.g} G · ${activeData() ? "league" : "site"} scoring` : "No games")}
-          ${LG.active ? stat("Owner", esc(own === "fa" ? "Free agent" : own.mine ? "You" : own.name), "") : ""}
         </div>
         <div class="pm-actions">
           <button class="btn primary" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
@@ -7156,13 +7179,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const down = near(pool.filter(x => diff(x) <= -8 && diff(x) >= -30 && gettable(x)), 6);
     const rows = list => list.map(x => {
       const d = diff(x), o = ownerOfSid(x.sleeperId);
-      return `<tr class="mt-row"><td><div class="pl-cell">${face(x.sleeperId, x.name, "sm")}<div class="pl-text">${nameLink(x.sleeperId, x.name)}${x.team ? `<span class="pl-team">${esc(x.team)}</span>` : ""}</div></div></td>
+      return `<tr class="mt-row"><td><div class="pl-cell">${face(x.sleeperId, x.name, "sm")}<div class="pl-text"><span class="pl-head">${nameLink(x.sleeperId, x.name)}${nflTag(x.team)}</span>${LG.active && o ? ownPill(o) : ""}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(x.pos)}">${esc(posLabel(x))}</span></td>
         <td class="mt-val">${fmt(dv(x))}</td><td class="tv-diff">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}%</td>
-        ${LG.active ? `<td>${o === "fa" ? `<span class="owner fa status">Free agent</span>` : o ? `<span class="owner status${o.mine ? " mine" : ""}">${esc(o.mine ? "My Team" : o.name)}</span>` : ""}</td>` : ""}</tr>`;
+</tr>`;
     }).join("");
     const table = (title, sub, list) => `<h3 class="section-label">${title}${sub ? `<span class="tier-sub">${sub}</span>` : ""}</h3>${list.length ? `<div class="table-scroll"><table class="mt-table tv-table">
-        <thead><tr><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th><th scope="col">Diff</th>${LG.active ? `<th scope="col">Owner</th>` : ""}</tr></thead>
+        <thead><tr><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Value</th><th scope="col">Diff</th></tr></thead>
         <tbody>${rows(list)}</tbody></table></div>` : `<p class="pp-note">None in range.</p>`}`;
     const canFind = LG.active && mineOwner && mineOwner !== "fa";
     return `
@@ -7207,7 +7230,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ["Pass yds", s => (s.t && s.t.pass_att ? s.t.pass_yd : null), v => fmt(v), true],
       ["Total TD", s => (s.t ? s.t.pass_td + s.t.rush_td + s.t.rec_td : null), v => v, true],
     ];
-    if (LG.active) rows.push(["Owner", s => (s.own === "fa" ? "Free agent" : s.own ? (s.own.mine ? "Your team" : s.own.name) : "–"), v => esc(v), null]);
+    if (LG.active) rows.push(["Owner", s => (s.own === "fa" ? "Free agent" : s.own ? (s.own.mine ? "My team" : "Owned by " + s.own.name) : "–"), v => esc(v), null]);
     const body = rows.map(([label, f, show, hiBetter]) => {
       const a = f(A), b = f(B);
       if (a == null && b == null) return "";
@@ -7655,7 +7678,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     list.innerHTML = hits.length ? hits.map(p => {
       const o = LG.ownerOf.get(p.id);
       return `<li><button type="button" data-tf-pick="${esc(p.sleeperId)}">${face(p.sleeperId, p.name, "sm", false)}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>
-        <span class="r-name">${esc(p.name)}<span class="owner${o && o.mine ? " mine" : !o ? " fa" : ""}">${esc(o ? (o.mine ? "Your team" : o.name) : "Free agent")}</span></span><span class="r-val">${fmt(dv(p))}</span></button></li>`;
+        <span class="r-name"><span class="pl-head"><span>${esc(p.name)}</span>${nflTag(p.team)}</span>${ownPill(o)}</span><span class="r-val">${fmt(dv(p))}</span></button></li>`;
     }).join("") : `<li class="empty" style="padding:10px">No match</li>`;
     list.hidden = false;
   }
@@ -7691,9 +7714,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
     const lead = $("tf-lead");
     if (!X) { lead.innerHTML = ""; body.innerHTML = `<p class="empty-note">${TF.src === "any" ? "Search for any player to find trades involving him." : "Pick a player."}</p>`; return; }
-    const ownerTxt = owner ? (owner.mine ? "Your team" : owner.name) : "Free agent";
-    const who = p => `${face(p.sleeperId, p.name, "sm")}<b>${nameLink(p.sleeperId, p.name)}</b> <span class="muted">${esc(posLabel(p))} · ${fmt(dv(p))}</span>`;
-    lead.innerHTML = `<span class="tf-target">${who(X)}${Y ? `<span class="tf-amp">+</span>${who(Y)}<span class="muted tf-pkgsum">= ${fmt(dv(X) + dv(Y))}</span>` : ""} <span class="owner status${owner && owner.mine ? " mine" : ""}">${esc(ownerTxt)}</span></span>`;
+    const who = p => `${face(p.sleeperId, p.name, "sm")}<span class="tf-who"><span class="pl-head"><b>${nameLink(p.sleeperId, p.name)}</b>${nflTag(p.team)}<span class="muted">${esc(posLabel(p))} · ${fmt(dv(p))}</span></span>${ownPill(owner)}</span>`;
+    lead.innerHTML = `<span class="tf-target">${who(X)}${Y ? `<span class="tf-amp">+</span>${who(Y)}<span class="muted tf-pkgsum">= ${fmt(dv(X) + dv(Y))}</span>` : ""}</span>`;
     if (!S) {
       body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent in ${esc(d.league.name)}. Pick a <b>From team</b> to see what trades would look like if a team owned him, or pick him up off waivers.</p>`;
       return;
@@ -7716,11 +7738,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
     const you = S.mine, sLabel = you ? "You" : S.name;
     lead.innerHTML += `<span class="tf-persp">${mode === "give" ? `Trades ${esc(you ? "you" : S.name)} could make with ${pkg ? "the pair" : "him"}` : `Ways ${esc(you ? "you" : S.name)} could get ${pkg ? "both" : "him"} from ${esc(owner.name)}`} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} within ${TF.fair ? "the fair range" : TF.gap + "%"}</span>`;
-    const ownerTag = t => `<span class="tf-own${t.mine ? " mine" : ""}">${esc(t.mine ? "Your team" : t.name)}</span>`;
     const prow = (p, from, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>
-      <span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag">${ownerTag(from)}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+      <span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag">${ownPill(from, "inline")}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     // compact row: photo · name · value, then "RB2 · starts at RB1"
-    const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+    const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     const cards = ideas.map((it, i) => {
       const sAhead = it.m.a >= it.m.b, v = finderVerdict(it.more, sAhead, S, it.team);
       const full = TF.openFull.has(i), fw = fullWhy(it);

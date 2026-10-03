@@ -174,6 +174,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 
 ## 10. Features and the decisions behind them
 
+- **Player identity layout (every screen that lists players):** line 1 is the player name (strongest) with the NFL team as a small muted abbreviation right beside it (`nflTag`, `.pl-team`). Line 2 is the fantasy owner as smaller secondary text (`ownPill` / `ownerTag`, `.own-tag`): "Owned by X" muted, **My team** in warm gold (`--mine-accent`), **Free agent** in muted green. Never put the owner on the NFL team's line. A player with no NFL team shows no team (not "FA"), so "Free agent" always means the fantasy league. Screens where the owner is already obvious (My Team, a team's roster board, a Trade History side) show no owner line.
 - **Rankings tab:**
   - All / QB / RB / WR / TE.
   - Board view toggle: SPAM Board vs League-adjusted.
