@@ -3457,7 +3457,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T08:00Z";
+  const BUILD_ID = "2026-10-04T09:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7253,8 +7253,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* Player modal: opens over whatever you're doing (rankings, a trade in progress, a team page)
      and never changes the page underneath. Click any player name or photo to open or switch. */
   const PP = { sid: null, tab: "overview", perf: String(STATS_SEASONS[0]), season: STATS_SEASONS[0], trail: [], compare: null, picking: false, pickQuery: "", opener: null, charts: [] };
-  const PP_TABS = [["overview", "Overview"], ["log", "Game log"], ["schedule", "Schedule"], ["stats", "Stats"], ["perf", "Fantasy performance"],
-                   ["history", "Ranking history"], ["value", "Trade value"], ["practice", "Practice report"]];
+  const PP_TABS = [["overview", "Overview"], ["log", "Game Log"], ["schedule", "Schedule"], ["stats", "Stats"], ["perf", "Fantasy Performance"],
+                   ["history", "Ranking History"], ["value", "Trade Value"], ["practice", "Practice Report"]];
   const modal = $("player-modal");
   const modalOpen = () => modal.open;
 

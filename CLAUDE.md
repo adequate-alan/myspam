@@ -191,7 +191,8 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Empty tiers last only until you save.
   - **Sign out** sits at the right of the editor bar whenever this browser has a saved GitHub token (next to `@login`); it removes the token from the browser. Unpublished edits stay saved.
 - **Player modal:**
-  - Tabs: Overview, Game log, Schedule, Stats, Fantasy performance, Ranking history, Trade value, Practice report (last: useful but secondary), Compare.
+  - Tabs (title case, Alan's call): Overview, Game Log, Schedule, Stats, Fantasy Performance, Ranking History, Trade Value, Practice Report (last: useful but secondary), Compare.
+  - Desktop layout (≥1100px modal): two-column top (identity, numbers, actions | full This week card) and two-column Overview (season, production, chart | This week context: start/sit, next weeks, practice notes, ranking moves). Narrower screens put the This week card at the top of the Overview instead.
   - Header: a compact matchup strip right of the name (week, opponent, kickoff, verdict, spread/total, status); hidden on phones.
   - Game log: every week of the season: result (W/L score), points, weekly position finish (`weeklyFinish`, current scoring), bye week, and upcoming games greyed with kickoff.
   - Schedule: every remaining week with a Matchup verdict and the opponent's ranks vs his position (points allowed, EPA, success, explosive; 1 = softest), a key line above the table and hover explanations on each column.
