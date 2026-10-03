@@ -1894,6 +1894,102 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
 .fa-opp .sc-dot { margin-right: 4px; }
 @media (max-width: 760px) { #fa-wrap .fa-wk { display: none; } }
+/* League hub: eyebrow, filters, transactions, matchups, waiver wire */
+.lg-eyebrow { display: block; margin-bottom: 4px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.tx-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 14px; }
+.tx-filters .method-note { margin: 0; flex-basis: 100%; }
+.tx-selects { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.st-mgr { color: var(--muted); font-size: 0.84rem; white-space: nowrap; }
+.st-table .bm small { font-size: 0.66rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.mv-card { padding: 0; overflow: hidden; }
+.mv-card .th-head { margin: 0; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); align-items: center; }
+.mv-tags { display: inline-flex; gap: 6px; }
+.mv-tag { padding: 3px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-2); }
+.mv-tag.waiver { color: var(--wr); border-color: color-mix(in srgb, var(--wr) 45%, transparent); background: color-mix(in srgb, var(--wr) 8%, transparent); }
+.mv-tag.free_agent { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 45%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
+.mv-tag.bidders { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, transparent); }
+.mv-body { display: grid; grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr) auto minmax(0, 1.2fr); align-items: center; gap: 12px 18px; padding: 10px 14px 12px; }
+.mv-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mv-team b { display: block; font-size: 0.9rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mv-team span { font-size: 0.74rem; color: var(--muted); }
+.mv-col { min-width: 0; }
+.mv-col p { margin: 2px 0 0; }
+.mv-label { display: block; margin-bottom: 4px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.mv-col.add .mv-label { color: var(--rb); }
+.mv-col.drop .mv-label { color: var(--st-dnp, var(--accent-primary)); }
+.mv-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mv-col li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mv-txt { display: flex; flex-direction: column; min-width: 0; }
+.mv-name { font-weight: 650; font-size: 0.86rem; color: var(--cream); }
+.mv-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--muted); }
+.mv-v { font-variant-numeric: tabular-nums; }
+.mv-bid { display: flex; flex-direction: column; align-items: center; line-height: 1; padding: 0 6px; }
+.mv-bid b { font-size: 1.5rem; font-weight: 850; color: var(--heading); font-variant-numeric: tabular-nums; }
+.mv-bid span { margin-top: 3px; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); }
+.mx-list { display: flex; flex-direction: column; gap: 10px; }
+.mx-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); cursor: pointer; outline-offset: 2px; }
+.mx-card:hover { border-color: var(--line); }
+.mx-card.open { border-color: var(--line); }
+.mx-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 54px 84px minmax(0, 1fr) 16px; align-items: center; gap: 10px; padding: 12px 16px 6px; }
+.mx-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mx-team.B { flex-direction: row-reverse; text-align: right; }
+.mx-tname { min-width: 0; display: flex; flex-direction: column; }
+.mx-tname b { font-size: 0.92rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mx-tname span { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+.mx-team.mine .mx-tname b { color: var(--mine-accent); }
+.mx-team.win .mx-tname b::after { content: " ✓"; color: var(--rb); }
+.mx-team.B.win .mx-tname b::after { content: ""; }
+.mx-team.B.win .mx-tname b::before { content: "✓ "; color: var(--rb); }
+.mx-score { font-size: 1.45rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink-2); text-align: center; }
+.mx-score.win { color: var(--heading); }
+.mx-card.upcoming .mx-score { color: var(--muted); font-weight: 600; }
+.mx-mid { text-align: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mx-live { color: var(--rb); }
+.mx-card .pr-caret { justify-self: end; }
+.mx-card.open .pr-caret { transform: rotate(-135deg) translate(-2px, -1px); border-color: var(--gold); }
+.mx-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 16px 10px; font-size: 0.74rem; color: var(--muted); }
+.mx-tops { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
+.mx-tops.b { justify-content: flex-end; text-align: right; }
+.mx-tops b { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mx-lbl { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.mx-left { color: var(--gold); }
+.mx-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 4px 16px 14px; border-top: 1px solid var(--line-soft); cursor: default; }
+.mx-lineup h4 { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; font-size: 0.82rem; color: var(--cream); }
+.mx-lineup h4 span { margin-left: auto; font-variant-numeric: tabular-nums; }
+.mx-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.mx-table td { padding: 5px 6px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.mx-slot { width: 44px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); }
+.mx-pl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mx-name { font-weight: 600; color: var(--cream); }
+.mx-game { white-space: nowrap; color: var(--ink-2); }
+.mx-game small { display: block; font-size: 0.66rem; color: var(--muted); }
+.mx-game small.live { color: var(--rb); }
+.mx-pts { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--heading); }
+.mx-table tr.upcoming .mx-pts, .mx-table tr.bye .mx-pts { color: var(--muted); font-weight: 500; }
+.fa-avail { font-size: 0.7rem; color: var(--muted); }
+.fa-avail.waivers { color: var(--mine-accent); }
+.fa-fit-t { font-size: 0.78rem; color: var(--ink-2); white-space: nowrap; }
+.fa-fit-t.start { color: var(--rb); font-weight: 600; }
+.fa-fit-t.deep { color: var(--muted); }
+#fa-wrap .controls { flex-wrap: wrap; gap: 10px; }
+@media (max-width: 900px) {
+  .mv-body { grid-template-columns: 1fr auto; }
+  .mv-team { grid-column: 1 / -1; }
+  .mv-col.drop { grid-column: 1 / -1; }
+  .mx-row { grid-template-columns: minmax(0, 1fr) 62px 40px 62px minmax(0, 1fr) 12px; gap: 6px; padding: 10px 10px 6px; }
+  .mx-score { font-size: 1.1rem; }
+  .mx-team .face { display: none; }
+  .mx-detail { grid-template-columns: 1fr; padding: 4px 10px 12px; }
+  .mx-table td:nth-child(3) { display: none; }
+  .mx-table td { padding: 5px 4px; }
+  .mx-slot { width: 34px; }
+  .mx-pl .face { display: none; }
+  .mx-pl .pl-head { min-width: 0; }
+  .mx-game { white-space: normal; font-size: 0.74rem; }
+  .mx-foot { padding: 0 10px 10px; }
+  .st-mgr { display: none; }
+  #fa-wrap .fa-fit { display: none; }
+}
 .pr-head {
   white-space: nowrap; padding: 0 18px 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
 }
@@ -2569,7 +2665,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .tx-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .tx-sum small { white-space: normal; }
   .th-sides { grid-template-columns: 1fr; }
-  .lg-subtabs { gap: 18px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .lg-subtabs { gap: 2px 16px; flex-wrap: wrap; overflow: visible; }
   .lg-subtabs .chip-btn { white-space: nowrap; flex: none; }
   .th-card { padding: 12px 14px; }
   .pr-rank { grid-area: rank; align-self: start; padding-top: 6px; }
@@ -2771,15 +2867,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   <section id="panel-league" role="tabpanel" aria-labelledby="tab-league" hidden>
     <div id="league-body"></div>
-    <!-- League → Free Agents (shown by renderLeague when that sub-tab is open) -->
+    <!-- League → Waiver Wire (shown by renderLeague when that sub-tab is open) -->
     <div id="fa-wrap" hidden>
     <div class="controls">
-      <div class="chips" id="fa-chips" role="group" aria-label="Filter free agents by position"></div>
-      <input class="search" id="fa-search" type="search" placeholder="Search free agents" aria-label="Search free agents">
+      <div class="chips" id="fa-chips" role="group" aria-label="Filter available players by position"></div>
+      <input class="search" id="fa-search" type="search" placeholder="Search available players" aria-label="Search available players">
+      <select class="select" id="fa-sort" aria-label="Sort available players">
+        <option value="rank">Sort: SPAM rank</option><option value="form">Sort: recent production</option><option value="matchup">Sort: this week's matchup</option>
+      </select>
     </div>
     <div class="table-scroll">
-      <table>
-        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col" class="fa-wk">This week</th><th scope="col">Value</th></tr></thead>
+      <table class="fa-table">
+        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col" class="fa-wk">This week</th><th scope="col" class="fa-fit" title="Where he'd fit on your roster in this league's lineup. SPAM value stays the main guide.">For your team</th><th scope="col">Value</th></tr></thead>
         <tbody id="fa-body"></tbody>
       </table>
     </div>
@@ -3493,7 +3592,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T16:00Z";
+  const BUILD_ID = "2026-10-04T18:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5400,8 +5499,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const trimLeague = l => ({
     league_id: l.league_id, name: l.name, season: l.season, status: l.status, total_rosters: l.total_rosters,
     roster_positions: l.roster_positions || [], scoring_settings: l.scoring_settings || {},
-    settings: (({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, best_ball, leg }) =>
-      ({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, best_ball, leg }))(l.settings || {}),
+    settings: (({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg }) =>
+      ({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg }))(l.settings || {}),
     draft_id: l.draft_id || null, previous_league_id: l.previous_league_id || null
   });
   const summary = l => ({ id: l.league_id, name: l.name, season: l.season, status: l.status, format: formatParts(l).join(" · ") });
@@ -6737,7 +6836,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- League tab: Power Rankings (expandable teams), Trade History, Standings ----------
      Clicking a team opens its roster board right under its row (one at a time, unless "Keep teams open"
      is on or Shift/Cmd/Ctrl is held). Nothing navigates away from the list. */
-  const LT = { sub: window.spmWantFA ? "fa" : "power", open: new Set(), keep: false, tradesFull: new Set(), loading: null, error: {} };   // loading/error are per league id
+  const LT = { sub: window.spmWantFA ? "waivers" : "power", open: new Set(), keep: false, tradesFull: new Set(), loading: null, error: {},   // loading/error are per league id
+    txType: "all", txWeek: "all", txTeam: "all",                       // Transactions filters
+    mx: {}, mxLoading: null, mxError: {}, mWeek: null, mOpen: new Set(), nfl: null };   // Matchups: cache per league|week (memory only)
+  // League hub sub-tabs. Old names still open the right one (#fa links, "trades" from earlier versions).
+  const LEAGUE_SUBS = [["power", "Power Rankings"], ["standings", "Standings"], ["matchups", "Matchups"], ["tx", "Transactions"], ["waivers", "Waiver Wire"]];
+  const LSUB_ALIAS = { fa: "waivers", trades: "tx" };
   function openTeam(rosterId) {   // My Team's "Position breakdown" and others: open that team in place
     LT.sub = "power"; LT.open = new Set([String(rosterId)]);
     showTab("league"); history.replaceState(null, "", "#league");
@@ -6747,29 +6851,37 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   function renderLeague() {
     const box = $("league-body"), d = activeData();
-    if (!d) { box.innerHTML = ""; return; }
-    const subs = [["power", "Power Rankings"], ["trades", "Trade History"], ["standings", "Standings"], ["fa", "Free Agents"]];
-    const faOn = LT.sub === "fa";
+    if (!d) { box.innerHTML = ""; $("fa-wrap").hidden = true; return; }
+    LT.sub = LSUB_ALIAS[LT.sub] || LT.sub;
+    if (!LEAGUE_SUBS.some(([k]) => k === LT.sub)) LT.sub = "power";
+    const faOn = LT.sub === "waivers";
     $("fa-wrap").hidden = !faOn;
     let body;
     try {
       const ev = evaluateTeams();
-      body = faOn ? "" : LT.sub === "trades" ? tradeHistoryHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : powerHtml(ev, d);
+      body = faOn ? "" : LT.sub === "tx" ? txHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : LT.sub === "matchups" ? matchupsHtml(ev, d) : powerHtml(ev, d);
     } catch (err) {   // never leave the old view up silently
       console.error(err);
       body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
     }
+    const title = LEAGUE_SUBS.find(([k]) => k === LT.sub)[1];
+    const sub = faOn ? `Available in this league · sorted by ${leagueView() ? "league-adjusted" : "base"} SPAM value`
+      : LT.sub === "tx" ? "Trades, waiver claims, adds and drops"
+      : LT.sub === "matchups" ? "This league's weekly matchups, scored by Sleeper"
+      : `${leagueView() ? "League-adjusted" : "Base"} SPAM values`;
     box.innerHTML = `
       <div class="panel-head lg-head">
         <div>
-          <h2 class="panel-title">${faOn ? "Free Agents" : LT.sub === "trades" ? "Trade History" : LT.sub === "standings" ? "Standings" : "Power Rankings"}</h2>
-          <p class="panel-sub">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))} · ${faOn ? `available in this league, sorted by SPAM ${leagueView() ? "league-adjusted" : "base"} values` : `${leagueView() ? "League-adjusted" : "Base"} SPAM values`}</p>
+          <span class="lg-eyebrow">${esc(d.league.name)} · ${esc(formatParts(d.league).join(" · "))}</span>
+          <h2 class="panel-title">${esc(title)}</h2>
+          <p class="panel-sub">${esc(sub)}</p>
         </div>
       </div>
-      <div class="lg-subtabs chips" role="tablist" aria-label="League views">${subs.map(([k, l]) =>
+      <div class="lg-subtabs chips" role="tablist" aria-label="League views">${LEAGUE_SUBS.map(([k, l]) =>
         `<button class="chip-btn" type="button" role="tab" data-lsub="${k}" aria-selected="${LT.sub === k}" aria-pressed="${LT.sub === k}">${l}</button>`).join("")}</div>
       ${body}`;
-    if (LT.sub === "trades") ensureTrades();
+    if (LT.sub === "tx" || faOn) ensureTrades();
+    if (LT.sub === "matchups") ensureMatchups();
     if (faOn) renderFA();
   }
 
@@ -6857,17 +6969,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const vs = r => {
       const dlt = r.recRank - r.x.power;
       if (!played || !dlt) return `<span class="muted">–</span>`;
-      return dlt > 0 ? `<span class="bm bm-up" title="Roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">▲${dlt}</span>`
-                     : `<span class="bm bm-down" title="Record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">▼${-dlt}</span>`;
+      return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, SPAM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">▲${dlt} <small>roster ahead</small></span>`
+                     : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, SPAM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">▼${-dlt} <small>record ahead</small></span>`;
     };
-    return `<p class="method-note">Actual standings next to SPAM power rank. ▲ means the roster is stronger than the record so far; ▼ means the record is ahead of the roster.${played ? "" : " No games are in the books yet."}</p>
+    return `<p class="method-note">Actual standings next to SPAM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."}</p>
       <div class="table-scroll"><table class="st-table">
-        <thead><tr><th scope="col">Rk</th><th scope="col">Team</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">Power rank</th><th scope="col">vs record</th></tr></thead>
+        <thead><tr><th scope="col">Rk</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">SPAM Power Rank</th><th scope="col">Difference</th></tr></thead>
         <tbody>${rows.map(r => `<tr class="st-row${r.t.mine ? " mine" : ""}" data-standing-team="${r.t.rosterId}" tabindex="0">
           <td class="rk">${r.recRank}</td>
           <td><div class="pl-cell">${teamFace(r.t, "sm")}<div class="pl-text"><span class="pl-name">${esc(r.t.name)}</span>${r.t.mine ? `<span class="owner mine">You</span>` : ""}</div></div></td>
+          <td class="st-mgr">${esc(r.t.manager)}</td>
           <td class="num">${esc(recordText(r.st) || "0-0")}</td><td class="num">${r.st.pf ? pts(r.st.pf) : "–"}</td><td class="num">${r.st.pa ? pts(r.st.pa) : "–"}</td>
-          <td class="num">${esc(streakText(r.st.streak))}</td><td class="num"><b>${r.x.power}</b></td><td class="num">${vs(r)}</td></tr>`).join("")}</tbody>
+          <td class="num">${esc(streakText(r.st.streak))}</td><td class="num"><b>${ordinal(r.x.power)}</b></td><td class="num">${vs(r)}</td></tr>`).join("")}</tbody>
       </table></div>`;
   }
 
@@ -6897,39 +7010,55 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // one Sleeper call with a time limit, so a request that never answers can't leave the view stuck
   const slGetTimed = (path, ms = 12000) => Promise.race([slGet(path), new Promise((_, rej) => setTimeout(() => rej(new Error("Sleeper took too long to answer")), ms))]);
+  // Every transaction in the league (Sleeper's log, weeks 1–18), kept in this browser only with the league's
+  // other data. Trades go to the trade analysis; waiver claims, free-agent adds and drops to the move cards.
+  // Bidders: Sleeper lists each losing waiver claim as a "failed" waiver for the same player in the same run,
+  // so a claim's bidder count is the teams that claimed that player in that run (shown only when 2 or more).
+  const txOn = () => currentTab === "league" && (LT.sub === "tx" || LT.sub === "waivers");
   async function loadTrades(force) {
     const d = activeData();
     if (!d || slSource() !== "sleeper") return;
     const id = d.league.league_id;
     if (LT.loading === id) return;
-    if (!force && d.trades && Date.now() - (d.tradesAt || 0) < 3600e3) return;
+    if (!force && d.tx && Date.now() - (d.tradesAt || 0) < 3600e3) return;
     LT.loading = id; LT.error[id] = "";
-    if (currentTab === "league" && LT.sub === "trades") renderLeague();
+    if (txOn()) renderLeague();
     try {
       let failed = 0;
       const lists = await Promise.all(Array.from({ length: 18 }, (_, i) => slGetTimed(`/league/${id}/transactions/${i + 1}`).catch(() => { failed++; return null; })));
       if (failed === 18) throw new Error("Sleeper didn't answer");
-      const seen = new Set(), trades = [];
+      const seen = new Set(), tx = [], claims = [];
       lists.forEach((list, i) => (Array.isArray(list) ? list : []).forEach(t => {
-        if (!t || t.type !== "trade" || t.status !== "complete" || seen.has(t.transaction_id)) return;
+        if (!t || seen.has(t.transaction_id)) return;
         seen.add(t.transaction_id);
-        trades.push({ id: String(t.transaction_id), at: t.status_updated || t.created || 0, week: t.leg || i + 1, rosters: t.roster_ids || [],
+        const at = t.status_updated || t.created || 0, week = t.leg || i + 1;
+        if (t.type === "waiver") Object.keys(t.adds || {}).forEach(sid => claims.push({ sid: String(sid), week, at, rid: (t.roster_ids || [])[0] }));
+        if (t.status !== "complete" || !["trade", "waiver", "free_agent", "commissioner"].includes(t.type)) return;
+        tx.push({ id: String(t.transaction_id), type: t.type, at, week, rosters: t.roster_ids || [],
           adds: t.adds || {}, drops: t.drops || {},
+          bid: t.type === "waiver" && t.settings && t.settings.waiver_bid != null ? Number(t.settings.waiver_bid) : null,
           picks: (t.draft_picks || []).map(p => ({ season: p.season, round: p.round, from: p.roster_id, owner: p.owner_id, prev: p.previous_owner_id })),
           faab: (t.waiver_budget || []).map(b => ({ sender: b.sender, receiver: b.receiver, amount: b.amount })) });
       }));
+      tx.forEach(t => {
+        if (t.type !== "waiver") return;
+        const sid = Object.keys(t.adds)[0];
+        const teams = new Set(claims.filter(c => c.sid === sid && c.week === t.week && Math.abs(c.at - t.at) < 30 * 60e3).map(c => c.rid));
+        if (teams.size >= 2) t.bidders = teams.size;
+      });
+      tx.sort((a, b) => b.at - a.at);
       const cur = sl && sl.data && sl.data[id];   // by league id: a background refresh may have replaced the object
-      if (cur) { cur.trades = trades.sort((a, b) => b.at - a.at); cur.tradesAt = Date.now(); writeSl(); }
+      if (cur) { cur.tx = tx; cur.trades = tx.filter(t => t.type === "trade"); cur.tradesAt = Date.now(); writeSl(); }
     } catch (err) { LT.error[id] = err.message || "unknown error"; }
     finally { if (LT.loading === id) LT.loading = null; }
-    if (currentTab === "league" && LT.sub === "trades") renderLeague();
+    if (txOn()) renderLeague();
   }
   function ensureTrades() {
     const d = activeData();
-    if (rankHistory === undefined) loadHistory().then(() => { if (currentTab === "league" && LT.sub === "trades") renderLeague(); });
+    if (rankHistory === undefined) loadHistory().then(() => { if (txOn()) renderLeague(); });
     if (!d || slSource() !== "sleeper") return;
     const id = d.league.league_id;
-    if (LT.loading !== id && !LT.error[id] && (!d.trades || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
+    if (LT.loading !== id && !LT.error[id] && (!d.tx || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
   }
   const SIDE_LABELS = [[3, "Fair", "Fair"], [7, "Slight win", "Slight loss"], [12, "Win", "Loss"], [20, "Clear win", "Clear loss"], [30, "Steal", "Lopsided loss"], [Infinity, "Robbery", "Robbed"]];
   function evalTrade(t) {
@@ -7039,16 +7168,169 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ${fullHtml}
     </article>`;
   }
-  function tradeHistoryHtml(ev, d) {
-    if (slSource() !== "sleeper") return `<p class="empty-note">Trade history comes from Sleeper's transaction log, so it's available for Sleeper leagues. ${esc(SOURCE_NAME[slSource()] === "pasted" ? "Pasted" : SOURCE_NAME[slSource()])} leagues show power rankings and standings.</p>`;
+  /* Transactions: trades (with the SPAM trade analysis), waiver claims, free-agent adds and drops, newest first */
+  const TX_TYPES = [["all", "All"], ["trade", "Trades"], ["waiver", "Waiver Wire"], ["free_agent", "Adds / Drops"]];
+  const TX_TAG = { trade: "Trade", waiver: "Waiver claim", free_agent: "Free agent", commissioner: "Commissioner" };
+  const txWhen = ms => new Date(ms).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  function txHtml(ev, d) {
+    if (slSource() !== "sleeper") return `<p class="empty-note">Transactions come from Sleeper's transaction log, so they're available for Sleeper leagues. ${esc(SOURCE_NAME[slSource()] === "pasted" ? "Pasted" : SOURCE_NAME[slSource()])} leagues show power rankings, standings and the waiver wire.</p>`;
     const id = d.league.league_id, loading = LT.loading === id, error = LT.error[id];
-    const head = `<div class="lg-toolbar"><p class="method-note">Completed trades are evaluated using SPAM values from the time of the trade when historical data is available. Trades that occurred before SPAM rankings existed are shown as retrospective evaluations using current values.</p>
-      <button class="btn" type="button" data-th-refresh${loading ? " disabled" : ""}>${loading ? "Loading…" : "Refresh"}</button></div>`;
-    if (error) return head + `<div class="lg-error"><p>Couldn't load trades for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div>`;
-    if (!d.trades) return head + `<p class="empty-note lg-loading">Loading completed trades for ${esc(d.league.name)}…</p>`;
-    if (!d.trades.length) return head + `<p class="empty-note">No completed trades found for this league.</p>`;
-    return head + `<div class="th-feed">${d.trades.map(t => tradeCard(evalTrade(t))).join("")}</div>`;
+    const all = d.tx || [], weeks = [...new Set(all.map(t => t.week))].sort((a, b) => a - b);
+    if (LT.txWeek !== "all" && !weeks.includes(Number(LT.txWeek))) LT.txWeek = "all";
+    const list = all.filter(t => (LT.txType === "all" || t.type === LT.txType || (LT.txType === "free_agent" && t.type === "commissioner"))
+      && (LT.txWeek === "all" || t.week === Number(LT.txWeek)) && (LT.txTeam === "all" || t.rosters.map(String).includes(LT.txTeam)));
+    const head = `<div class="tx-filters">
+        <div class="chips" role="group" aria-label="Transaction type">${TX_TYPES.map(([k, l]) => `<button class="chip-btn" type="button" data-tx-type="${k}" aria-pressed="${LT.txType === k}">${l}</button>`).join("")}</div>
+        <span class="tx-selects">
+          <select class="select" id="tx-week" aria-label="Week"><option value="all">All weeks</option>${weeks.map(w => `<option value="${w}"${String(w) === String(LT.txWeek) ? " selected" : ""}>Week ${w}</option>`).join("")}</select>
+          <select class="select" id="tx-team" aria-label="Team"><option value="all">All teams</option>${LG.teams.map(t => `<option value="${t.rosterId}"${String(t.rosterId) === LT.txTeam ? " selected" : ""}>${esc(t.mine ? t.name + " (you)" : t.name)}</option>`).join("")}</select>
+          <button class="btn" type="button" data-th-refresh${loading ? " disabled" : ""}>${loading ? "Loading…" : "Refresh"}</button>
+        </span></div>`;
+    if (error) return head + `<div class="lg-error"><p>Couldn't load transactions for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div>`;
+    if (!d.tx) return head + `<p class="empty-note lg-loading">Loading transactions for ${esc(d.league.name)}…</p>`;
+    const tradeNote = LT.txType === "all" || LT.txType === "trade"
+      ? `<p class="method-note">Trades are judged with SPAM values from the time of the trade when ranking history covers it. Trades from before SPAM rankings existed are labeled Pre-SPAM and evaluated as a retrospective with current values.</p>` : "";
+    if (!list.length) return head + `<p class="empty-note">No ${LT.txType === "all" ? "transactions" : TX_TYPES.find(x => x[0] === LT.txType)[1].toLowerCase()} match these filters.</p>`;
+    return head + tradeNote + `<div class="th-feed">${list.map(t => t.type === "trade" ? tradeCard(evalTrade(t)) : moveCard(t)).join("")}</div>
+      <p class="count">${list.length} of ${all.length} transaction${all.length === 1 ? "" : "s"}</p>`;
   }
+  // A waiver claim, free-agent pickup or drop: one team's adds and drops side by side
+  function moveCard(t) {
+    const map = bySleeper(), rid = t.rosters[0], team = LG.teams.find(x => x.rosterId === rid) || { name: `Team ${rid}`, manager: "", avatar: "" };
+    const line = sid => {
+      const e = rosterEntry(sid, map);
+      return `<li>${face(e.sid, e.name, "sm")}<span class="mv-txt"><span class="pl-head">${EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name, "mv-name") : `<span class="mv-name">${esc(e.name)}</span>`}${nflTag(e.team)}</span>
+        <span class="mv-sub"><span class="pos ${esc(e.pos)}">${esc(e.p ? posLabel(e.p) : e.pos || "–")}</span>${e.p ? `<span class="mv-v">${fmt(dv(e.p))}</span>` : `<span class="muted">Unranked</span>`}</span></span></li>`;
+    };
+    const adds = Object.keys(t.adds).filter(sid => t.adds[sid] === rid), drops = Object.keys(t.drops).filter(sid => t.drops[sid] === rid);
+    const faabOn = activeData().league.settings && activeData().league.settings.waiver_type === 2;
+    const bid = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0) ? `<div class="mv-bid"><b>$${t.bid}</b><span>FAAB</span></div>` : "";
+    return `<article class="th-card mv-card ${t.type}">
+      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${t.type}">${TX_TAG[t.type]}</span>${t.bidders ? `<span class="mv-tag bidders">${t.bidders} bidders</span>` : ""}</span>
+        <span class="th-date">Week ${t.week} · ${esc(txWhen(t.at))}</span></header>
+      <div class="mv-body">
+        <div class="mv-team">${teamFace(team, "sm")}<div><b>${esc(team.name)}</b>${team.manager && team.manager !== team.name ? `<span>${esc(team.manager)}</span>` : ""}</div></div>
+        <div class="mv-col add"><span class="mv-label">Adds</span>${adds.length ? `<ul>${adds.map(line).join("")}</ul>` : `<p class="muted">–</p>`}</div>
+        ${bid}
+        <div class="mv-col drop"><span class="mv-label">Drops</span>${drops.length ? `<ul>${drops.map(line).join("")}</ul>` : `<p class="muted">–</p>`}</div>
+      </div>
+    </article>`;
+  }
+  /* Matchups: the selected week's Sleeper matchups. Scores and lineups come from Sleeper (kept in memory,
+     never stored); NFL game status (kickoff, live, final) from our schedule. No projections or win
+     probabilities: Sleeper's public API doesn't provide projections, and SPAM doesn't invent them. */
+  // ET kickoff ("YYYY-MM-DD", "HH:MM") to a timestamp, daylight saving included
+  function etMs(date, time) {
+    const [y, m, d] = String(date).split("-").map(Number), [h, mi] = String(time || "13:00").split(":").map(Number);
+    for (const off of [4, 5]) {
+      const t = Date.UTC(y, m - 1, d, h + off, mi);
+      if (Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hourCycle: "h23" }).format(t)) === h) return t;
+    }
+    return Date.UTC(y, m - 1, d, h + 5, mi);
+  }
+  // one NFL team's game in a week: { kind: "bye" | "upcoming" | "live" | "final", opp, home, text }
+  function nflGameState(team, week) {
+    if (!team) return { kind: "none", text: "" };
+    const row = teamGames(STATS_SEASONS[0], team).find(r => r[0] === week);
+    if (!row) return { kind: teamGames(STATS_SEASONS[0], team).length ? "bye" : "none", text: teamGames(STATS_SEASONS[0], team).length ? "Bye" : "" };
+    const kick = etMs(row[3], row[6]), now = Date.now(), opp = `${row[2] ? "vs" : "@"} ${row[1]}`;
+    if (row[4] != null) return { kind: "final", opp, oppTeam: row[1], home: row[2], text: `Final ${row[4] > row[5] ? "W" : row[4] < row[5] ? "L" : "T"} ${row[4]}-${row[5]}` };
+    if (now > kick + 4.5 * 3600e3) return { kind: "final", opp, oppTeam: row[1], home: row[2], text: "Final" };
+    if (now >= kick) return { kind: "live", opp, oppTeam: row[1], home: row[2], text: "In progress" };
+    return { kind: "upcoming", opp, oppTeam: row[1], home: row[2], text: kickoffText(row[3], row[6]).replace(/ ET$/, "") };
+  }
+  const mxKey = (id, w) => id + "|" + w;
+  async function loadMatchups(week, force) {
+    const d = activeData(); if (!d || slSource() !== "sleeper" || !week) return;
+    const id = d.league.league_id, key = mxKey(id, week), have = LT.mx[key];
+    if (LT.mxLoading === key || (!force && have && Date.now() - have.at < 120e3)) return;
+    LT.mxLoading = key; LT.mxError[id] = "";
+    try { const list = await slGetTimed(`/league/${id}/matchups/${week}`); LT.mx[key] = { at: Date.now(), list: Array.isArray(list) ? list : [] }; }
+    catch (err) { LT.mxError[id] = err.message || "unknown error"; }
+    finally { if (LT.mxLoading === key) LT.mxLoading = null; }
+    if (currentTab === "league" && LT.sub === "matchups") renderLeague();
+  }
+  function ensureMatchups() {
+    const d = activeData(); if (!d || slSource() !== "sleeper") return;
+    if (!statsCache[STATS_SEASONS[0]]) { loadSeason(STATS_SEASONS[0]).then(() => { if (currentTab === "league" && LT.sub === "matchups") renderLeague(); }); }
+    if (!LT.nfl) {
+      LT.nfl = "loading";
+      slGetTimed("/state/nfl").then(st => { LT.nfl = st || {}; }).catch(() => { LT.nfl = {}; })
+        .then(() => { if (currentTab === "league" && LT.sub === "matchups") renderLeague(); });
+      return;
+    }
+    if (LT.nfl === "loading") return;
+    if (!LT.mWeek) LT.mWeek = mxCurrentWeek(d);
+    loadMatchups(LT.mWeek);
+  }
+  // Sleeper's current week (its NFL state), else the league's, else our schedule's
+  const mxCurrentWeek = d => Math.max(1, Number((LT.nfl && LT.nfl !== "loading" && (LT.nfl.display_week || LT.nfl.week)) || (d.league.settings && d.league.settings.leg) || currentWeek() || 1));
+  function matchupsHtml(ev, d) {
+    if (slSource() !== "sleeper") return `<p class="empty-note">Matchups come from Sleeper, so they're available for Sleeper leagues.</p>`;
+    const id = d.league.league_id;
+    if (!LT.nfl || LT.nfl === "loading" || !LT.mWeek) return `<p class="empty-note lg-loading">Loading this week's matchups…</p>`;
+    const cur = mxCurrentWeek(d), w = LT.mWeek, key = mxKey(id, w), data = LT.mx[key], err = LT.mxError[id];
+    const lastWeek = Math.max(cur, 17, Number(d.league.settings && d.league.settings.playoff_week_start || 0) + 2);
+    const weekSel = `<div class="tx-filters"><span class="tx-selects">
+        <select class="select" id="mx-week" aria-label="Week">${Array.from({ length: Math.min(18, lastWeek) }, (_, i) => i + 1).map(n => `<option value="${n}"${n === w ? " selected" : ""}>Week ${n}${n === cur ? " · current" : ""}</option>`).join("")}</select>
+        ${w !== cur ? `<button class="btn" type="button" data-mx-week="${cur}">Current week</button>` : ""}
+        <button class="btn" type="button" data-mx-refresh${LT.mxLoading === key ? " disabled" : ""}>${LT.mxLoading === key ? "Loading…" : "Refresh scores"}</button></span>
+      <p class="method-note">Scores and lineups from Sleeper${data ? ` · updated ${esc(ago(data.at))}` : ""}. Sleeper's public data has no projections, so none are shown.</p></div>`;
+    if (err) return weekSel + `<div class="lg-error"><p>Couldn't load Week ${w} matchups from Sleeper (${esc(err)}).</p><button class="btn primary" type="button" data-mx-refresh>Retry</button></div>`;
+    if (!data) return weekSel + `<p class="empty-note lg-loading">Loading Week ${w} matchups…</p>`;
+    const groups = new Map();
+    data.list.forEach(m => { if (m.matchup_id == null) return; if (!groups.has(m.matchup_id)) groups.set(m.matchup_id, []); groups.get(m.matchup_id).push(m); });
+    if (!groups.size) return weekSel + `<p class="empty-note">No matchups for Week ${w}${w > cur ? " yet" : ""}.</p>`;
+    const map = bySleeper(), slots = (d.league.roster_positions || []).filter(x => !["BN", "IR", "TAXI"].includes(x));
+    const side = m => {
+      const team = LG.teams.find(t => t.rosterId === m.roster_id) || { name: `Team ${m.roster_id}`, manager: "", avatar: "", roster: { settings: {} }, rosterId: m.roster_id };
+      const pp = m.players_points || {}, sp = m.starters_points || [];
+      const starters = (m.starters || []).map((sid, i) => {
+        sid = String(sid);
+        if (!sid || sid === "0") return { slot: slots[i] || "", empty: true };
+        const e = rosterEntry(sid, map), g = nflGameState(e.team, w);
+        return { slot: slots[i] || "", e, g, pts: pp[sid] ?? sp[i] ?? 0 };
+      });
+      const live = starters.filter(x => !x.empty);
+      const count = k => live.filter(x => x.g.kind === k).length;
+      const x = ev.byRoster.get(String(m.roster_id));
+      return { m, team, starters, pts: Number(m.custom_points ?? m.points ?? 0), power: x ? x.power : null,
+        done: count("final") + count("bye") + count("none"), playing: count("live"), toPlay: count("upcoming") };
+    };
+    const cards = [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([mid, ms]) => {
+      const [A, B] = ms.map(side);
+      if (!B) return "";
+      const started = [A, B].some(s => s.playing || s.starters.some(x => !x.empty && x.g.kind === "final"));
+      const state = w < cur || (started && !A.playing && !B.playing && !A.toPlay && !B.toPlay) ? "final" : w > cur || !started ? "upcoming" : "live";
+      const win = state === "final" ? (A.pts > B.pts ? "A" : B.pts > A.pts ? "B" : "T") : "";
+      const k = mxKey(id, w) + "|" + mid, open = LT.mOpen.has(k);
+      const top = s => {
+        const list = s.starters.filter(x => !x.empty);
+        const best = state === "upcoming" ? list.filter(x => x.e.p).sort((a, b) => dv(b.e.p) - dv(a.e.p)).slice(0, 2) : list.slice().sort((a, b) => b.pts - a.pts).slice(0, 2);
+        return best.map(x => `<span>${esc(x.e.name.split(" ").slice(-1)[0])}${state === "upcoming" ? "" : ` <b>${fp(x.pts)}</b>`}</span>`).join("");
+      };
+      const status = s => state === "live" ? `<span class="mx-left">${s.done} played · ${s.playing} playing · ${s.toPlay} to play</span>` : "";
+      const team = (s, which) => `<div class="mx-team ${which}${win === which ? " win" : ""}${s.team.mine ? " mine" : ""}">${teamFace(s.team, "sm")}
+          <div class="mx-tname"><b>${esc(s.team.name)}</b><span>${esc([recordText(s.team.roster.settings) || "", s.power ? `SPAM PR #${s.power}` : ""].filter(Boolean).join(" · "))}</span></div></div>`;
+      const score = (s, which) => `<span class="mx-score${win === which ? " win" : ""}">${state === "upcoming" ? "–" : fp(s.pts)}</span>`;
+      const mid2 = `<span class="mx-mid">${state === "final" ? (win === "T" ? "Tie" : "Final") : state === "live" ? `<span class="mx-live">Live</span>` : "vs"}</span>`;
+      const row = x => x.empty ? `<tr class="mx-empty"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td><td colspan="3" class="muted">Empty</td><td></td></tr>`
+        : `<tr class="${x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
+            <td><div class="mx-pl">${face(x.e.sid, x.e.name, "xs")}<span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.e.sid, x.e.name, "mx-name") : `<span class="mx-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span></div></td>
+            <td><span class="pos ${esc(x.e.pos)}">${esc(x.e.pos || "–")}</span></td>
+            <td class="mx-game"><span>${esc(x.g.opp || x.g.text)}</span>${x.g.opp ? `<small class="${x.g.kind}">${esc(x.g.text)}</small>` : ""}</td>
+            <td class="mx-pts">${x.g.kind === "upcoming" || x.g.kind === "bye" && !x.pts ? "–" : fp(x.pts)}</td></tr>`;
+      const lineup = s => `<div class="mx-lineup"><h4>${teamFace(s.team, "xs")}${esc(s.team.name)}<span>${state === "upcoming" ? "" : fp(s.pts)}</span></h4>
+          <table class="mx-table"><tbody>${s.starters.map(row).join("")}</tbody></table></div>`;
+      return `<article class="mx-card ${state}${open ? " open" : ""}" data-mx-toggle="${esc(k)}" role="button" tabindex="0" aria-expanded="${open}">
+        <div class="mx-row">${team(A, "A")}${score(A, "A")}${mid2}${score(B, "B")}${team(B, "B")}<span class="pr-caret" aria-hidden="true"></span></div>
+        <div class="mx-foot"><div class="mx-tops"><span class="mx-lbl">${state === "upcoming" ? "Top players" : "Top scorers"}</span>${top(A)}${status(A)}</div><div class="mx-tops b">${status(B)}${top(B)}</div></div>
+        ${open ? `<div class="mx-detail">${lineup(A)}${lineup(B)}</div>` : ""}
+      </article>`;
+    }).join("");
+    return weekSel + `<div class="mx-list">${cards}</div>`;
+  }
+
   function analyzeTrade(id) {
     const d = activeData(), t = d && d.trades && d.trades.find(x => x.id === id);
     if (!t) return;
@@ -7073,6 +7355,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("league-body").addEventListener("click", e => {
     const sub = e.target.closest("[data-lsub]");
     if (sub) { LT.sub = sub.dataset.lsub; renderLeague(); return; }
+    const txt = e.target.closest("[data-tx-type]");
+    if (txt) { LT.txType = txt.dataset.txType; renderLeague(); return; }
+    const mw = e.target.closest("[data-mx-week]");
+    if (mw) { LT.mWeek = Number(mw.dataset.mxWeek); LT.mOpen = new Set(); renderLeague(); return; }
+    if (e.target.closest("[data-mx-refresh]")) { const d = activeData(); if (d) { LT.mxError[d.league.league_id] = ""; loadMatchups(LT.mWeek, true); } return; }
+    const mx = e.target.closest("[data-mx-toggle]");
+    if (mx && !e.target.closest(".mx-detail") && !e.target.closest("button, a, input, select, label, .pl-link, .face")) {
+      const k = mx.dataset.mxToggle; if (LT.mOpen.has(k)) LT.mOpen.delete(k); else LT.mOpen.add(k); renderLeague(); return;
+    }
     const tw = e.target.closest("[data-trade-with]"), fw = e.target.closest("[data-find-with]");
     if (tw && LG.myRosterId != null) {
       TC.mode = "league"; saveTc(); setThree(false); $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
@@ -7101,11 +7392,17 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   });
   $("league-body").addEventListener("keydown", e => {
     if (e.key !== "Enter" && e.key !== " ") return;
-    const row = e.target.closest("[data-toggle-team]"), st = e.target.closest("[data-standing-team]");
+    const row = e.target.closest("[data-toggle-team]"), st = e.target.closest("[data-standing-team]"), mx = e.target.closest("[data-mx-toggle]");
+    if (mx && e.target === mx) { e.preventDefault(); const k = mx.dataset.mxToggle; if (LT.mOpen.has(k)) LT.mOpen.delete(k); else LT.mOpen.add(k); renderLeague(); return; }
     if (row && e.target === row) { e.preventDefault(); toggleTeam(row.dataset.toggleTeam, e.shiftKey); }
     else if (st && e.target === st) { e.preventDefault(); openTeam(st.dataset.standingTeam); }
   });
-  $("league-body").addEventListener("change", e => { if (e.target.id === "lg-keep") LT.keep = e.target.checked; });
+  $("league-body").addEventListener("change", e => {
+    if (e.target.id === "lg-keep") LT.keep = e.target.checked;
+    if (e.target.id === "tx-week") { LT.txWeek = e.target.value; renderLeague(); }
+    if (e.target.id === "tx-team") { LT.txTeam = e.target.value; renderLeague(); }
+    if (e.target.id === "mx-week") { LT.mWeek = Number(e.target.value); LT.mOpen = new Set(); renderLeague(); }
+  });
   // open/close a team in place, keeping the clicked row where it was on screen
   function toggleTeam(rid, keepOthers) {
     const before = $("league-body").querySelector(`.pr-item[data-rid="${rid}"]`), top = before ? before.getBoundingClientRect().top : null;
@@ -7132,7 +7429,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      a week it played without him is OUT (neither counts as zero). Avg = the games he played. Trend compares
      that average with his season PPG (last season's when this season has 3 games or fewer): Hot / Cooling
      when at least 15% and 2 points apart, else Steady; no trend without a baseline. */
-  function recentForm(sid, pos, team) {
+  function recentForm(sid, pos, team) { return recentFormHtml(recentFormData(sid, pos, team)); }
+  function recentFormData(sid, pos, team) {
     const season = STATS_SEASONS[0], log = sid ? seasonLog(season, sid, pos) : null, byW = new Map((log ? log.games : []).map(g => [g.w, g]));
     const sched = team ? teamGames(season, team) : [], rowW = new Map(sched.map(r => [r[0], r]));
     const last = Math.max(0, ...(log ? log.games.map(g => g.w) : []), ...sched.filter(r => r[4] != null).map(r => r[0]));
@@ -7143,11 +7441,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       else if (team && sched.length && !r) weeks.push({ w, tag: "BYE" });
       else if (r && r[4] != null) weeks.push({ w, tag: "OUT" });
     }
-    if (!weeks.length) return `<span class="muted">–</span>`;
+    if (!weeks.length) return { weeks, avg: null, base: null, played: [] };
     const played = weeks.filter(x => x.pts != null), avg = played.length ? played.reduce((a, x) => a + x.pts, 0) / played.length : null;
     let base = null;
     if (log && log.games.length > 3) base = totals(log.games).ppg;
     else { const prev = sid && STATS_SEASONS[1] ? seasonLog(STATS_SEASONS[1], sid, pos) : null; if (prev && prev.games.length >= 4) base = totals(prev.games).ppg; }
+    return { weeks, avg, base, played };
+  }
+  function recentFormHtml({ weeks, avg, base, played }) {
+    if (!weeks.length) return `<span class="muted">–</span>`;
     let trend = "";
     if (avg != null && base != null && played.length >= 2) {
       const d = avg - base, big = Math.abs(d) >= 2 && Math.abs(d) >= 0.15 * Math.max(base, 1);
@@ -7166,23 +7468,56 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const D = (defenseVsPos() || {})[p.pos], x = D && D[ng.opp];
     return `<span class="fa-opp" title="${x ? esc(VERDICT[x.grade]) : ""}"><span class="sc-dot ${x ? x.grade : ""}"></span>${teamLogo(ng.opp, "xs")}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</span>`;
   }
+  /* Waiver Wire: ranked players nobody in the selected league rosters. SPAM value leads (default sort = SPAM
+     rank); recent form, this week's matchup and where he'd fit on your roster are context, never the ranking. */
+  let faSort = "rank";
+  $("fa-sort").addEventListener("change", e => { faSort = e.target.value; renderFA(); });
+  // Recently dropped players are still on waivers (league's waiver_clear_days, from the transaction log)
+  function waiverUntil(p) {
+    const d = activeData(), days = d && d.league.settings && d.league.settings.waiver_clear_days;
+    if (!d || !d.tx || !days || !p.sleeperId) return null;
+    const drop = d.tx.find(t => t.drops && t.drops[p.sleeperId] != null);
+    if (!drop) return null;
+    const until = drop.at + days * 86400e3;
+    return until > Date.now() ? until : null;
+  }
+  // Where he'd land on your team in this league's lineup: starts (slot) or depth (QB2, WR4, bench depth)
+  function faFit(K, me, p) {
+    const L = K.after(me, [], [p], [me]), role = L.labels.get(p.id);
+    if (role) return { text: `Would start at ${role}`, cls: "start" };
+    const ahead = K.healthy(me).filter(x => x.pos === p.pos && dv(x) > dv(p)).length;
+    const benchAhead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
+    return benchAhead >= 2 && p.pos !== "QB" ? { text: "Bench depth only", cls: "deep" } : { text: `Would be your ${p.pos}${ahead + 1}`, cls: "" };
+  }
   function renderFA() {
     const d = activeData();
     if (!d) { $("fa-body").innerHTML = ""; $("fa-wrap").hidden = true; return; }
+    if (!statsCache[STATS_SEASONS[0]]) loadSeason(STATS_SEASONS[0]).then(() => { if (!$("fa-wrap").hidden) renderFA(); });
     let list = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && !LG.ownerOf.has(p.id));
     if (faPos !== "ALL") list = list.filter(p => p.pos === faPos);
     if (faQuery) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(faQuery));
-    list.sort((a, b) => dv(b) - dv(a));
+    const form = new Map(list.map(p => [p.id, recentFormData(p.sleeperId, p.pos, p.team)]));
+    const D = defenseVsPos() || {}, wk = currentWeek();
+    const grade = p => { const ng = p.team ? nextGame(p.team) : null; if (!ng || (wk && ng.week > wk)) return 3; const x = D[p.pos] && D[p.pos][ng.opp]; return x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3; };
+    const byVal = (a, b) => dv(b) - dv(a);
+    list.sort(faSort === "form" ? (a, b) => ((form.get(b.id).avg ?? -1) - (form.get(a.id).avg ?? -1)) || byVal(a, b)
+      : faSort === "matchup" ? (a, b) => (grade(a) - grade(b)) || byVal(a, b) : byVal);
+    const me = LG.teams.find(t => t.mine), K = me ? leagueKit() : null;
     const mx = Math.max(1, ...players.map(dv));
-    $("fa-body").innerHTML = list.length ? list.map(p => `<tr class="player">
+    $("fa-body").innerHTML = list.length ? list.map(p => {
+      const wv = waiverUntil(p), fit = K ? faFit(K, me, p) : null;
+      return `<tr class="player">
       <td class="rk">${overallRank(p)}</td>
-      <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span></div></div></td>
+      <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
+        <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span></div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
-      <td class="fa-l3">${recentForm(p.sleeperId, p.pos, p.team)}</td>
+      <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
       <td class="fa-wk">${faWeek(p)}</td>
-      <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td></tr>`).join("")
-      : `<tr><td class="empty" colspan="6">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
-    $("fa-count").textContent = `${list.length} ranked free agent${list.length === 1 ? "" : "s"}`;
+      <td class="fa-fit">${fit ? `<span class="fa-fit-t ${fit.cls}">${esc(fit.text)}</span>` : `<span class="muted">–</span>`}</td>
+      <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td></tr>`;
+    }).join("")
+      : `<tr><td class="empty" colspan="7">No ranked players available${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
+    $("fa-count").textContent = `${list.length} ranked player${list.length === 1 ? "" : "s"} available in ${d.league.name}. Roster percentages aren't shown: Sleeper's public data doesn't include them.`;
   }
 
   /* Trade calculator: pick teams and click players from their rosters */
