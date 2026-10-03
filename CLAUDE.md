@@ -32,6 +32,7 @@ Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, col
 13. **Keep the layers separate** (from Alan). Don't overwrite manual rankings or published values, don't let stats or projection updates change rankings, and keep league calculations derived from the base board.
 14. **Stay in scope** (from Alan). Don't change unrelated parts of the site when doing a specific feature. Preserve the SPAM branding and design system.
 15. **Don't rename the `spm_` localStorage keys** (from Alan). Renaming them would wipe visitors' saved leagues, edits and tokens.
+16. **League data is private to each visitor** (from Alan, Oct 4). The League hub is a template that works for any Sleeper league: everything in it (username, selected league, rosters, standings, matchups, transactions, waiver activity) is fetched in the visitor's browser and kept there (`spm_sleeper` in localStorage; matchups only in memory). Never commit anyone's league data, never hard-code a league, team or manager, and never make a personal league a public dataset. Tests use synthetic leagues only. Public/shared: base SPAM rankings, player identity, stats, ranking history, design, trade-value and league-adjustment logic.
 
 ## 3. How to run it
 
@@ -58,7 +59,7 @@ There's no committed test suite. Changes were verified with throwaway **Playwrig
   - Light and dark screenshots look right.
 - `?fmt=` URL form: `t10_qb1_rec0.5_tep0` (keys: `t` teams, `qb` 1/sf/2, `sx` superflex spots, `rec`, `tep`, `ptd`, `pyd`, `int`, `fl` fumble, `fd`, `rb`, `wr`, `te`, `fx` flex, `bn` bench).
 
-Committed so far: **`tests/format_check.py`** (`CHROMIUM=/path python3 tests/format_check.py`): runs `SPM.formatCheck()` in the page (Kittle rises with TE premium none → + → ++, Josh Allen 1QB vs Superflex, WR36 vs WR starters, RB30 vs league size and FLEX, WR1 vs points per catch, base format = base values exactly), then checks with a mock league that the Trade Calculator uses league-adjusted values in both "No league" and league mode, shows the Format adjustment table, follows Custom format changes, and that the base SPAM Board never changes. Run it after any change to the value model or the calculator. More checks belong in `tests/`.
+Committed so far: **`tests/league_hub_check.py`** (a synthetic 12-team and 10-team Sleeper league, mocked API: every League tab, filters, bidder counts, waiver availability, a past week's finals, league switching, persistence, base board unchanged) and **`tests/format_check.py`** (`CHROMIUM=/path python3 tests/format_check.py`): runs `SPM.formatCheck()` in the page (Kittle rises with TE premium none → + → ++, Josh Allen 1QB vs Superflex, WR36 vs WR starters, RB30 vs league size and FLEX, WR1 vs points per catch, base format = base values exactly), then checks with a mock league that the Trade Calculator uses league-adjusted values in both "No league" and league mode, shows the Format adjustment table, follows Custom format changes, and that the base SPAM Board never changes. Run it after any change to the value model or the calculator. More checks belong in `tests/`.
 
 ## 4. Where things are
 
@@ -101,9 +102,9 @@ Inside `index.html` (search for these names):
 - **Custom format:** `FMT`, `FMT_DEFAULT`, `FMT_FIELDS`, `fmtLeague`, `FMT_SRC` (synced vs custom), `configText`.
 - **Tabs:**
   - My Team: `renderMyTeam`.
-  - League: `renderLeague`, `powerHtml`, `teamExpand`, `standingsHtml`, `tradeHistoryHtml`, `evalTrade`, `valueAt`.
+  - League hub: `renderLeague` (`LEAGUE_SUBS`, `LT`), `powerHtml`, `teamExpand`, `standingsHtml`, `matchupsHtml` (`loadMatchups`, `nflGameState`, `etMs`), `txHtml` (`loadTrades` loads every transaction type, `moveCard`, `tradeCard`, `evalTrade`, `valueAt`).
   - Trade Finder: `renderFinder`, `findTrades`, `findThree`.
-  - Free Agents: `renderFA`.
+  - Waiver Wire: `renderFA` (`faFit`, `waiverUntil`, `recentFormData`).
   - Calculator: `renderTrade`, `tradeModel`, `runModel`, `rosterContext`.
   - Player modal: `openPlayer`, `renderPlayer`, `ppSection`, `statsStamp`.
 - **UI components:**
@@ -212,15 +213,12 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Strength cards lead with the league rank (green top third, red bottom third); the strength score is small at top right; the player / vs-average note is small and muted.
   - Roster sections (Starters / Bench / Injured reserve / Taxi) are tinted full-width bands with a player count; a **Recent form** column (`recentForm`, also on Free Agents): his last three team weeks, oldest to newest with a small muted "Wk N" under each score (BYE / OUT instead of zeros, still with their week), "Avg" of the games played, and ▲ Hot / → Steady / ▼ Cooling vs his season PPG (last season's while this season has ≤3 games; ±15% and ±2 pts; no trend without a baseline); when Sleeper has no lineup set, starters are SPAM's best lineup (labelled).
   - Slim outline-only right rail (260px): position-rank badges (best/worst highlighted) with a needs/strengths line, Hot lately (last 3 games), and "Trade with" as one themed dropdown.
-- **League tab:**
-  - Sub-tabs: Power Rankings / Trade History / Standings / **Free Agents** (Alan, Oct 4: Free Agents is part of the League hub, not top-level nav).
-  - Power Rankings: compact rows; the whole row expands into a roster board with position ranks vs the league.
-  - Gold accent on your own team.
-  - "Keep teams open to compare".
-  - Clicking a player, Trade With or Find Trades never toggles the row.
-  - Team score bar is scaled to the top team.
-  - Trade History: per-trade cards with verdict, meter, picks/FAAB, a 3-team layout, Analyze Trade, and labels for historical, pre-SPAM and current-value evaluations.
-  - Standings: record vs power rank.
+- **League tab (League hub, Alan, Oct 4):** one hub for the selected Sleeper league. Sub-tabs: **Power Rankings** (default) / **Standings** / **Matchups** / **Transactions** / **Waiver Wire**. The title carries the league name as an eyebrow. Switching leagues (header menu, calculator) re-syncs and redraws every tab with no reload; the selected league persists in `spm_sleeper`. Old `#fa` links and the old "trades" sub-tab open Waiver Wire / Transactions (`LSUB_ALIAS`). Matchups and Transactions need a Sleeper league (ESPN/pasted leagues get a note).
+  - Power Rankings: compact rows; the whole row expands inline into a roster board (QB/RB/WR/TE columns with starter/BN tags, position ranks vs the league, IR and Taxi chips); Trade with / Find trades never toggle the row; one team open at a time unless "Keep teams open to compare" (custom checkbox). Gold accent on your own team. Team score bar scaled to the top team.
+  - Standings: rank, team, manager, record, PF, PA, streak, SPAM Power Rank, and the difference (▲ roster ahead / ▼ record ahead). No "luck" scores.
+  - Matchups: week picker (current week from Sleeper's NFL state). Each card: both teams (avatar, record, SPAM PR), scores, Live/Final/vs; top scorers (or top SPAM players before kickoff); while live, "N played · N playing · N to play". Final weeks mark the winner. A card expands into both starting lineups side by side (slot, photo, name, NFL team, position, opponent, game status, points). Scores from Sleeper `/matchups/{week}` (memory only, refresh button, 2-minute cache); NFL game status from our schedule (kickoff ET → `etMs`). **No projections or win probabilities**: Sleeper's public API has no projections and SPAM doesn't invent them.
+  - Transactions: every completed trade, waiver claim, free-agent add/drop and commissioner move, newest first; filters All / Trades / Waiver Wire / Adds / Drops, Week, Team. Waiver cards: team, adds and drops (photo, position rank, NFL team, SPAM value), FAAB bid, and bidder count only when Sleeper's failed claims show 2+ teams claimed the same player in the same run (never invented). Trades reuse the trade-history analysis (historical / Pre-SPAM / current-value labels, verdict, difference, 3-team per-team verdicts, Analyze trade → calculator).
+  - Waiver Wire (replaced Free Agents): ranked players nobody rosters, sorted by SPAM value (or recent production / this week's matchup); position chips and search; overall rank, position rank, league-adjusted value, Recent form, This week, availability ("Free agent" or "On waivers · clears <day>" from the drop date + the league's `waiver_clear_days`), and "For your team" (`faFit`: Would start at FLEX / Would be your WR4 / Bench depth only) as context only. No roster % (not in Sleeper's public API), no FAAB suggestions yet.
 - **Trade Calculator:**
   - 2-team, plus optional 3-team.
   - League mode with roster context (lineup impact, team-specific value, position rooms).
@@ -239,7 +237,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Cards read: partner → short verdict ("FAIR + GOOD FIT") → muted numbers → give/get → optional one-line roster insight → View full analysis (Alan, Oct 4). The insight (`shortWhy`) says *why* the deal makes sense, never *what* it is: a received player who'd mostly sit on the bench, a weak room fixed for both teams, fair on value but better for one lineup (with the reason), depth turned into a stronger room, or a room improved without opening a hole. When there's nothing non-obvious, the line is omitted. Detailed explanations stay inside the full analysis.
   - Generated trade text never makes a team name the subject of a verb ("the gooners swaps"); use possessives (`possOf`: "your", "Team's", "the gooners'").
   - Always uses league-adjusted values.
-- **Free Agents** (League → Free Agents; top nav is Rankings · My Team · League · Trade Finder · Trade Calculator): unrostered ranked players in the selected league, with position chips, search, Recent form and This week. It lives in `#fa-wrap` inside the League panel, shown by `renderLeague` when `LT.sub === "fa"`; old `#fa` links open League → Free Agents. No owner line on its rows (they're all free agents).
+- **Main nav:** Rankings · My Team · League · Trade Finder · Trade Calculator. The Waiver Wire table lives in `#fa-wrap` inside the League panel (shown when `LT.sub === "waivers"`); its rows have no owner line (they're all available), just the availability line.
 - **Themes:**
   - Light: cream `#F7F2EB`, burgundy `#5A1F32`, coral `#D96B5B`, peach `#F0B18A`, ink `#2E2A28`.
   - Dark: near-black `#1A1314`, burgundy surfaces, cream `#F3EDE4`, gold `#F4B979`.
@@ -253,7 +251,8 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Tests:** only `tests/format_check.py` so far (see §3).
 - **IR / taxi spots** aren't format options; they don't change values.
 - **Draft picks** are listed in trades but not valued.
-- **Trade History:** only for Sleeper leagues; ESPN/Yahoo imports have no transaction feed.
+- **Transactions and Matchups:** only for Sleeper leagues; ESPN/Yahoo imports have no transaction or matchup feed.
+- **Not in the League hub yet (no reliable keyless source):** projections and win probabilities, roster percentages, FAAB bid suggestions.
 - **Deep tiers in shallow formats:** a 10-team 1QB board values QB13+ at a few hundred by design (tiers keep ≥40% of the value above).
 - **Excel master workbook:** Steven & Alan's original Excel file (`StevenAlanRankings`, per-position Steven/Alan/Combined sheets) is **not synced** with the site. The website is now the source of truth. An Oct 2 copy with the 70 Auto players and a "SPAM Board" sheet was produced but isn't in the repo.
 - **Old URL:** `stevenp36.github.io/spmetrics-fantasy/` is dead. A redirect page can live in a new `spmetrics-fantasy` repo if wanted.
