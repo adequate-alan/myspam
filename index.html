@@ -3609,7 +3609,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T20:30Z";
+  const BUILD_ID = "2026-10-04T20:45Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7222,9 +7222,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     </article>`;
   }
   /* Transactions: trades (with the SPAM trade analysis), waiver claims, free-agent adds and drops, newest first */
-  // Filters: All · Trades · Waivers / Adds & Drops (waiver claims, FAAB claims, free-agent adds, drops, commissioner moves).
+  // Filters: All · Trades · Waiver Wire (waiver claims, FAAB claims, free-agent adds, drops, commissioner moves).
   // Each card still says what it was: Waiver claim, Free agent, Drop (or Commissioner).
-  const TX_TYPES = [["all", "All"], ["trade", "Trades"], ["moves", "Waivers / Adds & Drops"]];
+  const TX_TYPES = [["all", "All"], ["trade", "Trades"], ["moves", "Waiver Wire"]];
   const txKind = t => (t.type === "trade" ? "trade" : t.type === "waiver" ? "waiver" : !Object.keys(t.adds || {}).length ? "drop" : t.type === "commissioner" ? "commissioner" : "free_agent");
   const TX_TAG = { trade: "Trade", waiver: "Waiver claim", free_agent: "Free agent", drop: "Drop", commissioner: "Commissioner" };
   const txWhen = ms => new Date(ms).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
