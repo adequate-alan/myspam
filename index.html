@@ -879,7 +879,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .tabs { display: flex; gap: 30px; margin-top: 16px; }
 .tab, .chip-btn {
   position: relative; background: none; border: 0; cursor: pointer;
-  font-weight: 650; font-stretch: 106%; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-weight: 650; font-stretch: 104%; font-size: 0.9rem; letter-spacing: 0.005em;
   color: var(--muted); transition: color 0.18s ease;
 }
 .tab { padding: 10px 0 14px; }
@@ -952,21 +952,24 @@ thead th {
   font-size: 0.66rem; font-weight: 550; letter-spacing: 0.13em; text-transform: uppercase;
   color: var(--muted); padding: 12px 22px; border-bottom: 1px solid var(--line); background: var(--table-head);
 }
-tbody td { padding: 17px 22px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+tbody td { padding: 11px 20px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr.player td { transition: background 0.16s ease; }
 tbody tr.player:hover td { background: var(--surface-hover); }
 td.rk { font-size: 0.9rem; font-weight: 600; width: 70px; color: var(--rank); font-variant-numeric: tabular-nums; }
-.pl-name { font-weight: 680; font-size: 1rem; letter-spacing: -0.01em; color: var(--ink); }
+.pl-name { font-weight: 680; font-size: 0.96rem; letter-spacing: -0.01em; color: var(--ink); }
 .pl-team {
   font-size: 0.64rem; font-weight: 600; color: var(--muted); letter-spacing: 0.1em;
   margin-left: 9px; text-transform: uppercase;
 }
-tr.tier td {   /* tier breaks: a clear divider above and a bolder label */
-  background: var(--tier-row); padding: 13px 22px 9px;
-  font-size: 0.72rem; font-weight: 800; font-stretch: 110%; letter-spacing: 0.13em; text-transform: uppercase;
-  color: var(--tier-text); border-top: 2px solid var(--tier-line); border-bottom: 1px solid var(--tier-line);
+tr.tier td {   /* tier band: a soft full-width surface, the tier name is the focus */
+  background: var(--tier-row); padding: 9px 20px 8px;
+  font-size: 0.86rem; font-weight: 750; font-stretch: 104%; letter-spacing: 0.005em;
+  color: var(--tier-text); border-top: 1px solid var(--tier-line); border-bottom: 1px solid var(--tier-line);
 }
+.tier-band { display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; }
+.tier-meta { margin-left: auto; font-size: 0.68rem; font-weight: 550; letter-spacing: 0.02em; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.tier-edit .tier-meta { margin-left: 0; }
 tbody tr.tier:first-child td { border-top: 0; }
 .pos-col { width: 1%; white-space: nowrap; padding-right: 8px !important; }
 .pos {
@@ -985,6 +988,11 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
   border-bottom: 1px solid var(--line-soft);
 }
 #panel-rankings thead th.val { padding-left: 14px; }   /* starts where the value bar starts */
+/* The column guide stays visible under the masthead while you scroll the board (--mast-h is set from JS).
+   overflow-x: clip keeps the rounded box without making it a scroll container, so sticky works. */
+#panel-rankings .table-scroll { overflow-x: clip; }
+#panel-rankings thead th { position: sticky; top: var(--mast-h, 0px); z-index: 2; background: var(--surface); box-shadow: inset 0 -1px 0 var(--line-soft); }
+@media (max-width: 640px) { body.editing #panel-rankings .table-scroll { overflow-x: auto; } body.editing #panel-rankings thead th { position: static; } }
 .valbar { display: flex; align-items: center; gap: 12px; }
 .valbar .track { flex: 0 1 200px; height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
 .valbar .fill { height: 100%; background: var(--c, var(--cream)); border-radius: 2px; opacity: 0.9; }
@@ -1078,12 +1086,12 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .side-face[hidden] { display: none; }
 .side-idtext { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .side-title {
-  font-weight: 800; font-stretch: 110%; font-size: 1.05rem; letter-spacing: 0.02em; text-transform: uppercase;
+  font-weight: 760; font-stretch: 104%; font-size: 1.08rem; letter-spacing: -0.005em;
   margin: 0; color: var(--cream);
 }
 .side-title { display: flex; align-items: baseline; min-width: 0; }
 .side-title .st-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.side-title small { flex: none; font-size: 0.64rem; color: var(--muted); font-weight: 600; margin-left: 8px; letter-spacing: 0.12em; }
+.side-title small { flex: none; font-size: 0.64rem; color: var(--muted); font-weight: 600; margin-left: 8px; letter-spacing: 0.12em; text-transform: uppercase; }
 .side-total { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); text-align: right; }
 .side-total b { display: block; font-size: 1.25rem; color: var(--cream); font-weight: 750; letter-spacing: -0.01em; text-transform: none; margin-top: 1px; font-variant-numeric: tabular-nums; }
 
@@ -1147,8 +1155,8 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 }
 .verdict-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 20px; }
 .verdict h2 {
-  margin: 0; font-weight: 850; font-stretch: 112%; font-size: 1.55rem; line-height: 1.05;
-  letter-spacing: -0.01em; text-transform: uppercase; text-wrap: balance; color: var(--cream);
+  margin: 0; font-weight: 820; font-stretch: 108%; font-size: 1.5rem; line-height: 1.1;
+  letter-spacing: -0.02em; text-wrap: balance; color: var(--cream);
 }
 .verdict h2.fair { color: var(--heading); }
 .verdict h2.win-A { color: var(--side-a); }
@@ -1570,8 +1578,8 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 /* ---------- Sleeper: My Team and Free Agents ---------- */
 .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px 20px; margin-bottom: 18px; }
 .panel-title {
-  margin: 0; font-weight: 850; font-stretch: 112%; font-size: 1.7rem; line-height: 1.05; letter-spacing: -0.01em;
-  text-transform: uppercase; color: var(--heading); text-wrap: balance;
+  margin: 0; font-weight: 820; font-stretch: 108%; font-size: 1.6rem; line-height: 1.1; letter-spacing: -0.02em;
+  color: var(--heading); text-wrap: balance;
 }
 .panel-sub { margin: 6px 0 0; color: var(--ink-2); font-size: 0.88rem; }
 .section-label { margin: 26px 0 10px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
@@ -1984,7 +1992,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pm-back:hover { color: var(--cream); }
 .pm-id { display: flex; align-items: center; gap: 18px; padding-right: 52px; }
 .pm-id-text { min-width: 0; }
-.pm-name { margin: 0; font-weight: 850; font-stretch: 112%; font-size: 1.95rem; line-height: 1.02; letter-spacing: -0.01em; text-transform: uppercase; color: var(--heading); }
+.pm-name { margin: 0; font-weight: 820; font-stretch: 108%; font-size: 1.85rem; line-height: 1.05; letter-spacing: -0.02em; color: var(--heading); }
 .pm-stats { display: flex; flex-wrap: wrap; row-gap: 12px; margin-top: 18px; }
 .pm-stat { display: flex; flex-direction: column; gap: 2px; padding: 0 22px; border-left: 1px solid var(--line-soft); min-width: 0; }
 .pm-stat:first-child { padding-left: 0; border-left: 0; }
@@ -2248,7 +2256,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .chips { gap: 20px; border-bottom: 1px solid var(--line-soft); }
   .controls .search { width: 100%; margin-bottom: 0; }
   tbody td, thead th { padding-inline: 14px; }
-  tbody td { padding-block: 15px; }
+  tbody td { padding-block: 10px; }
   td.rk { width: 44px; }
   td.val { min-width: 0; width: auto; padding-left: 8px; }
   #panel-rankings thead th.val { padding-left: 8px; }
@@ -3164,7 +3172,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T16:00Z";
+  // Masthead height, so sticky table headers sit just under it
+  (() => { const m = document.querySelector(".masthead"); if (!m) return;
+    const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
+    set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
+  const BUILD_ID = "2026-10-03T17:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3394,15 +3406,23 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     // tier editing: position tabs on the SPAM Board, no search/filter
     const tierEdit = editing && canReorder && EDIT_POS.includes(posFilter) && !query && !filtered;
     const empties = tierEdit ? (TIER_EMPTY[posFilter] || []).slice().sort((a, b) => a.tier - b.tier) : [];
+    // Small secondary note on each tier band, from the players currently in that tier only
+    const tierStats = new Map();
+    list.forEach(p => { const g = group(p); if (!g) return; const v = dv(p), x = tierStats.get(g) || { n: 0, lo: Infinity, hi: -Infinity };
+      x.n++; if (p.hasValue !== false && v > 0) { x.lo = Math.min(x.lo, v); x.hi = Math.max(x.hi, v); } tierStats.set(g, x); });
+    const tierMeta = label => { const x = tierStats.get(label); if (!x) return "";
+      const range = isFinite(x.lo) ? (Math.round(x.lo) === Math.round(x.hi) ? fmt(x.hi) : `${fmt(x.hi)}–${fmt(x.lo)}`) : "";
+      return `<span class="tier-meta">${x.n} player${x.n === 1 ? "" : "s"}${range ? " · " + range : ""}</span>`; };
+    const tierBand = label => `<tr class="tier"><td colspan="${cols}"><div class="tier-band"><span class="tier-label">${esc(label)}</span>${tierMeta(label)}</div></td></tr>`;
     const tierHead = (t, label, empty) => {
-      if (!tierEdit) return `<tr class="tier"><td colspan="${cols}">${esc(label)}</td></tr>`;
+      if (!tierEdit) return tierBand(label);
       const del = TIER_DEL && TIER_DEL.pos === posFilter && String(TIER_DEL.tier) === String(t);
       const tag = isTagTier(t), nums = tierNums(posFilter), i = nums.indexOf(Number(t));
       const hasAbove = i > 0, hasBelow = i >= 0 && i < nums.length - 1;
       return `<tr class="tier tier-edit${del ? " deleting" : ""}" data-tier="${esc(String(t))}"><td colspan="${cols}"><div class="tier-row">
         ${TIER_REN && TIER_REN.pos === posFilter && String(TIER_REN.tier) === String(t)
           ? `<input class="tier-input" type="text" value="${esc(tierNameOf(posFilter, t))}" placeholder="Name this tier" aria-label="Tier name" maxlength="60">`
-          : `<button class="tier-name" type="button" data-tier-act="rename" title="Rename tier">${esc(label)}<span class="tier-pen" aria-hidden="true">✎</span></button>`}
+          : `<button class="tier-name" type="button" data-tier-act="rename" title="Rename tier">${esc(label)}<span class="tier-pen" aria-hidden="true">✎</span></button>`}${empty ? "" : tierMeta(label)}
         ${del ? `<span class="tier-del-ask">Move its players to: ${hasAbove ? `<button class="btn" type="button" data-tier-act="del-up">Tier above</button>` : ""}${hasBelow ? `<button class="btn" type="button" data-tier-act="del-down">Tier below</button>` : ""}<button class="btn link" type="button" data-tier-act="del-cancel">Cancel</button></span>`
           : `<span class="tier-tools">${tag ? "" : `<button type="button" data-tier-act="above">+ Tier above</button><button type="button" data-tier-act="below">+ Tier below</button><button type="button" class="danger" data-tier-act="delete">Delete</button>`}</span>`}
       </div></td></tr>${empty ? `<tr class="tier-drop" data-tier="${esc(String(t))}"><td colspan="${cols}">Empty tier: drag players here</td></tr>` : ""}`;
@@ -3412,7 +3432,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const g = group(p);
       if (tierEdit && !isTagTier(p.tier)) flushEmpties(Number(p.tier));
       if (g && g !== lastGroup && !query && !filtered) {
-        out.push(tierEdit ? tierHead(p.tier, g, false) : `<tr class="tier"><td colspan="${cols}">${esc(g)}</td></tr>`);
+        out.push(tierEdit ? tierHead(p.tier, g, false) : tierBand(g));
       }
       lastGroup = g;
       const editCol = !editing ? "" : `<td class="edit-col">${canReorder && numOf(p) != null ? `
