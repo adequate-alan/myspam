@@ -154,8 +154,18 @@ with sync_playwright() as p:
     ok(card.locator(".mx-pr").count() == 2 and card.locator(".mx-score").count() == 2, "Each side: SPAM PR badge and a big score")
     projs = card.locator(".mx-proj").all_inner_texts()
     ok(len(projs) == 2 and all(re.search(r"PROJ\s+\d+\.\d", t.upper()) for t in projs), f"Projected score under each score: {projs}")
-    pcts = [int(t.rstrip('%')) for t in card.locator(".mx-pct").all_inner_texts()]
-    ok(len(pcts) == 2 and sum(pcts) == 100 and "PROJECTED MATCHUP" in card.inner_text().upper(), f"Projected matchup bar: {pcts}")
+    full_cards = partial_cards = 0
+    for c in pg.locator(".mx-card").all():
+        pj = c.locator(".mx-proj").all_inner_texts()
+        if c.locator(".mx-bar").count():
+            pcts = [float(t.rstrip('%')) for t in c.locator(".mx-pct").all_inner_texts()]
+            tot = [float(re.search(r"(\d+\.\d)", t).group(1)) for t in pj]
+            ok(abs(sum(pcts) - 100) < 0.2 and abs(pcts[0] - 100 * tot[0] / sum(tot)) < 0.2 and not any("*" in t for t in pj), f"Projected matchup bar = share of the two totals: {pcts} from {tot}")
+            full_cards += 1
+        else:
+            ok(c.locator(".mx-partial").count() == 1 and any("*" in t for t in pj), "A partial projection hides the bar and says so")
+            partial_cards += 1
+    ok(full_cards >= 1, f"Fully projected matchups show the bar ({full_cards} full, {partial_cards} partial)")
     ok("WIN PROBABILITY" not in pg.inner_text("#league-body").upper() and "TOP PLAYERS" not in pg.inner_text("#league-body").upper(), "No win probability label and no top-players clutter")
     ok("PROJECTIONS: SPAM" in pg.inner_text(".mx-source").upper(), "Data source line: Scores Sleeper · Projections SPAM")
     card.locator(".mx-show").click(); pg.wait_for_timeout(400)
@@ -286,7 +296,7 @@ with sync_playwright() as p:
     pg2.click("#tab-league"); pg2.wait_for_timeout(300); pg2.click("[data-lsub=matchups]"); pg2.wait_for_timeout(1800)
     ok(pg2.locator(".mx-card.live").count() >= 1 and pg2.locator(".mx-state.live").count() >= 1, f"Sunday afternoon: matchups are live ({pg2.locator('.mx-card.live').count()})")
     lp = pg2.locator(".mx-card.live .mx-proj").first.inner_text().upper()
-    ok("LIVE PROJ" in lp, f"Live projection label: {lp}")
+    ok("APPROX. LIVE PROJ" in lp, f"Live projection is labeled approximate: {lp}")
     ok(re.search(r"\d+ played · \d+ active · \d+ remaining", pg2.inner_text(".mx-card.live .mx-left-row")) is not None, "Players played / active / remaining")
     pg2.locator(".mx-card.live .mx-show").first.click(); pg2.wait_for_timeout(400)
     ok(pg2.locator(".mx-card.open .mx-pts.live").count() >= 1 and pg2.locator(".mx-card.open .mx-livetag").count() >= 1, "Live starters show LIVE points with their projection")

@@ -2016,6 +2016,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line-soft); }
 .mx-bar-a { background: var(--accent-primary); }
 .mx-bar-b { flex: 1; background: color-mix(in srgb, var(--gold) 70%, transparent); margin-left: 2px; }
+.mx-partial { margin: 2px 20px 0; text-align: center; font-size: 0.68rem; color: var(--muted); }
 .mx-bar-lbl { text-align: center; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
 .mx-left-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 20px 8px; font-size: 0.7rem; color: var(--muted); }
 .mx-show { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 7px; border-top: 1px solid var(--line-soft); font-size: 0.72rem; font-weight: 650; color: var(--ink-2); cursor: pointer; }
@@ -3708,7 +3709,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T23:45Z";
+  const BUILD_ID = "2026-10-05T00:15Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7510,30 +7511,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // Sleeper's current week (its NFL state), else the league's, else our schedule's
   const mxCurrentWeek = d => Math.max(1, Number((LT.nfl && LT.nfl !== "loading" && (LT.nfl.display_week || LT.nfl.week)) || (d.league.settings && d.league.settings.leg) || currentWeek() || 1));
-  // A starter's projection for the week (SPAM projection in the league's scoring, see weekProj): final = his points;
-  // live = points so far + his projection for the share of the game left (estimated from time since kickoff, ~3¼ h);
-  // not started = his projection; bye / out / empty = 0. Unranked starters use his season PPG when our stats have
-  // him, else null (the team's projection is then marked partial).
-  const GAME_MS = 3.25 * 3600e3;
-  function starterProj(x, w, cur) {
-    if (x.empty) return { v: 0 };
-    const g = x.g;
-    if (g.kind === "final") return { v: x.pts, actual: true };
-    if (g.kind === "bye" || g.kind === "none") return { v: 0, tag: g.kind === "bye" ? "Bye" : "" };
-    let per = null;
-    if (x.e.p) {
-      const rep = w === cur ? injuryReport(x.e.team) : null, inj = rep && rep.week === w ? injuryOf(x.e.team, x.e.sid) : null;
-      if (g.kind === "upcoming" && inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { v: 0, tag: "Out", out: true };   // once his game starts, his points speak
-      if (x.e.p.projPPG != null) { const R = projRatios(); per = x.e.p.projPPG * (R.get(x.e.p.id) ?? R.get("pos:" + x.e.p.pos) ?? 1); }
-    }
-    if (per == null) { const sn = seasonRanks().get(x.e.sid); per = sn && sn.g ? sn.ppg : null; }
-    // a QB/RB/WR/TE with no projection and no games this season isn't producing: 0. Other positions
-    // (K, DEF, IDP) SPAM doesn't project: left out of the projected comparison on both sides.
-    let noProj = false;
-    if (per == null && EDIT_POS.includes(x.e.pos)) { per = 0; noProj = true; }
-    if (per == null) return { v: g.kind === "live" ? x.pts : 0, missing: true };
-    if (g.kind === "live") { const left = Math.max(0, Math.min(1, 1 - (Date.now() - g.kick) / GAME_MS)); return { v: x.pts + per * left, per: noProj ? null : per, live: true }; }
-    return { v: per, per: noProj ? null : per };
+  // A starter's week for Matchups: the shared weekOutlook with Sleeper's live/final points; an empty slot is 0
+  function starterProj(x, w) {
+    if (x.empty) return { est: 0, kind: "empty" };
+    return weekOutlook(x.e, w, { pts: x.pts });
   }
   function matchupsHtml(ev, d) {
     if (slSource() !== "sleeper") return `<p class="empty-note">Matchups come from Sleeper, so they're available for Sleeper leagues.</p>`;
@@ -7545,7 +7526,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <select class="select" id="mx-week" aria-label="Week">${Array.from({ length: Math.min(18, lastWeek) }, (_, i) => i + 1).map(n => `<option value="${n}"${n === w ? " selected" : ""}>Week ${n}${n === cur ? " · current" : ""}</option>`).join("")}</select>
         ${w !== cur ? `<button class="btn" type="button" data-mx-week="${cur}">Current week</button>` : ""}
         <button class="btn" type="button" data-mx-refresh${LT.mxLoading === key ? " disabled" : ""}>${LT.mxLoading === key ? "Loading…" : "Refresh scores"}</button></span>
-      <span class="mx-source">Scores: Sleeper · Projections: SPAM ${infoIcon("SPAM's weekly projection (usage, results and team outlook), rescored for this league's scoring. Live projection = points so far + each player's projection for the part of his game that's left, estimated from the time since kickoff. Not matchup-adjusted. The bar shows each team's share of the two projected totals, not a win probability.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
+      <span class="mx-source">Scores: Sleeper · Projections: ${esc(projSource())} ${infoIcon("SPAM's weekly projection (usage, results and team outlook), rescored for this league's scoring and summed over each starting lineup. Live projections are approximate: points so far plus each player's projection for the part of his game that's left, estimated from the time since kickoff (no real-time game clock). Not matchup-adjusted. Starters SPAM doesn't project use their season PPG when our stats have them; otherwise the total is marked partial and the bar is hidden. The bar shows each team's share of the two projected totals, not a win probability.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
     if (err) return weekSel + `<div class="lg-error"><p>Couldn't load Week ${w} matchups from Sleeper (${esc(err)}).</p><button class="btn primary" type="button" data-mx-refresh>Retry</button></div>`;
     if (!data) return weekSel + `<p class="empty-note lg-loading">Loading Week ${w} matchups…</p>`;
     const groups = new Map();
@@ -7561,12 +7542,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         const e = rosterEntry(sid, map), g = nflGameState(e.team, w);
         return { slot: slots[i] || "", e, g, pts: Number(pp[sid] ?? sp[i] ?? 0) };
       });
-      starters.forEach(x => { x.proj = starterProj(x, w, cur); });
+      starters.forEach(x => { x.proj = starterProj(x, w); });
       const live = starters.filter(x => !x.empty);
       const count = k => live.filter(x => x.g.kind === k).length;
       const x = ev.byRoster.get(String(m.roster_id));
       return { m, team, starters, pts: Number(m.custom_points ?? m.points ?? 0), power: x ? x.power : null,
-        proj: starters.reduce((a, s) => a + (s.proj.v || 0), 0), partial: starters.some(s => s.proj.missing),
+        proj: starters.reduce((a, s) => a + (s.proj.est || 0), 0), partial: starters.some(s => s.proj.missing),
         done: count("final"), playing: count("live"), toPlay: count("upcoming"), off: count("bye") + count("none") };
     };
     const cards = [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([mid, ms]) => {
@@ -7581,32 +7562,31 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <span>${esc([s.team.manager !== s.team.name ? s.team.manager : "", recordText(s.team.roster.settings) || "0-0"].filter(Boolean).join(" · "))}</span></div></div>`;
       const score = (s, which) => `<div class="mx-sc ${which}${win === which ? " win" : ""}"><span class="mx-score">${fp(s.pts)}</span>
           ${state === "final" ? (win === which ? `<span class="mx-res win">Win</span>` : win === "T" ? `<span class="mx-res">Tie</span>` : `<span class="mx-res">Final</span>`)
-            : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Doesn't include starters SPAM doesn't project (e.g. K, DEF)" : ""}">${state === "live" ? "Live proj" : "Proj"} <b>${fp(s.proj)}</b>${s.partial ? "*" : ""}</span>`}</div>`;
+            : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Partial: one or more starters could not be projected" : state === "live" ? "Approximate: points so far plus each player's projection for the part of his game that's left, estimated from time since kickoff. Not a real-time game model." : ""}">${state === "live" ? "Approx. live proj" : "Proj"} <b>${fp(s.proj)}</b>${s.partial ? "*" : ""}</span>`}</div>`;
       const mid2 = `<span class="mx-mid"><span class="mx-state ${state}">${state === "final" ? "Final" : state === "live" ? "Live" : "Upcoming"}</span><span class="mx-vs">vs</span></span>`;
-      // projected share over the lineup slots both teams have projections for (unprojected slots, e.g. K/DEF, left out on both sides)
-      const skip = new Set(); [A, B].forEach(S => S.starters.forEach((x, i) => { if (x.proj.missing) skip.add(i); }));
-      const pa = A.starters.reduce((a, x, i) => a + (skip.has(i) ? 0 : x.proj.v || 0), 0), pb = B.starters.reduce((a, x, i) => a + (skip.has(i) ? 0 : x.proj.v || 0), 0);
-      const tot = pa + pb, showBar = state !== "final" && tot > 0;
-      const shareA = showBar ? Math.round(100 * pa / tot) : 0;
-      const excl = [...new Set([...skip].map(i => SLOT_LABEL[slots[i]] || slots[i]))].join(", ");
+      // projected share of the two totals; only when both lineups are fully projected (a partial total would mislead)
+      const tot = A.proj + B.proj, partial = A.partial || B.partial, showBar = state !== "final" && tot > 0 && !partial;
+      const shareA = showBar ? Math.round(1000 * A.proj / tot) / 10 : 0;
       const left = s => state === "upcoming" ? `${s.toPlay} to play` : `${s.done} played · ${s.playing} active · ${s.toPlay} remaining`;
-      const bar = showBar ? `<div class="mx-bar-row"><span class="mx-pct A">${shareA}%</span>
-          <div class="mx-bar" role="img" aria-label="Projected matchup: ${shareA}% to ${100 - shareA}%"><span class="mx-bar-a" style="width:${shareA}%"></span><span class="mx-bar-b"></span></div>
-          <span class="mx-pct B">${100 - shareA}%</span></div><div class="mx-bar-lbl">Projected matchup${excl ? ` <span>(excl. ${esc(excl)})</span>` : ""}</div>` : "";
+      const bar = showBar ? `<div class="mx-bar-row"><span class="mx-pct A">${shareA.toFixed(1)}%</span>
+          <div class="mx-bar" role="img" aria-label="Projected matchup: ${shareA.toFixed(1)}% to ${(100 - shareA).toFixed(1)}%"><span class="mx-bar-a" style="width:${shareA}%"></span><span class="mx-bar-b"></span></div>
+          <span class="mx-pct B">${(100 - shareA).toFixed(1)}%</span></div><div class="mx-bar-lbl">Projected matchup</div>`
+        : state !== "final" && partial ? `<p class="mx-partial">Partial projection · one or more starters could not be projected</p>` : "";
       // Expanded lineups: compact rows, final points or live points + projection, or the projection alone
       const ptsCell = x => {
+        const P = x.proj;
         if (x.empty) return `<td class="mx-pts">—</td>`;
-        const P = x.proj, pj = P.per != null ? `<small>Proj ${fp(P.per)}</small>` : "";
-        if (x.g.kind === "final") return `<td class="mx-pts final"><b>${fp(x.pts)}</b></td>`;
-        if (x.g.kind === "live") return `<td class="mx-pts live"><b>${fp(x.pts)}</b> <span class="mx-livetag">Live</span>${pj}</td>`;
-        if (P.tag) return `<td class="mx-pts off">${esc(P.tag)}</td>`;
-        return `<td class="mx-pts up">${P.per != null ? `<span>Proj <b>${fp(P.per)}</b></span>` : "—"}</td>`;
+        if (P.kind === "final") return `<td class="mx-pts final"><b>${P.pts != null ? fp(P.pts) : "—"}</b><small>${P.dnp ? "DNP" : P.pending ? "pts pending" : "Final"}</small></td>`;
+        if (P.kind === "live") return `<td class="mx-pts live"><b>${fp(P.pts)}</b> <span class="mx-livetag">Live</span>${P.proj != null ? `<small title="Approximate: estimated from time since kickoff">Approx. proj ${fp(P.est)}</small>` : `<small>No projection</small>`}</td>`;
+        if (P.kind === "bye" || P.kind === "out") return `<td class="mx-pts off">${esc(P.text)}</td>`;
+        if (P.missing) return `<td class="mx-pts up" title="No SPAM projection and no ${STATS_SEASONS[0]} games in our stats">No proj</td>`;
+        return `<td class="mx-pts up"><span>Proj <b>${fp(P.proj)}</b></span>${P.fallback ? `<small title="Season points per game, used because SPAM has no projection for him">season PPG</small>` : ""}</td>`;
       };
       const row = x => x.empty ? `<tr class="mx-empty"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td><td colspan="3" class="muted">Empty</td><td class="mx-pts">—</td></tr>`
-        : `<tr class="${x.proj.out ? "out" : x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
+        : `<tr class="${x.proj.kind === "out" ? "out" : x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
             <td><div class="mx-pl">${face(x.e.sid, x.e.name, "xs")}<span class="mx-pl-t"><span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.e.sid, x.e.name, "mx-name") : `<span class="mx-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span></span></div></td>
             <td><span class="pos ${esc(x.e.pos)}">${esc(x.e.pos || "–")}</span></td>
-            <td class="mx-game">${x.g.oppTeam ? `<span class="mx-opp">${teamLogo(x.g.oppTeam, "xs")}${x.g.home ? "vs" : "@"} ${esc(x.g.oppTeam)}</span>` : ""}<small class="${x.proj.out ? "out" : x.g.kind}">${esc(x.proj.out ? "Out" : x.g.text || "")}</small></td>
+            <td class="mx-game">${x.g.oppTeam ? `<span class="mx-opp">${teamLogo(x.g.oppTeam, "xs")}${x.g.home ? "vs" : "@"} ${esc(x.g.oppTeam)}</span>` : ""}<small class="${x.proj.kind === "out" ? "out" : x.g.kind}">${esc(x.proj.kind === "out" ? "Out" : x.g.text || "")}</small></td>
             ${ptsCell(x)}</tr>`;
       const lineup = s => { const top = s.starters.filter(x => !x.empty && (x.g.kind === "final" || x.g.kind === "live")).sort((a, b) => b.pts - a.pts)[0];
         return `<div class="mx-lineup"><h4>${teamFace(s.team, "xs")}${esc(s.team.name)}${top ? `<small>Top: ${esc(compactName(top.e.name))} ${fp(top.pts)}</small>` : ""}<span>${fp(s.pts)}</span></h4>
@@ -7770,13 +7750,21 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const benchAhead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
     return benchAhead >= 2 && p.pos !== "QB" ? { text: "Bench depth", cls: "deep" } : { text: `Your ${p.pos}${ahead + 1}`, cls: "" };
   }
-  // This week's projection in the league's scoring: SPAM's projection (rest-of-season points per game from usage,
-  // results and team outlook, written by the weekly pipeline in the site's scoring) rescored with the player's
-  // own league/site scoring ratio over his recent games (his position's average ratio when he has too few).
-  // Bye → "Bye", ruled Out on this week's report → "Out", no projection → null (shown as —). Not matchup-adjusted.
+  /* ---------- Weekly projections: one shared module (Waiver Wire, Matchups, player modal, future start/sit) ----------
+     provider (per-game expectation) → league scoring engine → weekly projection → game status (weekOutlook).
+     Providers, in priority order. Each returns { stats: {pass_yd, rec, …} } (scored exactly with the league's
+     settings via gamePoints) or { basePts } (points in the site's scoring, rescored with the player's own
+     league/site ratio over his recent games), or null. An external provider slots in at the front of the list
+     without touching any page. Season PPG is not a provider: it's a flagged fallback when no provider has him.
+     Weekly projections never touch rankings, values, tiers or history. */
+  const PROJ_PROVIDERS = [
+    { id: "spam", label: "SPAM", get: e => (e.p && e.p.projPPG != null ? { basePts: e.p.projPPG } : null) }
+  ];
+  const projSource = () => PROJ_PROVIDERS.map(x => x.label).join(" / ");
+  const leagueScoring = () => scoringNow();
   let projRatioCache = { key: "", map: null };
-  function projRatios() {
-    const sc = scoringNow(), base = (comps && comps.base_scoring) || DEFAULT_SCORING, key = JSON.stringify(sc) + "|" + STATS_SEASONS.map(y => statsCache[y] ? statsCache[y].updated : "").join();
+  function projRatios(sc) {
+    const base = (comps && comps.base_scoring) || DEFAULT_SCORING, key = JSON.stringify(sc) + "|" + STATS_SEASONS.map(y => statsCache[y] ? statsCache[y].updated : "").join();
     if (projRatioCache.key === key) return projRatioCache.map;
     const map = new Map(), sums = {};
     players.forEach(p => {
@@ -7793,22 +7781,90 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     projRatioCache = { key, map };
     return map;
   }
-  // This week's cell (shared game status): Bye (no game this week) · Final + his actual points (DNP if the stats
-  // include the week and he has no line; "pending" until they do) · Live + projection · Upcoming + projection · Out
-  function weekProj(p) {
-    const wk = currentWeek(), g = nflGameState(p.team, wk), d = statsCache[STATS_SEASONS[0]];
-    if (g.kind === "bye") return { kind: "bye", text: "Bye", v: null, sub: "" };
-    if (g.kind === "final") {
-      const pts = weekPoints(p.sleeperId, p.pos, wk);
-      if (pts != null) return { kind: "final", text: fp(pts), v: pts, sub: "Final" };
-      return d && d.through_week >= wk ? { kind: "dnp", text: "DNP", v: 0, sub: "Final" } : { kind: "pending", text: "—", v: null, sub: "Final · pts pending" };
+  // His points per game this season in the given scoring (null without games in our stats)
+  function seasonPpg(sid, pos, sc) {
+    const d = statsCache[STATS_SEASONS[0]], pl = d && d.players && d.players[sid];
+    if (!pl || !pl.g.length) return null;
+    let t = 0; pl.g.forEach(a => { const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; }); t += gamePoints(g, pos || pl.p, sc); });
+    return t / pl.g.length;
+  }
+  // Per-game projection for one player in a scoring system: { pts, source, fallback } or null (can't be projected)
+  function weeklyProjection(e, sc = leagueScoring()) {
+    for (const prov of PROJ_PROVIDERS) {
+      const r = prov.get(e);
+      if (!r) continue;
+      if (r.stats) return { pts: gamePoints(r.stats, e.pos, sc), source: prov.id, fallback: false };
+      if (r.basePts != null) { const R = projRatios(sc); return { pts: r.basePts * ((e.p && R.get(e.p.id)) ?? R.get("pos:" + e.pos) ?? 1), source: prov.id, fallback: false }; }
     }
-    const rep = injuryReport(p.team), inj = rep && rep.week === wk ? injuryOf(p.team, p.sleeperId) : null;
-    if (g.kind === "upcoming" && inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", text: "Out", v: null, sub: "" };
-    if (p.projPPG == null) return { kind: "none", text: "—", v: null, sub: g.kind === "live" ? "Live" : "" };
-    const R = projRatios(), r = R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1;
-    const v = Math.round(p.projPPG * r * 10) / 10;
-    return { kind: "ok", text: v.toFixed(1), v, sub: g.kind === "live" ? "Live · proj" : "Proj" };
+    const ppg = e.sid ? seasonPpg(e.sid, e.pos, sc) : null;
+    return ppg != null ? { pts: ppg, source: "season", fallback: true } : null;
+  }
+  /* One player's week (shared by every page): game status from nflGameState + points + projection.
+     final = actual points (Sleeper's when given, else our stat line; DNP / pending without one), no projection;
+     live = points so far + projection for the share of the game left, estimated from time since kickoff
+            (no keyless game clock) and flagged approx;
+     upcoming = projection; ruled Out before kickoff = 0; bye = 0; can't project = missing (never a made-up 0).
+     { kind, game, pts (actual), proj (per-game), est (expected total for the week), approx, fallback, missing, text } */
+  const GAME_MS = 3.25 * 3600e3;
+  function weekOutlook(e, week, opts = {}) {
+    const sc = opts.sc || leagueScoring(), g = nflGameState(e.team, week), now = currentWeek();
+    const sleeperPts = opts.pts;
+    if (g.kind === "bye") return { kind: "bye", game: g, est: 0, text: "Bye" };
+    if (g.kind === "final") {
+      const pts = sleeperPts ?? weekPoints(e.sid, e.pos, week), d = statsCache[STATS_SEASONS[0]];
+      if (pts != null) return { kind: "final", game: g, pts, est: pts, text: "Final" };
+      return d && d.through_week >= week ? { kind: "final", game: g, pts: 0, est: 0, dnp: true, text: "DNP" } : { kind: "final", game: g, pts: null, est: 0, pending: true, text: "Final · pts pending" };
+    }
+    if (g.kind === "upcoming" && week === now && e.p) {
+      const rep = injuryReport(e.team), inj = rep && rep.week === week ? injuryOf(e.team, e.sid) : null;
+      if (inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", game: g, est: 0, text: "Out" };   // once his game starts, his points speak
+    }
+    if (g.kind === "none" && !e.team) return { kind: "none", game: g, est: 0, missing: true, text: "" };
+    const P = weeklyProjection(e, sc);
+    const so = g.kind === "live" ? (sleeperPts ?? 0) : null;
+    if (!P) return { kind: g.kind, game: g, pts: so, est: g.kind === "live" ? so : null, missing: true, text: g.text };
+    if (g.kind === "live") {
+      const left = Math.max(0, Math.min(1, 1 - (Date.now() - g.kick) / GAME_MS));
+      return { kind: "live", game: g, pts: so, proj: P.pts, est: so + P.pts * left, approx: true, fallback: P.fallback, source: P.source, text: "Live" };
+    }
+    return { kind: g.kind, game: g, proj: P.pts, est: P.pts, fallback: P.fallback, source: P.source, text: g.text };
+  }
+  // Self-test: projections follow the league's scoring (SPM.projectionCheck() in the console, tests/format_check.py)
+  async function projectionCheck() {
+    if (!comps) await loadStatic();
+    await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason));
+    projRatioCache.key = "";
+    const scOf = f => fmtLeague({ ...FMT_DEFAULT, ...f }).scoring_settings;
+    const entry = p => ({ sid: p.sleeperId, pos: p.pos, team: p.team, p, name: p.name });
+    const withLog = pos => players.filter(p => p.pos === pos && p.projPPG != null && p.sleeperId && (statsCache[STATS_SEASONS[0]].players[p.sleeperId] || {}).g).sort((a, b) => a.posNum - b.posNum)[0];
+    const val = (p, f) => Math.round(10 * weeklyProjection(entry(p), scOf(f)).pts) / 10;
+    const out = [], check = (name, values, pass) => out.push({ check: name, values, pass: !!pass });
+    const te = withLog("TE"), wr = withLog("WR"), rb = players.filter(p => p.pos === "RB" && p.projPPG != null && p.sleeperId).sort((a, b) => a.posNum - b.posNum)[0], qb = withLog("QB");
+    const t = [0, 0.5, 1].map(x => val(te, { tep: x }));
+    check(`${te.name} (TE): TE premium none → + → ++`, t, t[0] < t[1] && t[1] < t[2]);
+    for (const p of [wr, rb]) { const r = [0, 0.5, 1].map(x => val(p, { rec: x, tep: 0 })); check(`${p.name} (${p.pos}): Standard → Half → Full PPR`, r, r[0] < r[1] && r[1] < r[2]); }
+    const q = [4, 6].map(x => val(qb, { ptd: x }));
+    check(`${qb.name} (QB): 4 → 6 point passing TDs`, q, q[0] < q[1]);
+    const sf = [val(qb, { qb: "1" }), val(qb, { qb: "sf" }), val(qb, { qb: "2" })];
+    check(`${qb.name}: 1QB / Superflex / 2QB with the same scoring don't change his own projection`, sf, sf[0] === sf[1] && sf[1] === sf[2]);
+    const fd = [val(wr, { fd: 0 }), val(wr, { fd: 1 })];
+    check(`${wr.name}: first-down points raise his projection`, fd, fd[1] > fd[0]);
+    const bonusSc = { ...scOf({}), bonus_rec_yd_100: 3 }, wrE = entry(wr), b0 = Math.round(10 * weeklyProjection(wrE, scOf({})).pts) / 10, b1 = Math.round(10 * weeklyProjection(wrE, bonusSc).pts) / 10;
+    check(`${wr.name}: a 100-yard receiving bonus never lowers his projection`, [b0, b1], b1 >= b0);
+    const none = weeklyProjection({ sid: "0", pos: "K", team: "BUF", p: null }, scOf({}));
+    check("A kicker with no projection and no stats isn't given a made-up projection", [String(none)], none === null);
+    if (out.some(c => !c.pass)) console.warn("SPAM projection check failed", out); else console.info("SPAM projection check passed", out);
+    return out;
+  }
+  // Waiver Wire's Wk N cell, from the shared week outlook
+  function weekProj(p) {
+    const o = weekOutlook({ sid: p.sleeperId, pos: p.pos, team: p.team, p }, currentWeek());
+    if (o.kind === "bye") return { kind: "bye", text: "Bye", v: null, sub: "" };
+    if (o.kind === "out") return { kind: "out", text: "Out", v: null, sub: "" };
+    if (o.kind === "final") return o.dnp ? { kind: "dnp", text: "DNP", v: 0, sub: "Final" } : o.pending ? { kind: "pending", text: "—", v: null, sub: "Final · pts pending" } : { kind: "final", text: fp(o.pts), v: o.pts, sub: "Final" };
+    if (o.missing) return { kind: "none", text: "—", v: null, sub: o.kind === "live" ? "Live" : "" };
+    const v = Math.round(o.proj * 10) / 10;
+    return { kind: "ok", text: v.toFixed(1), v, sub: (o.kind === "live" ? "Live · proj" : "Proj") + (o.fallback ? " (season PPG)" : "") };
   }
   // Season production in the league's scoring: position finish by total points, points, points per game
   let seasonRankCache = { key: "", map: null };
@@ -8373,6 +8429,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="tw-teams"><span class="tw-team">${teamLogo(info.team, "md")}<b>${esc(mt ? mt.nick : info.team)}</b></span><span class="tw-at">${ng.home ? "vs" : "@"}</span><span class="tw-team">${teamLogo(ng.opp, "md")}<b>${esc(mo ? mo.nick : ng.opp)}</b></span>${bye ? `<span class="tw-sub">next game</span>` : ""}</div>
       <div class="tw-game"><span>${played ? `<b>${esc(g.text)}</b>${pts != null ? ` · ${fp(pts)} pts` : ""}` : esc(kickoffText(ng.date, ng.time)) + (bye ? ` · Week ${ng.week}` : g.kind === "live" ? " · Live" : "")}</span>${where ? `<span>${esc(where)}</span>` : ""}${statusChip(info)}</div>
       <div class="tw-stats">
+        ${(() => { if (bye) return ""; const o = weekOutlook({ sid: info.sid, pos: info.pos, team: info.team, p: info.p }, wk);   // the shared weekly projection
+          return o.kind === "final" ? tile(`Wk ${wk} points`, o.pts != null ? fp(o.pts) : "–", o.dnp ? "Didn't play" : o.pending ? "Pending" : "Final")
+            : o.kind === "out" ? tile(`Wk ${wk} proj`, "Out", "Ruled out")
+            : o.missing ? tile(`Wk ${wk} proj`, "–", "No projection")
+            : o.kind === "live" ? tile(`Wk ${wk} proj`, fp(o.proj), "Game in progress")
+            : tile(`Wk ${wk} proj`, fp(o.proj), o.fallback ? "Season PPG" : `${esc(projSource())} · ${activeData() ? "league" : "site"} scoring`); })()}
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
         ${tile("Team total", implied ?? "–", implied ? "implied" : "")}
@@ -9513,7 +9575,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     throw new Error("the history file kept changing");
   }
-  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck };   // helpers for the scheduled snapshot and tests
+  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck };   // helpers for the scheduled snapshot and tests
 
   // Start-up: restore a saved connection
   sl = readSl();
