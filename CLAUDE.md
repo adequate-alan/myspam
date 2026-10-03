@@ -206,7 +206,11 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Photos come from `sleepercdn.com`, with an initials fallback.
   - Shows both the league position rank and the SPAM Board rank when they differ.
   - "Stats updated" line.
-- **My Team:** the connected user's roster with slots, league ranks and values.
+- **My Team:** the connected user's roster with slots, league ranks and values. The roster table is the centerpiece; no new cards (Alan, Oct 4).
+  - Header: team avatar, name, one summary line "Power Rank #N · Record W-L · Team Score X", then manager · league; "Position breakdown" opens the team in League.
+  - Strength cards lead with the league rank (green top third, red bottom third); the strength score is small at top right; the player / vs-average note is small and muted.
+  - Roster sections (Starters / Bench / Injured reserve / Taxi) are tinted full-width bands with a player count; a Last 3 column; when Sleeper has no lineup set, starters are SPAM's best lineup (labelled).
+  - Slim outline-only right rail (260px): position-rank badges (best/worst highlighted) with a needs/strengths line, Hot lately (last 3 games), and "Trade with" as one themed dropdown.
 - **League tab:**
   - Sub-tabs: Power Rankings / Trade History / Standings.
   - Power Rankings: compact rows; the whole row expands into a roster board with position ranks vs the league.

@@ -762,9 +762,9 @@ const TRADE_VERDICTS = [
 :root[data-theme="light"] {
   --page-bg: #F7F2EB;            /* warm cream */
   --nav-bg: #F7F2EB;
-  --surface-bg: #F0E8DE;         /* cards and tables: a step darker than the page (never white) */
+  --surface-bg: #EDE3D6;         /* cards and tables: a clear step darker than the page (never white) */
   --surface-raised: #F6F0E8;     /* modals, dropdowns */
-  --table-head: #E8DED2;
+  --table-head: #E4D8CA;
   --row-hover: #EBDDD5;
   --tier-row: #EEE3D8;
   --control-bg: #FAF6F0;
@@ -1842,6 +1842,30 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 /* My Team: strength in one row, roster beside a slim side panel on wide screens */
 @media (min-width: 1024px) { .mt-strength { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 .mt-dash { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+/* My Team polish: header summary, rank-first strength cards, roster sections, light rail */
+.mt-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.mt-summary { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 6px 0 2px; font-size: 0.9rem; color: var(--ink-2); }
+.mt-summary b { color: var(--cream); font-weight: 750; font-variant-numeric: tabular-nums; }
+.mt-summary i { font-style: normal; color: var(--muted); font-size: 0.8rem; }
+.strength.rk-first { padding: 12px 14px; }
+.st-score { font-size: 0.74rem; font-weight: 650; color: var(--muted); font-variant-numeric: tabular-nums; }
+.st-rank { margin-top: 6px; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; color: var(--cream); font-variant-numeric: tabular-nums; }
+.st-rank small { margin-left: 5px; font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+.st-rank.good { color: var(--rb); } .st-rank.tough { color: var(--qb); }
+.strength.rk-first .st-note { font-size: 0.68rem; color: color-mix(in srgb, var(--muted) 85%, transparent); }
+.mt-table tr.mt-sec td { background: color-mix(in srgb, var(--accent-primary) 10%, var(--surface)); border-top: 2px solid color-mix(in srgb, var(--accent-primary) 35%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--accent-primary) 22%, transparent); padding-block: 8px; }
+.mt-sec-n { margin-left: 8px; font-size: 0.7rem; font-weight: 600; color: var(--muted); }
+.mt-side .mt-card { background: none; padding: 10px 14px; }
+.mt-side { gap: 8px; }
+.nb-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.nb { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; border-radius: 6px; border: 1px solid var(--line-soft); font-size: 0.78rem; }
+.nb b { font-weight: 750; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.nb .pos { min-width: 0; height: 18px; font-size: 0.6rem; padding: 0 6px; }
+.nb.good b { color: var(--rb); } .nb.tough b { color: var(--qb); }
+.nb.best { border-color: color-mix(in srgb, var(--rb) 55%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
+.nb.worst { border-color: color-mix(in srgb, var(--qb) 55%, transparent); background: color-mix(in srgb, var(--qb) 8%, transparent); }
+.nb-text { margin-top: 8px; font-size: 0.74rem; }
+.mt-trade { width: 100%; margin-top: 4px; }
 .mt-main { min-width: 0; }
 .mt-side { display: flex; flex-direction: column; gap: 12px; }
 .mt-card { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
@@ -1849,7 +1873,7 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mt-card .rr-sub { display: block; margin-top: 6px; }
 .mt-card .trade-with { margin-top: 6px; }
 .mt-card .rr-list { flex-direction: column; gap: 6px; }
-@media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; } .mt-side { margin-top: 38px; } }
+@media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 260px; align-items: start; } .mt-side { margin-top: 38px; } }
 .mt-l3, .fa-l3 { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
 .fa-opp .sc-dot { margin-right: 4px; }
@@ -2444,7 +2468,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tf3-ul { list-style: none; margin: 0; padding: 0; }
 
 /* ---------- Footer, dialog, toast ---------- */
-footer { border-top: 1px solid var(--line-soft); padding-block: 22px 40px; color: var(--muted); font-size: 0.8rem; }
+footer { border-top: 1px solid var(--line-soft); padding-block: 16px 32px; color: color-mix(in srgb, var(--muted) 75%, transparent); font-size: 0.7rem; }
 .footer-row { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
 .footer-link { background: none; border: 0; padding: 0; color: var(--muted); font-size: 0.78rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .footer-link:hover { color: var(--cream); }
@@ -3412,7 +3436,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("brand-name").innerHTML = nm;   // one strong word; the small accent mark comes from CSS
   $("brand-tag").textContent = SITE.tagline;
   $("meta").textContent = SITE.updated ? "Updated " + SITE.updated : "";
-  $("footer-text").textContent = "Rankings and trade model by " + SITE.author + ". Base values reflect " + formatLabel() + " scoring.";
+  $("footer-text").textContent = SITE.name + " rankings and trade model · Base format: " + formatLabel();
   $("sample-notice").hidden = !SITE.sampleData;
   if (SITE.sampleNote) $("sample-note").textContent = SITE.sampleNote;
 
@@ -3457,7 +3481,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T10:00Z";
+  const BUILD_ID = "2026-10-04T11:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6422,7 +6446,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td class="mt-l3">${(() => { const g = recentGames(e.sid, e.pos, 3); return g.length ? fp(avgPts(g)) : `<span class="muted">–</span>`; })()}</td>
         <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
     };
-    const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier"><td colspan="6">${title}</td></tr>${rowsHtml}` : "";
+    const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier mt-sec"><td colspan="6">${title}<span class="mt-sec-n">${(rowsHtml.match(/<tr class="mt-row(?! empty-slot)/g) || []).length}</span></td></tr>${rowsHtml}` : "";
     // Sleeper's lineup; before one is set (all slots empty), SPAM's best lineup by value
     const ev = evaluateTeams(), mineEv = ev.list.find(x => x.team.mine);
     const noLineup = !(r.starters || []).some(x => x && x !== "0");
@@ -6445,15 +6469,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const needs = EDIT_POS.filter(pos => mineEv.place[pos] > n - third), strong = EDIT_POS.filter(pos => mineEv.place[pos] <= third);
     const hot = r.players.map(x => map.get(String(x))).filter(Boolean).map(p => ({ p, g: recentGames(p.sleeperId, p.pos, 3) })).filter(x => x.g.length)
       .map(x => ({ ...x, a: avgPts(x.g) })).sort((a, b) => b.a - a.a).slice(0, 5);
-    const wl = recordText(r.settings) ? ` · ${recordText(r.settings)}` : "";
     const others = LG.teams.filter(t => !t.mine);
     box.innerHTML = `
-      <div class="panel-head">
-        <div>
+      <div class="panel-head mt-head">
+        <div class="mt-id">${teamFace(me, "lg")}<div>
           <h2 class="panel-title">${esc(me.name)}</h2>
-          <p class="panel-sub">${esc(me.manager)}${wl} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
-        </div>
-        <button class="btn" type="button" data-open-team="${me.rosterId}">Power rank ${mineEv.power} of ${ev.list.length} · Position breakdown</button>
+          <p class="mt-summary"><span>Power Rank <b>#${mineEv.power}</b> <i>of ${n}</i></span>${recordText(r.settings) ? `<span>Record <b>${esc(recordText(r.settings))}</b></span>` : ""}<span>Team Score <b>${fmt(mineEv.score)}</b></span></p>
+          <p class="panel-sub">${esc(me.manager)} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
+        </div></div>
+        <button class="btn" type="button" data-open-team="${me.rosterId}">Position breakdown</button>
       </div>
       <h3 class="section-label">Roster strength</h3>
       <div class="strength-grid mt-strength">${strength}</div>
@@ -6464,24 +6488,31 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
       <aside class="mt-side">
-        <section class="mt-card"><h3 class="rr-label">Power rank</h3><div class="rr-team">${teamFace(me, "sm")}<div><p class="rr-big">#${mineEv.power} <span>of ${n}</span></p><p class="rr-text">Team score ${fmt(mineEv.score)}${wl}</p></div></div></section>
-        ${needs.length || strong.length ? `<section class="mt-card"><h3 class="rr-label">Needs and strengths</h3>${needs.length ? `<p class="rr-text">Needs <b>${needs.join(", ")}</b></p>` : ""}${strong.length ? `<p class="rr-text">Strong at <b>${strong.join(", ")}</b></p>` : ""}<p class="rr-sub">${EDIT_POS.map(pos => `${pos} ${ordinal(mineEv.place[pos])}`).join(" · ")}</p></section>` : ""}
+        <section class="mt-card"><h3 class="rr-label">Position ranks <span class="rr-when">in the league</span></h3>
+          <div class="nb-row">${EDIT_POS.map(pos => { const pl = mineEv.place[pos], lo = Math.min(...EDIT_POS.map(q => mineEv.place[q])), hi = Math.max(...EDIT_POS.map(q => mineEv.place[q])), best = lo !== hi && pl === lo, worst = lo !== hi && pl === hi;
+            return `<span class="nb ${gradeOf(pl, n)}${best ? " best" : worst ? " worst" : ""}" title="${pos}: ${ordinal(pl)} of ${n}${best ? " (strongest)" : worst ? " (weakest)" : ""}"><span class="pos ${pos}">${pos}</span><b>${ordinal(pl)}</b></span>`; }).join("")}</div>
+          ${needs.length || strong.length ? `<p class="rr-text nb-text">${needs.length ? `Needs <b>${needs.join(", ")}</b>` : ""}${needs.length && strong.length ? " · " : ""}${strong.length ? `Strong at <b>${strong.join(", ")}</b>` : ""}</p>` : ""}</section>
         ${hot.length ? `<section class="mt-card"><h3 class="rr-label">Hot lately <span class="rr-when">last 3 games</span></h3><ul class="rr-list">${hot.map(x => `<li><span class="rr-mv up">${fp(x.a)}</span>${nameLink(x.p.sleeperId, x.p.name, "rr-name")}<span class="rr-sub">${esc(posLabel(x.p))}</span></li>`).join("")}</ul></section>` : ""}
         <section class="mt-card"><h3 class="rr-label">Trade with</h3>
-        <div class="trade-with">${others.map(t => `<button class="tw-btn" type="button" data-roster="${t.rosterId}">
-          <span class="tw-name">${esc(t.name)}</span>${t.name !== t.manager ? `<span class="tw-manager">${esc(t.manager)}</span>` : ""}</button>`).join("")}</div></section>
+          <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></section>
       </aside></div>`;
+  }
+  function tradeWith(rosterId) {
+    if (!rosterId || LG.myRosterId == null) return;
+    TC.mode = "league"; saveTc(); setThree(false); $("team-A").value = String(LG.myRosterId); $("team-B").value = String(rosterId);
+    sides.A = []; sides.B = [];
+    renderTeamRosters(); renderTrade();
+    showTab("trade"); history.replaceState(null, "", "#trade");
+    window.scrollTo({ top: 0 });
   }
   $("myteam-body").addEventListener("click", e => {
     const ot = e.target.closest("[data-open-team]");
     if (ot) { openTeam(ot.dataset.openTeam); return; }
     const b = e.target.closest("[data-roster]");
-    if (!b || LG.myRosterId == null) return;
-    TC.mode = "league"; saveTc(); setThree(false); $("team-A").value = String(LG.myRosterId); $("team-B").value = b.dataset.roster;
-    sides.A = []; sides.B = [];
-    renderTeamRosters(); renderTrade();
-    showTab("trade"); history.replaceState(null, "", "#trade");
-    window.scrollTo({ top: 0 });
+    if (b) tradeWith(b.dataset.roster);
+  });
+  $("myteam-body").addEventListener("change", e => {
+    if (e.target.matches("[data-trade-with]") && e.target.value) tradeWith(e.target.value);
   });
 
   /* ---------- Photos ---------- */
@@ -6598,9 +6629,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // Position strength cards (QB, RB, WR, TE, bench depth) for one team, compared with the league
   function strengthCards(x, ev) {
-    const card = (k, label, val, note, color) => `<div class="strength">
-        <div class="st-top">${k === "DEPTH" ? `<span class="st-label">${label}</span>` : `<span class="pos ${k}">${k}</span>`}<span class="st-place">${ordinal(x.place[k])} of ${ev.n}</span></div>
-        <div class="st-total">${fmt(val)}</div>
+    const card = (k, label, val, note, color) => `<div class="strength rk-first">
+        <div class="st-top">${k === "DEPTH" ? `<span class="st-label">${label}</span>` : `<span class="pos ${k}">${k}</span>`}<span class="st-score" title="Position strength score">${fmt(val)}</span></div>
+        <div class="st-rank ${gradeOf(x.place[k], ev.n)}">${ordinal(x.place[k])}<small>of ${ev.n}</small></div>
         <div class="st-bar" style="--c: ${color}"><span style="width:${Math.max(3, 100 * val / ev.max[k]).toFixed(1)}%"></span></div>
         <div class="st-note">${note}</div></div>`;
     return EDIT_POS.map(pos => {
