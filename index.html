@@ -1875,6 +1875,14 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mt-card .rr-list { flex-direction: column; gap: 6px; }
 @media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 260px; align-items: start; } .mt-side { margin-top: 38px; } }
 .mt-l3, .fa-l3 { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.rf { display: flex; flex-direction: column; gap: 2px; }
+.rf-scores { font-size: 0.84rem; color: var(--ink); }
+.rf-scores i { font-style: normal; color: var(--muted); margin: 0 4px; }
+.rf-tag { font-size: 0.62rem; font-weight: 750; letter-spacing: 0.06em; color: var(--muted); }
+.rf-tag.out { color: var(--st-dnp); }
+.rf-sub { font-size: 0.68rem; color: var(--muted); }
+.rf-trend { font-weight: 700; }
+.rf-trend.hot { color: var(--rb); } .rf-trend.cool { color: var(--qb); } .rf-trend.steady { color: var(--muted); }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
 .fa-opp .sc-dot { margin-right: 4px; }
 @media (max-width: 760px) { #panel-fa .fa-wk { display: none; } }
@@ -2811,7 +2819,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     </div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="Average fantasy points, last 3 games">Last 3</th><th scope="col" class="fa-wk">This week</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="fa-l3" title="His last three weeks, newest first (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col" class="fa-wk">This week</th><th scope="col">Value</th></tr></thead>
         <tbody id="fa-body"></tbody>
       </table>
     </div>
@@ -3481,7 +3489,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T11:00Z";
+  const BUILD_ID = "2026-10-04T12:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6443,7 +6451,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflTag(e.team)}</div></div></td>
         <td class="pos-col">${badge}</td>
         <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
-        <td class="mt-l3">${(() => { const g = recentGames(e.sid, e.pos, 3); return g.length ? fp(avgPts(g)) : `<span class="muted">–</span>`; })()}</td>
+        <td class="mt-l3">${recentForm(e.sid, e.pos, e.team)}</td>
         <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
     };
     const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier mt-sec"><td colspan="6">${title}<span class="mt-sec-n">${(rowsHtml.match(/<tr class="mt-row(?! empty-slot)/g) || []).length}</span></td></tr>${rowsHtml}` : "";
@@ -6484,7 +6492,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="mt-dash"><div class="mt-main">
       <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are SPAM's best lineup</span>` : ""}</h3>
       <div class="table-scroll"><table class="mt-table">
-        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col" title="Average fantasy points, last 3 games">Last 3</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col" title="His last three weeks, newest first (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
       <aside class="mt-side">
@@ -7032,6 +7040,35 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     renderFA();
   });
   $("fa-search").addEventListener("input", e => { faQuery = e.target.value.trim().toLowerCase(); renderFA(); });
+  /* Recent form: his last three weeks his team has played, newest first. A week his team didn't play is BYE,
+     a week it played without him is OUT (neither counts as zero). Avg = the games he played. Trend compares
+     that average with his season PPG (last season's when this season has 3 games or fewer): Hot / Cooling
+     when at least 15% and 2 points apart, else Steady; no trend without a baseline. */
+  function recentForm(sid, pos, team) {
+    const season = STATS_SEASONS[0], log = sid ? seasonLog(season, sid, pos) : null, byW = new Map((log ? log.games : []).map(g => [g.w, g]));
+    const sched = team ? teamGames(season, team) : [], rowW = new Map(sched.map(r => [r[0], r]));
+    const last = Math.max(0, ...(log ? log.games.map(g => g.w) : []), ...sched.filter(r => r[4] != null).map(r => r[0]));
+    const weeks = [];
+    for (let w = last; w >= 1 && weeks.length < 3; w--) {
+      const g = byW.get(w), r = rowW.get(w);
+      if (g) weeks.push({ w, pts: g.pts });
+      else if (team && sched.length && !r) weeks.push({ w, tag: "BYE" });
+      else if (r && r[4] != null) weeks.push({ w, tag: "OUT" });
+    }
+    if (!weeks.length) return `<span class="muted">–</span>`;
+    const played = weeks.filter(x => x.pts != null), avg = played.length ? played.reduce((a, x) => a + x.pts, 0) / played.length : null;
+    let base = null;
+    if (log && log.games.length > 3) base = totals(log.games).ppg;
+    else { const prev = sid && STATS_SEASONS[1] ? seasonLog(STATS_SEASONS[1], sid, pos) : null; if (prev && prev.games.length >= 4) base = totals(prev.games).ppg; }
+    let trend = "";
+    if (avg != null && base != null && played.length >= 2) {
+      const d = avg - base, big = Math.abs(d) >= 2 && Math.abs(d) >= 0.15 * Math.max(base, 1);
+      trend = !big ? `<span class="rf-trend steady" title="Within 15% of his usual ${fp(base)}">→ Steady</span>`
+        : d > 0 ? `<span class="rf-trend hot" title="Up from his usual ${fp(base)}">▲ Hot</span>` : `<span class="rf-trend cool" title="Down from his usual ${fp(base)}">▼ Cooling</span>`;
+    }
+    const cell = x => x.tag ? `<b class="rf-tag ${x.tag.toLowerCase()}" title="Week ${x.w}: ${x.tag === "BYE" ? "bye week" : "didn't play"}">${x.tag}</b>` : `<span title="Week ${x.w}">${fp(x.pts)}</span>`;
+    return `<span class="rf"><span class="rf-scores">${weeks.map(cell).join(`<i>·</i>`)}</span>${avg != null ? `<span class="rf-sub">Avg ${fp(avg)}${trend ? " · " + trend : ""}</span>` : ""}</span>`;
+  }
   // Free agents: this week's opponent with the matchup verdict dot
   function faWeek(p) {
     const ng = p.team ? nextGame(p.team) : null, wk = currentWeek();
@@ -7053,7 +7090,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>${ownPill("fa")}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
-      <td class="fa-l3">${(() => { const g = recentGames(p.sleeperId, p.pos, 3); return g.length ? fp(avgPts(g)) : `<span class="muted">–</span>`; })()}</td>
+      <td class="fa-l3">${recentForm(p.sleeperId, p.pos, p.team)}</td>
       <td class="fa-wk">${faWeek(p)}</td>
       <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td></tr>`).join("")
       : `<tr><td class="empty" colspan="6">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
