@@ -2772,7 +2772,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   <section id="panel-finder" role="tabpanel" aria-labelledby="tab-finder" hidden>
     <div class="panel-head">
       <div>
-        <h2 class="panel-title">Trade finder</h2>
+        <h2 class="panel-title">Trade Finder</h2>
         <p class="panel-sub" id="tf-sub"></p>
       </div>
     </div>
@@ -3492,7 +3492,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T12:30Z";
+  const BUILD_ID = "2026-10-04T13:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
