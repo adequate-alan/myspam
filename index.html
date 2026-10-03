@@ -1876,11 +1876,14 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 @media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 260px; align-items: start; } .mt-side { margin-top: 38px; } }
 .mt-l3, .fa-l3 { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 .rf { display: flex; flex-direction: column; gap: 2px; }
-.rf-scores { font-size: 0.84rem; color: var(--ink); }
-.rf-scores i { font-style: normal; color: var(--muted); margin: 0 4px; }
+.rf-scores { display: inline-grid; grid-auto-flow: column; grid-auto-columns: minmax(34px, auto); column-gap: 10px; width: max-content; font-size: 0.84rem; color: var(--ink); }
+.rf-col { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.rf-v { font-variant-numeric: tabular-nums; }
+.rf-wk { font-size: 0.6rem; font-weight: 450; color: var(--muted); white-space: nowrap; }
+.rf-tag { line-height: 1.55; }
 .rf-tag { font-size: 0.62rem; font-weight: 750; letter-spacing: 0.06em; color: var(--muted); }
 .rf-tag.out { color: var(--st-dnp); }
-.rf-sub { font-size: 0.68rem; color: var(--muted); }
+.rf-sub { margin-top: 2px; font-size: 0.68rem; color: var(--muted); }
 .rf-trend { font-weight: 700; }
 .rf-trend.hot { color: var(--rb); } .rf-trend.cool { color: var(--qb); } .rf-trend.steady { color: var(--muted); }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
@@ -3489,7 +3492,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T12:00Z";
+  const BUILD_ID = "2026-10-04T12:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7040,7 +7043,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     renderFA();
   });
   $("fa-search").addEventListener("input", e => { faQuery = e.target.value.trim().toLowerCase(); renderFA(); });
-  /* Recent form: his last three weeks his team has played, newest first. A week his team didn't play is BYE,
+  /* Recent form: his last three weeks his team has played, shown oldest to newest with week labels. A week his team didn't play is BYE,
      a week it played without him is OUT (neither counts as zero). Avg = the games he played. Trend compares
      that average with his season PPG (last season's when this season has 3 games or fewer): Hot / Cooling
      when at least 15% and 2 points apart, else Steady; no trend without a baseline. */
@@ -7066,8 +7069,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       trend = !big ? `<span class="rf-trend steady" title="Within 15% of his usual ${fp(base)}">→ Steady</span>`
         : d > 0 ? `<span class="rf-trend hot" title="Up from his usual ${fp(base)}">▲ Hot</span>` : `<span class="rf-trend cool" title="Down from his usual ${fp(base)}">▼ Cooling</span>`;
     }
-    const cell = x => x.tag ? `<b class="rf-tag ${x.tag.toLowerCase()}" title="Week ${x.w}: ${x.tag === "BYE" ? "bye week" : "didn't play"}">${x.tag}</b>` : `<span title="Week ${x.w}">${fp(x.pts)}</span>`;
-    return `<span class="rf"><span class="rf-scores">${weeks.map(cell).join(`<i>·</i>`)}</span>${avg != null ? `<span class="rf-sub">Avg ${fp(avg)}${trend ? " · " + trend : ""}</span>` : ""}</span>`;
+    // oldest to newest, left to right, each score with its week underneath
+    const cell = x => `<span class="rf-col">${x.tag ? `<b class="rf-tag ${x.tag.toLowerCase()}" title="Week ${x.w}: ${x.tag === "BYE" ? "bye week" : "didn't play"}">${x.tag}</b>` : `<span class="rf-v">${fp(x.pts)}</span>`}<span class="rf-wk">Wk ${x.w}</span></span>`;
+    return `<span class="rf"><span class="rf-scores">${weeks.slice().reverse().map(cell).join("")}</span>${avg != null ? `<span class="rf-sub">Avg ${fp(avg)}${trend ? " · " + trend : ""}</span>` : ""}</span>`;
   }
   // Free agents: this week's opponent with the matchup verdict dot
   function faWeek(p) {
