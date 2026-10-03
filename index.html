@@ -544,6 +544,43 @@ function tradeModel(sideA, sideB) {
    overall board (the overall_tier column). Any tier without a name
    shows as "Tier 3", etc.
    ===================================================================== */
+/* NFL team metadata: the one place team names, colors and logos come from (nflverse teams_colors_logos;
+   logos from ESPN's logo CDN). [full name, nickname, primary color, secondary color, ESPN logo code] */
+const NFL_TEAMS = {
+  ARI: ["Arizona Cardinals", "Cardinals", "#97233F", "#000000", "ari"],
+  ATL: ["Atlanta Falcons", "Falcons", "#A71930", "#000000", "atl"],
+  BAL: ["Baltimore Ravens", "Ravens", "#241773", "#9E7C0C", "bal"],
+  BUF: ["Buffalo Bills", "Bills", "#00338D", "#C60C30", "buf"],
+  CAR: ["Carolina Panthers", "Panthers", "#0085CA", "#000000", "car"],
+  CHI: ["Chicago Bears", "Bears", "#0B162A", "#E64100", "chi"],
+  CIN: ["Cincinnati Bengals", "Bengals", "#FB4F14", "#000000", "cin"],
+  CLE: ["Cleveland Browns", "Browns", "#FF3C00", "#311D00", "cle"],
+  DAL: ["Dallas Cowboys", "Cowboys", "#002244", "#B0B7BC", "dal"],
+  DEN: ["Denver Broncos", "Broncos", "#002244", "#FB4F14", "den"],
+  DET: ["Detroit Lions", "Lions", "#0076B6", "#B0B7BC", "det"],
+  GB: ["Green Bay Packers", "Packers", "#203731", "#FFB612", "gb"],
+  HOU: ["Houston Texans", "Texans", "#03202F", "#A71930", "hou"],
+  IND: ["Indianapolis Colts", "Colts", "#002C5F", "#A5ACAF", "ind"],
+  JAX: ["Jacksonville Jaguars", "Jaguars", "#006778", "#000000", "jax"],
+  KC: ["Kansas City Chiefs", "Chiefs", "#E31837", "#FFB612", "kc"],
+  LAC: ["Los Angeles Chargers", "Chargers", "#007BC7", "#FFC20E", "lac"],
+  LAR: ["Los Angeles Rams", "Rams", "#003594", "#FFD100", "lar"],
+  LV: ["Las Vegas Raiders", "Raiders", "#000000", "#A5ACAF", "lv"],
+  MIA: ["Miami Dolphins", "Dolphins", "#008E97", "#F58220", "mia"],
+  MIN: ["Minnesota Vikings", "Vikings", "#4F2683", "#FFC62F", "min"],
+  NE: ["New England Patriots", "Patriots", "#002244", "#C60C30", "ne"],
+  NO: ["New Orleans Saints", "Saints", "#D3BC8D", "#000000", "no"],
+  NYG: ["New York Giants", "Giants", "#0B2265", "#A71930", "nyg"],
+  NYJ: ["New York Jets", "Jets", "#003F2D", "#000000", "nyj"],
+  PHI: ["Philadelphia Eagles", "Eagles", "#004C54", "#A5ACAF", "phi"],
+  PIT: ["Pittsburgh Steelers", "Steelers", "#000000", "#FFB612", "pit"],
+  SEA: ["Seattle Seahawks", "Seahawks", "#002244", "#69BE28", "sea"],
+  SF: ["San Francisco 49ers", "49ers", "#AA0000", "#B3995D", "sf"],
+  TB: ["Tampa Bay Buccaneers", "Buccaneers", "#A71930", "#322F2B", "tb"],
+  TEN: ["Tennessee Titans", "Titans", "#4495D2", "#D50A0A", "ten"],
+  WAS: ["Washington Commanders", "Commanders", "#5A1414", "#FFB612", "wsh"],
+};
+
 const TIER_NAMES = {
   ALL: {
     // 1: "Elite",
@@ -2109,13 +2146,51 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .rk-l:empty { display: none; }
 .rk-bar { width: 44px; height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
 .rk-bar span { display: block; height: 100%; background: color-mix(in srgb, var(--rk) 70%, transparent); border-radius: 2px; }
-.inj-chip { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 650; color: var(--ink-2); background: color-mix(in srgb, var(--muted) 14%, transparent); }
-.inj-chip.q { color: var(--gold); background: color-mix(in srgb, var(--gold) 13%, transparent); }
-.inj-chip.out { color: var(--qb); background: color-mix(in srgb, var(--qb) 14%, transparent); }
-.pr-chip { display: inline-block; min-width: 38px; text-align: center; padding: 1px 6px; border-radius: 4px; font-size: 0.66rem; font-weight: 750; letter-spacing: 0.04em; }
-.pr-chip.FP { color: var(--rb); background: color-mix(in srgb, var(--rb) 13%, transparent); }
-.pr-chip.LP { color: var(--gold); background: color-mix(in srgb, var(--gold) 13%, transparent); }
-.pr-chip.DNP { color: var(--qb); background: color-mix(in srgb, var(--qb) 14%, transparent); }
+/* Team identity: logos and restrained team-colour accents (the SPAM theme stays the base) */
+.tm { --tc: var(--tc-d, var(--line)); }
+:root[data-theme="light"] .tm { --tc: var(--tc-l, var(--line)); }
+.tlogo { width: 22px; height: 22px; object-fit: contain; flex: none; vertical-align: middle; }
+.tlogo.xs { width: 16px; height: 16px; margin-right: 6px; } .tlogo.sm { width: 20px; height: 20px; } .tlogo.md { width: 28px; height: 28px; }
+.tlogo.broken { display: none; }
+.pm-head.tm { box-shadow: inset 0 3px 0 var(--tc); }
+.pm-head.tm .face.xl { box-shadow: inset 0 0 0 1px var(--line), 0 0 0 3px var(--surface), 0 0 0 5px color-mix(in srgb, var(--tc) 70%, transparent); }
+.pp-meta .tlogo { margin-right: -4px; }
+.pm-week-top .tlogo { align-self: center; }
+.pm-at { font-size: 0.72rem; color: var(--muted); }
+.tw-card { --ta: var(--ta-d, var(--line)); --tb: var(--tb-d, var(--line)); }
+:root[data-theme="light"] .tw-card { --ta: var(--ta-l, var(--line)); --tb: var(--tb-l, var(--line)); }
+.tw-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; background: linear-gradient(to right, var(--ta) 50%, var(--tb) 50%); opacity: 0.85; }
+.tw-teams { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.tw-team { display: inline-flex; align-items: center; gap: 8px; }
+.tw-team b { font-size: 1.05rem; font-weight: 760; color: var(--cream); }
+.tw-at { font-size: 0.8rem; font-weight: 650; color: var(--muted); }
+.tw-game { margin-top: 6px; }
+.sc-opp.tm { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--tc) 55%, transparent); }
+.sc-opp .tlogo { margin-right: 6px; }
+.gl-opp .tlogo { vertical-align: -3px; }
+/* Practice report: one section per team with its logo and a team-colour edge, groups by position */
+.pr-me { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 14px; }
+.pr-scope { font-size: 0.78rem; color: var(--muted); }
+.pr-sec { margin-bottom: 18px; }
+.pr-team { display: flex; align-items: center; gap: 10px; padding: 9px 14px; margin-bottom: 8px; border-radius: var(--radius-sm); border: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--tc) 8%, var(--surface)); box-shadow: inset 3px 0 0 var(--tc); }
+.pr-team b { font-size: 0.98rem; font-weight: 760; color: var(--cream); }
+.pr-opp { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.pr-wk { margin-left: auto; font-size: 0.72rem; color: var(--muted); }
+.gl-table.inj-table tr.pr-group td { padding: 6px 12px 5px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); background: color-mix(in srgb, var(--muted) 6%, transparent); text-align: left; }
+.gl-table.inj-table td.pr-day, .gl-table.inj-table th.pr-day { text-align: center; width: 64px; }
+.pr-player .st-badge { margin-left: 8px; }
+.pr-inj { color: var(--ink-2); }
+/* Status colours, the same everywhere */
+:root, :root[data-theme="dark"] { --st-fp: #3F9D62; --st-lp: #D8901E; --st-dnp: #C9373F; --st-out: #93202A; --st-q: #D9A520; --st-d: #D85A2B; --st-ir: #8F4A4F; --st-ink: #FFFFFF; --st-ink-amber: #1A1314; }
+:root[data-theme="light"] { --st-fp: #2F8550; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
+.st-blk { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 24px; padding: 0 6px; border-radius: 5px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; color: var(--st-ink); background: var(--st, var(--surface-2)); }
+.st-blk.none { --st: transparent; color: var(--muted); font-weight: 500; }
+.st-blk.fp { --st: var(--st-fp); } .st-blk.lp { --st: var(--st-lp); color: var(--st-ink-amber); } .st-blk.dnp { --st: var(--st-dnp); }
+.st-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; color: var(--st-ink); background: var(--st, var(--surface-2)); white-space: nowrap; }
+.st-badge.fp, .st-badge.ok { --st: color-mix(in srgb, var(--st-fp) 22%, transparent); color: var(--st-fp); }
+.st-badge.lp, .st-badge.q { --st: var(--st-q); color: var(--st-ink-amber); }
+.st-badge.d { --st: var(--st-d); } .st-badge.dnp { --st: var(--st-dnp); } .st-badge.out { --st: var(--st-out); } .st-badge.ir { --st: var(--st-ir); }
 .inj-pos { display: inline-block; min-width: 30px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.06em; color: var(--muted); }
 .inj-table tr.inj-me td { background: color-mix(in srgb, var(--gold) 9%, transparent); }
 .inj-table .pl-name { font-size: 0.86rem; }
@@ -2134,8 +2209,6 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .gl-table .gl-row.off td.gl-result, .gl-table .gl-row.off td.gl-opp { text-align: left; }
 .gl-table.inj-table th, .gl-table.inj-table td { text-align: left; }
 .inj-table tr.tier td { font-size: 0.68rem; font-weight: 650; padding: 6px 16px 5px; color: var(--muted); background: color-mix(in srgb, var(--muted) 6%, transparent); border-color: var(--line-soft); }
-.inj-team { margin-left: 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
-.inj-chip.ok { color: color-mix(in srgb, var(--rb) 75%, var(--muted)); background: color-mix(in srgb, var(--rb) 10%, transparent); }
 .pr-full { margin-top: 14px; }
 .tw-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; font-size: 0.8rem; color: var(--ink-2); }
 .tw-nx { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -3316,11 +3389,32 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (el._setHints) el._setHints();
   }
   scrollHints(document.querySelector(".tabs"));
+  /* NFL team identity: logo, names, and accent colors readable on each theme (from NFL_TEAMS only).
+     --tc-d / --tc-l are the team's color for dark / light mode; .tm picks the one for the current theme.
+     A team color too dark for the dark theme (navy, black) uses the secondary color or a lighter tint;
+     one too light for the light theme (gold, tan) uses the secondary color or a darker shade. */
+  function teamMeta(abbr) {
+    const t = NFL_TEAMS[abbr];
+    return t ? { abbr, name: t[0], nick: t[1], c1: t[2], c2: t[3], logo: `https://a.espncdn.com/i/teamlogos/nfl/500/${t[4]}.png` } : null;
+  }
+  const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const lumOf = h => { const c = hexRgb(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const mixHex = (h, to, f) => "#" + hexRgb(h).map((v, i) => Math.round(v + (hexRgb(to)[i] - v) * f).toString(16).padStart(2, "0")).join("");
+  const TEAM_ACCENT = {};
+  function teamAccent(abbr) {
+    if (TEAM_ACCENT[abbr]) return TEAM_ACCENT[abbr];
+    const m = teamMeta(abbr); if (!m) return null;
+    const d = [m.c1, m.c2].find(c => lumOf(c) > 0.07 && lumOf(c) < 0.75) || mixHex(m.c1, "#FFFFFF", 0.5);
+    const l = [m.c1, m.c2].find(c => lumOf(c) < 0.3) || mixHex(m.c1, "#000000", 0.4);
+    return (TEAM_ACCENT[abbr] = { d, l });
+  }
+  const teamStyle = abbr => { const a = teamAccent(abbr); return a ? `--tc-d:${a.d};--tc-l:${a.l}` : ""; };
+  const teamLogo = (abbr, size = "") => { const m = teamMeta(abbr); return m ? `<img class="tlogo${size ? " " + size : ""}" src="${m.logo}" alt="${esc(m.nick)}" title="${esc(m.name)}" loading="lazy" decoding="async" onerror="this.classList.add('broken')">` : ""; };
   // Masthead height, so sticky table headers sit just under it
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T02:00Z";
+  const BUILD_ID = "2026-10-04T04:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5853,7 +5947,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return nameIdx;
   }
   const TEAM_ALIAS = { JAC: "JAX", WSH: "WAS", LA: "LAR", LVR: "LV", OAK: "LV", SD: "LAC", STL: "LAR", KCC: "KC", GBP: "GB", NEP: "NE", NOS: "NO", SFO: "SF", TBB: "TB" };
-  const NFL_TEAMS = new Set(["ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LV", "LAC", "LAR",
+  const NFL_ABBRS = new Set(["ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LV", "LAC", "LAR",
                              "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SF", "SEA", "TB", "TEN", "WAS", "JAC", "WSH"]);
   const normTeam = t => { t = String(t || "").toUpperCase(); return TEAM_ALIAS[t] || t; };
   function pickCandidate(list, pos, team) {
@@ -5870,7 +5964,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const push = c => { if (c && !seen.has(c.sid)) { seen.add(c.sid); found.push(c); } };
     String(text || "").split(/\r?\n/).forEach(line => {
       if (line.length > 400) return;   // paragraphs of news, not roster rows
-      const team = (line.match(/\b[A-Za-z]{2,3}\b/g) || []).map(t => t.toUpperCase()).find(t => NFL_TEAMS.has(t) && t !== "NO" && t !== "NE");
+      const team = (line.match(/\b[A-Za-z]{2,3}\b/g) || []).map(t => t.toUpperCase()).find(t => NFL_ABBRS.has(t) && t !== "NO" && t !== "NE");
       const pos = (line.match(/\b(QB|RB|WR|TE|K)\b/) || [])[1];
       const words = nameKey(line).split(" ").filter(Boolean);
       for (let i = 0; i < words.length; i++) {
@@ -7165,14 +7259,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const stat = (label, val, sub) => `<div class="pm-stat"><span class="pm-stat-label">${label}</span><span class="pm-stat-val">${val}</span>${sub ? `<span class="pm-stat-sub">${sub}</span>` : ""}</div>`;
     const tabsList = PP.compare ? PP_TABS.concat([["compare", "Compare"]]) : PP_TABS;
     box.innerHTML = `
-      <div class="pm-head">
+      <div class="pm-head tm" style="${teamStyle(info.team)}">
         ${closeBtn}
         ${prevName ? `<button class="pm-back" type="button" data-pm-back>← ${esc(prevName)}</button>` : ""}
         <div class="pm-id">
           ${face(sid, info.name, "xl", false)}
           <div class="pm-id-text">
             <h2 class="pm-name" id="pm-name">${esc(info.name)}</h2>
-            <div class="pp-meta">${pos ? `<span class="pos ${esc(pos)}">${esc(pos)}</span>` : ""}<span>${meta.map(esc).join(" · ")}</span></div>
+            <div class="pp-meta">${pos ? `<span class="pos ${esc(pos)}">${esc(pos)}</span>` : ""}${info.team ? teamLogo(info.team, "sm") : ""}<span>${esc(info.team && teamMeta(info.team) ? teamMeta(info.team).nick + " · " : "")}${meta.map(esc).join(" · ")}</span></div>
             ${LG.active ? `<div class="pm-owner">${ownPill(own)}</div>` : ""}
           </div>
           ${loaded ? headerWeek(info) : ""}
@@ -7299,12 +7393,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const run = info.pos === "RB" ? "rush" : "pass";
     const defRow = dv0 && dv0.epaRank ? `<div class="tw-def"><span class="tw-label">${esc(ng.opp)} defense vs ${info.pos === "RB" ? "the run" : "the pass"}</span>
         ${rankChip(`EPA/${run}`, dv0.epaRank, dv0.n)}${rankChip("Success", dv0.succRank, dv0.n)}${rankChip("Explosive", dv0.explRank, dv0.n)}<span class="tw-sub">rank of ${dv0.n} · 1 = softest</span></div>` : "";
-    return `<div class="tw-card${grade ? " " + grade : ""}">
+    const mt = teamMeta(info.team), mo = teamMeta(ng.opp);
+    return `<div class="tw-card${grade ? " " + grade : ""}" style="${teamStyle(info.team).replace(/--tc-/g, "--ta-")};${teamStyle(ng.opp).replace(/--tc-/g, "--tb-")}">
       <div class="tw-head">
         <span class="tw-eyebrow">${bye ? `Week ${wk} · Bye` : `This week · Week ${ng.week}`}</span>
         ${gradeText ? `<span class="tw-grade">${gradeText}</span>` : ""}
       </div>
-      <div class="tw-game"><b>${bye ? "Next: " : ""}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}${statusChip(info)}</div>
+      <div class="tw-teams"><span class="tw-team">${teamLogo(info.team, "md")}<b>${esc(mt ? mt.nick : info.team)}</b></span><span class="tw-at">${ng.home ? "vs" : "@"}</span><span class="tw-team">${teamLogo(ng.opp, "md")}<b>${esc(mo ? mo.nick : ng.opp)}</b></span>${bye ? `<span class="tw-sub">next game</span>` : ""}</div>
+      <div class="tw-game"><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}${statusChip(info)}</div>
       <div class="tw-stats">
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
@@ -7319,7 +7415,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   const VERDICT = { good: "Favorable matchup", neutral: "Neutral matchup", tough: "Tough matchup" };
   // His own status: the practice-report line, or "not on practice report" once his team's report is out
-  const statusChip = info => { const r = injuryOf(info.team, info.sid); return r ? injuryChip(r) : injuryReport(info.team) ? `<span class="inj-chip ok">Not on practice report</span>` : ""; };
+  const statusChip = info => { const r = injuryOf(info.team, info.sid); return r ? injuryChip(r) : injuryReport(info.team) ? stBadge("", "Not on practice report") : ""; };
   // The three weeks after this one, with each opponent's verdict dot
   function nextWeeksLine(info, ng) {
     const rows = teamGames(STATS_SEASONS[0], info.team), D = (defenseVsPos() || {})[info.pos];
@@ -7334,11 +7430,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return out.length ? `<div class="tw-line"><span class="tw-label">Next</span>${out.join("")}<button class="btn link inline" type="button" data-pp-tab="schedule">Full schedule</button></div>` : "";
   }
   // Practice-report entries that matter for this player: his own team's and the opponent's units he plays with / against
+  // Default practice-report view: the player, same-position teammates, his OL (QB/RB/TE), key skill players,
+  // the opponent's defensive front (QB/RB) and secondary (QB/WR/TE). The rest sits behind "View full report".
+  const OL = ["T", "OT", "G", "OG", "C", "OL"], DL = ["DE", "DT", "NT", "DL"], LBS = ["LB", "OLB", "ILB", "MLB"], DBS = ["CB", "S", "FS", "SS", "DB", "SAF"];
   const RELEVANT = {
-    QB: { own: ["QB", "RB", "WR", "TE", "T", "OT", "G", "OG", "C", "OL"], opp: ["DE", "DT", "NT", "DL", "OLB", "CB", "S", "FS", "SS", "DB", "SAF"] },
-    RB: { own: ["RB", "FB", "QB", "T", "OT", "G", "OG", "C", "OL"], opp: ["DE", "DT", "NT", "DL", "LB", "OLB", "ILB", "MLB"] },
-    WR: { own: ["QB", "WR", "TE"], opp: ["CB", "S", "FS", "SS", "DB", "SAF"] },
-    TE: { own: ["QB", "TE", "WR", "T", "OT"], opp: ["LB", "OLB", "ILB", "MLB", "S", "FS", "SS", "SAF"] },
+    QB: { own: ["QB", "RB", "WR", "TE", ...OL], opp: [...DL, ...LBS, ...DBS] },
+    RB: { own: ["RB", "FB", "QB", "WR", "TE", ...OL], opp: [...DL, ...LBS] },
+    WR: { own: ["WR", "QB", "TE", "RB"], opp: DBS },
+    TE: { own: ["TE", "QB", "WR", "RB", ...OL], opp: [...LBS, ...DBS] },
   };
   const SEVERITY = r => ({ Out: 0, Doubtful: 1, Questionable: 2 })[r.status] ?? ({ DNP: 3, LP: 4, FP: 5 })[r.practice] ?? 6;
   function relevantReports(info, ng) {
@@ -7350,7 +7449,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const key = relevantReports(info, ng).filter(r => SEVERITY(r) <= 4).slice(0, 4);
     if (!key.length) return "";
     return `<div class="tw-line"><span class="tw-label">Practice notes</span>${key.map(r =>
-      `<span class="tw-nx">${esc(r.name)} <i>${esc(r.team)} ${esc(r.pos)}</i> <span class="inj-chip ${statusCls(r.status) || (r.practice === "DNP" ? "q" : "")}">${esc(r.status || PRACTICE_TEXT[r.practice] || "")}</span></span>`).join("")}<button class="btn link inline" type="button" data-pp-tab="practice">Practice report</button></div>`;
+      `<span class="tw-nx">${teamLogo(r.team, "xs")}${esc(r.name)} <i>${esc(r.pos)}</i> ${stBadge(r.status || r.practice, r.status || r.practice)}</span>`).join("")}<button class="btn link inline" type="button" data-pp-tab="practice">Practice report</button></div>`;
   }
   // Compact matchup summary for the modal header (fills the space right of the name)
   function headerWeek(info) {
@@ -7358,7 +7457,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const wk = currentWeek(), bye = wk && ng.week > wk, D = (defenseVsPos() || {})[info.pos], x = !bye && D && D[ng.opp];
     const lines = [ng.spread != null ? `${esc(info.team)} ${ng.spread === 0 ? "PK" : (ng.spread > 0 ? "+" : "−") + Math.abs(ng.spread)}` : "", ng.total != null ? `O/U ${fp(ng.total)}` : ""].filter(Boolean).join(" · ");
     return `<div class="pm-week${x ? " " + x.grade : ""}">
-      <div class="pm-week-top"><span class="tw-eyebrow">${bye ? `Week ${wk} bye · next` : `Week ${ng.week}`}</span><b>${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span class="pm-week-sub">${esc(kickoffText(ng.date, ng.time))}</span></div>
+      <div class="pm-week-top"><span class="tw-eyebrow">${bye ? `Week ${wk} bye · next` : `Week ${ng.week}`}</span>${teamLogo(info.team, "sm")}<span class="pm-at">${ng.home ? "vs" : "@"}</span>${teamLogo(ng.opp, "sm")}<b>${esc(ng.opp)}</b><span class="pm-week-sub">${esc(kickoffText(ng.date, ng.time))}</span></div>
       <div class="pm-week-tags">${x ? `<span class="tw-grade">${VERDICT[x.grade]}</span>` : ""}${lines ? `<span class="pm-week-sub">${lines}</span>` : ""}${statusChip(info)}</div>
     </div>`;
   }
@@ -7368,15 +7467,23 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Injury report (latest week in the stats file): [name, pos, sid, game status, practice, injury]
   function injuryReport(team) {
     const d = statsCache[STATS_SEASONS[0]], I = d && d.injuries;
-    return I && I.teams && I.teams[team] ? { week: I.week, rows: I.teams[team].map(r => ({ name: r[0], pos: r[1], sid: r[2], status: r[3], practice: r[4], injury: r[5] })) } : null;
+    if (!I || !I.teams || !I.teams[team]) return null;
+    const c = I.cols || ["name", "pos", "sid", "status", "practice", "injury"], at = (r, k) => (c.indexOf(k) >= 0 ? r[c.indexOf(k)] : null);
+    return { week: I.week, daily: c.includes("wed"), rows: I.teams[team].map(r => ({ name: at(r, "name"), pos: at(r, "pos"), sid: at(r, "sid"), status: at(r, "status"),
+      practice: at(r, "practice"), injury: injuryText(at(r, "injury")), wed: at(r, "wed"), thu: at(r, "thu"), fri: at(r, "fri") })) };
   }
   function injuryOf(team, sid) {
     const rep = team && injuryReport(team);
     return rep ? rep.rows.find(r => r.sid && String(r.sid) === String(sid)) || null : null;
   }
+  const injuryText = s => (!s ? null : /^not injury related/i.test(s) ? (/rest/i.test(s) ? "Rest (not injury)" : "Not injury related") : s);
   const PRACTICE_TEXT = { DNP: "did not practice", LP: "limited practice", FP: "full practice" };
-  const statusCls = s => ({ Out: "out", Doubtful: "out", Questionable: "q" })[s] || "";
-  const injuryChip = r => `<span class="inj-chip ${statusCls(r.status) || (r.practice === "DNP" ? "q" : "")}">${esc([r.status || "On practice report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] || ""].filter(Boolean).join(" · "))}</span>`;
+  // One status colour language everywhere: FP green, LP amber, DNP red, Out deep red, Questionable amber, Doubtful orange-red, IR muted red
+  const ST_CLASS = { FP: "fp", LP: "lp", DNP: "dnp", Out: "out", Questionable: "q", Doubtful: "d", IR: "ir", "Injured reserve": "ir" };
+  const stBlock = v => (v ? `<span class="st-blk ${ST_CLASS[v] || ""}" title="${esc(PRACTICE_TEXT[v] || v)}">${esc(v)}</span>` : `<span class="st-blk none">–</span>`);
+  const stBadge = (v, text) => `<span class="st-badge ${ST_CLASS[v] || "ok"}">${esc(text || v)}</span>`;
+  const statusCls = s => ST_CLASS[s] || "";
+  const injuryChip = r => stBadge(r.status || r.practice, [r.status || "On practice report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] || ""].filter(Boolean).join(" · "));
 
   /* Schedule tab: every remaining week, with the opponent defense's ranks vs his position */
   function ppSchedule(info) {
@@ -7391,7 +7498,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (r[4] != null) continue;   // already played
       const x = D && D[r[1]], g = x ? x.grade : "";
       out.push(`<tr class="sc-row${w === wk ? " now" : ""}"><td class="gl-wk">${w}${w === wk ? `<span class="sc-now">Now</span>` : ""}</td>
-        <td class="sc-opp"><span class="sc-dot ${g}"></span>${r[2] ? "vs" : "@"} <b>${esc(r[1])}</b></td>
+        <td class="sc-opp tm" style="${teamStyle(r[1])}"><span class="sc-dot ${g}"></span>${teamLogo(r[1], "sm")}${r[2] ? "vs" : "@"} <b>${esc(r[1])}</b></td>
         <td class="sc-when">${esc(kickoffText(r[3], r[6]))}</td>
         <td class="sc-verdict ${g}">${x ? VERDICT[g].split(" ")[0] : "–"}</td>
         <td>${x ? rankChip("", x.ppgRank, x.n) : "–"}</td><td>${x && x.epaRank ? rankChip("", x.epaRank, x.n) : "–"}</td>
@@ -7415,32 +7522,33 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     ["Defensive backs", ["CB", "S", "FS", "SS", "DB", "SAF"]], ["Special teams", ["K", "P", "LS"]]];
   function ppPractice(info) {
     if (!info.team) return `<p class="empty-note">${esc(info.name)} isn't on an NFL team.</p>`;
-    const ng = nextGame(info.team), teams = [info.team].concat(ng ? [ng.opp] : []);
-    const rel = relevantReports(info, ng), anyRep = injuryReport(info.team) || (ng && injuryReport(ng.opp));
-    const relRow = r => `<tr><td><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}<span class="inj-team">${esc(r.team)}${r.opp ? " · opp" : ""}</span></td>
-        <td>${r.status ? `<span class="inj-chip ${statusCls(r.status)}">${esc(r.status)}</span>` : `<span class="muted">–</span>`}</td>
-        <td>${r.practice ? `<span class="pr-chip ${r.practice}">${r.practice}</span>` : "–"}</td><td class="muted">${esc(r.injury || "")}</td></tr>`;
-    const R = RELEVANT[info.pos];
-    const relevant = `<h3 class="section-label">${esc(info.name)}</h3>
-      <p class="pp-glance">${statusChip(info) || `<span class="muted">No practice report yet this week.</span>`}</p>
-      ${R ? `<h3 class="section-label">Relevant to him<span class="tier-sub">${esc(info.team)}: ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)}: ${esc(relevantLabel(R.opp))}` : ""}</span></h3>
-      ${rel.length ? `<div class="table-scroll"><table class="gl-table inj-table"><thead><tr><th scope="col">Player</th><th scope="col">Game status</th><th scope="col">Practice</th><th scope="col">Injury</th></tr></thead><tbody>${rel.map(relRow).join("")}</tbody></table></div>`
-        : `<p class="pp-note">${anyRep ? "No one in those position groups is on either report." : "No practice reports yet this week."}</p>`}` : ""}
-      <button class="btn pr-full" type="button" data-pr-full aria-expanded="${!!PP.fullReport}">${PP.fullReport ? "Hide full team reports" : "View full team reports"}</button>`;
-    if (!PP.fullReport) return relevant + `<p class="pp-note">Latest official practice report (nflverse), refreshed Wednesday to Friday evenings.</p>`;
-    const block = (team, opp) => {
-      const rep = injuryReport(team);
-      if (!rep) return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}</h3><p class="pp-note">No one on ${esc(team)}'s latest practice report.</p>`;
-      const groups = POS_GROUPS.map(([label, list]) => [label, rep.rows.filter(r => list.includes(r.pos))]).concat([["Other", rep.rows.filter(r => !POS_GROUPS.some(([, l]) => l.includes(r.pos)))]]).filter(([, rows]) => rows.length);
-      return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}<span class="tier-sub">Week ${rep.week} practice report</span></h3>
-        <div class="table-scroll"><table class="gl-table inj-table"><thead><tr><th scope="col">Player</th><th scope="col">Game status</th><th scope="col">Practice</th><th scope="col">Injury</th></tr></thead>
-        <tbody>${groups.map(([label, rows]) => `<tr class="tier"><td colspan="4">${esc(label)}</td></tr>` + rows.map(r =>
-          `<tr class="${String(r.sid) === String(info.sid) ? "inj-me" : ""}"><td><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}</td>
-            <td>${r.status ? `<span class="inj-chip ${statusCls(r.status)}">${esc(r.status)}</span>` : `<span class="muted">–</span>`}</td>
-            <td>${r.practice ? `<span class="pr-chip ${r.practice}">${r.practice}</span>` : "–"}</td><td class="muted">${esc(r.injury || "")}</td></tr>`).join("")).join("")}</tbody></table></div>`;
+    const ng = nextGame(info.team), R = RELEVANT[info.pos], full = !!PP.fullReport || !R;
+    const teamsList = [[info.team, false]].concat(ng ? [[ng.opp, true]] : []);
+    const isMe = r => r.sid && String(r.sid) === String(info.sid);
+    const section = (team, opp) => {
+      const rep = injuryReport(team), m = teamMeta(team);
+      const head = `<div class="pr-team tm" style="${teamStyle(team)}">${teamLogo(team, "md")}<b>${esc(m ? m.name : team)}</b>${opp ? `<span class="pr-opp">Opponent</span>` : ""}<span class="pr-wk">${rep ? `Week ${rep.week} practice report` : ""}</span></div>`;
+      if (!rep) return `<section class="pr-sec">${head}<p class="pp-note">No one on ${esc(team)}'s latest practice report.</p></section>`;
+      let rows = rep.rows;
+      if (!full) rows = rows.filter(r => isMe(r) || (opp ? R.opp : R.own).includes(r.pos));
+      // his position group first on his own team, then the usual order
+      const order = POS_GROUPS.slice();
+      if (!opp) { const i = order.findIndex(([, l]) => l.includes(info.pos)); if (i > 0) order.unshift(order.splice(i, 1)[0]); }
+      const groups = order.map(([label, list]) => [label, rows.filter(r => list.includes(r.pos)).sort((a, b) => isMe(b) - isMe(a) || SEVERITY(a) - SEVERITY(b))])
+        .concat([["Other", rows.filter(r => !POS_GROUPS.some(([, l]) => l.includes(r.pos)))]]).filter(([, g]) => g.length);
+      if (!groups.length) return `<section class="pr-sec">${head}<p class="pp-note">No ${esc(relevantLabel(opp ? R.opp : R.own))} on ${esc(team)}'s report.</p></section>`;
+      const days = rep.daily ? ["wed", "thu", "fri"] : null;
+      const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}</td>
+          ${days ? days.map(k => `<td class="pr-day">${stBlock(r[k])}</td>`).join("") : `<td class="pr-day">${stBlock(r.practice)}</td>`}<td class="pr-inj">${esc(r.injury || "")}</td></tr>`;
+      return `<section class="pr-sec">${head}<div class="table-scroll"><table class="gl-table inj-table">
+        <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day">Practice</th>`}<th scope="col">Injury</th></tr></thead>
+        <tbody>${groups.map(([label, g]) => `<tr class="pr-group"><td colspan="${days ? 5 : 3}">${esc(label)}</td></tr>` + g.map(row).join("")).join("")}</tbody></table></div></section>`;
     };
-    return relevant + teams.map((t, i) => block(t, i > 0)).join("") +
-      `<p class="pp-note">Latest official practice report (nflverse). Practice shows the most recent day reported (FP full, LP limited, DNP did not practice). Refreshed Wednesday to Friday evenings.</p>`;
+    const me = `<div class="pr-me">${statusChip(info) || `<span class="muted">No practice report yet this week.</span>`}${R && !full ? `<span class="pr-scope">Showing what matters for ${esc(info.name)}: ${esc(info.team)} ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)} ${esc(relevantLabel(R.opp))}` : ""}</span>` : ""}</div>`;
+    const anyDaily = teamsList.some(([t]) => { const r = injuryReport(t); return r && r.daily; });
+    return me + teamsList.map(([t, o]) => section(t, o)).join("") +
+      (R ? `<button class="btn pr-full" type="button" data-pr-full aria-expanded="${full}">${full ? "Show only what matters for him" : "View full report"}</button>` : "") +
+      `<p class="pp-note">Official practice report (nflverse): FP full, LP limited, DNP did not practice. ${anyDaily ? "Each day fills in from our Wednesday, Thursday and Friday evening updates; a dash means that day wasn't captured." : "Shows the latest day reported."}</p>`;
   }
 
   const GROUP_SHORT = { QB: "QB", RB: "RB", FB: "RB", WR: "WR", TE: "TE", T: "OL", OT: "OL", G: "OL", OG: "OL", C: "OL", OL: "OL",
@@ -7558,12 +7666,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (g) {
         const o = oppLabel(season, g), cls = g.pts >= hi ? " good" : g.pts < lo ? " weak" : "";
         const res = o.res ? `<span class="gl-res ${o.res[0]}">${esc(o.res)}</span>` : "";
-        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${fp(g.pts)}</td><td class="gl-fin">${esc(myFin[w] || "–")}</td>
+        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(g.opp, "xs")}${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${fp(g.pts)}</td><td class="gl-fin">${esc(myFin[w] || "–")}</td>
           ${cols.map(c => `<td>${cellOf(g, c)}</td>`).join("")}</tr>`);
       } else if (!r) {
         rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp" colspan="${span - 1}">Bye week</td></tr>`);
       } else if (r[4] == null) {
-        rows.push(`<tr class="gl-row off up"><td class="gl-wk">${w}</td><td class="gl-opp">${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result" colspan="${span - 2}">${esc(kickoffText(r[3], r[6]))}</td></tr>`);
+        rows.push(`<tr class="gl-row off up"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(r[1], "xs")}${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result" colspan="${span - 2}">${esc(kickoffText(r[3], r[6]))}</td></tr>`);
       } else {
         rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp">${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result" colspan="${span - 2}">Did not play</td></tr>`);
       }

@@ -14,7 +14,10 @@ kickoff time (ET), the team's spread (negative = favored), game total, roof and 
 Also, for the player pages' matchup context:
   defense   each defense's run and pass efficiency allowed (EPA per play, success rate,
             explosive-play rate: runs of 10+ yards, passes of 20+), from nflverse play-by-play
-  injuries  the latest week's injury report per team: game status, practice status, injury
+  injuries  the latest week's injury report per team: game status, practice status, injury, and the
+            practice status by day (Wed/Thu/Fri). nflverse keeps only the latest practice status, so
+            each run records it under its own day (Eastern time: Wed, Thu, or Fri for Fri-Mon runs)
+            and carries the days already recorded this week over from the previous file.
 
 Sources: nflverse player stats (weekly) and nflverse schedules, matched to Sleeper
 IDs with the DynastyProcess player ID table.
@@ -110,25 +113,42 @@ def defense(season, src=PBP_URL):
 
 
 PRACTICE = {"Did Not Participate In Practice": "DNP", "Limited Participation in Practice": "LP", "Full Participation in Practice": "FP"}
-INJURY_COLS = ["name", "pos", "sid", "status", "practice", "injury"]
+INJURY_COLS = ["name", "pos", "sid", "status", "practice", "injury", "wed", "thu", "fri"]
+DAY_OF_RUN = {2: "wed", 3: "thu", 4: "fri", 5: "fri", 6: "fri", 0: "fri"}   # Monday=0 ... Tuesday (1): new week, no report yet
 
 
-def injuries(season, ids, src=INJ_URL):
-    """The latest regular-season week's report: per team, everyone listed (game status, practice status, injury)."""
+def practice_day(now=None):
+    from zoneinfo import ZoneInfo
+    now = now or datetime.now(ZoneInfo("America/New_York"))
+    return DAY_OF_RUN.get(now.weekday())
+
+
+def injuries(season, ids, src=INJ_URL, prev=None, day=None):
+    """The latest regular-season week's report: per team, everyone listed (game status, latest practice status,
+    injury) plus practice status by day, carried over from prev (the last file's injuries) for the same week."""
     d = pd.read_csv(src.format(season), low_memory=False)
     d = d[d.season_type == "REG"]
     if not len(d):
         return None
     wk = int(d.week.max())
     d = d[d.week == wk]
+    old = {}
+    if prev and prev.get("week") == wk and "wed" in prev.get("cols", []):
+        c = prev["cols"]
+        for t, rows in prev.get("teams", {}).items():
+            for r in rows:
+                old[(t, r[c.index("name")])] = {k: r[c.index(k)] for k in ("wed", "thu", "fri")}
     teams = {}
     for r in d.itertuples():
         inj = r.report_primary_injury if isinstance(r.report_primary_injury, str) else r.practice_primary_injury
-        teams.setdefault(team(r.team), []).append([
+        tm, prac = team(r.team), PRACTICE.get(r.practice_status) if isinstance(r.practice_status, str) else None
+        days = dict(old.get((tm, r.full_name), {"wed": None, "thu": None, "fri": None}))
+        if day and prac:
+            days[day] = prac
+        teams.setdefault(tm, []).append([
             r.full_name, r.position, ids.get(r.gsis_id) if isinstance(r.gsis_id, str) else None,
-            r.report_status if isinstance(r.report_status, str) else None,
-            PRACTICE.get(r.practice_status) if isinstance(r.practice_status, str) else None,
-            inj if isinstance(inj, str) else None])
+            r.report_status if isinstance(r.report_status, str) else None, prac,
+            inj if isinstance(inj, str) else None, days["wed"], days["thu"], days["fri"]])
     return {"week": wk, "cols": INJURY_COLS, "teams": dict(sorted(teams.items()))}
 
 
@@ -140,7 +160,7 @@ def optional(label, fn, *args):
         return None
 
 
-def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL):
+def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL, prev=None):
     d = pd.read_csv(stats_src.format(season), low_memory=False)
     d = d[(d.season_type == "REG") & d.position.isin(POS)].copy()
     d["sid"] = d.player_id.map(ids)
@@ -166,7 +186,7 @@ def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_
         "schedule_cols": SCHEDULE_COLS,
         "schedule": schedule(games, season),
         "defense": optional("defense", defense, season, pbp_src),
-        "injuries": optional("injuries", injuries, season, ids, inj_src),
+        "injuries": optional("injuries", injuries, season, ids, inj_src, (prev or {}).get("injuries"), practice_day()),
     }
 
 
@@ -179,8 +199,13 @@ if __name__ == "__main__":
     ids = sleeper_map(os.environ.get("IDS_SRC", IDS_URL))
     games = pd.read_csv(os.environ.get("GAMES_SRC", GAMES_URL), low_memory=False)
     for s in seasons:
-        data = build(s, ids, games, stats_src, os.environ.get("PBP_SRC", PBP_URL), os.environ.get("INJ_SRC", INJ_URL))
         path = os.path.join(out_dir, f"{s}.json")
+        try:
+            with open(path) as f:
+                prev = json.load(f)
+        except (OSError, ValueError):
+            prev = None
+        data = build(s, ids, games, stats_src, os.environ.get("PBP_SRC", PBP_URL), os.environ.get("INJ_SRC", INJ_URL), prev)
         with open(path, "w") as f:
             json.dump(data, f, separators=(",", ":"))
         print(f"{s}: {len(data['players'])} players through week {data['through_week']}, "
