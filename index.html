@@ -3056,7 +3056,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // The settings values are adjusted to: a connected league, else hand-picked settings, else none (base)
   const valueLeague = () => (sl && sl.activeId && sl.data && sl.data[sl.activeId] ? sl.data[sl.activeId].league : FMT ? fmtLeague(FMT) : null);
-  const leagueView = () => LG.fmtOn && LG.mode === "league";
+  // League-adjusted values and position ranks apply whenever a league (or hand-picked settings) is set,
+  // everywhere except the Rankings board, where the SPAM Board / League-adjusted toggle decides.
+  // Trade Finder, My Team, League, Free Agents, the calculator's league mode and player pages opened
+  // from them always use the league's own order, never the base SPAM positional rank.
+  const leagueView = () => LG.fmtOn && (LG.mode === "league" || offRankings());
+  const offRankings = () => { try { return currentTab !== "rankings"; } catch (e) { return false; } };
   const adjName = () => (LG.active ? "League-adjusted" : "Your settings");
   const dv = p => (leagueView() && LG.adj.has(p.id) ? LG.adj.get(p.id) : p.value);
   const EDIT_POS = ["QB", "RB", "WR", "TE"];
@@ -3073,7 +3078,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T04:40Z";
+  const BUILD_ID = "2026-10-03T08:20Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3123,7 +3128,17 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       btn.setAttribute("aria-selected", on);
       $("panel-" + k).hidden = !on;
     }
+    const was = currentTab;
     currentTab = name;
+    // with the SPAM Board view on, values differ between the Rankings board (base) and every
+    // league view (adjusted), and views drawn in the background used the Rankings context: redraw on open
+    const flip = was !== name && typeof LG === "object" && LG.fmtOn && LG.mode !== "league";
+    if (flip) {
+      try {
+        ({ myteam: renderMyTeam, league: renderLeague, fa: renderFA, trade: renderTrade, rankings: renderRankings }[name] || (() => {}))();
+        if ($("player-modal").open) renderPlayer();
+      } catch (e) { console.warn("tab redraw", e); }
+    }
     if (name === "finder" && typeof renderFinder === "function") renderFinder();
   }
   for (const [k, btn] of Object.entries(tabs)) {
@@ -3333,7 +3348,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       hl = 0;
       list.innerHTML = current.length ? current.map((p, i) =>
         `<li><button type="button" data-id="${p.id}" class="${i === hl ? "hl" : ""}">
-          ${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+          ${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>
           <span class="r-name">${esc(p.name)}${ownerTag(p)}</span>
           <span class="r-val">${fmt(tv(p))}</span></button></li>`).join("")
         : `<li class="empty" style="padding:10px">No match</li>`;
@@ -3915,7 +3930,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         $("balance-list").innerHTML = scored.map(x => {
           const g = pctMore(x.r.a, x.r.b), t = TRADE_VERDICTS.find(v => g < v.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
           return `<button class="suggest bal" type="button" data-ids="${x.p.id}" data-side="${loser}">
-            <span class="bal-players"><span class="bal-p">${face(x.p.sleeperId, x.p.name, "xs")}<span class="pos ${esc(x.p.pos)}">${esc(x.p.posRank)}</span><span class="bal-n">${esc(x.p.name)}</span><span class="r-val">+${fmt(tv(x.p))}</span></span></span>
+            <span class="bal-players"><span class="bal-p">${face(x.p.sleeperId, x.p.name, "xs")}<span class="pos ${esc(x.p.pos)}">${esc(posLabel(x.p))}</span><span class="bal-n">${esc(x.p.name)}</span><span class="r-val">+${fmt(tv(x.p))}</span></span></span>
             <span class="bal-result">→ ${g.toFixed(1)}% · ${esc(t.upTo <= 3 ? "Fair" : t.range.split(":")[0])}</span></button>`;
         }).join("");
         shown = true;
@@ -4087,7 +4102,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!picks.length) return;
     $("balance-sub").textContent = `${names[W]} gives up the most. Redirect one of these to ${isYouThey(names[W]) ? "you" : names[W]}:`;
     $("balance-list").innerHTML = picks.map(c => `<button class="suggest bal" type="button" data-ids="${c.p.id}" data-side="${W}" data-origin="${c.o}">
-      <span class="bal-players"><span class="bal-p">${face(c.p.sleeperId, c.p.name, "xs")}<span class="pos ${esc(c.p.pos)}">${esc(c.p.posRank)}</span><span class="bal-n">${esc(c.p.name)}<small>from ${esc(names[c.o])}</small></span><span class="r-val">+${fmt(tv(c.p))}</span></span></span>
+      <span class="bal-players"><span class="bal-p">${face(c.p.sleeperId, c.p.name, "xs")}<span class="pos ${esc(c.p.pos)}">${esc(posLabel(c.p))}</span><span class="bal-n">${esc(c.p.name)}<small>from ${esc(names[c.o])}</small></span><span class="r-val">+${fmt(tv(c.p))}</span></span></span>
       <span class="bal-result">→ ${esc(names[W])} ${c.st[W].m.a >= c.st[W].m.b ? "+" : "−"}${c.st[W].more.toFixed(1)}% · ${esc(c.st[W].outcome.label)}</span></button>`).join("");
     $("balance-btn").hidden = false;
     $("balance").hidden = !TC_UI.balance;
@@ -4208,7 +4223,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("balance-list").innerHTML = lb.picks.map((x, i) => {
       const t = TRADE_VERDICTS.find(v => x.gapAfter < v.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
       return `${i ? `<span class="bal-or">or</span>` : ""}<button class="suggest bal" type="button" data-ids="${x.list.map(p => p.id).join(",")}" data-side="${lb.receiverSide}">
-        <span class="bal-players">${x.list.map(p => `<span class="bal-p">${face(p.sleeperId, p.name, "xs")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span><span class="bal-n">${esc(p.name)}<small>${esc(role(p))}</small></span><span class="r-val">+${fmt(tv(p))}</span></span>`).join(`<span class="bal-plus">+</span>`)}</span>
+        <span class="bal-players">${x.list.map(p => `<span class="bal-p">${face(p.sleeperId, p.name, "xs")}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span><span class="bal-n">${esc(p.name)}<small>${esc(role(p))}</small></span><span class="r-val">+${fmt(tv(p))}</span></span>`).join(`<span class="bal-plus">+</span>`)}</span>
         <span class="bal-result">→ ${x.gapAfter.toFixed(1)}% · ${esc(t.upTo <= 3 ? "Fair" : t.range.split(":")[0])}</span></button>`;
     }).join("");
     $("balance").hidden = false;
@@ -5746,7 +5761,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const row = (slot, sid) => {
       if (!sid || sid === "0") return `<tr class="mt-row empty-slot"><td class="slot">${esc(slot)}</td><td colspan="4" class="muted">Empty</td></tr>`;
       const e = rosterEntry(sid, map);
-      const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? e.p.posRank : e.pos)}</span>` : "";
+      const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? posLabel(e.p) : e.pos)}</span>` : "";
       return `<tr class="mt-row">
         <td class="slot">${esc(slot)}</td>
         <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${e.team ? `<span class="pl-team">${esc(e.team)}</span>` : ""}</div></div></td>
@@ -6327,7 +6342,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("fa-body").innerHTML = list.length ? list.map(p => `<tr class="player">
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${p.team ? `<span class="pl-team">${esc(p.team)}</span>` : ""}</div></div></td>
-      <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span></td>
+      <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
       <td class="val"><div class="valbar" style="--c: var(--${p.pos.toLowerCase()})"><div class="track"><div class="fill" style="width:${Math.max(2, 100 * dv(p) / mx).toFixed(1)}%"></div></div><span class="num">${fmt(dv(p))}</span></div></td>
       <td class="fa-status"><span class="owner fa status">Free agent</span></td></tr>`).join("")
       : `<tr><td class="empty" colspan="5">No ranked free agents${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
@@ -6350,14 +6365,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         .sort((a, b) => (b.ranked ? tv(b.p) : -1) - (a.ranked ? tv(a.p) : -1));
       if (TC3.on) {
         box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Send to</span></div>
-          <div class="tr-list">${entries.filter(e => e.ranked).map(e => `<div class="tr-player tr3${inTrade(e.p.id) ? " in" : ""}">${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span>
+          <div class="tr-list">${entries.filter(e => e.ranked).map(e => `<div class="tr-player tr3${inTrade(e.p.id) ? " in" : ""}">${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(posLabel(e.p))}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span>
             ${others3(s).map(x => `<button class="tr-send" type="button" data-id="${e.p.id}" data-side="${x}" data-origin="${s}"${inTrade(e.p.id) ? " disabled" : ""} title="Send to ${esc(sideName(x))}">${esc(shortName(sideName(x)))}</button>`).join("")}</div>`).join("")}</div>`;
         return;
       }
       box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Sends to ${esc(sideName(s === "A" ? "B" : "A"))}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
           ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s === "A" ? "B" : "A"}"${inTrade(e.p.id) ? " disabled" : ""}>
-              ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(e.p.posRank)}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span></button>`
+              ${face(e.sid, e.name, "sm")}<span class="pos ${esc(e.pos)}">${esc(posLabel(e.p))}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">${fmt(tv(e.p))}</span></button>`
           : `<div class="tr-player unranked">${face(e.sid, e.name, "sm")}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="tr-name">${esc(e.name)}</span><span class="tr-val">Unranked</span></div>`).join("")}</div>`;
     });
   }
@@ -6591,7 +6606,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </div>
         <div class="pm-stats">
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
-          ${stat("Position", p ? esc(p.posRank) : "–", "")}
+          ${stat("Position", p ? esc(posLabel(p)) : "–", p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "")}
           ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
           ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? `${curT.g} G · ${activeData() ? "league" : "site"} scoring` : "No games")}
           ${LG.active ? stat("Owner", esc(own === "fa" ? "Free agent" : own.mine ? "You" : own.name), "") : ""}
@@ -6621,7 +6636,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const list = q ? players.filter(x => x.pos !== "PICK" && x.sleeperId && x.sleeperId !== PP.sid && (x.name + " " + x.team).toLowerCase().includes(q)).sort((a, b) => dv(b) - dv(a)).slice(0, 6) : [];
     return `<div class="pm-pick">
       <input class="search" id="pm-pick" type="search" placeholder="Compare with… type a player" autocomplete="off" value="${esc(PP.pickQuery)}" aria-label="Player to compare">
-      ${list.length ? `<ul class="pm-pick-list">${list.map(x => `<li><button type="button" data-pm-pick="${esc(x.sleeperId)}">${face(x.sleeperId, x.name, "xs", false)}<span class="pos ${esc(x.pos)}">${esc(x.posRank)}</span><span class="r-name">${esc(x.name)}</span><span class="r-val">${fmt(dv(x))}</span></button></li>`).join("")}</ul>` : q ? `<p class="pp-note">No ranked player matches “${esc(PP.pickQuery)}”.</p>` : ""}
+      ${list.length ? `<ul class="pm-pick-list">${list.map(x => `<li><button type="button" data-pm-pick="${esc(x.sleeperId)}">${face(x.sleeperId, x.name, "xs", false)}<span class="pos ${esc(x.pos)}">${esc(posLabel(x))}</span><span class="r-name">${esc(x.name)}</span><span class="r-val">${fmt(dv(x))}</span></button></li>`).join("")}</ul>` : q ? `<p class="pp-note">No ranked player matches “${esc(PP.pickQuery)}”.</p>` : ""}
     </div>`;
   }
 
@@ -6680,7 +6695,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return `
       <div class="ov-grid">
         ${cell("Overall rank", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "Unranked", p ? (leagueView() ? adjName() : "SPAM") : "")}
-        ${cell("Position rank", p ? esc(p.posRank) : "–", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : "")}
+        ${cell("Position rank", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
         ${cell("SPAM Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? adjName() + (LG.factor.has(p.id) ? ` · ${LG.factor.get(p.id) > 1 ? "+" : "−"}${Math.abs(Math.round((LG.factor.get(p.id) - 1) * 1000) / 10)}% for his scoring profile` : "") : "Base") : "")}
         ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"}` : "No games yet")}
         ${cell("Points per game", t && t.g ? fp(t.ppg) : "–", esc(activeData() ? "League scoring" : "Site scoring"))}
@@ -6875,7 +6890,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const rows = list => list.map(x => {
       const d = diff(x), o = ownerOfSid(x.sleeperId);
       return `<tr class="mt-row"><td><div class="pl-cell">${face(x.sleeperId, x.name, "sm")}<div class="pl-text">${nameLink(x.sleeperId, x.name)}${x.team ? `<span class="pl-team">${esc(x.team)}</span>` : ""}</div></div></td>
-        <td class="pos-col"><span class="pos ${esc(x.pos)}">${esc(x.posRank)}</span></td>
+        <td class="pos-col"><span class="pos ${esc(x.pos)}">${esc(posLabel(x))}</span></td>
         <td class="mt-val">${fmt(dv(x))}</td><td class="tv-diff">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}%</td>
         ${LG.active ? `<td>${o === "fa" ? `<span class="owner fa status">Free agent</span>` : o ? `<span class="owner status${o.mine ? " mine" : ""}">${esc(o.mine ? "My Team" : o.name)}</span>` : ""}</td>` : ""}</tr>`;
     }).join("");
@@ -6932,7 +6947,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const win = hiBetter == null || a == null || b == null || a === b ? "" : (hiBetter ? a > b : a < b) ? "a" : "b";
       return `<tr><td class="${win === "a" ? "cmp-win" : ""}">${a == null ? "–" : show(a, A)}</td><th scope="row">${label}</th><td class="${win === "b" ? "cmp-win" : ""}">${b == null ? "–" : show(b, B)}</td></tr>`;
     }).join("");
-    const headCell = s => `<div class="cmp-head">${face(s.inf.sid, s.inf.name, "lg")}${nameLink(s.inf.sid, s.inf.name, "cmp-name")}<span class="cmp-meta">${s.inf.pos ? `<span class="pos ${esc(s.inf.pos)}">${esc(s.inf.p ? s.inf.p.posRank : s.inf.pos)}</span>` : ""} ${esc(s.inf.team || "")}</span></div>`;
+    const headCell = s => `<div class="cmp-head">${face(s.inf.sid, s.inf.name, "lg")}${nameLink(s.inf.sid, s.inf.name, "cmp-name")}<span class="cmp-meta">${s.inf.pos ? `<span class="pos ${esc(s.inf.pos)}">${esc(s.inf.p ? posLabel(s.inf.p) : s.inf.pos)}</span>` : ""} ${esc(s.inf.team || "")}</span></div>`;
     return `<div class="cmp">
         <div class="cmp-top">${headCell(A)}<button class="btn" type="button" data-pm-swap title="Make ${esc(other.name)} the main player">⇄ Swap</button>${headCell(B)}</div>
         <table class="cmp-table"><tbody>${body}</tbody></table>
@@ -7338,12 +7353,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const list = (o.roster.players || []).map(String).filter(s => s !== X.sleeperId).map(s => map.get(s)).filter(Boolean).sort((a, b) => dv(b) - dv(a));
     if (!list.some(p => p.sleeperId === TF.sid2)) TF.sid2 = "";
     return `<div class="tf-second"><span class="tf-plus" aria-hidden="true">+</span><select class="select" id="tf-player2" aria-label="Package with a second player">
-      <option value="">Add a second player (optional)</option>${list.map(p => `<option value="${esc(p.sleeperId)}"${p.sleeperId === TF.sid2 ? " selected" : ""}>${esc(p.name)} · ${esc(p.posRank)} · ${fmt(dv(p))}</option>`).join("")}</select></div>`;
+      <option value="">Add a second player (optional)</option>${list.map(p => `<option value="${esc(p.sleeperId)}"${p.sleeperId === TF.sid2 ? " selected" : ""}>${esc(p.name)} · ${esc(posLabel(p))} · ${fmt(dv(p))}</option>`).join("")}</select></div>`;
   }
   function renderFinderPick() {
     const map = bySleeper(), me = LG.teams.find(t => t.mine), box = $("tf-pick");
     $("tf-src").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.src === TF.src));
-    const opt = p => `<option value="${esc(p.sleeperId)}">${esc(p.name)} · ${esc(p.posRank)} · ${fmt(dv(p))}</option>`;
+    const opt = p => `<option value="${esc(p.sleeperId)}">${esc(p.name)} · ${esc(posLabel(p))} · ${fmt(dv(p))}</option>`;
     const teamPlayers = t => (t.roster.players || []).map(String).map(s => map.get(s)).filter(Boolean).sort((a, b) => dv(b) - dv(a));
     if (TF.src === "mine") {
       if (!me) { box.innerHTML = `<p class="pp-note">You don't have a team in this league. Use Any player.</p>`; return; }
@@ -7362,7 +7377,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     } else {
       const X = TF.sid ? map.get(TF.sid) : null;
       box.innerHTML = `<div class="tf-search"><input class="search" id="tf-q" type="search" placeholder="Search any player" autocomplete="off" value="${esc(TF.q)}" aria-label="Search any player"><ul class="results" id="tf-results" hidden></ul></div>
-        ${X ? `<div class="tf-chosen">${face(X.sleeperId, X.name, "xs")}${nameLink(X.sleeperId, X.name, "tf-name")}<span class="pos ${esc(X.pos)}">${esc(X.posRank)}</span><span class="tf-v">${fmt(dv(X))}</span></div>` + pickSecond(map) : ""}`;
+        ${X ? `<div class="tf-chosen">${face(X.sleeperId, X.name, "xs")}${nameLink(X.sleeperId, X.name, "tf-name")}<span class="pos ${esc(X.pos)}">${esc(posLabel(X))}</span><span class="tf-v">${fmt(dv(X))}</span></div>` + pickSecond(map) : ""}`;
     }
   }
   function tfResults() {
@@ -7372,7 +7387,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const hits = players.filter(p => p.pos !== "PICK" && p.sleeperId && (p.name + " " + p.team).toLowerCase().includes(q)).sort((a, b) => dv(b) - dv(a)).slice(0, 8);
     list.innerHTML = hits.length ? hits.map(p => {
       const o = LG.ownerOf.get(p.id);
-      return `<li><button type="button" data-tf-pick="${esc(p.sleeperId)}">${face(p.sleeperId, p.name, "sm", false)}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+      return `<li><button type="button" data-tf-pick="${esc(p.sleeperId)}">${face(p.sleeperId, p.name, "sm", false)}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>
         <span class="r-name">${esc(p.name)}<span class="owner${o && o.mine ? " mine" : !o ? " fa" : ""}">${esc(o ? (o.mine ? "Your team" : o.name) : "Free agent")}</span></span><span class="r-val">${fmt(dv(p))}</span></button></li>`;
     }).join("") : `<li class="empty" style="padding:10px">No match</li>`;
     list.hidden = false;
@@ -7410,7 +7425,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const lead = $("tf-lead");
     if (!X) { lead.innerHTML = ""; body.innerHTML = `<p class="empty-note">${TF.src === "any" ? "Search for any player to find trades involving him." : "Pick a player."}</p>`; return; }
     const ownerTxt = owner ? (owner.mine ? "Your team" : owner.name) : "Free agent";
-    const who = p => `${face(p.sleeperId, p.name, "sm")}<b>${nameLink(p.sleeperId, p.name)}</b> <span class="muted">${esc(p.posRank)} · ${fmt(dv(p))}</span>`;
+    const who = p => `${face(p.sleeperId, p.name, "sm")}<b>${nameLink(p.sleeperId, p.name)}</b> <span class="muted">${esc(posLabel(p))} · ${fmt(dv(p))}</span>`;
     lead.innerHTML = `<span class="tf-target">${who(X)}${Y ? `<span class="tf-amp">+</span>${who(Y)}<span class="muted tf-pkgsum">= ${fmt(dv(X) + dv(Y))}</span>` : ""} <span class="owner status${owner && owner.mine ? " mine" : ""}">${esc(ownerTxt)}</span></span>`;
     if (!S) {
       body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent in ${esc(d.league.name)}. Pick a <b>From team</b> to see what trades would look like if a team owned him, or pick him up off waivers.</p>`;
@@ -7435,10 +7450,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const you = S.mine, sLabel = you ? "You" : S.name;
     lead.innerHTML += `<span class="tf-persp">${mode === "give" ? `Trades ${esc(you ? "you" : S.name)} could make with ${pkg ? "the pair" : "him"}` : `Ways ${esc(you ? "you" : S.name)} could get ${pkg ? "both" : "him"} from ${esc(owner.name)}`} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} within ${TF.fair ? "the fair range" : TF.gap + "%"}</span>`;
     const ownerTag = t => `<span class="tf-own${t.mine ? " mine" : ""}">${esc(t.mine ? "Your team" : t.name)}</span>`;
-    const prow = (p, from, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
+    const prow = (p, from, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>
       <span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag">${ownerTag(from)}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     // compact row: photo · name · value, then "RB2 · starts at RB1"
-    const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(p.posRank)}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+    const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     const cards = ideas.map((it, i) => {
       const sAhead = it.m.a >= it.m.b, v = finderVerdict(it.more, sAhead, S, it.team);
       const full = TF.openFull.has(i), fw = fullWhy(it);
