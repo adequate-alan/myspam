@@ -2062,6 +2062,15 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .tx-val { font-size: 0.8rem; font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; }
 .tx-empty { margin: 8px 10px; font-size: 0.76rem; color: var(--muted); }
 .tx-extras { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.tx-inactive { border: 1px dashed var(--line); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--surface) 55%, transparent); padding: 4px 0 4px; }
+.tx-inactive-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 6px 10px 6px; border-bottom: 1px solid var(--line-soft); }
+.tx-inactive-note { font-size: 0.68rem; color: var(--muted); }
+.tx-inactive-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.tx-inactive-list .tx-pl + .tx-pl { border-top: 0; }
+.tx-pl.inactive { opacity: 0.72; }
+.tx-pl.inactive .tx-name { font-weight: 550; color: var(--ink-2); }
+.tx-pl.inactive .tx-val { color: var(--muted); font-weight: 600; }
+.tx-role.off { color: var(--muted); background: transparent; border: 1px solid var(--line); }
 .tx-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .tx-extra .ctl-label { min-width: 46px; }
 .tx-chip { display: inline-flex; align-items: baseline; gap: 5px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line-soft); font-size: 0.76rem; color: var(--ink-2); }
@@ -3599,7 +3608,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T19:30Z";
+  const BUILD_ID = "2026-10-04T20:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6979,9 +6988,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const chip = (e, tag) => `<span class="tx-chip">${EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name, "tx-chip-name") : esc(e.name)}<small>${esc(e.pos || "")}${tag ? " · " + tag : ""}</small></span>`;
     const other = healthy.filter(e => !e.ranked);
     const ir = (r.reserve || []).map(s => rosterEntry(s, map)), taxi = (r.taxi || []).map(s => rosterEntry(s, map));
-    const extras = [other.length ? `<div class="tx-extra"><span class="ctl-label">Other</span>${other.map(e => chip(e)).join("")}</div>` : "",
-                    ir.length ? `<div class="tx-extra"><span class="ctl-label">IR</span>${ir.map(e => chip(e)).join("")}</div>` : "",
-                    taxi.length ? `<div class="tx-extra"><span class="ctl-label">Taxi</span>${taxi.map(e => chip(e)).join("")}</div>` : ""].join("");
+    // IR and taxi: rostered but inactive. Listed in full (muted, with an IR / TAXI badge) and never counted
+    // as starters, bench or in the position strength above (the lineup only uses the healthy roster).
+    const inactiveRow = (e, tag) => `<div class="tx-pl inactive">${face(e.sid, e.name, "sm")}
+        <div class="tx-pl-text">${EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name, "tx-name") : `<span class="tx-name">${esc(e.name)}</span>`}<span class="tx-sub">${esc([e.team, e.p ? posLabel(e.p) : e.pos, e.p ? "#" + overallRank(e.p) : ""].filter(Boolean).join(" · "))}</span></div>
+        <span class="tx-role off" title="${tag === "IR" ? "Injured reserve" : "Taxi squad"}: rostered but inactive, not counted in team strength">${tag}</span><span class="tx-val" title="SPAM value (not counted in team strength)">${e.p ? fmt(dv(e.p)) : "–"}</span></div>`;
+    const inactive = ir.map(e => inactiveRow(e, "IR")).concat(taxi.map(e => inactiveRow(e, "TAXI")));
+    const extras = [inactive.length ? `<div class="tx-inactive"><div class="tx-inactive-head"><span class="ctl-label">${ir.length ? "Injured reserve" : ""}${ir.length && taxi.length ? " · " : ""}${taxi.length ? "Taxi squad" : ""}</span><span class="tx-inactive-note">Rostered, inactive · not counted in team strength</span></div><div class="tx-inactive-list">${inactive.join("")}</div></div>` : "",
+                    other.length ? `<div class="tx-extra"><span class="ctl-label">Other</span>${other.map(e => chip(e)).join("")}</div>` : ""].join("");
     const best = x.best, worst = x.worst, me = LG.myRosterId != null;
     const actions = t.mine
       ? `<button class="btn" type="button" data-find-with="ANY">Find trades</button>`
