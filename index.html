@@ -2087,7 +2087,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .sc-opp b { color: var(--cream); }
 .sc-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; background: var(--line); vertical-align: 1px; }
 .sc-dot.good { background: var(--rb); } .sc-dot.neutral { background: var(--gold); } .sc-dot.tough { background: var(--qb); }
-.gl-table.sc-table th:nth-child(-n+3), .gl-table.sc-table td:nth-child(-n+3), .gl-table .sc-row.off td { text-align: left; }
+.gl-table.sc-table th:nth-child(-n+4), .gl-table.sc-table td:nth-child(-n+4), .gl-table .sc-row.off td { text-align: left; }
 .sc-row.off td { color: var(--muted); }
 .sc-when { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
 .sc-table tr.now td { background: color-mix(in srgb, var(--gold) 6%, transparent); }
@@ -2097,7 +2097,28 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .gl-row.up td { color: var(--muted); }
 .gl-table .gl-row.off td.gl-result, .gl-table .gl-row.off td.gl-opp { text-align: left; }
 .gl-table.inj-table th, .gl-table.inj-table td { text-align: left; }
-.inj-table tr.tier td { font-size: 0.72rem; padding: 7px 16px 6px; }
+.inj-table tr.tier td { font-size: 0.68rem; font-weight: 650; padding: 6px 16px 5px; color: var(--muted); background: color-mix(in srgb, var(--muted) 6%, transparent); border-color: var(--line-soft); }
+.inj-team { margin-left: 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
+.inj-chip.ok { color: color-mix(in srgb, var(--rb) 75%, var(--muted)); background: color-mix(in srgb, var(--rb) 10%, transparent); }
+.pr-full { margin-top: 14px; }
+.tw-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; font-size: 0.8rem; color: var(--ink-2); }
+.tw-nx { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tw-nx i { font-style: normal; color: var(--muted); font-size: 0.72rem; }
+.tw-line .sc-dot { margin-right: 0; }
+.pm-week { --tw: var(--line); margin-left: auto; display: flex; flex-direction: column; gap: 7px; min-width: 0; max-width: 460px; padding: 10px 16px; border-radius: var(--radius); border: 1px solid var(--line-soft); background: color-mix(in srgb, var(--surface) 70%, transparent); box-shadow: inset 3px 0 0 var(--tw); }
+.pm-week.good { --tw: color-mix(in srgb, var(--rb) 75%, transparent); }
+.pm-week.neutral { --tw: color-mix(in srgb, var(--gold) 60%, transparent); }
+.pm-week.tough { --tw: color-mix(in srgb, var(--qb) 70%, transparent); }
+.pm-week b { font-size: 1.05rem; color: var(--cream); }
+.pm-week-sub { font-size: 0.74rem; color: var(--muted); }
+.pm-week-top, .pm-week-tags { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.pm-week-tags { align-items: center; }
+.pm-week.neutral .tw-grade { color: var(--gold); }
+@media (max-width: 760px) { .pm-week { display: none; } }
+.sc-key { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 0.76rem; color: var(--muted); }
+.sc-help { cursor: help; text-decoration: underline dotted color-mix(in srgb, var(--muted) 60%, transparent); text-underline-offset: 3px; }
+.sc-verdict { font-size: 0.74rem; font-weight: 650; color: var(--muted); }
+.sc-verdict.good { color: var(--rb); } .sc-verdict.neutral { color: var(--gold); } .sc-verdict.tough { color: var(--qb); }
 .tw-none { margin: 0; color: var(--muted); font-size: 0.86rem; }
 .tw-context { margin: 10px 0 0; font-size: 0.84rem; color: var(--ink-2); }
 .tw-context b { color: var(--cream); }
@@ -3244,7 +3265,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-03T22:30Z";
+  const BUILD_ID = "2026-10-04T00:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6916,9 +6937,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* Defense vs position: what each NFL defense has allowed to a position this season, in the current
      scoring, all ranked 1 = softest: fantasy points allowed per game, points per opportunity (QB dropbacks
      + runs, RB carries + targets, WR/TE targets), and from play-by-play (runs for RBs, dropbacks for the
-     others) EPA per play, success rate and explosive-play rate. The matchup grade blends points/game 45%,
-     per opportunity 20%, EPA 20%, success 15% (60/40 of the first two without play-by-play) and splits
-     the defenses into thirds: Good / Neutral / Tough. */
+     others) EPA per play, success rate and explosive-play rate. The matchup verdict blends the four shown
+     on the Schedule tab: points/game 40%, EPA 25%, success 20%, explosive 15% (without play-by-play: points
+     per game 60%, per opportunity 40%) and splits the defenses into thirds: Favorable / Neutral / Tough. */
   const DVP = { key: "", data: null };
   function defenseVsPos() {
     const season = STATS_SEASONS[0], d = statsCache[season];
@@ -6952,7 +6973,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         for (const [k, rk] of [["epa", "epaRank"], ["succ", "succRank"], ["expl", "explRank"]])
           [...rows].filter(r => r[k] != null).sort((a, b) => b[k] - a[k]).forEach((r, i) => { r[rk] = i + 1; });
       }
-      const score = r => r.epaRank ? 0.45 * r.ppgRank + 0.2 * r.effRank + 0.2 * r.epaRank + 0.15 * r.succRank : 0.6 * r.ppgRank + 0.4 * r.effRank;
+      const score = r => r.epaRank ? 0.4 * r.ppgRank + 0.25 * r.epaRank + 0.2 * r.succRank + 0.15 * r.explRank : 0.6 * r.ppgRank + 0.4 * r.effRank;
       [...rows].sort((a, b) => score(a) - score(b)).forEach((r, i) => { r.rank = i + 1; });
       rows.forEach(r => { r.n = n; r.grade = r.rank <= Math.round(n / 3) ? "good" : r.rank > n - Math.round(n / 3) ? "tough" : "neutral"; });
       out[pos] = Object.fromEntries(rows.map(r => [r.def, r]));
@@ -6972,8 +6993,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* Player modal: opens over whatever you're doing (rankings, a trade in progress, a team page)
      and never changes the page underneath. Click any player name or photo to open or switch. */
   const PP = { sid: null, tab: "overview", perf: String(STATS_SEASONS[0]), season: STATS_SEASONS[0], trail: [], compare: null, picking: false, pickQuery: "", opener: null, charts: [] };
-  const PP_TABS = [["overview", "Overview"], ["log", "Game log"], ["schedule", "Schedule"], ["practice", "Practice report"], ["stats", "Stats"], ["perf", "Fantasy performance"],
-                   ["history", "Ranking history"], ["value", "Trade value"]];
+  const PP_TABS = [["overview", "Overview"], ["log", "Game log"], ["schedule", "Schedule"], ["stats", "Stats"], ["perf", "Fantasy performance"],
+                   ["history", "Ranking history"], ["value", "Trade value"], ["practice", "Practice report"]];
   const modal = $("player-modal");
   const modalOpen = () => modal.open;
 
@@ -7060,6 +7081,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <div class="pp-meta">${pos ? `<span class="pos ${esc(pos)}">${esc(pos)}</span>` : ""}<span>${meta.map(esc).join(" · ")}</span></div>
             ${LG.active ? `<div class="pm-owner">${ownPill(own)}</div>` : ""}
           </div>
+          ${loaded ? headerWeek(info) : ""}
         </div>
         <div class="pm-stats">
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
@@ -7172,7 +7194,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const bye = wk && ng.week > wk;
     const dvp = defenseVsPos(), dv0 = dvp && dvp[info.pos] && dvp[info.pos][ng.opp];
     const grade = !bye && dv0 ? dv0.grade : null;
-    const gradeText = { good: "Good matchup", neutral: "Neutral matchup", tough: "Tough matchup" }[grade];
+    const gradeText = VERDICT[grade];
     const spread = ng.spread != null ? `${esc(info.team)} ${ng.spread === 0 ? "PK" : (ng.spread > 0 ? "+" : "−") + Math.abs(ng.spread)}` : "–";
     const implied = ng.total != null && ng.spread != null ? fp(ng.total / 2 - ng.spread / 2) : null;
     const where = [ng.stadium, ROOF_TEXT[ng.roof]].filter(Boolean).join(" · ");
@@ -7186,7 +7208,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <span class="tw-eyebrow">${bye ? `Week ${wk} · Bye` : `This week · Week ${ng.week}`}</span>
         ${gradeText ? `<span class="tw-grade">${gradeText}</span>` : ""}
       </div>
-      <div class="tw-game"><b>${bye ? "Next: " : ""}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}${inj ? injuryChip(inj) : ""}</div>
+      <div class="tw-game"><b>${bye ? "Next: " : ""}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}${statusChip(info)}</div>
       <div class="tw-stats">
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
@@ -7195,6 +7217,53 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         ${tile(`Pts allowed to ${P}`, dv0 ? fp(dv0.ppg) : "–", dv0 ? `per game · ${dv0.g} game${dv0.g === 1 ? "" : "s"}${dv0.g < 5 ? " · small sample" : ""}` : "")}
       </div>
       ${defRow}
+      ${nextWeeksLine(info, ng)}
+      ${keyReportsLine(info, ng)}
+    </div>`;
+  }
+  const VERDICT = { good: "Favorable matchup", neutral: "Neutral matchup", tough: "Tough matchup" };
+  // His own status: the practice-report line, or "not on practice report" once his team's report is out
+  const statusChip = info => { const r = injuryOf(info.team, info.sid); return r ? injuryChip(r) : injuryReport(info.team) ? `<span class="inj-chip ok">Not on practice report</span>` : ""; };
+  // The three weeks after this one, with each opponent's verdict dot
+  function nextWeeksLine(info, ng) {
+    const rows = teamGames(STATS_SEASONS[0], info.team), D = (defenseVsPos() || {})[info.pos];
+    if (!rows.length) return "";
+    const byW = new Map(rows.map(r => [r[0], r])), last = Math.max(...rows.map(r => r[0])), out = [];
+    for (let w = ng.week + 1; w <= last && out.length < 3; w++) {
+      const r = byW.get(w);
+      if (!r) { out.push(`<span class="tw-nx">Wk ${w} bye</span>`); continue; }
+      const x = D && D[r[1]];
+      out.push(`<span class="tw-nx"><span class="sc-dot ${x ? x.grade : ""}"></span>Wk ${w} ${r[2] ? "vs" : "@"} ${esc(r[1])}${x ? ` <i>${VERDICT[x.grade].split(" ")[0]}</i>` : ""}</span>`);
+    }
+    return out.length ? `<div class="tw-line"><span class="tw-label">Next</span>${out.join("")}<button class="btn link inline" type="button" data-pp-tab="schedule">Full schedule</button></div>` : "";
+  }
+  // Practice-report entries that matter for this player: his own team's and the opponent's units he plays with / against
+  const RELEVANT = {
+    QB: { own: ["QB", "RB", "WR", "TE", "T", "OT", "G", "OG", "C", "OL"], opp: ["DE", "DT", "NT", "DL", "OLB", "CB", "S", "FS", "SS", "DB", "SAF"] },
+    RB: { own: ["RB", "FB", "QB", "T", "OT", "G", "OG", "C", "OL"], opp: ["DE", "DT", "NT", "DL", "LB", "OLB", "ILB", "MLB"] },
+    WR: { own: ["QB", "WR", "TE"], opp: ["CB", "S", "FS", "SS", "DB", "SAF"] },
+    TE: { own: ["QB", "TE", "WR", "T", "OT"], opp: ["LB", "OLB", "ILB", "MLB", "S", "FS", "SS", "SAF"] },
+  };
+  const SEVERITY = r => ({ Out: 0, Doubtful: 1, Questionable: 2 })[r.status] ?? ({ DNP: 3, LP: 4, FP: 5 })[r.practice] ?? 6;
+  function relevantReports(info, ng) {
+    const R = RELEVANT[info.pos]; if (!R) return [];
+    const pick = (team, list, opp) => { const rep = team && injuryReport(team); return rep ? rep.rows.filter(r => list.includes(r.pos) && String(r.sid) !== String(info.sid)).map(r => ({ ...r, team, opp })) : []; };
+    return pick(info.team, R.own, false).concat(ng ? pick(ng.opp, R.opp, true) : []).sort((a, b) => SEVERITY(a) - SEVERITY(b));
+  }
+  function keyReportsLine(info, ng) {
+    const key = relevantReports(info, ng).filter(r => SEVERITY(r) <= 4).slice(0, 4);
+    if (!key.length) return "";
+    return `<div class="tw-line"><span class="tw-label">Practice notes</span>${key.map(r =>
+      `<span class="tw-nx">${esc(r.name)} <i>${esc(r.team)} ${esc(r.pos)}</i> <span class="inj-chip ${statusCls(r.status) || (r.practice === "DNP" ? "q" : "")}">${esc(r.status || PRACTICE_TEXT[r.practice] || "")}</span></span>`).join("")}<button class="btn link inline" type="button" data-pp-tab="practice">Practice report</button></div>`;
+  }
+  // Compact matchup summary for the modal header (fills the space right of the name)
+  function headerWeek(info) {
+    const ng = info.team ? nextGame(info.team) : null; if (!ng) return "";
+    const wk = currentWeek(), bye = wk && ng.week > wk, D = (defenseVsPos() || {})[info.pos], x = !bye && D && D[ng.opp];
+    const lines = [ng.spread != null ? `${esc(info.team)} ${ng.spread === 0 ? "PK" : (ng.spread > 0 ? "+" : "−") + Math.abs(ng.spread)}` : "", ng.total != null ? `O/U ${fp(ng.total)}` : ""].filter(Boolean).join(" · ");
+    return `<div class="pm-week${x ? " " + x.grade : ""}">
+      <div class="pm-week-top"><span class="tw-eyebrow">${bye ? `Week ${wk} bye · next` : `Week ${ng.week}`}</span><b>${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span class="pm-week-sub">${esc(kickoffText(ng.date, ng.time))}</span></div>
+      <div class="pm-week-tags">${x ? `<span class="tw-grade">${VERDICT[x.grade]}</span>` : ""}${lines ? `<span class="pm-week-sub">${lines}</span>` : ""}${statusChip(info)}</div>
     </div>`;
   }
   // A defense rank (1 = softest): the number with a short bar, tinted by third
@@ -7222,20 +7291,26 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const out = [];
     for (let w = wk || 1; w <= last; w++) {
       const r = byW.get(w);
-      if (!r) { out.push(`<tr class="sc-row off"><td class="gl-wk">${w}</td><td colspan="6">Bye week</td></tr>`); continue; }
+      if (!r) { out.push(`<tr class="sc-row off"><td class="gl-wk">${w}</td><td colspan="7">Bye week</td></tr>`); continue; }
       if (r[4] != null) continue;   // already played
       const x = D && D[r[1]], g = x ? x.grade : "";
       out.push(`<tr class="sc-row${w === wk ? " now" : ""}"><td class="gl-wk">${w}${w === wk ? `<span class="sc-now">Now</span>` : ""}</td>
         <td class="sc-opp"><span class="sc-dot ${g}"></span>${r[2] ? "vs" : "@"} <b>${esc(r[1])}</b></td>
         <td class="sc-when">${esc(kickoffText(r[3], r[6]))}</td>
+        <td class="sc-verdict ${g}">${x ? VERDICT[g].split(" ")[0] : "–"}</td>
         <td>${x ? rankChip("", x.ppgRank, x.n) : "–"}</td><td>${x && x.epaRank ? rankChip("", x.epaRank, x.n) : "–"}</td>
         <td>${x && x.succRank ? rankChip("", x.succRank, x.n) : "–"}</td><td>${x && x.explRank ? rankChip("", x.explRank, x.n) : "–"}</td></tr>`);
     }
     const d = statsCache[STATS_SEASONS[0]], run = info.pos === "RB" ? "rush" : "pass";
-    return `<div class="table-scroll"><table class="gl-table sc-table">
-        <thead><tr><th scope="col">Wk</th><th scope="col">Opp</th><th scope="col">Kickoff</th><th scope="col">Pts vs ${esc(info.pos)}</th><th scope="col">EPA/${run}</th><th scope="col">Success</th><th scope="col">Explosive</th></tr></thead>
-        <tbody>${out.join("") || `<tr><td colspan="7" class="empty">Season complete.</td></tr>`}</tbody></table></div>
-      <p class="pp-note">Defense ranks vs ${esc(info.pos)}s, 1 = softest of 32, from ${STATS_SEASONS[0]} games so far${d && d.through_week ? ` (through Week ${d.through_week})` : ""}, in ${esc(scoringLabel())}. The dot is the matchup grade (green good, gold neutral, red tough). Early-season ranks rest on a few games.</p>`;
+    return `<p class="sc-key"><span class="sc-dot good"></span>1st = softest defense, best for him · 32nd = toughest. Hover a column for what it measures.</p>
+      <div class="table-scroll"><table class="gl-table sc-table">
+        <thead><tr><th scope="col">Wk</th><th scope="col">Opp</th><th scope="col">Kickoff</th><th scope="col" title="Blend of the four ranks to the right">Matchup</th>
+          <th scope="col" class="sc-help" title="Fantasy points allowed per game to ${esc(info.pos)}s. 1st = allows the most (best matchup).">Pts vs ${esc(info.pos)}</th>
+          <th scope="col" class="sc-help" title="Expected points added per ${run} allowed. 1st = gives up the most per play.">EPA/${run}</th>
+          <th scope="col" class="sc-help" title="Share of ${run === "rush" ? "runs" : "dropbacks"} that are successful for the offense. 1st = allows the highest rate.">Success</th>
+          <th scope="col" class="sc-help" title="Share of ${run === "rush" ? "runs of 10+ yards" : "passes of 20+ yards"} allowed. 1st = allows the most big plays.">Explosive</th></tr></thead>
+        <tbody>${out.join("") || `<tr><td colspan="8" class="empty">Season complete.</td></tr>`}</tbody></table></div>
+      <p class="pp-note">Defense ranks vs ${esc(info.pos)}s, 1 = softest of 32, from ${STATS_SEASONS[0]} games so far${d && d.through_week ? ` (through Week ${d.through_week})` : ""}, in ${esc(scoringLabel())}. Matchup blends the four ranks (points 40%, EPA 25%, success 20%, explosive 15%). Early-season ranks rest on a few games.</p>`;
   }
 
   /* Practice report tab: his team's and his next opponent's latest practice report */
@@ -7245,6 +7320,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function ppPractice(info) {
     if (!info.team) return `<p class="empty-note">${esc(info.name)} isn't on an NFL team.</p>`;
     const ng = nextGame(info.team), teams = [info.team].concat(ng ? [ng.opp] : []);
+    const rel = relevantReports(info, ng), anyRep = injuryReport(info.team) || (ng && injuryReport(ng.opp));
+    const relRow = r => `<tr><td><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}<span class="inj-team">${esc(r.team)}${r.opp ? " · opp" : ""}</span></td>
+        <td>${r.status ? `<span class="inj-chip ${statusCls(r.status)}">${esc(r.status)}</span>` : `<span class="muted">–</span>`}</td>
+        <td>${r.practice ? `<span class="pr-chip ${r.practice}">${r.practice}</span>` : "–"}</td><td class="muted">${esc(r.injury || "")}</td></tr>`;
+    const R = RELEVANT[info.pos];
+    const relevant = `<h3 class="section-label">${esc(info.name)}</h3>
+      <p class="pp-glance">${statusChip(info) || `<span class="muted">No practice report yet this week.</span>`}</p>
+      ${R ? `<h3 class="section-label">Relevant to him<span class="tier-sub">${esc(info.team)}: ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)}: ${esc(relevantLabel(R.opp))}` : ""}</span></h3>
+      ${rel.length ? `<div class="table-scroll"><table class="gl-table inj-table"><thead><tr><th scope="col">Player</th><th scope="col">Game status</th><th scope="col">Practice</th><th scope="col">Injury</th></tr></thead><tbody>${rel.map(relRow).join("")}</tbody></table></div>`
+        : `<p class="pp-note">${anyRep ? "No one in those position groups is on either report." : "No practice reports yet this week."}</p>`}` : ""}
+      <button class="btn pr-full" type="button" data-pr-full aria-expanded="${!!PP.fullReport}">${PP.fullReport ? "Hide full team reports" : "View full team reports"}</button>`;
+    if (!PP.fullReport) return relevant + `<p class="pp-note">Latest official practice report (nflverse), refreshed Wednesday to Friday evenings.</p>`;
     const block = (team, opp) => {
       const rep = injuryReport(team);
       if (!rep) return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}</h3><p class="pp-note">No one on ${esc(team)}'s latest practice report.</p>`;
@@ -7256,9 +7343,17 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <td>${r.status ? `<span class="inj-chip ${statusCls(r.status)}">${esc(r.status)}</span>` : `<span class="muted">–</span>`}</td>
             <td>${r.practice ? `<span class="pr-chip ${r.practice}">${r.practice}</span>` : "–"}</td><td class="muted">${esc(r.injury || "")}</td></tr>`).join("")).join("")}</tbody></table></div>`;
     };
-    return teams.map((t, i) => block(t, i > 0)).join("") +
+    return relevant + teams.map((t, i) => block(t, i > 0)).join("") +
       `<p class="pp-note">Latest official practice report (nflverse). Practice shows the most recent day reported (FP full, LP limited, DNP did not practice). Refreshed Wednesday to Friday evenings.</p>`;
   }
+
+  const GROUP_SHORT = { QB: "QB", RB: "RB", FB: "RB", WR: "WR", TE: "TE", T: "OL", OT: "OL", G: "OL", OG: "OL", C: "OL", OL: "OL",
+    DE: "DL", DT: "DL", NT: "DL", DL: "DL", LB: "LB", OLB: "LB", ILB: "LB", MLB: "LB", CB: "DB", S: "DB", FS: "DB", SS: "DB", DB: "DB", SAF: "DB" };
+  const relevantLabel = list => uniq(list.map(x => GROUP_SHORT[x] || x)).join(", ");
+  document.addEventListener("click", e => {
+    if (!e.target.closest("[data-pr-full]")) return;
+    PP.fullReport = !PP.fullReport; renderPlayer();
+  });
 
   /* Weekly position finish: his rank at his position among everyone's points that week (current scoring) */
   const FIN = { key: "", data: null };
