@@ -203,10 +203,26 @@ with sync_playwright() as p:
     ok(name_of.get(L1["free"][0]) not in names, "A player claimed on waivers isn't listed as available")
     ok(pg.locator(".fa-fit-t").count() == n_fa, "Each available player shows where he'd fit on your team")
     ok(pg.locator(".fa-avail.waivers").count() >= 1, "A recently dropped player shows as on waivers")
-    vals = [int(re.sub(r"\D", "", v)) for v in pg.locator("#fa-body .val .num").all_inner_texts()]
-    ok(vals == sorted(vals, reverse=True), "Sorted by SPAM value by default")
-    pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'form'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(300)
-    ok(pg.locator("#fa-body tr.player").count() == n_fa, "Sort by recent production")
+    head = [h.strip().upper() for h in pg.locator("#fa-head th").all_inner_texts()]
+    ok(head == ["RK", "PLAYER", "POS", "WK 4 PROJ", "RECENT FORM", "MATCHUP", "SZN RK", "FPTS", "PPG", "FIT"], f"Waiver Wire columns: {head}")
+    ok(pg.locator("#fa-body .val, #fa-body .valbar").count() == 0, "No SPAM value column or value bar on Waiver Wire")
+    projs = [t.strip() for t in pg.locator("#fa-body td.fa-proj").all_inner_texts()]
+    ok(all(re.fullmatch(r"\d+\.\d|—|Bye|Out", t) for t in projs) and "0.0" not in projs[:5] and sum(bool(re.fullmatch(r"\d+\.\d", t)) for t in projs) > 10, f"Weekly projections shown (— when missing, never a fake zero): {projs[:8]}")
+    ranks = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
+    ok(ranks == sorted(ranks), "Sorted by SPAM rank by default")
+    fw = pg.evaluate("() => document.getElementById('fa-wrap').getBoundingClientRect().width")
+    ok(fw <= 1180, f"Waiver table stays compact on desktop ({fw:.0f}px)")
+    for opt in ["proj", "form", "ppg", "matchup", "posrank"]:
+        pg.evaluate(f"() => {{ const s = document.getElementById('fa-sort'); s.value = '{opt}'; s.dispatchEvent(new Event('change', {{ bubbles: true }})); }}"); pg.wait_for_timeout(250)
+        ok(pg.locator("#fa-body tr.player").count() == n_fa, f"Sort by {opt}")
+    pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'proj'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(250)
+    pv = [float(t) for t in pg.locator("#fa-body td.fa-proj").all_inner_texts() if re.fullmatch(r"\d+\.\d", t.strip())]
+    ok(pv == sorted(pv, reverse=True), "Projection sort is highest first")
+    pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'rank'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(250)
+    pg.locator("#fa-fitsort").check(force=True); pg.wait_for_timeout(300)
+    ranks2 = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
+    ok(sorted(ranks2) == sorted(ranks) and ranks2 != ranks and abs(ranks2.index(ranks[0])) <= 3, "My team fit nudges starters up without reshuffling the list")
+    pg.locator("#fa-fitsort").uncheck(force=True); pg.wait_for_timeout(300)
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_waivers.png")
 
     # switch league: every League tab follows
