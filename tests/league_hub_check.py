@@ -95,6 +95,24 @@ with sync_playwright() as p:
     pg.locator("#sd-leagues [data-league='L1']").click(); pg.wait_for_timeout(1500)
     ok("tester" in pg.evaluate("() => localStorage.getItem('spm_sleeper') || ''"), "League data is kept in this browser's localStorage")
 
+    # Superflex league vs a saved 1QB custom format (the Oct 4 "QB values collapsed" report)
+    def qb_values():
+        pg.click("#tab-rankings"); pg.wait_for_timeout(500)
+        return pg.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#rank-body tr.player')].map(tr => [(tr.querySelector('.pos-col .pos') || {}).textContent, tr.querySelector('.val .num, .val .num-btn').textContent.replace(/\\D/g, '')]).filter(([k]) => k && k.startsWith('QB')).map(([k, v]) => [k, Number(v)]))""")
+    sf = qb_values()
+    ok(pg.locator("#fmt-override").is_hidden() and "custom" not in pg.inner_text("#lc-format").lower(), "Superflex league on its own settings: no custom-format notice")
+    pg.evaluate("() => { const b = document.createElement('button'); b.dataset.openFmt = ''; document.body.append(b); b.click(); b.remove(); }"); pg.wait_for_timeout(300)
+    pg.click("[data-fmt-src=custom]"); pg.click("button[data-fmt=qb][data-v='1']"); pg.click("#fmt-apply"); pg.wait_for_timeout(800)
+    one = qb_values()
+    ok("custom" in pg.inner_text("#lc-format").lower() and pg.locator("#fmt-override").is_visible(), "A custom 1QB format shows in the league chip and as a notice on every tab")
+    ok(sf["QB12"] > 2 * one["QB12"] and sf["QB20"] > 3 * one["QB20"], f"Superflex QB values are far above the custom 1QB ones: QB12 {sf['QB12']} vs {one['QB12']}, QB20 {sf['QB20']} vs {one['QB20']}")
+    pg.click("[data-use-league]"); pg.wait_for_timeout(800)
+    back = qb_values()
+    ok(back == sf and pg.locator("#fmt-override").is_hidden(), "One click goes back to the league's own Superflex values")
+    checks = pg.evaluate("() => SPM.formatCheck()")
+    for c in checks:
+        ok(c["pass"], "formatCheck: " + c["check"] + " " + str(c["values"])[:160])
+
     pg.click("#tab-league"); pg.wait_for_timeout(600)
     tabs = pg.locator("[data-lsub]").all_inner_texts()
     ok(tabs == ["Power Rankings", "Standings", "Matchups", "Transactions", "Waiver Wire"], f"League sub-tabs: {tabs}")

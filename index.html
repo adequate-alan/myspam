@@ -1744,6 +1744,12 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
 }
 .fmt-chip:hover { border-color: var(--border-strong); background: var(--surface); }
 .fmt-chip.custom { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.league-chip.custom { border-color: color-mix(in srgb, var(--gold) 65%, var(--line)); }
+.league-chip.custom .lc-format { color: var(--gold); }
+.fmt-override { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--line)); border-radius: var(--radius); background: color-mix(in srgb, var(--gold) 9%, var(--surface)); font-size: 0.86rem; color: var(--ink); }
+.fmt-override[hidden] { display: none; }
+.fmt-override b { color: var(--heading); }
+.fo-actions { display: inline-flex; align-items: center; gap: 10px; }
 .fc-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
 .fc-format { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 dialog.fmt-dialog { width: min(620px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
@@ -2811,6 +2817,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     <span id="sample-note">These rankings and trade values are placeholders until the real ones are added.</span>
   </div>
 
+  <div class="fmt-override" id="fmt-override" role="status" hidden></div>
   <section id="panel-rankings" role="tabpanel" aria-labelledby="tab-rankings">
     <div class="editor-bar" id="editor-bar" hidden>
       <div class="eb-left">
@@ -3592,7 +3599,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T18:00Z";
+  const BUILD_ID = "2026-10-04T19:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5742,6 +5749,21 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     check(`${rb30.name} (RB30) rises with FLEX spots 0 → 2`, fl, fl[0] < fl[1]);
     const rec = [0, 0.5, 1].map(x => val({ ...one, tep: 0, rec: x }, at("WR", 1)));
     check(`${at("WR", 1).name} (WR1) rises with points per catch 0 → 0.5 → 1`, rec, rec[0] < rec[1] && rec[1] < rec[2]);
+    // Superflex keeps the QB premium: the same QBs in 1QB vs Superflex, 12 and 10 teams (QB20 = a low-end SF starter)
+    const qbs = [find("Josh Allen"), find("Lamar Jackson"), find("Brock Purdy"), at("QB", 20)].filter(Boolean);
+    for (const t of [12, 10]) {
+      const one1 = qbs.map(q => val({ teams: t, qb: "1", tep: 0 }, q)), sf = qbs.map(q => val({ teams: t, qb: "sf", tep: 0 }, q));
+      check(`${t}-team 1QB → Superflex: ${qbs.map(q => q.name).join(", ")}`, qbs.map((q, i) => `${one1[i]} → ${sf[i]}`),
+        sf.every((v, i) => v > one1[i] * 1.4) && sf[qbs.length - 1] > 3 * Math.max(1, one1[qbs.length - 1]));
+    }
+    const two = [val({ qb: "1", tep: 0 }, at("QB", 12)), val({ qb: "2", tep: 0 }, at("QB", 12))];
+    check(`${at("QB", 12).name} (QB12): 1QB vs 2QB`, two, two[1] > two[0] * 1.4);
+    const sl0 = syncedLeague();
+    if (sl0) {
+      const lu = lineupOf(valueLeague()), own = lineupOf(sl0);
+      check(usingCustom() ? `A custom format is on (values ignore ${sl0.name}'s own settings)` : `Values use ${sl0.name}'s own lineup (${own.SUPER_FLEX ? "Superflex" : own.QB >= 2 ? "2QB" : "1QB"}, ${own.teams} teams)`,
+        [JSON.stringify(lu)], !usingCustom() && lu.SUPER_FLEX === own.SUPER_FLEX && lu.QB === own.QB && lu.teams === own.teams);
+    }
     const same = players.filter(p => Math.round(adjMapFor(fmtLeague(FMT_DEFAULT)).get(p.id)) !== Math.round(p.value));
     check("A league in the base format gives exactly the base values", same.map(p => p.name), same.length === 0);
     const live = LG.fmtOn ? players.slice(0, 50).filter(p => Math.round(adjMapFor(valueLeague()).get(p.id)) !== Math.round(LG.adj.get(p.id))) : [];
@@ -5866,12 +5888,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ? `<span>${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPAM Board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
       : `<span>Showing the SPAM Board · <b>${esc(formatLabel())}</b></span>`;
     if (!d) {
+      $("fmt-override").hidden = true; $("league-chip").classList.remove("custom");
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
       if (["myteam", "league"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
       return;
     }
     $("lc-name").textContent = d.league.name;
-    $("lc-format").textContent = formatParts(d.league).join(" · ");
+    // the chip shows the format the values actually use: a custom format overrides the league's own settings
+    $("lc-format").textContent = usingCustom() ? "Custom · " + formatParts(fmtLeague(FMT)).join(" · ") : formatParts(d.league).join(" · ");
+    $("league-chip").classList.toggle("custom", usingCustom());
+    $("fmt-override").hidden = !usingCustom();
+    if (usingCustom()) $("fmt-override").innerHTML = `<span><b>Custom format on.</b> Values use ${esc(formatParts(fmtLeague(FMT)).join(" · "))}, not ${esc(d.league.name)}'s own settings (${esc(formatParts(d.league).join(" · "))}).</span>
+      <span class="fo-actions"><button class="btn primary" type="button" data-use-league>Use ${esc(d.league.name)}'s settings</button><button class="btn link inline" type="button" data-open-fmt>Edit custom format</button></span>`;
     const opts = [`<option value="all">All players</option>`];
     if (LG.myRosterId != null) opts.push(`<option value="mine">My Team</option>`);
     opts.push(`<option value="fa">Free agents</option>`, `<optgroup label="Teams">`);
@@ -5997,6 +6025,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   async function syncLeague(id) {
     await loadStatic();
+    // a different league (connect or switch) starts on its own settings; a custom format stays only for refreshes
+    if (sl && sl.activeId !== id && FMT_SRC === "custom") { FMT_SRC = "league"; try { localStorage.setItem(FMT_SRC_KEY, FMT_SRC); } catch (e) {} }
     const [league, users, rosters] = await Promise.all([slGet(`/league/${id}`), slGet(`/league/${id}/users`), slGet(`/league/${id}/rosters`)]);
     if (!league) throw new Error("Sleeper couldn't find that league.");
     sl.data = { [id]: {
@@ -6167,6 +6197,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const b = e.target.closest("[data-import]"); if (!b) return;
     fdialog.close(); openImport(b.dataset.import);
   });
+  // back to the connected league's own settings (from the custom-format notice)
+  function useLeagueSettings() {
+    FMT_SRC = "league";
+    try { localStorage.setItem(FMT_SRC_KEY, FMT_SRC); } catch (err) {}
+    renderLeagueAll();
+    if (activeData()) toast(`Using ${activeData().league.name}'s own settings.`);
+  }
+  document.addEventListener("click", e => { if (e.target.closest("[data-use-league]")) { e.preventDefault(); useLeagueSettings(); } });
   // any "Change" / "League settings" link on the page
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-open-fmt]"); if (!b) return;
