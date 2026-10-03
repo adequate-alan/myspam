@@ -3599,7 +3599,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T19:00Z";
+  const BUILD_ID = "2026-10-04T19:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6938,7 +6938,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <span class="pr-strength"><span class="pr-score">${fmt(x.score)}</span><span class="pr-bar"><span style="width:${(100 * x.score / topScore).toFixed(1)}%"></span></span></span>
           <span class="pr-pos"><span class="pr-pos-item"><span class="pr-pos-label">Best</span><span class="pos ${x.best[0]}">${x.best[0]}</span><span class="pr-place">${ordinal(x.best[1])}</span></span>
             <span class="pr-pos-item"><span class="pr-pos-label">Weakest</span><span class="pos ${x.worst[0]}">${x.worst[0]}</span><span class="pr-place">${ordinal(x.worst[1])}</span></span></span>
-          <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${stars.map(p => esc(p.name.split(" ").slice(-1)[0])).join(" · ")}</span></span>
+          <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${stars.map(p => esc(compactName(p.name))).join(" · ")}</span></span>
           <span class="pr-caret" aria-hidden="true"></span>
         </div>
         ${open ? `<div class="pr-detail">${teamExpand(x, ev, d)}</div>` : ""}
@@ -7345,7 +7345,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const top = s => {
         const list = s.starters.filter(x => !x.empty);
         const best = state === "upcoming" ? list.filter(x => x.e.p).sort((a, b) => dv(b.e.p) - dv(a.e.p)).slice(0, 2) : list.slice().sort((a, b) => b.pts - a.pts).slice(0, 2);
-        return best.map(x => `<span>${esc(x.e.name.split(" ").slice(-1)[0])}${state === "upcoming" ? "" : ` <b>${fp(x.pts)}</b>`}</span>`).join("");
+        return best.map(x => `<span>${esc(compactName(x.e.name))}${state === "upcoming" ? "" : ` <b>${fp(x.pts)}</b>`}</span>`).join("");
       };
       const status = s => state === "live" ? `<span class="mx-left">${s.done} played · ${s.playing} playing · ${s.toPlay} to play</span>` : "";
       const team = (s, which) => `<div class="mx-team ${which}${win === which ? " win" : ""}${s.team.mine ? " mine" : ""}">${teamFace(s.team, "sm")}
@@ -7714,6 +7714,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function ownerOfSid(sid) {
     if (!LG.active) return null;
     return LG.teams.find(t => (t.roster.players || []).map(String).includes(String(sid))) || "fa";
+  }
+  // Compact player name for tight summaries: the last name, keeping a suffix with it
+  // ("Kenneth Walker III" → "Walker III", "Marvin Harrison Jr." → "Harrison Jr.", "Amon-Ra St. Brown" → "St. Brown"). Full names everywhere else.
+  const NAME_SUFFIX = /^(jr|sr|ii|iii|iv|v)\.?$/i;
+  function compactName(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    let k = parts.length - 1;
+    if (k >= 2 && NAME_SUFFIX.test(parts[k])) k--;               // suffix stays with the last name
+    if (k >= 2 && /^st\.?$/i.test(parts[k - 1])) k--;          // "St. Brown"
+    return parts.slice(k).join(" ");
   }
   function nameLink(sid, name, cls = "pl-name") {   // every player name opens the player modal
     return sid ? `<span class="${cls} pl-link" data-player="${esc(sid)}" role="button" tabindex="0">${esc(name)}</span>` : `<span class="${cls}">${esc(name)}</span>`;
