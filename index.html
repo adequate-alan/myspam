@@ -1340,6 +1340,11 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .bd-table thead th { font-size: 0.62rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: none; }
 .bd-table tbody th { text-align: left; font-weight: 550; color: var(--ink-2); white-space: nowrap; }
 .bd-table td { color: var(--ink); width: 30%; }
+.bd-scroll { overflow-x: auto; }
+.bd-table.bd-fmt { max-width: 760px; }
+.bd-table.bd-fmt td { width: auto; }
+.bd-table.bd-fmt thead th { white-space: normal; vertical-align: bottom; }
+.bd-table .bd-group th { padding-top: 12px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-align: left; }
 .bd-table tr.bd-total th, .bd-table tr.bd-total td { border-bottom: 0; color: var(--cream); font-weight: 750; }
 
 /* ---------- Trade calculator: roster needs ---------- */
@@ -3434,6 +3439,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const offRankings = () => { try { return currentTab !== "rankings"; } catch (e) { return false; } };
   const adjName = () => (LG.active ? "League-adjusted" : "Your settings");
   const dv = p => (leagueView() && LG.adj.has(p.id) ? LG.adj.get(p.id) : p.value);
+  // League-adjusted value whenever a format is set (a connected league or your settings), whatever tab is open
+  const adjOf = p => (LG.fmtOn && LG.adj.has(p.id) ? LG.adj.get(p.id) : p.value);
   const EDIT_POS = ["QB", "RB", "WR", "TE"];
 
   /* ---------- Header / footer ---------- */
@@ -3486,7 +3493,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-04T15:00Z";
+  const BUILD_ID = "2026-10-04T16:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3810,8 +3817,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const TC = { mode: (() => { try { return localStorage.getItem("spm_tc_mode") || "league"; } catch (e) { return "league"; } })() };
   const saveTc = () => { try { localStorage.setItem("spm_tc_mode", TC.mode); } catch (e) {} };
   const tcLeague = () => TC.mode === "league" && LG.active;
-  // value used by the trade calculator: the league's (league mode), your hand-picked settings (no league), else base
-  const tv = p => (tcLeague() || (!LG.active && leagueView()) ? dv(p) : p.value);
+  // value used by the trade calculator: always the league-adjusted value for the active format (the connected
+  // league's settings, or your settings), also in "No league" mode; base SPAM values only when no format is set
+  const tv = adjOf;
+  // where the calculator's values come from, in words
+  const tcValuesName = () => (!LG.fmtOn ? "" : LG.active && !usingCustom() ? `${activeData().league.name || "League"}'s settings` : "Your settings");
   // Roster needs (1 = desperately need … 5 = set); saved in this browser
   const NEEDS = (() => { try { return { QB: 3, RB: 3, WR: 3, TE: 3, ...JSON.parse(localStorage.getItem("spm_needs") || "{}") }; } catch (e) { return { QB: 3, RB: 3, WR: 3, TE: 3 }; } })();
   const needMult = pos => (NEEDS[pos] ? NEED_MULTIPLIERS[NEEDS[pos] - 1] ?? 1 : 1);
@@ -3884,7 +3894,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const pick = id => { const p = byId.get(id); return { ...p, value: val(p) }; };
       const A = aIds.map(pick), B = bIds.map(pick);
       // league depth applies whenever the values are the league's (or your settings'), not base values
-      const adjusted = val === tv ? tcLeague() || (!LG.active && leagueView()) : val === dv ? leagueView() : false;
+      const adjusted = val === tv ? LG.fmtOn : val === dv ? leagueView() : false;
       LEAGUE_DEPTH = adjusted ? LG.depth || 1 : 1;
       const r = tradeModel(A, B) || {};
       if (r.adj) r.adj.depth = LEAGUE_DEPTH;
@@ -3909,7 +3919,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Trade rows: the name leads; position rank (badge) and, in 3-team trades, who sends him on a quieter
   // second line; the value right-aligned so the totals add up visibly. Team-fit detail lives in a tooltip
   // and in Roster impact rather than in the row.
-  const tcAdjusted = () => tcLeague() || (!LG.active && leagueView());
+  const tcAdjusted = () => LG.fmtOn;
   function renderRoster(side) {
     const ids = sides[side];
     const X = !TC3.on && TC_UI.ctx ? TC_UI.ctx[side] : null, fitView = X && TC_UI.lens === "fit";
@@ -4008,10 +4018,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("tc-teamC").hidden = !(on && TC3.on);
     $("tc-badge").innerHTML = on
       ? `<span class="tc-dot" aria-hidden="true"></span>League context: <b>${esc(activeData().league.name)}</b> ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
-      : !LG.active && leagueView()
-        ? `<span class="tc-dot" aria-hidden="true"></span>Your settings · ${esc(formatParts(fmtLeague(FMT)).join(" · "))} ${infoIcon("Values are adjusted for the league settings you picked. Connect a league to also use its rosters.", "About your settings")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
+      : LG.fmtOn
+        ? `<span class="tc-dot" aria-hidden="true"></span>${esc(tcValuesName())} · ${esc(formatParts(valueLeague()).join(" · "))} ${infoIcon("Values are league-adjusted for these settings. Pick a league above to also use its rosters. Your base rankings don't change.", "About league-adjusted values")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
         : `SPAM Values ${infoIcon(`Base SPAM values for the site's format (${formatLabel()}). Pick your league's settings, or connect a league to use its rosters and scoring.`, "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
-    $("tc-badge").classList.toggle("on", on || (!LG.active && leagueView()));
+    $("tc-badge").classList.toggle("on", on || LG.fmtOn);
     ["A", "B", "C"].forEach(s => {
       $("search-" + s).placeholder = on ? (sideTeam(s === "A" ? "B" : s === "B" ? "A" : s) && !TC3.on ? "Or search any player (hypothetical)" : "Search any player") : "Search players";
       if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; $("rtoggle-" + s).hidden = true; }
@@ -4682,7 +4692,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("tc-breakdown-body").innerHTML = `<table class="bd-table">
         <thead><tr><th scope="col"></th><th scope="col">${esc(names.A)}</th><th scope="col">${esc(names.B)}</th></tr></thead>
         <tbody>
-          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), tcLeague() ? "League-adjusted SPAM values for the players each side gets." : !LG.active && leagueView() ? "SPAM values adjusted for your settings, for the players each side gets." : "Base SPAM values for the players each side gets.")}
+          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), LG.fmtOn ? `League-adjusted SPAM values (${tcValuesName()}) for the players each side gets. See Format adjustment below.` : "Base SPAM values for the players each side gets.")}
           ${row("Best-player bonus", sign(bonusA), sign(bonusB), "In an uneven trade (2-for-1 etc.), the side getting the best player gets up to 5% of the deal.")}
           ${row("Waiver adjustment", sign(spotA), sign(spotB), "The side taking on more players has to cut someone: 1% of the deal per extra player, up to 2%.")}
           ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
@@ -4691,7 +4701,21 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             row("Cost of what they give", fmt(TC_UI.ctx.A.fit.give), fmt(TC_UI.ctx.B.fit.give), "Roster-adjusted: losing a starter costs full value, losing bench depth costs less.") +
             row("Roster-adjusted net", fmtNet(TC_UI.ctx.A.fit.net), fmtNet(TC_UI.ctx.B.fit.net), "", "bd-total") : ""}
         </tbody></table>
-      <p class="pp-note">${pct} gap · ${esc(tier.range)}</p>`;
+      <p class="pp-note">${pct} gap · ${esc(tier.range)}</p>${formatBreakdown(names)}`;
+  }
+  // Base SPAM value → format steps → league-adjusted value, for every player in the trade
+  function formatBreakdown(names) {
+    if (!LG.fmtOn) return "";
+    const groups = (TC3.on ? ["A", "B", "C"] : ["A", "B"]).map(s => ({ s, ps: sides[s].map(id => byId.get(id)).filter(Boolean) })).filter(g => g.ps.length);
+    const all = groups.flatMap(g => g.ps.map(p => ({ p, f: formatSteps(p) }))).filter(x => x.f);
+    if (!all.length) return "";
+    const cols = all[0].f.steps.filter((st, i) => st.on !== false || all.some(x => Math.round(x.f.steps[i].d) !== 0)).map(st => st.key);
+    const sign = v => (Math.round(v) === 0 ? "–" : `${v > 0 ? "+" : "−"}${fmt(Math.abs(Math.round(v)))}`);
+    const head = all[0].f.steps.filter(st => cols.includes(st.key)).map(st => `<th scope="col">${esc(st.label)}</th>`).join("");
+    const rows = groups.map(g => `<tr class="bd-group"><th scope="rowgroup" colspan="${cols.length + 3}">${esc(names[g.s] || g.s)} ${g.s === "A" && names.A === "You" ? "get" : "gets"}</th></tr>` +
+      g.ps.map(p => { const f = formatSteps(p); return f ? `<tr><th scope="row">${esc(p.name)}</th><td>${fmt(f.base)}</td>${f.steps.filter(st => cols.includes(st.key)).map(st => `<td>${sign(st.d)}</td>`).join("")}<td><b>${fmt(f.adj)}</b></td></tr>` : ""; }).join("")).join("");
+    return `<h4 class="sub-label">Format adjustment ${infoIcon(`Base SPAM values are the site's format (${formatLabel()}). Each step re-prices them for ${tcValuesName()} (${formatParts(valueLeague()).join(", ")}): its scoring, then its TE premium, then its lineup and league size. The steps add up to the league-adjusted value. Your base rankings never change.`, "About format adjustment")}</h4>
+      <div class="bd-scroll"><table class="bd-table bd-fmt"><thead><tr><th scope="col"></th><th scope="col">Base SPAM Value</th>${head}<th scope="col">League-adjusted Value</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
   function renderContext(res, ctx, names) {
     const cv = contextVerdict(res, ctx), A = ctx.A, B = ctx.B;
@@ -5461,7 +5485,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     LG.active = !!(d && sl);
     LG.fmtOn = !!vl;
     LG.depth = leagueDepth(vl);
-    LG.adj = new Map(); LG.adjRank = new Map(); LG.adjPos = new Map(); LG.factor = new Map();
+    LG.adj = new Map(); LG.adjRank = new Map(); LG.adjPos = new Map(); LG.factor = new Map(); adjCache = new Map();
     LG.ownerOf = new Map(); LG.teams = []; LG.myRosterId = null;
     LG.mode = LG.active ? (sl.view === "base" ? "base" : "league") : fmtView;
     if (LG.active) leagueTeams(d);
@@ -5562,6 +5586,69 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     stickyOrder(all.filter(p => !isAuto(p)), p => LG.adj.get(p.id), FA.margin, Infinity)
       .concat(stickyOrder(all.filter(isAuto), p => LG.adj.get(p.id), FA.margin, Infinity))
       .forEach((p, k) => LG.adjRank.set(p.id, k + 1));
+  }
+  // Adjusted values for any league object, without touching the active league layer (LG): runs the same
+  // adjustValues and puts LG back. Used to split a value into its format steps and by SPM.formatCheck.
+  var adjCache = new Map();   // var: leagueRecalc can run before this line
+  function adjMapFor(vl) {
+    const key = JSON.stringify([lineupOf(vl), vl.roster_positions, vl.scoring_settings]);
+    if (adjCache.has(key)) return adjCache.get(key);
+    const keep = { adj: LG.adj, adjPos: LG.adjPos, adjRank: LG.adjRank, factor: LG.factor, depth: LG.depth };
+    try {
+      LG.adj = new Map(); LG.adjPos = new Map(); LG.adjRank = new Map(); LG.factor = new Map(); LG.depth = leagueDepth(vl);
+      adjustValues(vl);
+      adjCache.set(key, LG.adj);
+      return LG.adj;
+    } finally { Object.assign(LG, keep); }
+  }
+  // A player's league-adjusted value split into steps, each measured from the one before:
+  // base SPAM value → scoring → TE premium → lineup & league size = league-adjusted value (exact sum)
+  function formatSteps(p) {
+    const vl = valueLeague();
+    if (!vl || !comps || !LG.adj.has(p.id)) return null;
+    const base = fmtLeague(FMT_DEFAULT), bsc = base.scoring_settings, sc = vl.scoring_settings || {};
+    const withSc = x => ({ ...base, scoring_settings: x });
+    const lu = lineupOf(vl), b = lineupOf(base);
+    const v1 = adjMapFor(withSc({ ...sc, bonus_rec_te: bsc.bonus_rec_te || 0 })).get(p.id);   // the league's scoring, base TE premium
+    const v2 = adjMapFor(withSc(sc)).get(p.id);                                                // + the league's TE premium
+    const v3 = LG.adj.get(p.id);                                                               // + the league's lineup and size
+    const tepFrom = tepShort(bsc.bonus_rec_te) || "none", tepTo = tepShort(sc.bonus_rec_te) || "none";
+    const luDiff = ["teams", "QB", "RB", "WR", "TE", "FLEX", "WRRB_FLEX", "REC_FLEX", "SUPER_FLEX", "bench"].some(k => lu[k] !== b[k]);
+    return { base: p.value, adj: v3, steps: [
+      { key: "scoring", label: "Scoring", d: v1 - p.value },
+      { key: "tep", label: `TE premium (${tepFrom} → ${tepTo})`, d: v2 - v1, on: tepFrom !== tepTo },
+      { key: "lineup", label: "Lineup & league size", d: v3 - v2, on: luDiff }
+    ] };
+  }
+  // Self-test: do the format settings reach the values? SPM.formatCheck() in the console (or tests/format_check.py).
+  async function formatCheck() {
+    if (!comps) await loadStatic();
+    await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason));
+    factorCache.key = null; adjCache = new Map();
+    const find = n => players.find(p => p.name === n);
+    const at = (pos, n) => players.find(p => p.pos === pos && p.posNum === n);
+    const val = (f, p) => Math.round(adjMapFor(fmtLeague({ ...FMT_DEFAULT, ...f })).get(p.id));
+    const kit = find("George Kittle"), allen = find("Josh Allen"), wr36 = at("WR", 36), rb30 = at("RB", 30);
+    const one = { qb: "1", rec: 1 }, out = [];
+    const check = (name, vals, ok) => out.push({ check: name, values: vals, pass: !!ok });
+    const k = [0, 0.5, 1].map(t => val({ ...one, tep: t }, kit));
+    check("Kittle rises with TE premium (none → + → ++), 12-team 1QB Full PPR", k, k[0] < k[1] && k[1] < k[2]);
+    const a = [val({ ...one, tep: 0 }, allen), val({ qb: "sf", tep: 0 }, allen)];
+    check("Josh Allen: 1QB vs Superflex", a, a[1] > a[0] * 1.25);
+    const w = [2, 3, 4].map(n => val({ ...one, tep: 0, wr: n }, wr36));
+    check(`${wr36.name} (WR36) rises with WR starters 2 → 3 → 4`, w, w[0] < w[1] && w[1] < w[2]);
+    const r = [10, 12, 14].map(t => val({ ...one, tep: 0, teams: t }, rb30));
+    check(`${rb30.name} (RB30) rises with league size 10 → 12 → 14`, r, r[0] < r[1] && r[1] < r[2]);
+    const fl = [0, 2].map(n => val({ ...one, tep: 0, flex: n }, rb30));
+    check(`${rb30.name} (RB30) rises with FLEX spots 0 → 2`, fl, fl[0] < fl[1]);
+    const rec = [0, 0.5, 1].map(x => val({ ...one, tep: 0, rec: x }, at("WR", 1)));
+    check(`${at("WR", 1).name} (WR1) rises with points per catch 0 → 0.5 → 1`, rec, rec[0] < rec[1] && rec[1] < rec[2]);
+    const same = players.filter(p => Math.round(adjMapFor(fmtLeague(FMT_DEFAULT)).get(p.id)) !== Math.round(p.value));
+    check("A league in the base format gives exactly the base values", same.map(p => p.name), same.length === 0);
+    const live = LG.fmtOn ? players.slice(0, 50).filter(p => Math.round(adjMapFor(valueLeague()).get(p.id)) !== Math.round(LG.adj.get(p.id))) : [];
+    check("The active league layer matches a fresh run of its settings", live.map(p => p.name), live.length === 0);
+    if (out.some(c => !c.pass)) console.warn("SPAM format check failed", out); else console.info("SPAM format check passed", out);
+    return out;
   }
   // Tier drop guard + floor for formats that push deep tiers to ~0 (see FORMAT_ADJUST.tierKeep / floor).
   // Each tier moves as a block (tiermates stay close); a league in the base format is unchanged, since
@@ -8707,7 +8794,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     throw new Error("the history file kept changing");
   }
-  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot };   // helpers for the scheduled snapshot and tests
+  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck };   // helpers for the scheduled snapshot and tests
 
   // Start-up: restore a saved connection
   sl = readSl();

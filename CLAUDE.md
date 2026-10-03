@@ -58,7 +58,7 @@ There's no committed test suite. Changes were verified with throwaway **Playwrig
   - Light and dark screenshots look right.
 - `?fmt=` URL form: `t10_qb1_rec0.5_tep0` (keys: `t` teams, `qb` 1/sf/2, `sx` superflex spots, `rec`, `tep`, `ptd`, `pyd`, `int`, `fl` fumble, `fd`, `rb`, `wr`, `te`, `fx` flex, `bn` bench).
 
-Committing these as `tests/` would be a good first improvement.
+Committed so far: **`tests/format_check.py`** (`CHROMIUM=/path python3 tests/format_check.py`): runs `SPM.formatCheck()` in the page (Kittle rises with TE premium none → + → ++, Josh Allen 1QB vs Superflex, WR36 vs WR starters, RB30 vs league size and FLEX, WR1 vs points per catch, base format = base values exactly), then checks with a mock league that the Trade Calculator uses league-adjusted values in both "No league" and league mode, shows the Format adjustment table, follows Custom format changes, and that the base SPAM Board never changes. Run it after any change to the value model or the calculator. More checks belong in `tests/`.
 
 ## 4. Where things are
 
@@ -89,7 +89,8 @@ Inside `index.html` (search for these names):
 - **Value pipeline:**
   - `loadPlayers` → `modelValue` → `keepRankOrderBySource` → `applyTiers` → `autoValues` (the tail) → `keepOverallOrder` (whole board: values never increase down the overall rank).
   - League layer: `leagueRecalc` → `adjustValues(valueLeague())` → `smoothTiers` → `stickyOrder` → `LG.adj` / `LG.adjPos` / `LG.adjRank`.
-  - Display helpers: `dv(p)` = value in the current context, `posLabel(p)` = position rank in the current context, `leagueView()` decides which.
+  - Display helpers: `dv(p)` = value in the current context, `posLabel(p)` = position rank in the current context, `leagueView()` decides which. `adjOf(p)` = league-adjusted value whenever a format is set, on any tab (the calculator's `tv`).
+  - Format debugging: `adjMapFor(league)` (adjusted values for any league object without touching `LG`), `formatSteps(p)` (base → scoring → TE premium → lineup & league size), `SPM.formatCheck()` (self-test, see §3).
 - **Editor:**
   - `editor`, `draft`, `writeOrder`, `moveOverall`, `movePlayer`, `setValue`, `makeManual`.
   - Tier editing: `tierAction`, `shiftTiers`, `materializeTierNames`, `TIER_EMPTY`.
@@ -230,7 +231,8 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Cards keep "gets" semantics. In a 2-team league trade, each card's main button is "+ Add from <partner>'s roster" (the players it receives come from the other team); "Or search any player (hypothetical)" is secondary. 3-team mode keeps each team's own roster with send-to buttons.
   - Rows read: name on line 1; line 2 = position badge · NFL team · owner (just the partner's team name when he comes from the trade partner, else "Owned by X" / My team / Free agent; 3-team shows the "from" menu instead). Value right-aligned.
   - Verdict card is compact: verdict, adjusted difference, one-line reason, then Balance / Swap / Clear on one row; Why?, Roster impact (lineup changes) and Value breakdown stay collapsed.
-  - Universal mode (No league) drops team names, avatars and ownership and goes back to You / They.
+  - Universal mode (No league) drops team names, avatars and ownership and goes back to You / They. **Values still follow the active format** (Alan, Oct 4: fixes a bug where "No league" with a league connected silently used base values): the connected league's settings, or your Custom format / League settings; base SPAM values only when no format is set at all. The context bar says whose settings the values use.
+  - Value breakdown ends with a **Format adjustment** table for every player in the trade: Base SPAM Value → Scoring → TE premium (from → to) → Lineup & league size → League-adjusted Value. Each step is measured from the one before (the same `adjustValues` run on in-between formats), so they add up exactly; columns with nothing to show are hidden. Note that a step can move non-TEs too (e.g. TE premium changes flex replacement levels).
 - **Trade Finder:**
   - League-wide discovery for one player, or a **2-player package from one roster**.
   - 1-for-1 or packages; 3-team cycles only for single players.
@@ -248,7 +250,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 ## 11. Known limitations and unfinished work
 
 - **Editor security:** editing is open to every visitor (Steven's temporary choice); only people with a GitHub token can publish. Real authentication is still to do.
-- **Tests:** no committed test suite (see §3).
+- **Tests:** only `tests/format_check.py` so far (see §3).
 - **IR / taxi spots** aren't format options; they don't change values.
 - **Draft picks** are listed in trades but not valued.
 - **Trade History:** only for Sleeper leagues; ESPN/Yahoo imports have no transaction feed.
