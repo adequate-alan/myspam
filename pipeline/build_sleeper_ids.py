@@ -13,7 +13,7 @@
 Source: DynastyProcess player ID table (github.com/dynastyprocess/data).
 Run from the pipeline folder: python build_sleeper_ids.py [path/to/index.html]
 """
-import json, os, re, sys
+import csv, io, json, os, re, sys
 import pandas as pd
 from project_players import norm
 from merge_projections import ALIASES
@@ -25,6 +25,11 @@ IDS_URL = "https://raw.githubusercontent.com/dynastyprocess/data/master/files/db
 POS = {"QB": "QB", "RB": "RB", "WR": "WR", "TE": "TE", "PK": "K", "K": "K"}
 TEAM_FIX = {"LVR": "LV", "JAC": "JAX", "LAR": "LAR", "KCC": "KC", "GBP": "GB", "NEP": "NE", "NOS": "NO",
             "SFO": "SF", "TBB": "TB", "LA": "LAR", "WSH": "WAS"}
+
+
+def _row(cells):
+    """One CSV line, quoting cells with commas or quotes (custom tier names can have them)."""
+    b = io.StringIO(); csv.writer(b, lineterminator="").writerow(cells); return b.getvalue()
 
 
 def load_ids(src=IDS_URL):
@@ -65,26 +70,26 @@ def tag_rankings(ids, site_path):
     s = open(site_path).read()
     m = re.search(r"const RANKINGS_CSV = `\n(.*?)\n`;", s, re.S)
     lines = m.group(1).splitlines()
-    head = lines[0].split(",")
+    head = next(csv.reader([lines[0]]))
     if "sleeper_id" not in head:
         head.append("sleeper_id")
-    old_head = lines[0].split(",")
+    old_head = next(csv.reader([lines[0]]))
     isid = head.index("sleeper_id")
     # prefer players with a real team when names collide
     ids = ids.assign(fa=(ids.team == "FA").astype(int)).sort_values(["fa", "db_season"], ascending=[True, False])
     look = {}
     for r in ids.itertuples():
         look.setdefault((r.key, r.pos), r.sleeper_id)
-    out, missing = [",".join(head)], []
+    out, missing = [_row(head)], []
     for line in lines[1:]:
-        row = dict(zip(old_head, line.split(",")))
+        row = dict(zip(old_head, next(csv.reader([line]))))
         name, pos = row.get("player", ""), row.get("pos", "")
         sid = look.get((norm(ID_ALIASES.get(name) or ALIASES.get(name, name)), pos), "")
         if not sid:
             missing.append(f"{pos} {name}")
         c = [row.get(h, "") for h in head]
         c[isid] = sid
-        out.append(",".join(c))
+        out.append(_row(c))
     s = s[:m.start(1)] + "\n".join(out) + s[m.end(1):]
     open(site_path, "w").write(s)
     return missing
