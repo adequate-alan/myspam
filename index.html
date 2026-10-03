@@ -1382,6 +1382,13 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 #league-body .pr-stars .face[data-player]:hover { position: relative; z-index: 1; }
 #league-body .lg-toolbar .method-note { font-size: 0.74rem; color: color-mix(in srgb, var(--muted) 85%, transparent); }
 
+.tf-second { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.tf-second .select { flex: 1 1 auto; min-width: 0; }
+.tf-plus, .tf-amp { flex: none; font-weight: 700; color: var(--accent-primary); }
+.tf-amp { margin: 0 2px; }
+.tf-pkgsum { margin-left: 4px; font-size: 0.86rem; }
+.tf-target { flex-wrap: wrap; row-gap: 4px; }
+
 /* ---------- Checkboxes and radios: one themed control everywhere (no native browser boxes) ---------- */
 :root, :root[data-theme="dark"] {
   --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%231A1314' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -3066,7 +3073,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T02:15Z";
+  const BUILD_ID = "2026-10-03T04:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6262,7 +6269,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       return;
     }
     if (fw) {
-      TF.src = "mine"; TF.sid = null; TF.from = "auto"; TF.against = fw.dataset.findWith; TF.pos = "ANY"; TF.openFull = new Set();
+      TF.src = "mine"; TF.sid = null; TF.sid2 = ""; TF.from = "auto"; TF.against = fw.dataset.findWith; TF.pos = "ANY"; TF.openFull = new Set();
       showTab("finder"); history.replaceState(null, "", "#finder"); window.scrollTo({ top: 0 });
       return;
     }
@@ -7072,10 +7079,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      premium via league values, bench depth, roster spots) ranks the value-matched ideas.
      Optional 3-team ideas only appear when every team improves its lineup and the direct
      2-team swap wouldn't work for the partner. */
-  const TF = { src: "mine", sid: null, srcTeam: "", from: "auto", against: "ANY", pos: "ANY", size: "pkg", three: false,
+  const TF = { src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", size: "pkg", three: false,
                gap: 10, fair: false, sort: "best", q: "", ideas: [], ideas3: [], openFull: new Set() };
   function openFinder(sid) {
-    TF.sid = String(sid); TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
+    TF.sid = String(sid); TF.sid2 = ""; TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
     const p = bySleeper().get(TF.sid), o = p ? LG.ownerOf.get(p.id) : null;
     TF.src = o && o.mine ? "mine" : "any";
     showTab("finder"); history.replaceState(null, "", "#finder"); window.scrollTo({ top: 0 });
@@ -7129,9 +7136,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return { d, map, V, byVal, healthy, tradable, outSet, strength, base, after, placeMoves };
   }
 
+  // target: one player, or a 2-player package from the same roster (shopped together)
   function findTrades(target, mode, S, opts) {
     const K = leagueKit(), V = K.V, byVal = K.byVal, sum = list => list.reduce((a, p) => a + V(p), 0);
-    const xv = V(target), sPool = K.tradable(S), owner = LG.ownerOf.get(target.id);
+    const pkg = Array.isArray(target) ? target : null;
+    if (pkg) target = pkg[0];
+    const xv = pkg ? sum(pkg) : V(target), sPool = K.tradable(S).filter(p => !pkg || !pkg.includes(p)), owner = LG.ownerOf.get(target.id);
     const ideas = [];
     const pairs = (pool, anchor, maxV) => {
       const out = [];
@@ -7145,9 +7155,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (T === S) continue;
       if (mode === "get" && T !== owner) continue;
       if (mode === "give" && opts.against !== "ANY" && String(T.rosterId) !== opts.against) continue;
-      const tPool = K.tradable(T);
+      const tPool = K.tradable(T).filter(p => !pkg || !pkg.includes(p));
       let giveSets, getSets;
-      if (mode === "give") {
+      // a package: the pair is fixed; the other side is one player (consolidation) or a pair
+      const others = pool => pool.filter(p => V(p) >= 0.45 * xv && V(p) <= 1.4 * xv).map(p => [p]).concat(opts.packages ? pairs(pool, null, 1.15 * xv) : []);
+      if (pkg && mode === "give") { giveSets = [pkg]; getSets = others(tPool); }
+      else if (pkg) { getSets = [pkg]; giveSets = others(sPool); }
+      else if (mode === "give") {
         giveSets = [[target]].concat(opts.packages ? pairs(sPool, target) : []);
         getSets = tPool.filter(p => V(p) >= 0.3 * xv && V(p) <= 1.4 * xv).map(p => [p]).concat(opts.packages ? pairs(tPool, null, 1.15 * xv) : []);
       } else {
@@ -7189,7 +7203,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const out = [], perTeam = new Map(), seen = new Set(), one = mode === "get" || opts.against !== "ANY";
     for (const it of ideas) {
       const key = (mode === "give" ? it.get : it.give).map(p => p.id).sort().join("+");   // each package once
-      const tk = it.team.rosterId, n = perTeam.get(tk) || { all: 0, big: 0 }, big = it.give.length + it.get.length === 4;
+      const tk = it.team.rosterId, n = perTeam.get(tk) || { all: 0, big: 0 }, big = !pkg && it.give.length + it.get.length === 4;
       if (seen.has(key) || n.all >= (one ? 12 : 3) || (big && n.big >= (one ? 3 : 1))) continue;   // otherwise 3 ideas and one 2-for-2 per team
       seen.add(key); perTeam.set(tk, { all: n.all + 1, big: n.big + (big ? 1 : 0) });
       out.push(it);
@@ -7312,7 +7326,19 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const owner = X ? LG.ownerOf.get(X.id) || null : null;
     const S = TF.from !== "auto" ? LG.teams.find(t => String(t.rosterId) === TF.from) || null : owner;
     const mode = X && S ? (owner && owner === S ? "give" : "get") : null;
-    return { X, owner, S, mode };
+    // optional second player: a 2-player package from the same roster
+    let Y = TF.sid2 ? map.get(TF.sid2) : null;
+    if (Y && (Y === X || !owner || LG.ownerOf.get(Y.id) !== owner)) { Y = null; TF.sid2 = ""; }
+    return { X, Y, owner, S, mode, pkg: Y ? [X, Y].sort((a, b) => dv(b) - dv(a)) : null };
+  }
+  // "Package with": a second player from the same roster, to shop two players together
+  function pickSecond(map) {
+    const X = TF.sid ? map.get(TF.sid) : null, o = X ? LG.ownerOf.get(X.id) : null;
+    if (!X || !o) return "";
+    const list = (o.roster.players || []).map(String).filter(s => s !== X.sleeperId).map(s => map.get(s)).filter(Boolean).sort((a, b) => dv(b) - dv(a));
+    if (!list.some(p => p.sleeperId === TF.sid2)) TF.sid2 = "";
+    return `<div class="tf-second"><span class="tf-plus" aria-hidden="true">+</span><select class="select" id="tf-player2" aria-label="Package with a second player">
+      <option value="">Add a second player (optional)</option>${list.map(p => `<option value="${esc(p.sleeperId)}"${p.sleeperId === TF.sid2 ? " selected" : ""}>${esc(p.name)} · ${esc(p.posRank)} · ${fmt(dv(p))}</option>`).join("")}</select></div>`;
   }
   function renderFinderPick() {
     const map = bySleeper(), me = LG.teams.find(t => t.mine), box = $("tf-pick");
@@ -7323,7 +7349,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (!me) { box.innerHTML = `<p class="pp-note">You don't have a team in this league. Use Any player.</p>`; return; }
       const list = teamPlayers(me);
       if (!list.some(p => p.sleeperId === TF.sid)) TF.sid = list[0] ? list[0].sleeperId : null;
-      box.innerHTML = `<select class="select" id="tf-player" aria-label="Your player">${list.map(opt).join("")}</select>`;
+      box.innerHTML = `<select class="select" id="tf-player" aria-label="Your player">${list.map(opt).join("")}</select>` + pickSecond(map);
       if (TF.sid) $("tf-player").value = TF.sid;
     } else if (TF.src === "team") {
       const teams = LG.teams;
@@ -7331,12 +7357,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const t = teams.find(x => String(x.rosterId) === TF.srcTeam), list = teamPlayers(t);
       if (!list.some(p => p.sleeperId === TF.sid)) TF.sid = list[0] ? list[0].sleeperId : null;
       box.innerHTML = `<div class="tf-pick-two"><select class="select" id="tf-src-team" aria-label="Team">${teams.map(x => `<option value="${x.rosterId}">${esc(x.mine ? x.name + " (you)" : x.name)}</option>`).join("")}</select>
-        <select class="select" id="tf-player" aria-label="Player">${list.map(opt).join("")}</select></div>`;
+        <select class="select" id="tf-player" aria-label="Player">${list.map(opt).join("")}</select></div>` + pickSecond(map);
       $("tf-src-team").value = TF.srcTeam; if (TF.sid) $("tf-player").value = TF.sid;
     } else {
       const X = TF.sid ? map.get(TF.sid) : null;
       box.innerHTML = `<div class="tf-search"><input class="search" id="tf-q" type="search" placeholder="Search any player" autocomplete="off" value="${esc(TF.q)}" aria-label="Search any player"><ul class="results" id="tf-results" hidden></ul></div>
-        ${X ? `<div class="tf-chosen">${face(X.sleeperId, X.name, "xs")}${nameLink(X.sleeperId, X.name, "tf-name")}<span class="pos ${esc(X.pos)}">${esc(X.posRank)}</span><span class="tf-v">${fmt(dv(X))}</span></div>` : ""}`;
+        ${X ? `<div class="tf-chosen">${face(X.sleeperId, X.name, "xs")}${nameLink(X.sleeperId, X.name, "tf-name")}<span class="pos ${esc(X.pos)}">${esc(X.posRank)}</span><span class="tf-v">${fmt(dv(X))}</span></div>` + pickSecond(map) : ""}`;
     }
   }
   function tfResults() {
@@ -7359,7 +7385,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     TF.dirty = false;
     $("tf-sub").textContent = `${d.league.name} · ${formatParts(d.league).join(" · ")} · ${leagueView() ? "League-adjusted" : "Base"} SPAM Values`;
     renderFinderPick();
-    const { X, owner, S, mode } = finderTarget();
+    const { X, Y, owner, S, mode, pkg } = finderTarget();
     const others = LG.teams;
     $("tf-from").innerHTML = `<option value="auto">${owner ? "Owner · " + esc(owner.mine ? "your team" : owner.name) : "Owner"}</option>` +
       others.map(t => `<option value="${t.rosterId}">${esc(t.mine ? t.name + " (you)" : t.name)}</option>`).join("");
@@ -7372,7 +7398,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("tf-pos").value = TF.pos;
     $("tf-gap").value = String(TF.gap); $("tf-gap").disabled = TF.fair;
     $("tf-fair").checked = TF.fair; $("tf-three").checked = TF.three;
-    $("tf-size").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.size === TF.size));
+    $("tf-size").querySelectorAll("button").forEach(b => {
+      b.setAttribute("aria-pressed", b.dataset.size === TF.size);
+      b.textContent = b.dataset.size === "1" ? (pkg ? "2-for-1" : "1-for-1") : (pkg ? "2-for-1 or 2-for-2" : "Packages");
+    });
     const sName = S ? (S.mine ? "me" : S.name) : "starting team";
     $("tf-sort").innerHTML = [["best", "Best match"], ["fair", "Fairest"], ["start", `Best for ${sName}`], ["roster", "Biggest roster improvement"], ["oneone", "1-for-1 first"], ["fewest", "Fewest players"]]
       .map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
@@ -7381,7 +7410,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const lead = $("tf-lead");
     if (!X) { lead.innerHTML = ""; body.innerHTML = `<p class="empty-note">${TF.src === "any" ? "Search for any player to find trades involving him." : "Pick a player."}</p>`; return; }
     const ownerTxt = owner ? (owner.mine ? "Your team" : owner.name) : "Free agent";
-    lead.innerHTML = `<span class="tf-target">${face(X.sleeperId, X.name, "sm")}<b>${nameLink(X.sleeperId, X.name)}</b> <span class="muted">${esc(X.posRank)} · ${fmt(dv(X))}</span> <span class="owner status${owner && owner.mine ? " mine" : ""}">${esc(ownerTxt)}</span></span>`;
+    const who = p => `${face(p.sleeperId, p.name, "sm")}<b>${nameLink(p.sleeperId, p.name)}</b> <span class="muted">${esc(p.posRank)} · ${fmt(dv(p))}</span>`;
+    lead.innerHTML = `<span class="tf-target">${who(X)}${Y ? `<span class="tf-amp">+</span>${who(Y)}<span class="muted tf-pkgsum">= ${fmt(dv(X) + dv(Y))}</span>` : ""} <span class="owner status${owner && owner.mine ? " mine" : ""}">${esc(ownerTxt)}</span></span>`;
     if (!S) {
       body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent in ${esc(d.league.name)}. Pick a <b>From team</b> to see what trades would look like if a team owned him, or pick him up off waivers.</p>`;
       return;
@@ -7389,7 +7419,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (mode === "get" && !owner) { body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent, so there's no one to trade with. ${esc(S.mine ? "You" : S.name)} can pick him up off waivers.</p>`; return; }
     const gap = TF.fair ? 2.99 : TF.gap;
     const opts = { pos: TF.pos, against: TF.against, gap, packages: TF.size === "pkg" };
-    let ideas = findTrades(X, mode, S, opts);
+    let ideas = findTrades(pkg || X, mode, S, opts);
     const sortKey = {
       best: (a, b) => b.score - a.score,
       fair: (a, b) => a.more - b.more || b.score - a.score,
@@ -7400,10 +7430,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }[TF.sort] || ((a, b) => b.score - a.score);
     ideas = ideas.slice().sort(sortKey).slice(0, 20);
     TF.ideas = ideas;
-    TF.ideas3 = TF.three ? findThree(X, mode, S, opts) : [];
+    TF.ideas3 = TF.three && !pkg ? findThree(X, mode, S, opts) : [];   // 3-team cycles are for single players
 
     const you = S.mine, sLabel = you ? "You" : S.name;
-    lead.innerHTML += `<span class="tf-persp">${mode === "give" ? `Trades ${esc(you ? "you" : S.name)} could make with him` : `Ways ${esc(you ? "you" : S.name)} could get him from ${esc(owner.name)}`} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} within ${TF.fair ? "the fair range" : TF.gap + "%"}</span>`;
+    lead.innerHTML += `<span class="tf-persp">${mode === "give" ? `Trades ${esc(you ? "you" : S.name)} could make with ${pkg ? "the pair" : "him"}` : `Ways ${esc(you ? "you" : S.name)} could get ${pkg ? "both" : "him"} from ${esc(owner.name)}`} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} within ${TF.fair ? "the fair range" : TF.gap + "%"}</span>`;
     const ownerTag = t => `<span class="tf-own${t.mine ? " mine" : ""}">${esc(t.mine ? "Your team" : t.name)}</span>`;
     const prow = (p, from, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(p.posRank)}</span>
       <span class="tf-n">${nameLink(p.sleeperId, p.name, "tf-name")}<span class="tf-tag">${ownerTag(from)}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
@@ -7442,13 +7472,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </article>`;
     }).join("");
     body.innerHTML = (ideas.length ? `<div class="tf-list">${cards}</div>`
-        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${TF.size === "1" ? " or allow packages" : ""}.</p>`) +
-      (TF.three ? `<h3 class="section-label">3-team ideas</h3>` + (cards3 ? `<div class="tf-list">${cards3}</div>` : `<p class="pp-note">No 3-team deal solves something a 2-team trade can't here.</p>`) : "");
+        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${TF.size === "1" ? " or allow packages" : ""}.</p>`) +
+      (TF.three && !pkg ? `<h3 class="section-label">3-team ideas</h3>` + (cards3 ? `<div class="tf-list">${cards3}</div>` : `<p class="pp-note">No 3-team deal solves something a 2-team trade can't here.</p>`) : "");
   }
-  $("tf-src").addEventListener("click", e => { const b = e.target.closest("button[data-src]"); if (!b) return; TF.src = b.dataset.src; TF.from = "auto"; TF.openFull = new Set(); renderFinder(); });
+  $("tf-src").addEventListener("click", e => { const b = e.target.closest("button[data-src]"); if (!b) return; TF.src = b.dataset.src; TF.sid2 = ""; TF.from = "auto"; TF.openFull = new Set(); renderFinder(); });
   $("tf-pick").addEventListener("change", e => {
-    if (e.target.id === "tf-player") { TF.sid = e.target.value; TF.from = "auto"; }
-    if (e.target.id === "tf-src-team") { TF.srcTeam = e.target.value; TF.sid = null; TF.from = "auto"; }
+    if (e.target.id === "tf-player") { TF.sid = e.target.value; TF.sid2 = ""; TF.from = "auto"; }
+    if (e.target.id === "tf-player2") { TF.sid2 = e.target.value; }
+    if (e.target.id === "tf-src-team") { TF.srcTeam = e.target.value; TF.sid = null; TF.sid2 = ""; TF.from = "auto"; }
     TF.openFull = new Set(); renderFinder();
   });
   $("tf-pick").addEventListener("input", e => { if (e.target.id === "tf-q") { TF.q = e.target.value; tfResults(); } });
@@ -7456,7 +7487,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("tf-pick").addEventListener("mousedown", e => { if (e.target.closest("#tf-results")) e.preventDefault(); });
   $("tf-pick").addEventListener("click", e => {
     const b = e.target.closest("[data-tf-pick]"); if (!b) return;
-    TF.sid = b.dataset.tfPick; TF.q = ""; TF.from = "auto"; TF.openFull = new Set(); renderFinder();
+    TF.sid = b.dataset.tfPick; TF.sid2 = ""; TF.q = ""; TF.from = "auto"; TF.openFull = new Set(); renderFinder();
   });
   $("tf-pick").addEventListener("keydown", e => {
     if (e.target.id === "tf-q" && e.key === "Enter") { const first = $("tf-results") && $("tf-results").querySelector("[data-tf-pick]"); if (first) first.click(); e.preventDefault(); }
