@@ -17,6 +17,9 @@ on:
     - cron: "0 15 * * 1"    # Mon 11 AM ET: retry
     - cron: "30 8 * * 2"    # Tue 4:30 AM ET: after Monday Night Football
     - cron: "0 15 * * 4"    # Thu 11 AM ET: catch stat corrections before the next game day
+    - cron: "0 22 * * 3"    # Wed 6 PM ET: first injury/practice report of the week
+    - cron: "0 22 * * 4"    # Thu 6 PM ET: practice report update
+    - cron: "0 22 * * 5"    # Fri 6 PM ET: final practice report with game statuses
   workflow_dispatch:
     inputs:
       stats_only:

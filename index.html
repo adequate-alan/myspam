@@ -2065,6 +2065,39 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .tw-label { font-size: 0.56rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tw-val { font-size: 1rem; font-weight: 720; color: var(--cream); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tw-sub { font-size: 0.66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-def { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.tw-def .tw-label { margin-right: 2px; }
+.rk-chip { --rk: var(--gold); display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; }
+.rk-chip.good { --rk: var(--rb); } .rk-chip.tough { --rk: var(--qb); }
+.rk-chip b { color: var(--cream); font-weight: 700; font-variant-numeric: tabular-nums; min-width: 30px; }
+.rk-l:empty { display: none; }
+.rk-bar { width: 44px; height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.rk-bar span { display: block; height: 100%; background: color-mix(in srgb, var(--rk) 70%, transparent); border-radius: 2px; }
+.inj-chip { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 650; color: var(--ink-2); background: color-mix(in srgb, var(--muted) 14%, transparent); }
+.inj-chip.q { color: var(--gold); background: color-mix(in srgb, var(--gold) 13%, transparent); }
+.inj-chip.out { color: var(--qb); background: color-mix(in srgb, var(--qb) 14%, transparent); }
+.pr-chip { display: inline-block; min-width: 38px; text-align: center; padding: 1px 6px; border-radius: 4px; font-size: 0.66rem; font-weight: 750; letter-spacing: 0.04em; }
+.pr-chip.FP { color: var(--rb); background: color-mix(in srgb, var(--rb) 13%, transparent); }
+.pr-chip.LP { color: var(--gold); background: color-mix(in srgb, var(--gold) 13%, transparent); }
+.pr-chip.DNP { color: var(--qb); background: color-mix(in srgb, var(--qb) 14%, transparent); }
+.inj-pos { display: inline-block; min-width: 30px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.06em; color: var(--muted); }
+.inj-table tr.inj-me td { background: color-mix(in srgb, var(--gold) 9%, transparent); }
+.inj-table .pl-name { font-size: 0.86rem; }
+.sc-now { display: block; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); }
+.sc-opp b { color: var(--cream); }
+.sc-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; background: var(--line); vertical-align: 1px; }
+.sc-dot.good { background: var(--rb); } .sc-dot.neutral { background: var(--gold); } .sc-dot.tough { background: var(--qb); }
+.gl-table.sc-table th:nth-child(-n+3), .gl-table.sc-table td:nth-child(-n+3), .gl-table .sc-row.off td { text-align: left; }
+.sc-row.off td { color: var(--muted); }
+.sc-when { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+.sc-table tr.now td { background: color-mix(in srgb, var(--gold) 6%, transparent); }
+.gl-res { font-size: 0.74rem; font-weight: 650; color: var(--muted); white-space: nowrap; }
+.gl-res.W { color: var(--rb); } .gl-res.L { color: var(--qb); }
+.gl-fin { font-size: 0.76rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.gl-row.up td { color: var(--muted); }
+.gl-table .gl-row.off td.gl-result, .gl-table .gl-row.off td.gl-opp { text-align: left; }
+.gl-table.inj-table th, .gl-table.inj-table td { text-align: left; }
+.inj-table tr.tier td { font-size: 0.72rem; padding: 7px 16px 6px; }
 .tw-none { margin: 0; color: var(--muted); font-size: 0.86rem; }
 .tw-context { margin: 10px 0 0; font-size: 0.84rem; color: var(--ink-2); }
 .tw-context b { color: var(--cream); }
@@ -3211,7 +3244,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-03T20:00Z";
+  const BUILD_ID = "2026-10-03T22:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6881,9 +6914,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const m = Math.min(...w); return isFinite(m) ? m : null;
   }
   /* Defense vs position: what each NFL defense has allowed to a position this season, in the current
-     scoring. Two signals, both ranked 1 = softest: fantasy points allowed per game, and points allowed
-     per opportunity (QB dropbacks + runs, RB carries + targets, WR/TE targets). The matchup grade
-     blends them (60/40) and splits the league into thirds: Good / Neutral / Tough. */
+     scoring, all ranked 1 = softest: fantasy points allowed per game, points per opportunity (QB dropbacks
+     + runs, RB carries + targets, WR/TE targets), and from play-by-play (runs for RBs, dropbacks for the
+     others) EPA per play, success rate and explosive-play rate. The matchup grade blends points/game 45%,
+     per opportunity 20%, EPA 20%, success 15% (60/40 of the first two without play-by-play) and splits
+     the defenses into thirds: Good / Neutral / Tough. */
   const DVP = { key: "", data: null };
   function defenseVsPos() {
     const season = STATS_SEASONS[0], d = statsCache[season];
@@ -6909,7 +6944,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const n = rows.length; if (!n) continue;
       [...rows].sort((a, b) => b.ppg - a.ppg).forEach((r, i) => { r.ppgRank = i + 1; });
       [...rows].sort((a, b) => b.eff - a.eff).forEach((r, i) => { r.effRank = i + 1; });
-      [...rows].sort((a, b) => (0.6 * a.ppgRank + 0.4 * a.effRank) - (0.6 * b.ppgRank + 0.4 * b.effRank)).forEach((r, i) => { r.rank = i + 1; });
+      // efficiency allowed from play-by-play (runs for RBs, dropbacks for QB/WR/TE), when the stats file has it
+      const D = d.defense, side = pos === "RB" ? "run" : "pass";
+      if (D && D.teams) {
+        const ci = k => D.cols.indexOf(side + "_" + k);
+        rows.forEach(r => { const t = D.teams[r.def]; if (t) { r.epa = t[ci("epa")]; r.succ = t[ci("success")]; r.expl = t[ci("expl")]; } });
+        for (const [k, rk] of [["epa", "epaRank"], ["succ", "succRank"], ["expl", "explRank"]])
+          [...rows].filter(r => r[k] != null).sort((a, b) => b[k] - a[k]).forEach((r, i) => { r[rk] = i + 1; });
+      }
+      const score = r => r.epaRank ? 0.45 * r.ppgRank + 0.2 * r.effRank + 0.2 * r.epaRank + 0.15 * r.succRank : 0.6 * r.ppgRank + 0.4 * r.effRank;
+      [...rows].sort((a, b) => score(a) - score(b)).forEach((r, i) => { r.rank = i + 1; });
       rows.forEach(r => { r.n = n; r.grade = r.rank <= Math.round(n / 3) ? "good" : r.rank > n - Math.round(n / 3) ? "tough" : "neutral"; });
       out[pos] = Object.fromEntries(rows.map(r => [r.def, r]));
     }
@@ -6928,7 +6972,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* Player modal: opens over whatever you're doing (rankings, a trade in progress, a team page)
      and never changes the page underneath. Click any player name or photo to open or switch. */
   const PP = { sid: null, tab: "overview", perf: String(STATS_SEASONS[0]), season: STATS_SEASONS[0], trail: [], compare: null, picking: false, pickQuery: "", opener: null, charts: [] };
-  const PP_TABS = [["overview", "Overview"], ["log", "Game log"], ["stats", "Stats"], ["perf", "Fantasy performance"],
+  const PP_TABS = [["overview", "Overview"], ["log", "Game log"], ["schedule", "Schedule"], ["injuries", "Injuries"], ["stats", "Stats"], ["perf", "Fantasy performance"],
                    ["history", "Ranking history"], ["value", "Trade value"]];
   const modal = $("player-modal");
   const modalOpen = () => modal.open;
@@ -7055,6 +7099,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function ppSection(info) {
     PP.charts = [];
     if (PP.tab === "log") return ppGameLog(info);
+    if (PP.tab === "schedule") return ppSchedule(info);
+    if (PP.tab === "injuries") return ppInjuries(info);
     if (PP.tab === "stats") return ppStats(info);
     if (PP.tab === "perf") return ppPerformance(info);
     if (PP.tab === "history") return ppHistory(info);
@@ -7131,21 +7177,105 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const implied = ng.total != null && ng.spread != null ? fp(ng.total / 2 - ng.spread / 2) : null;
     const where = [ng.stadium, ROOF_TEXT[ng.roof]].filter(Boolean).join(" · ");
     const tile = (label, val, sub) => `<div class="tw-stat"><span class="tw-label">${label}</span><span class="tw-val">${val}</span>${sub ? `<span class="tw-sub">${sub}</span>` : ""}</div>`;
-    const P = esc(info.pos) + "s";
+    const P = esc(info.pos) + "s", inj = injuryOf(info.team, info.sid);
+    const run = info.pos === "RB" ? "rush" : "pass";
+    const defRow = dv0 && dv0.epaRank ? `<div class="tw-def"><span class="tw-label">${esc(ng.opp)} defense vs ${info.pos === "RB" ? "the run" : "the pass"}</span>
+        ${rankChip(`EPA/${run}`, dv0.epaRank, dv0.n)}${rankChip("Success", dv0.succRank, dv0.n)}${rankChip("Explosive", dv0.explRank, dv0.n)}<span class="tw-sub">rank of ${dv0.n} · 1 = softest</span></div>` : "";
     return `<div class="tw-card${grade ? " " + grade : ""}">
       <div class="tw-head">
         <span class="tw-eyebrow">${bye ? `Week ${wk} · Bye` : `This week · Week ${ng.week}`}</span>
         ${gradeText ? `<span class="tw-grade">${gradeText}</span>` : ""}
       </div>
-      <div class="tw-game"><b>${bye ? "Next: " : ""}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}</div>
+      <div class="tw-game"><b>${bye ? "Next: " : ""}${ng.home ? "vs" : "@"} ${esc(ng.opp)}</b><span>${esc(kickoffText(ng.date, ng.time))}${bye ? ` · Week ${ng.week}` : ""}</span>${where ? `<span>${esc(where)}</span>` : ""}${inj ? injuryChip(inj) : ""}</div>
       <div class="tw-stats">
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
         ${tile("Team total", implied ?? "–", implied ? "implied" : "")}
-        ${tile(`${esc(ng.opp)} vs ${esc(info.pos)}`, dv0 ? softTough(dv0.rank, dv0.n) : "–", dv0 ? `of ${dv0.n} defenses` : "No games yet")}
+        ${tile(`${esc(ng.opp)} vs ${esc(info.pos)}`, dv0 ? softTough(dv0.rank, dv0.n) : "–", dv0 ? `blended matchup rank of ${dv0.n}` : "No games yet")}
         ${tile(`Pts allowed to ${P}`, dv0 ? fp(dv0.ppg) : "–", dv0 ? `per game · ${dv0.g} game${dv0.g === 1 ? "" : "s"}${dv0.g < 5 ? " · small sample" : ""}` : "")}
       </div>
+      ${defRow}
     </div>`;
+  }
+  // A defense rank (1 = softest): the number with a short bar, tinted by third
+  const gradeOf = (r, n) => (r <= Math.round(n / 3) ? "good" : r > n - Math.round(n / 3) ? "tough" : "neutral");
+  const rankChip = (label, r, n) => r ? `<span class="rk-chip ${gradeOf(r, n)}"><span class="rk-l">${label}</span><b>${ordinal(r)}</b><span class="rk-bar"><span style="width:${(100 * (n - r + 1) / n).toFixed(0)}%"></span></span></span>` : "";
+  // Injury report (latest week in the stats file): [name, pos, sid, game status, practice, injury]
+  function injuryReport(team) {
+    const d = statsCache[STATS_SEASONS[0]], I = d && d.injuries;
+    return I && I.teams && I.teams[team] ? { week: I.week, rows: I.teams[team].map(r => ({ name: r[0], pos: r[1], sid: r[2], status: r[3], practice: r[4], injury: r[5] })) } : null;
+  }
+  function injuryOf(team, sid) {
+    const rep = team && injuryReport(team);
+    return rep ? rep.rows.find(r => r.sid && String(r.sid) === String(sid)) || null : null;
+  }
+  const PRACTICE_TEXT = { DNP: "did not practice", LP: "limited practice", FP: "full practice" };
+  const statusCls = s => ({ Out: "out", Doubtful: "out", Questionable: "q" })[s] || "";
+  const injuryChip = r => `<span class="inj-chip ${statusCls(r.status) || (r.practice === "DNP" ? "q" : "")}">${esc([r.status || "On injury report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] || ""].filter(Boolean).join(" · "))}</span>`;
+
+  /* Schedule tab: every remaining week, with the opponent defense's ranks vs his position */
+  function ppSchedule(info) {
+    if (!info.team) return `<p class="empty-note">${esc(info.name)} isn't on an NFL team.</p>`;
+    const rows = teamGames(STATS_SEASONS[0], info.team), dvp = defenseVsPos(), D = dvp && dvp[info.pos];
+    if (!rows.length) return `<p class="empty-note">No schedule yet.</p>`;
+    const wk = currentWeek(), last = Math.max(...rows.map(r => r[0])), byW = new Map(rows.map(r => [r[0], r]));
+    const out = [];
+    for (let w = wk || 1; w <= last; w++) {
+      const r = byW.get(w);
+      if (!r) { out.push(`<tr class="sc-row off"><td class="gl-wk">${w}</td><td colspan="6">Bye week</td></tr>`); continue; }
+      if (r[4] != null) continue;   // already played
+      const x = D && D[r[1]], g = x ? x.grade : "";
+      out.push(`<tr class="sc-row${w === wk ? " now" : ""}"><td class="gl-wk">${w}${w === wk ? `<span class="sc-now">Now</span>` : ""}</td>
+        <td class="sc-opp"><span class="sc-dot ${g}"></span>${r[2] ? "vs" : "@"} <b>${esc(r[1])}</b></td>
+        <td class="sc-when">${esc(kickoffText(r[3], r[6]))}</td>
+        <td>${x ? rankChip("", x.ppgRank, x.n) : "–"}</td><td>${x && x.epaRank ? rankChip("", x.epaRank, x.n) : "–"}</td>
+        <td>${x && x.succRank ? rankChip("", x.succRank, x.n) : "–"}</td><td>${x && x.explRank ? rankChip("", x.explRank, x.n) : "–"}</td></tr>`);
+    }
+    const d = statsCache[STATS_SEASONS[0]], run = info.pos === "RB" ? "rush" : "pass";
+    return `<div class="table-scroll"><table class="gl-table sc-table">
+        <thead><tr><th scope="col">Wk</th><th scope="col">Opp</th><th scope="col">Kickoff</th><th scope="col">Pts vs ${esc(info.pos)}</th><th scope="col">EPA/${run}</th><th scope="col">Success</th><th scope="col">Explosive</th></tr></thead>
+        <tbody>${out.join("") || `<tr><td colspan="7" class="empty">Season complete.</td></tr>`}</tbody></table></div>
+      <p class="pp-note">Defense ranks vs ${esc(info.pos)}s, 1 = softest of 32, from ${STATS_SEASONS[0]} games so far${d && d.through_week ? ` (through Week ${d.through_week})` : ""}, in ${esc(scoringLabel())}. The dot is the matchup grade (green good, gold neutral, red tough). Early-season ranks rest on a few games.</p>`;
+  }
+
+  /* Injuries tab: his team's and his next opponent's latest injury report */
+  const POS_GROUPS = [["Quarterbacks", ["QB"]], ["Running backs", ["RB", "FB"]], ["Wide receivers", ["WR"]], ["Tight ends", ["TE"]],
+    ["Offensive line", ["T", "OT", "G", "OG", "C", "OL"]], ["Defensive line", ["DE", "DT", "NT", "DL"]], ["Linebackers", ["LB", "OLB", "ILB", "MLB"]],
+    ["Defensive backs", ["CB", "S", "FS", "SS", "DB", "SAF"]], ["Special teams", ["K", "P", "LS"]]];
+  function ppInjuries(info) {
+    if (!info.team) return `<p class="empty-note">${esc(info.name)} isn't on an NFL team.</p>`;
+    const ng = nextGame(info.team), teams = [info.team].concat(ng ? [ng.opp] : []);
+    const block = (team, opp) => {
+      const rep = injuryReport(team);
+      if (!rep) return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}</h3><p class="pp-note">No one on ${esc(team)}'s latest injury report.</p>`;
+      const groups = POS_GROUPS.map(([label, list]) => [label, rep.rows.filter(r => list.includes(r.pos))]).concat([["Other", rep.rows.filter(r => !POS_GROUPS.some(([, l]) => l.includes(r.pos)))]]).filter(([, rows]) => rows.length);
+      return `<h3 class="section-label">${esc(team)}${opp ? " · opponent" : ""}<span class="tier-sub">Week ${rep.week} report</span></h3>
+        <div class="table-scroll"><table class="gl-table inj-table"><thead><tr><th scope="col">Player</th><th scope="col">Game status</th><th scope="col">Practice</th><th scope="col">Injury</th></tr></thead>
+        <tbody>${groups.map(([label, rows]) => `<tr class="tier"><td colspan="4">${esc(label)}</td></tr>` + rows.map(r =>
+          `<tr class="${String(r.sid) === String(info.sid) ? "inj-me" : ""}"><td><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}</td>
+            <td>${r.status ? `<span class="inj-chip ${statusCls(r.status)}">${esc(r.status)}</span>` : `<span class="muted">–</span>`}</td>
+            <td>${r.practice ? `<span class="pr-chip ${r.practice}">${r.practice}</span>` : "–"}</td><td class="muted">${esc(r.injury || "")}</td></tr>`).join("")).join("")}</tbody></table></div>`;
+    };
+    return teams.map((t, i) => block(t, i > 0)).join("") +
+      `<p class="pp-note">Latest official report (nflverse). Practice shows the most recent day reported (FP full, LP limited, DNP did not practice). Refreshed Wednesday to Friday evenings.</p>`;
+  }
+
+  /* Weekly position finish: his rank at his position among everyone's points that week (current scoring) */
+  const FIN = { key: "", data: null };
+  function weeklyFinish(season) {
+    const d = statsCache[season]; if (!d) return null;
+    const sc = scoringNow(), key = season + "|" + d.updated + "|" + JSON.stringify(sc);
+    if (FIN.key === key) return FIN.data;
+    const by = {};
+    for (const [sid, pl] of Object.entries(d.players)) for (const a of pl.g) {
+      const g = {}; d.cols.forEach((c, i) => { g[c] = a[i]; });
+      ((by[g.w] = by[g.w] || {})[pl.p] = by[g.w][pl.p] || []).push([sid, gamePoints(g, pl.p, sc)]);
+    }
+    const out = {};
+    for (const [w, P] of Object.entries(by)) for (const [pos, list] of Object.entries(P))
+      list.sort((a, b) => b[1] - a[1]).forEach(([sid], i) => { (out[sid] = out[sid] || {})[w] = pos + (i + 1); });
+    FIN.key = key; FIN.data = out;
+    return out;
   }
   function byeWeek(team) {
     const rows = team ? teamGames(STATS_SEASONS[0], team) : [];
@@ -7229,16 +7359,22 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const hi = line ? line * 1.75 : Infinity, lo = line ? line * 0.5 : -Infinity;
     const byWeek = new Map(log.games.map(g => [g.w, g]));
     const team = log.games[log.games.length - 1].tm, sched = teamGames(season, team);
-    const last = data.through_week, rows = [];
+    // every week of the season: played games, bye, missed games, then (this season) the games still to come
+    const fin = weeklyFinish(season), myFin = fin && fin[info.sid] || {};
+    const last = Math.max(data.through_week, ...sched.map(r => r[0])), rows = [], span = cols.length + 5;
     for (let w = 1; w <= last; w++) {
-      const g = byWeek.get(w);
+      const g = byWeek.get(w), r = sched.find(x => x[0] === w);
       if (g) {
         const o = oppLabel(season, g), cls = g.pts >= hi ? " good" : g.pts < lo ? " weak" : "";
-        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp" title="${esc(o.res)}">${esc(o.opp)}</td><td class="gl-pts">${fp(g.pts)}</td>
+        const res = o.res ? `<span class="gl-res ${o.res[0]}">${esc(o.res)}</span>` : "";
+        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${fp(g.pts)}</td><td class="gl-fin">${esc(myFin[w] || "–")}</td>
           ${cols.map(c => `<td>${cellOf(g, c)}</td>`).join("")}</tr>`);
+      } else if (!r) {
+        rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp" colspan="${span - 1}">Bye week</td></tr>`);
+      } else if (r[4] == null) {
+        rows.push(`<tr class="gl-row off up"><td class="gl-wk">${w}</td><td class="gl-opp">${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result" colspan="${span - 2}">${esc(kickoffText(r[3], r[6]))}</td></tr>`);
       } else {
-        const bye = !sched.some(r => r[0] === w);
-        rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp" colspan="${cols.length + 2}">${bye ? "Bye" : "Did not play"}</td></tr>`);
+        rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp">${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result" colspan="${span - 2}">Did not play</td></tr>`);
       }
     }
     const t = totals(log.games), tg = { ...t, w: "", tm: "" };
@@ -7248,11 +7384,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }).join("");
     return head + `
       <div class="table-scroll"><table class="gl-table">
-        <thead><tr><th scope="col">Wk</th><th scope="col">Opp</th><th scope="col">FPts</th>${cols.map(c => `<th scope="col">${c[0]}</th>`).join("")}</tr></thead>
+        <thead><tr><th scope="col">Wk</th><th scope="col">Opp</th><th scope="col">Result</th><th scope="col">FPts</th><th scope="col" title="Weekly finish at his position">Fin</th>${cols.map(c => `<th scope="col">${c[0]}</th>`).join("")}</tr></thead>
         <tbody>${rows.join("")}</tbody>
-        <tfoot><tr><td colspan="2">${t.g} G · ${fp(t.ppg)}/g</td><td class="gl-pts">${fp(t.pts)}</td>${totalCells}</tr></tfoot>
+        <tfoot><tr><td colspan="3">${t.g} G · ${fp(t.ppg)}/g</td><td class="gl-pts">${fp(t.pts)}</td><td></td>${totalCells}</tr></tfoot>
       </table></div>
-      <p class="pp-note">${esc(scoringLabel())}. ${line ? `Gold rows: ${fp(hi)}+ points (1.75× the ${pos} starter line of ${fp(line)}). Dim rows: under ${fp(lo)}.` : ""}</p>`;
+      <p class="pp-note">${esc(scoringLabel())}. Fin = his finish at ${esc(pos)} that week. ${line ? `Gold rows: ${fp(hi)}+ points (1.75× the ${pos} starter line of ${fp(line)}). Dim rows: under ${fp(lo)}.` : ""}</p>`;
   }
 
   /* Season stats */
