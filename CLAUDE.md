@@ -185,6 +185,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - In position tabs, hover a tier header to rename it, add a tier above or below, or delete it (asks whether players move to the tier above or below; never drops players).
   - Drag players onto tier headers or empty tiers.
   - Empty tiers last only until you save.
+  - **Sign out** sits at the right of the editor bar whenever this browser has a saved GitHub token (next to `@login`); it removes the token from the browser. Unpublished edits stay saved.
 - **Player modal:**
   - Overview, game log, stats, fantasy performance (charts), ranking history, compare.
   - Photos come from `sleepercdn.com`, with an initials fallback.

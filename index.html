@@ -2409,8 +2409,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <span id="eb-local-text"></span>
           <button class="btn publish" id="eb-publish" type="button">Publish to live site</button>
           <button class="btn danger" id="eb-discard" type="button">Discard browser edits</button>
-          <button class="btn link" id="eb-signout" type="button" hidden>Forget token</button>
         </div>
+        <button class="btn link" id="eb-signout" type="button" hidden title="Remove your GitHub token from this browser">Sign out</button>
       </div>
     </div>
     <div class="controls">
@@ -3121,7 +3121,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
      BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
-  const BUILD_ID = "2026-10-03T10:30Z";
+  const BUILD_ID = "2026-10-03T12:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4815,7 +4815,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function forgetToken() {
     try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
     Object.assign(editor, { token: null, login: "" });
-    updateEditorBar(); toast("GitHub token removed from this browser.");
+    updateEditorBar(); toast("Signed out. Your GitHub token was removed from this browser.");
   }
 
   $("eb-save").addEventListener("click", saveLocal);
