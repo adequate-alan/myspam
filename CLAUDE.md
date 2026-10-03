@@ -178,7 +178,9 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Rankings tab:**
   - All / QB / RB / WR / TE.
   - Board view toggle: SPAM Board vs League-adjusted.
-  - Tier headers: compact, muted guide labels (RK / RANK, PLAYER, POS, VALUE).
+  - Column guide (RK / RANK, PLAYER, POS, VALUE): compact and muted, and sticky under the masthead while scrolling (desktop; `--mast-h` is set from JS).
+  - Dense rows (~53px). Tier bands: a soft full-width band with the tier name as the focus (normal case, not oversized). A small muted note "N players · high–low" is derived only from the players currently in that tier; never show a formula-style value range as the headline.
+  - Typography: big headings (page titles, card titles, verdicts, player name in the modal) and the main tabs use normal case; uppercase with letter spacing is kept for small labels (column guides, tags, badges).
   - Owner "Show" filter when a league is connected.
 - **Editor** (top bar, temporary: open to everyone):
   - Drag or arrows to reorder.
