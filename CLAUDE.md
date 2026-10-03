@@ -234,7 +234,8 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Trade Finder:**
   - League-wide discovery for one player, or a **2-player package from one roster**.
   - 1-for-1 or packages; 3-team cycles only for single players.
-  - Cards read: partner → short verdict ("FAIR + GOOD FIT") → muted numbers → give/get → one-line why. The full analysis expands.
+  - Cards read: partner → short verdict ("FAIR + GOOD FIT") → muted numbers → give/get → optional one-line roster insight → View full analysis (Alan, Oct 4). The insight (`shortWhy`) says *why* the deal makes sense, never *what* it is: a received player who'd mostly sit on the bench, a weak room fixed for both teams, fair on value but better for one lineup (with the reason), depth turned into a stronger room, or a room improved without opening a hole. When there's nothing non-obvious, the line is omitted. Detailed explanations stay inside the full analysis.
+  - Generated trade text never makes a team name the subject of a verb ("the gooners swaps"); use possessives (`possOf`: "your", "Team's", "the gooners'").
   - Always uses league-adjusted values.
 - **Free Agents** (League → Free Agents; top nav is Rankings · My Team · League · Trade Finder · Trade Calculator): unrostered ranked players in the selected league, with position chips, search, Recent form and This week. It lives in `#fa-wrap` inside the League panel, shown by `renderLeague` when `LT.sub === "fa"`; old `#fa` links open League → Free Agents. No owner line on its rows (they're all free agents).
 - **Themes:**
