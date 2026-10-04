@@ -4028,7 +4028,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T14:40Z";
+  const BUILD_ID = "2026-10-05T15:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7729,7 +7729,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Bidders: Sleeper lists each losing waiver claim as a "failed" waiver for the same player in the same run,
   // so a claim's bidder count is the teams that claimed that player in that run (shown only when 2 or more).
   const txOn = () => currentTab === "league" && (LT.sub === "tx" || LT.sub === "waivers");
-  const TX_VERSION = 3;   // bump when the stored transaction shape changes (2: waiver bids), so saved logs reload
+  const TX_VERSION = 4;   // bump when the stored transaction shape changes (2: waiver bids), so saved logs reload
   async function loadTrades(force) {
     const d = activeData();
     if (!d || slSource() !== "sleeper") return;
@@ -7761,11 +7761,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       // one (Oct 4: 2 of 4 bids were missing with a 30-minute window), so a losing claim joins the winning claim for
       // that player that week nearest to it in time (normally there's only one)
       const wins = tx.filter(t => t.type === "waiver");
-      const nearestWin = c => { let best = null; wins.forEach(t => { if (Object.keys(t.adds)[0] === c.sid && t.week === c.week && (!best || Math.abs(t.at - c.at) < Math.abs(best.at - c.at))) best = t; }); return best; };
+      // (a losing claim can be filed under the next week's number, so the week may differ by one)
+      const nearestWin = c => { let best = null; wins.forEach(t => { if (Object.keys(t.adds)[0] === c.sid && Math.abs(t.week - c.week) <= 1 && (!best || Math.abs(t.at - c.at) < Math.abs(best.at - c.at))) best = t; }); return best; };
       tx.forEach(t => {
         if (t.type !== "waiver") return;
         const sid = Object.keys(t.adds)[0], byTeam = new Map();
-        claims.filter(c => c.sid === sid && c.week === t.week && (c.won ? Math.abs(c.at - t.at) < 30 * 60e3 && c.rid === t.rosters[0] : nearestWin(c) === t)).forEach((c, i) => {
+        claims.filter(c => c.sid === sid && (c.won ? c.week === t.week && Math.abs(c.at - t.at) < 30 * 60e3 && c.rid === t.rosters[0] : nearestWin(c) === t)).forEach((c, i) => {
           const have = byTeam.get(c.rid);
           if (!have || (c.won && !have.won) || (!have.won && (c.bid ?? -1) > (have.bid ?? -1))) byTeam.set(c.rid, { ...c, order: i });
         });
