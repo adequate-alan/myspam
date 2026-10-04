@@ -53,6 +53,19 @@ L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "pass_yd
 L2 = make_league("L2", "Beta League", 10, ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6, {"rec": 0.5, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2})
 LEAGUES = {"L1": L1, "L2": L2}
 
+def mx_week(L, w):
+    """Weeks 3 and 4 as built above; other weeks pair teams in a rotation (circle method), scored only before week 4"""
+    if w in (3, 4): return L["mx"]
+    if w > 18: return []
+    rs = L["rosters"]; n = len(rs); rest = rs[1:]; k = w % (n - 1)
+    order = [rs[0]] + rest[k:] + rest[:k]
+    out = []
+    for i in range(n // 2):
+        for j, r in enumerate((order[i], order[n - 1 - i])):
+            pts = round(85 + (i * 13 + w * 7 + j * 29 + r["roster_id"] * 3) % 60, 2) if w < 4 else 0
+            out.append({"roster_id": r["roster_id"], "matchup_id": i + 1, "points": pts, "starters": r["starters"], "players": r["players"], "players_points": {}, "starters_points": []})
+    return out
+
 def sleeper(route):
     path = route.request.url.split("/v1", 1)[-1].split("?")[0]
     body = []
@@ -66,7 +79,7 @@ def sleeper(route):
         elif rest == "/users": body = L["users"]
         elif rest == "/rosters": body = L["rosters"]
         elif rest.startswith("/transactions/"): body = L["tx"].get(int(rest.rsplit("/", 1)[1]), [])
-        elif rest in ("/matchups/3", "/matchups/4"): body = L["mx"]
+        elif rest.startswith("/matchups/"): body = mx_week(L, int(rest.rsplit("/", 1)[1]))
     route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
 
 def serve():
@@ -121,7 +134,7 @@ with sync_playwright() as p:
 
     pg.click("#tab-league"); pg.wait_for_timeout(600)
     tabs = pg.locator("[data-lsub]").all_inner_texts()
-    ok(tabs == ["Power Rankings", "Standings", "Matchups", "Transactions", "Waiver Wire"], f"League sub-tabs: {tabs}")
+    ok(tabs == ["Power Rankings", "Standings", "Matchups", "Rosters", "Transactions", "Waiver Wire"], f"League sub-tabs: {tabs}")
     ok(pg.locator("[data-lsub=power][aria-pressed=true]").count() == 1, "Power Rankings is the default")
     nav = [t.strip() for t in pg.locator(".tabs [role=tab]").all_inner_texts() if t.strip()]
     ok(nav == ["Rankings", "My Team", "League", "Trade Finder", "Trade Calculator"], f"Main nav: {nav}")
@@ -176,6 +189,31 @@ with sync_playwright() as p:
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_matchups.png", full_page=True)
     pg.evaluate("() => { const s = document.getElementById('mx-week'); s.value = '3'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(1200)
     ok(pg.locator(".mx-card.final").count() == 6 and pg.locator(".mx-res.win").count() >= 5 and pg.locator(".mx-bar").count() == 0, "A past week: final scores, the winner marked, no projection bar")
+    pg.click("[data-mx-week='4']"); pg.wait_for_timeout(800)
+
+    # Rosters: team picker, header, week nav, dense table by section, season schedule
+    pg.click("[data-lsub=rosters]"); pg.wait_for_timeout(2500)
+    ok(pg.locator(".ro-pick").count() == 12 and "You" in pg.locator(".ro-pick.on").inner_text(), "Rosters: a picker with every team, your team selected first")
+    hd = pg.inner_text(".ro-head").upper()
+    ok(all(k in hd for k in ("SPAM PR", "RECORD", "PF", "PA", "FAAB")) and "$60" in hd, f"Team header: SPAM PR, record, PF, PA and FAAB left ($100 − $40): {hd[:160]}")
+    th = [t.strip().upper() for t in pg.locator(".ro-table thead th").all_inner_texts()]
+    ok(th == ["SLOT", "PLAYER", "WK 4", "SZN RK", "SPAM RK", "GP", "FPTS", "PPG"], f"Roster columns: {th}")
+    secs = [t.split("\n")[0].upper() for t in pg.locator(".ro-sec .ro-sec-t").all_inner_texts()]
+    ok(secs[:2] == ["STARTERS9", "BENCH4"] or (secs[0].startswith("STARTERS") and secs[1].startswith("BENCH")), f"Starters and Bench sections: {secs}")
+    slots = [t.strip() for t in pg.locator(".ro-row:not(.bn):not(.inactive) .ro-sl").all_inner_texts()]
+    ok(slots == ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SF"], f"Starter slots in league order with SPAM slot colors: {slots}")
+    ok(pg.locator(".ro-row:not(.bn) td.ro-wk").count() >= 9 and pg.locator(".ro-row .ro-g").count() >= 9, "Each starter shows his week and the matchup under his name")
+    ok(pg.locator(".ro-sw").count() == 17 and "3 played" in pg.inner_text(".ro-sched .rail-title"), f"Season schedule lists every week with 3 played ({pg.locator('.ro-sw').count()})")
+    ok(pg.locator(".ro-res.w, .ro-res.l, .ro-res.t").count() == 3, "Played weeks show W/L")
+    pg.locator(".ro-row:not(.bn)").first.click(); pg.wait_for_timeout(300)
+    ok("SPAM VALUE" in pg.inner_text(".ro-detail").upper(), "A player row expands to show his SPAM value")
+    if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_rosters.png", full_page=True)
+    pg.click("[data-ro-week='3']"); pg.wait_for_timeout(1200)
+    ok(pg.locator(".ro-wk.final").count() >= 9 and "WK 3" in pg.inner_text(".ro-table thead").upper(), "Week 3: Sleeper's recorded lineup with final points")
+    pg.locator(".ro-pick").nth(3).click(); pg.wait_for_timeout(500)
+    ok("You" not in pg.inner_text(".ro-name"), "Picking another team shows its roster")
+    pg.locator(".ro-sw-btn").nth(1).click(); pg.wait_for_timeout(1500)
+    ok(pg.locator("[data-lsub=matchups][aria-pressed=true]").count() == 1 and pg.locator(".mx-card.open").count() == 1 and pg.input_value("#mx-week") == "2", "Clicking a schedule week opens that matchup")
     pg.click("[data-mx-week='4']"); pg.wait_for_timeout(800)
 
     pg.click("[data-lsub=tx]"); pg.wait_for_timeout(1500)
