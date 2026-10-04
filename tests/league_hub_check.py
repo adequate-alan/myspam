@@ -52,6 +52,7 @@ SF = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SUPER_FLEX"] + ["BN"] *
 L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5})
 L2 = make_league("L2", "Beta League", 10, ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6, {"rec": 0.5, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2})
 LEAGUES = {"L1": L1, "L2": L2}
+TRENDING = sids[200]   # on no roster in either league: Sleeper-wide trending adds
 
 def mx_week(L, w):
     """Weeks 3 and 4 as built above; other weeks pair teams in a rotation (circle method), scored only before week 4"""
@@ -70,7 +71,8 @@ def sleeper(route):
     path = route.request.url.split("/v1", 1)[-1].split("?")[0]
     body = []
     m = re.match(r"/league/(\w+)(/.*)?$", path)
-    if path == "/state/nfl": body = {"season": "2026", "league_season": "2026", "week": 4, "display_week": 4, "season_type": "regular"}
+    if path.startswith("/players/nfl/trending/add"): body = [{"player_id": TRENDING, "count": 4200}, {"player_id": sids[201], "count": 75}]
+    elif path == "/state/nfl": body = {"season": "2026", "league_season": "2026", "week": 4, "display_week": 4, "season_type": "regular"}
     elif path.startswith("/user/") and "/leagues/" in path: body = [x["league"] for x in LEAGUES.values()]
     elif path.startswith("/user/"): body = {"user_id": "L1u1", "username": "tester", "display_name": "tester"}
     elif m and m.group(1) in LEAGUES:
@@ -318,6 +320,15 @@ with sync_playwright() as p:
     ranks2 = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
     ok(sorted(ranks2) == sorted(ranks) and ranks2 != ranks and abs(ranks2.index(ranks[0])) <= 3, "My team fit nudges starters up without reshuffling the list")
     pg.locator("#fa-fitsort").uncheck(force=True); pg.wait_for_timeout(300)
+    fits = pg.locator(".fa-fit-t").all_inner_texts()
+    ok(not any(t.startswith("Your ") for t in fits) and any(t.startswith("Would be ") or t in ("Bench depth",) or t.startswith("Starts at") or t.endswith("upgrade") for t in fits), f"Fit reads 'Would be WR5' / Starts at / Bench depth: {sorted(set(fits))[:6]}")
+    ok("4.2k adds" in pg.inner_text("#fa-body"), "Sleeper's trending adds (24h) show under the availability line")
+    pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'trend'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(300)
+    ok(name_of[TRENDING] in pg.locator("#fa-body tr.player").first.inner_text(), "Sort by trending adds puts the most-added player first")
+    pg.locator("#fa-body tr.player").first.locator("td.fa-num").first.click(); pg.wait_for_timeout(600)
+    ok(pg.locator("#player-modal[open]").count() == 1 and name_of[TRENDING] in pg.inner_text("#player-modal"), "Clicking anywhere on a row opens the player page")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'rank'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(250)
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_waivers.png")
 
     # switch league: every League tab follows
