@@ -2011,55 +2011,60 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .bids-note { margin: 10px 0 0; font-size: 0.72rem; line-height: 1.45; color: var(--muted); }
 .mv-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .mv-name { font-weight: 650; font-size: 0.86rem; color: var(--cream); }
-.mx-list { display: flex; flex-direction: column; gap: 12px; max-width: 1080px; }
-.mx-filters { max-width: 1080px; }
-.mx-source { font-size: 0.74rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+/* Matchups use the desktop width (Alan, Oct 4): one centered 1200px column; the source line sits beside the week controls */
+.mx-wrap { max-width: 1200px; margin-inline: auto; }
+.mx-list { display: flex; flex-direction: column; gap: 14px; }
+.mx-filters { justify-content: flex-start; }
+.mx-source { font-size: 0.68rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
 .mx-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); overflow: hidden; }
-.mx-card.has-mine { box-shadow: inset 3px 0 0 var(--gold); }
-.mx-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px 72px 120px minmax(0, 1fr); align-items: center; gap: 12px; padding: 16px 20px 8px; }
+.mx-card.has-mine { box-shadow: inset 4px 0 0 var(--mine-accent); border-color: color-mix(in srgb, var(--mine-accent) 50%, var(--line-soft)); background: color-mix(in srgb, var(--mine-accent) 8%, var(--surface)); }
+.mx-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 84px 150px minmax(0, 1fr); align-items: center; gap: 14px; padding: 22px 28px 10px; }
 .mx-team { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .mx-team.A { flex-direction: row-reverse; text-align: right; }
-.mx-team .face { width: 42px; height: 42px; flex: none; }
+.mx-team .face { width: 50px; height: 50px; flex: none; }
 .mx-tname { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .mx-team.A .mx-tname { align-items: flex-end; }
-.mx-tname b { font-size: 0.98rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.mx-tname span { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+.mx-tname b { font-size: 1.08rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.mx-tname span { font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
 .mx-team.mine .mx-tname b { color: var(--mine-accent); }
 .mx-pr { align-self: flex-start; font-size: 0.58rem !important; font-weight: 700; letter-spacing: 0.08em; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink-2) !important; }
 .mx-team.A .mx-pr { align-self: flex-end; }
 .mx-sc { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.mx-score { font-size: 1.9rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.mx-score { font-size: 2.45rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .mx-sc.win .mx-score, .mx-card.live .mx-score, .mx-card.upcoming .mx-score { color: var(--heading); }
-.mx-card.upcoming .mx-score { color: var(--muted); }
-.mx-proj { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-.mx-proj b { font-size: 0.82rem; letter-spacing: 0; color: var(--gold); font-variant-numeric: tabular-nums; }
+.mx-card.upcoming .mx-score { color: var(--ink-2); }
+.mx-proj { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.mx-proj b { font-size: 1.02rem; font-weight: 800; margin-left: 3px; letter-spacing: 0; color: var(--gold); font-variant-numeric: tabular-nums; }
 .mx-res { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .mx-res.win { color: var(--rb); }
 .mx-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .mx-state { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); }
 .mx-state.live { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 50%, transparent); }
 .mx-vs { font-size: 0.7rem; color: var(--muted); }
-.mx-bar-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 10px; padding: 4px 20px 0; }
-.mx-pct { font-size: 0.74rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.mx-bar-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 54px; align-items: center; gap: 12px; padding: 6px 28px 0; }
+.mx-pct { font-size: 0.86rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .mx-pct.B { text-align: right; }
-.mx-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line-soft); }
+.mx-bar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--line-soft); }
 .mx-bar-a { background: var(--accent-primary); }
 .mx-bar-b { flex: 1; background: color-mix(in srgb, var(--gold) 70%, transparent); margin-left: 2px; }
 .mx-partial { margin: 2px 20px 0; text-align: center; font-size: 0.68rem; color: var(--muted); }
 .mx-bar-lbl { text-align: center; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
-.mx-left-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 20px 8px; font-size: 0.7rem; color: var(--muted); }
-.mx-show { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 7px; border-top: 1px solid var(--line-soft); font-size: 0.72rem; font-weight: 650; color: var(--ink-2); cursor: pointer; }
+.mx-left-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 28px 10px; font-size: 0.7rem; color: var(--muted); }
+.mx-show { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 9px; border-top: 1px solid var(--line-soft); font-size: 0.76rem; font-weight: 700; color: var(--accent-primary); cursor: pointer; transition: background 0.12s; }
 .mx-show:hover { background: var(--hover-bg); color: var(--ink); }
+.mx-show:hover .mx-chev { transform: rotate(45deg) translate(1px, 1px); }
+.mx-card.open .mx-show { color: var(--ink-2); }
 .mx-show:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
-.mx-chev { width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+.mx-chev { width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform 0.12s; }
 .mx-card.open .mx-chev { transform: rotate(-135deg) translate(-1px, -1px); }
-.mx-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 4px 16px 14px; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--bg) 35%, var(--surface)); }
-.mx-lineup h4 { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; font-size: 0.8rem; color: var(--ink); }
+.mx-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; padding: 6px 24px 18px; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--bg) 35%, var(--surface)); }
+.mx-table .face.xs { width: 24px; height: 24px; }
+.mx-lineup h4 { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 0.88rem; color: var(--ink); }
 .mx-lineup h4 small { font-size: 0.7rem; font-weight: 500; color: var(--muted); }
 .mx-lineup h4 span { margin-left: auto; font-variant-numeric: tabular-nums; text-align: right; }
 .mx-lu-proj { display: block; font-size: 0.64rem; font-weight: 600; color: var(--muted); }
-.mx-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-.mx-table td { padding: 4px 5px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.mx-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.mx-table td { padding: 6px 6px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
 .mx-slot { width: 40px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); }
 .mx-pl { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .mx-pl-t { min-width: 0; }
@@ -3870,7 +3875,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T07:20Z";
+  const BUILD_ID = "2026-10-05T08:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7171,7 +7176,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     let body;
     try {
       const ev = evaluateTeams();
-      body = faOn ? "" : LT.sub === "tx" ? txHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : LT.sub === "matchups" ? matchupsHtml(ev, d) : LT.sub === "rosters" ? rostersHtml(ev, d) : powerHtml(ev, d);
+      body = faOn ? "" : LT.sub === "tx" ? txHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : LT.sub === "matchups" ? `<div class="mx-wrap">${matchupsHtml(ev, d)}</div>` : LT.sub === "rosters" ? rostersHtml(ev, d) : powerHtml(ev, d);
     } catch (err) {   // never leave the old view up silently
       console.error(err);
       body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
@@ -8020,7 +8025,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (mw) { LT.mWeek = Number(mw.dataset.mxWeek); LT.mOpen = new Set(); renderLeague(); return; }
     if (e.target.closest("[data-mx-refresh]")) { const d = activeData(); if (d) { LT.mxError[d.league.league_id] = ""; loadMatchups(LT.mWeek, true); } return; }
     const mx = e.target.closest("[data-mx-toggle]");
-    if (mx) { const k = mx.dataset.mxToggle; if (LT.mOpen.has(k)) LT.mOpen.delete(k); else LT.mOpen.add(k); renderLeague(); return; }
+    if (mx) { const k = mx.dataset.mxToggle; LT.mOpen = LT.mOpen.has(k) ? new Set() : new Set([k]); renderLeague(); return; }   // one matchup open at a time
     const tw = e.target.closest("[data-trade-with]"), fw = e.target.closest("[data-find-with]");
     if (tw && LG.myRosterId != null) {
       TC.mode = "league"; saveTc(); setThree(false); $("team-A").value = String(LG.myRosterId); $("team-B").value = tw.dataset.tradeWith;
