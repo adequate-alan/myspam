@@ -3875,7 +3875,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T09:00Z";
+  const BUILD_ID = "2026-10-05T09:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5645,7 +5645,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       toast("Published. The live site updates in about a minute." + snapNote);
     } catch (err) {
       editor.saving = false; updateEditorBar();
-      toast(err.status === 401 || err.status === 403
+      toast(err.status === 401 || err.status === 403 || err.status === 404   // GitHub answers "Not Found" when the token can't see the repo
         ? `Publish failed: GitHub said "${err.message}". The token needs write access to ${REPO}: a classic token with the repo scope, or the owner's fine-grained token with Contents: Read and write (fix it on GitHub, then publish again).`
         : "Publish failed: " + err.message);
     }
