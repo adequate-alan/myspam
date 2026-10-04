@@ -395,6 +395,7 @@ const VALUE_MODEL = {
   tagTierFrom: 90,   // tiers 90+ are labels (e.g. Hurt), not part of the tier ladder
   autoDecay: 0.978,  // auto-added players (ranked under yours): each spot down is worth this share of the one above   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
   keepRankOrder: true, // values never break your positional order (see step 7)
+  minRankStep: 0.0025, // on the board each player is worth at least 0.25% less than the one ranked ahead (no tied values); tighter only when squeezed between two published values
   projection: {
     maxWeight: 0.7,     // the most a projection can ever count
     halfWeightGames: 4  // games played at which it counts half of maxWeight
@@ -651,7 +652,7 @@ const FORMAT_ADJUST = {
   avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 },  // players used for each position's average
   // Shallow formats can price a whole tier at waiver level (10-team 1QB: QB13+ ≈ 0). Two guards:
   tierKeep: 0.40,     // a tier keeps at least 40% of the last value above it (unless your base board's own drop there is steeper)
-  floor: 25,          // nobody shows 0: a tiny floor of 25, easing down 2% per position spot
+  floor: 25,          // a tiny floor of 25, easing down 2% per position spot, never above the player's base value
   floorDecay: 0.98
 };
 
@@ -3495,34 +3496,40 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     });
   }
 
-  // Overall order: values never go up as you go down the overall board. Your rank is the truth, so a
-  // player valued above someone ranked ahead of him meets the players above in the middle (closest values
-  // to the tier values that never increase, pool-adjacent-violators, same as keepRankOrder), with a 0.5%
-  // step inside each pooled group so the player ranked higher stays ahead. Published (typed) values are
-  // fixed anchors: the model values between two of them are kept between them.
+  // Overall order: values go down as you go down the overall board, at least minRankStep (0.25%) per rank, so
+  // no two players share a value. Your rank is the truth: a player valued above someone ranked ahead of him
+  // meets the players above in the middle (the closest values that keep the order, pool-adjacent-violators).
+  // Published (typed) values are fixed anchors: the model values between two of them stay between them.
   function keepOverallOrder(list) {
     if (!(typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) || list.length < 2) return;
     list.sort((a, b) => a.rank - b.rank);
-    const pav = seg => {
-      const blocks = [];
-      seg.forEach(p => {
-        blocks.push({ sum: p.value, n: 1, members: [p] });
-        while (blocks.length > 1) {
-          const b = blocks[blocks.length - 1], a = blocks[blocks.length - 2];
-          if (a.sum / a.n >= b.sum / b.n) break;
-          a.sum += b.sum; a.n += b.n; a.members.push(...b.members); blocks.pop();
+
+    // Between two published values (hi above, lo below) the model values step down strictly: each at least
+    // minRankStep (0.25%) below the one ahead, the first below hi, the last above lo. The fit is the closest one
+    // to the current values on a log scale (PAV on u = ln v − i·ln r, which turns "next ≤ r × this" into "never
+    // increases"), so a tied run spreads both ways around its old value instead of sinking. If the stretch is too
+    // crowded for the full step, the step shrinks to what fits. Small values at the bottom step by whole points.
+    const step = Math.max(0, Number(VALUE_MODEL.minRankStep) || 0);
+    let seg = [], hi = Infinity;
+    const C = 200;  // log(value + C): proportional steps for real values, near-linear pooling for small ones (a 0 still pools with its neighbours)
+    const close = lo => {
+      const n = seg.length;
+      if (!n) return;
+      let r = 1 - step;
+      if (isFinite(hi) && hi > lo) r = Math.max(r, Math.pow((lo + C) / (hi + C), 1 / (n + 1)));   // fit n steps between the anchors
+      const lr = Math.log(r);
+      const u = seg.map((p, i) => Math.log(Math.max(p.value, 0) + C) - i * lr);
+      const blocks = [];   // non-increasing fit of u (pool adjacent violators, equal weights)
+      u.forEach((x, i) => {
+        blocks.push({ sum: x, n: 1, from: i });
+        while (blocks.length > 1 && blocks[blocks.length - 2].sum / blocks[blocks.length - 2].n < blocks[blocks.length - 1].sum / blocks[blocks.length - 1].n) {
+          const top = blocks.pop(); blocks[blocks.length - 1].sum += top.sum; blocks[blocks.length - 1].n += top.n;
         }
       });
-      blocks.forEach(b => {
-        if (b.n === 1) return;
-        const mean = b.sum / b.n;
-        b.members.forEach((p, k) => { p.value = mean * (1 + 0.005 * ((b.n - 1) / 2 - k)); });
-      });
-    };
-    let seg = [], hi = Infinity;
-    const close = lo => {
-      pav(seg);
-      seg.forEach(p => { p.value = Math.max(lo, Math.min(hi, p.value)); });
+      const uMax = isFinite(hi) ? Math.log(hi + C) + lr : Infinity, uMin = lo > 0 ? Math.log(lo + C) - n * lr : -Infinity;
+      blocks.forEach(bl => { const m = Math.max(uMin, Math.min(uMax, bl.sum / bl.n)); for (let i = bl.from; i < bl.from + bl.n; i++) seg[i].value = Math.max(0, Math.exp(m + i * lr) - C); });
+      if (!(lo > 0)) for (let i = 1; i < n; i++) if (seg[i - 1].value < 400) seg[i].value = Math.max(0, Math.min(seg[i].value, Math.round(seg[i - 1].value) - 1));   // whole-point steps so small values don't round into ties
+      seg.forEach(p => { if (p.value < 0.5) p.value = 0; });
       seg = [];
     };
     list.forEach(p => {
@@ -3530,7 +3537,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       close(p.value); hi = p.value;   // a published value: fixed
     });
     close(0);
-    for (let k = 1; k < list.length; k++) if (list[k].modelValued) list[k].value = Math.min(list[k].value, list[k - 1].value);
   }
 
   // Tier adjustment for model values: pull each tier toward its average,
@@ -3721,7 +3727,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T02:00Z";
+  const BUILD_ID = "2026-10-05T03:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5915,7 +5921,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           for (let k = 1; k < cur.length; k++) if (!cur[k].custom) raw.set(cur[k].id, Math.min(raw.get(cur[k].id), raw.get(cur[k - 1].id) * 0.995));
         }
       }
-      if (FA.floor > 0) g.forEach(p => { if (!p.custom) raw.set(p.id, Math.max(raw.get(p.id), FA.floor * Math.pow(FA.floorDecay || 1, p.posNum - 1))); });
+      // the floor only undoes what a format takes away: never above his base value (so the base format = the base board)
+      if (FA.floor > 0) g.forEach(p => { if (!p.custom) raw.set(p.id, Math.max(raw.get(p.id), Math.min(p.value, FA.floor * Math.pow(FA.floorDecay || 1, p.posNum - 1)))); });
     }
   }
   // Keeps the given order; a player moves up only past someone his value beats by more than `margin`,
