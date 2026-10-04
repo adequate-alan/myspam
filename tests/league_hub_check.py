@@ -215,7 +215,23 @@ with sync_playwright() as p:
             c1 = pg.locator(".roster li").count(); pg.click("#bal-undo"); pg.wait_for_timeout(400)
             ok(c1 > c0 and pg.locator(".roster li").count() == c0, "A balance suggestion adds itself to the trade, and Undo takes it back")
     ok("HOW SPAM CALCULATED THIS" in pg.inner_text("#tc-breakdown summary").upper(), "Technical math sits in one collapsed 'How SPAM calculated this' section")
-    pg.click("#clear-btn"); pg.click("#tab-league"); pg.wait_for_timeout(500)
+    pg.click("#clear-btn")
+
+    # Trade Finder goals: Slight edge / Best value ideas favor you within their range and are labelled as such (never "steal")
+    pg.click("#tab-finder"); pg.wait_for_timeout(1200)
+    pv = pg.evaluate("() => [...document.getElementById('tf-player').options].map(o => o.value)")[:6]
+    for goal, lo, hi, word in (("edge", 3, 10, "SLIGHT EDGE TO YOU"), ("value", 8, 15, "GOOD VALUE FOR YOU")):
+        pg.evaluate(f"() => {{ const s = document.getElementById('tf-goal'); s.value = '{goal}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(300)
+        seen, good = 0, True
+        for v in pv:
+            pg.evaluate(f"() => {{ const s = document.getElementById('tf-player'); s.value = '{v}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(300)
+            for c in pg.locator(".tf-card:not(.tf3)").all():
+                seen += 1
+                vt, df = c.locator(".tf-verdict-big").inner_text().upper(), float(c.locator(".tf-diff").inner_text().split("%")[0])
+                good = good and vt.startswith(word) and "STEAL" not in vt and lo - 0.05 <= df <= hi + 0.05
+        ok(seen > 0 and good, f"Trade goal '{goal}': {seen} ideas, all {lo}-{hi}% in your favor and labelled '{word.title()}'")
+    pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
+    pg.click("#tab-league"); pg.wait_for_timeout(500)
 
     # Rosters: team picker, header, week nav, dense table by section, season schedule
     pg.click("[data-lsub=rosters]"); pg.wait_for_timeout(2500)
