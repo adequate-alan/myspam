@@ -188,6 +188,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Dense rows (~53px). Tier bands: a soft full-width band with the tier name as the focus (normal case, not oversized). A small muted note "N players · high–low" is derived only from the players currently in that tier; never show a formula-style value range as the headline.
   - Typography: big headings (page titles, card titles, verdicts, player name in the modal) and the main tabs use normal case; uppercase with letter spacing is kept for small labels (column guides, tags, badges).
   - Owner "Show" filter when a league is connected.
+  - **"Updated" date** (header, and the rail's Last updated) = `lastUpdated()`: the newer of the weekly job's stamp (`SITE.updated`, written Tuesdays by `stamp_date.py`) and the latest Ranking History entry, so a publish shows its date right away on every screen (Oct 4: phones showed the stale Tuesday stamp while the desktop rail showed the publish date).
 - **Editor** (top bar, temporary: open to everyone):
   - Drag or arrows to reorder.
   - Click a value to type it.
@@ -269,7 +270,6 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Custom domain:** not set up. Every path is relative; only `canonical`/`og:url` would change.
 - **Player data:** some player-name matches use aliases (`pipeline/merge_projections.py` `ALIASES`, `pipeline/build_sleeper_ids.py` `ID_ALIASES`). Add an alias when a new player's projection or Sleeper ID comes up empty.
 - **Known issues, not yet fixed (found in an Oct 3 code review):**
-  - The publish error and Refresh stats error messages (and the token prompt) only describe fine-grained tokens ("Contents/Actions: Read and write"). They don't fit Alan's classic `repo` token.
   - The README is stale: it says stats refresh weekly only (game-day runs exist), and its token section only mentions fine-grained tokens.
   - The scheduled workflow runs `git push` without pulling first. If someone publishes during the Tuesday job, the job's push is rejected and that run's deploy fails.
   - `mergeInto` merges rank columns per row. If Steven and Alan publish overlapping rank moves from stale pages, the board could end up with duplicate ranks. The 409 retry only catches a changed file.
