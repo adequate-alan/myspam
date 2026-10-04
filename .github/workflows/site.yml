@@ -61,6 +61,7 @@ jobs:
         run: |
           pip install pandas numpy
           python build_stats.py 2026
+          python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
 
       - name: Refresh projections and stats (weekly / manual runs only)
         if: github.event_name != 'push' && steps.mode.outputs.stats != 'true'
@@ -71,6 +72,7 @@ jobs:
           python merge_projections.py ../index.html
           python build_sleeper_ids.py ../index.html
           python build_stats.py 2026
+          python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
           python stamp_date.py ../index.html
 
       - name: Scheduled ranking-history snapshot (weekly / manual runs only)
@@ -87,6 +89,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html data/sleeper_players.json data/platform_ids.json data/stats/2026.json data/rank_history.json
+          if [ -f data/depth_charts.json ]; then git add data/depth_charts.json; fi
           git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
           git push
 
