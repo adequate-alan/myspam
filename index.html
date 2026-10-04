@@ -979,8 +979,10 @@ main { padding-block: 32px 72px; }
   margin-bottom: 14px; border-bottom: 1px solid var(--line-soft);
 }
 /* one toolbar row (Alan, Oct 4): positions · view switch + format note · Show + search */
-.controls .league-controls { margin: 0 auto 6px 0; flex: 1 1 0; min-width: 0; justify-content: flex-start; flex-wrap: nowrap; }
-.controls .fmt-note { flex: 1 1 0; min-width: 0; flex-wrap: nowrap; }
+/* the format note sits right under the switch, small and muted (not floating mid-row) */
+.controls .league-controls { margin: 0 auto 4px 0; flex: 0 1 auto; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; }
+.controls .fmt-note { max-width: 100%; min-width: 0; flex-wrap: nowrap; font-size: 0.62rem; }
+.controls .fmt-note b { font-size: 0.6rem; }
 .controls .fmt-note > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .controls .fmt-note .btn.link { white-space: nowrap; }
 @media (max-width: 900px) {
@@ -1673,7 +1675,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 .own-tag.fa { color: color-mix(in srgb, var(--rb) 60%, var(--muted)); }
 .own-tag.inline { display: inline; margin-top: 0; }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.72; }   /* other owners stay secondary on the board; My team keeps full gold */
-.tier-tag { display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-soft); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; color: var(--muted); vertical-align: middle; cursor: default; }
+.tier-tag { display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 6%, transparent); font-size: 0.6rem; font-weight: 750; letter-spacing: 0.04em; color: var(--ink-2); vertical-align: middle; cursor: default; }
 .tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 40%, transparent); }
 .rr-jump { all: unset; cursor: pointer; }
 .rr-jump:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -3147,10 +3149,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <span class="fmt-note" id="fmt-note"></span>
       </div>
       <div class="ctl-right">
+        <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
         <label class="owner-filter" id="owner-filter-wrap"><span>Show</span>
           <select class="select" id="owner-filter" aria-label="Filter by owner"></select>
         </label>
-        <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
       </div>
     </div>
     <div class="rk-layout">
@@ -3921,7 +3923,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T11:40Z";
+  const BUILD_ID = "2026-10-05T12:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
