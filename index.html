@@ -24,8 +24,8 @@
 <meta property="og:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football. Connect Sleeper, ESPN or Yahoo, or pick your league settings.">
 <!-- The site's public address lives only here (canonical + og:url); every asset and link below is relative,
      so moving to a custom domain later only means a CNAME file and these two lines. -->
-<link rel="canonical" href="https://stevenp36.github.io/spam/">
-<meta property="og:url" content="https://stevenp36.github.io/spam/">
+<link rel="canonical" href="https://spamfantasy.github.io/">
+<meta property="og:url" content="https://spamfantasy.github.io/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SPAM Fantasy Rankings">
 <meta name="twitter:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football.">
@@ -52,7 +52,7 @@ const SITE = {
   tagline: "Fantasy Football Rankings",
   updated: "Oct 1, 2026",
   author: "SPAM",
-  repo: "stevenp36/spam", // editors need write access to this GitHub repo
+  repo: "spamfantasy/spamfantasy.github.io", // editors need write access to this GitHub repo
   sampleData: false,          // set to true to show the work-in-progress banner
   sampleNote: "WR rankings are final. QB, RB and TE are Steven's rankings until Alan's are in."
 };
@@ -3319,7 +3319,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   <form id="signin-form" method="dialog">
     <h2 id="signin-title">Publish to the live site</h2>
     <p>Publishing writes your edits to the <span class="mono" id="signin-repo"></span> repository on GitHub, so it needs a GitHub access token for an account that can write to it. You only do this once per browser.</p>
-    <p class="hint">Create one at github.com → Settings → Developer settings → Fine-grained tokens. Give it access to only this repository, with <strong>Contents: Read and write</strong>. It stays saved in this browser until you sign out.</p>
+    <p class="hint">Create one at github.com → Settings → Developer settings → Personal access tokens → <strong>Tokens (classic)</strong> with the <strong>repo</strong> scope (collaborators on this repo need a classic token). Signed in as the repo's owner, a fine-grained token for this repository with <strong>Contents</strong> and <strong>Actions: Read and write</strong> also works. It stays saved in this browser until you sign out.</p>
     <label for="signin-token">Access token</label>
     <input id="signin-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
     <p class="signin-error" id="signin-error" role="alert"></p>
@@ -3875,7 +3875,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T08:10Z";
+  const BUILD_ID = "2026-10-05T09:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5646,7 +5646,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     } catch (err) {
       editor.saving = false; updateEditorBar();
       toast(err.status === 401 || err.status === 403
-        ? `Publish failed: GitHub said "${err.message}". The token needs access to ${REPO} with Contents: Read and write (edit the token on GitHub, then publish again).`
+        ? `Publish failed: GitHub said "${err.message}". The token needs write access to ${REPO}: a classic token with the repo scope, or the owner's fine-grained token with Contents: Read and write (fix it on GitHub, then publish again).`
         : "Publish failed: " + err.message);
     }
   }
@@ -9159,7 +9159,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         body: JSON.stringify({ ref: "main", inputs: { stats_only: true } })
       });
       if (res.status === 204) toast("Stats refresh started. New games show up in about 5 minutes; reload the page then.");
-      else if (res.status === 403 || res.status === 404) toast("GitHub didn't allow it. Edit your token and give it Actions: Read and write, then try again.");
+      else if (res.status === 403 || res.status === 404) toast("GitHub didn't allow it. The token needs the repo scope (classic) or Actions: Read and write (fine-grained), then try again.");
       else toast("Couldn't start the refresh (GitHub said " + res.status + ").");
     } catch (err) { toast("Couldn't reach GitHub: " + err.message); }
     b.disabled = false;

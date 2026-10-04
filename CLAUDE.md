@@ -2,7 +2,7 @@
 
 Read this file first. It's the context an AI assistant (or a new developer) needs to keep building SPAM without undoing decisions that were already made. `README.md` has the feature-by-feature reference; this file has the **why**, the **rules**, and the **workflow**.
 
-Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, collaborator). Both edit the rankings; both may work on the code from their own Claude accounts. Keep this file current: when you make a product decision, add it here in the same commit.
+Owners: **Steven** (GitHub `stevenp36`) and **Alan** (GitHub `adequate-alan`), both collaborators on the repo, which belongs to the shared **`spamfantasy`** GitHub account (a personal account both can sign in to; only it can change repo settings, Pages, collaborators or transfers). Both edit the rankings; both may work on the code from their own Claude accounts. Keep this file current: when you make a product decision, add it here in the same commit.
 
 **Git workflow (agreed Oct 3, 2026):** Steven (`stevenp36`) and Alan (`adequate-alan`) **both push straight to `main`**; there's no branch/PR step. Every push to `main` redeploys the live site, so: `git pull --rebase` right before you start and again right before you push, keep commits small and focused, test locally first, and never force-push. If a rebase conflicts in `index.html`, resolve it by keeping both people's changes; never resolve a `RANKINGS_CSV` conflict by taking one side wholesale (that can drop the other person's published ranking edits). Commit as yourself (git `user.name`/`user.email` set to your own GitHub account) so the history shows who changed what. **For Alan**, every session sets this automatically before committing: `git config user.name adequate-alan` and `git config user.email 54249725+adequate-alan@users.noreply.github.com` (GitHub noreply address; "Keep my email addresses private" is on, so use this, not a personal email). The `alan-dev` branch was only an access test and can be deleted.
 
@@ -11,7 +11,7 @@ Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, col
 ## 1. What SPAM is
 
 - **SPAM** is the product: fantasy football rankings, values and trade tools. Brand mark is the one-word wordmark **`SPAM.`** (the period is part of the logo: burgundy word + warm accent dot in light mode, cream word in dark mode). The old name was SPMetrics. Never bring that name back in the UI, metadata or copy.
-- Live site: **https://stevenp36.github.io/spam/** (rankings at `#rankings`). Repo: **`stevenp36/spam`** (renamed from `spmetrics-fantasy`; the old Pages URL no longer resolves).
+- Live site: **https://spamfantasy.github.io/** (rankings at `#rankings`). Repo: **`spamfantasy/spamfantasy.github.io`** (Oct 4, 2026: transferred from `stevenp36/spam` to the `spamfantasy` account and renamed so Pages serves it at the root; before that it was `spmetrics-fantasy`). GitHub redirects the old git URL, but **Pages URLs don't redirect**: `stevenp36.github.io/spam/` no longer serves the site. Never create a new `stevenp36/spam` repo (it would break GitHub's git redirect); a redirect page for the old URL would go in a `stevenp36/stevenp36.github.io` repo at `spam/index.html`. Browser-saved data (`spm_*`: leagues, edits, tokens, theme) is per web address, so everyone starts fresh on the new URL.
 - Base format: **12-team, Full PPR, Superflex, TE premium (+0.5), redraft.** That's what the SPAM Board means.
 - The **SPAM Board** (Steven & Alan's manual rankings, tiers and published values) is the **core source of truth**. Everything else (league-adjusted values, trade verdicts, power rankings, Trade Finder) is *derived* from it.
 
@@ -39,7 +39,7 @@ Owners: **Steven** (GitHub `stevenp36`, repo owner) and **Alan** (co-ranker, col
 It's a static site: **one HTML file** plus JSON data. No build step, no framework, no npm.
 
 ```bash
-git clone https://github.com/stevenp36/spam.git && cd spam
+git clone https://github.com/spamfantasy/spamfantasy.github.io.git && cd spamfantasy.github.io
 python3 -m http.server 8000          # then open http://localhost:8000/
 ```
 
@@ -131,8 +131,8 @@ Inside `index.html` (search for these names):
 ## 6. Publishing (rankings) and deploying (code)
 
 **Rankings edits** (no code): in the site's editor (currently open to every visitor, temporarily), make changes → **Save changes**. If that browser has a GitHub token, Save publishes immediately; otherwise click **Publish to live site** once and paste a token:
-- **Steven** (owner): a *fine-grained* token for `stevenp36/spam` with **Contents: Read and write** (+ **Actions: Read and write** for the Refresh stats button).
-- **Alan** (collaborator): fine-grained tokens can't reach repos owned by another personal account, so use a **classic** token with the **`repo`** scope (`public_repo` is enough for publishing; `repo` is needed to start the stats workflow).
+- **Steven and Alan** (collaborators on a repo owned by the `spamfantasy` personal account): fine-grained tokens can't reach repos owned by another personal account, so each uses a **classic** token with the **`repo`** scope (`public_repo` is enough for publishing; `repo` is needed to start the stats workflow). Old fine-grained tokens for `stevenp36/spam` stopped working with the transfer.
+- Signed in as **`spamfantasy`** (the owner), a *fine-grained* token for this repo with **Contents: Read and write** (+ **Actions: Read and write** for Refresh stats) also works.
 - Tokens live only in that browser's `localStorage` (`spm_editor_token`). **Never put a token in the code or the repo.**
 
 **Code changes**: commit to `main` and push. The `push` trigger in `site.yml` deploys the repo root to GitHub Pages in ~1 minute. **Bump `BUILD_ID`** (top of the main script) in every code change so open browsers get the "new version" prompt. Rankings publishes from the editor don't need it.
@@ -265,7 +265,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **External projection sources (researched Oct 4, nothing integrated):** no free, documented source permits public website use. Sleeper's `api.sleeper.com/projections/nfl/{season}/{week}` has raw stats for every position incl. K/DEF/IDP keyed by Sleeper ID (ideal technically) but is undocumented (not in docs.sleeper.com, a different host from the documented `api.sleeper.app`), the data is reportedly RotoWire's licensed projections, it changed in Sept 2026, and Sleeper's API is free for non-commercial use only: only with Sleeper's written OK. FantasyPros API: documented, key required, free tier is non-production only, production needs a paid plan, public display/redistribution needs a commercial agreement. Fantasy Nerds: ~$200–400/yr, raw stat projections QB/RB/WR/TE/K + IDP (no weekly DEF), key. SportsDataIO: paid (~$99–149/mo self-serve), raw stats all positions, commercial licensing. MySportsFeeds: free for non-commercial personal use; projections are an add-on. Open source (nflverse/ffverse): no weekly projections (ffopportunity is expected points; ffanalytics scrapes sites). Recommended path: keep SPAM's model; have `project_players.py` output per-game raw stat projections (it already models targets/carries/attempts) so SPAM scores exactly per league; ask Sleeper or FantasyPros for permission before using theirs.
 - **Deep tiers in shallow formats:** a 10-team 1QB board values QB13+ at a few hundred by design (tiers keep ≥40% of the value above).
 - **Excel master workbook:** Steven & Alan's original Excel file (`StevenAlanRankings`, per-position Steven/Alan/Combined sheets) is **not synced** with the site. The website is now the source of truth. An Oct 2 copy with the 70 Auto players and a "SPAM Board" sheet was produced but isn't in the repo.
-- **Old URL:** `stevenp36.github.io/spmetrics-fantasy/` is dead. A redirect page can live in a new `spmetrics-fantasy` repo if wanted.
+- **Old URLs:** `stevenp36.github.io/spmetrics-fantasy/` and (since the Oct 4 transfer) `stevenp36.github.io/spam/` are dead. A redirect page for either could live in a `stevenp36/stevenp36.github.io` user-site repo (`spam/index.html`, `spmetrics-fantasy/index.html`) if wanted; never recreate `stevenp36/spam`.
 - **Custom domain:** not set up. Every path is relative; only `canonical`/`og:url` would change.
 - **Player data:** some player-name matches use aliases (`pipeline/merge_projections.py` `ALIASES`, `pipeline/build_sleeper_ids.py` `ID_ALIASES`). Add an alias when a new player's projection or Sleeper ID comes up empty.
 - **Known issues, not yet fixed (found in an Oct 3 code review):**
