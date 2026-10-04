@@ -2121,6 +2121,123 @@ th.fa-proj { text-align: right; }
   .st-mgr { display: none; }
   #fa-wrap .fa-fit, #fa-wrap .fa-srk, #fa-wrap .fa-num { display: none; }
 }
+/* League → Rosters: team picker, team header with week nav, dense roster table + season schedule */
+.ro-wrap { max-width: 1326px; margin-inline: auto; }
+.ro-picker { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; padding: 2px 2px 8px; margin-bottom: 12px; border-bottom: 1px solid var(--line-soft); }
+.ro-pick { all: unset; box-sizing: border-box; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 92px; padding: 7px 4px 6px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
+.ro-pick span:last-child { max-width: 100%; font-size: 0.66rem; line-height: 1.2; font-weight: 600; text-align: center; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.ro-pick .face { width: 30px; height: 30px; }
+.ro-pick:hover { background: var(--hover-bg); }
+.ro-pick:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.ro-pick.mine span:last-child { color: var(--mine-accent); }
+.ro-pick.on { background: var(--surface); border-color: var(--line); box-shadow: inset 0 -2px 0 var(--accent-primary); }
+.ro-pick.on span:last-child { color: var(--ink); }
+.ro-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.ro-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.ro-id-t { min-width: 0; }
+.ro-name { margin: 0 0 4px; font-size: 1.35rem; font-weight: 800; color: var(--heading); display: flex; align-items: center; gap: 8px; }
+.ro-name .owner { font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.ro-head.mine .ro-name { color: var(--mine-accent); }
+.ro-stats { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; font-size: 0.8rem; color: var(--ink-2); }
+.ro-mgr { color: var(--muted); }
+.ro-stat i { font-style: normal; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-right: 5px; }
+.ro-stat b { font-weight: 750; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ro-stat.faab b { color: var(--rb); }
+.ro-week { display: flex; align-items: center; gap: 6px; }
+.ro-week .select { min-width: 150px; }
+.ro-wk-btn { all: unset; box-sizing: border-box; width: 32px; height: 34px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-size: 1.1rem; cursor: pointer; }
+.ro-wk-btn:hover:not([disabled]) { background: var(--hover-bg); }
+.ro-wk-btn[disabled] { opacity: 0.35; cursor: default; }
+.ro-wk-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.ro-wk-static { font-weight: 700; color: var(--ink); }
+.ro-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px 28px; align-items: start; }
+@media (min-width: 1240px) { .ro-layout { grid-template-columns: minmax(0, 1fr) 340px; }
+  .ro-sched { position: sticky; top: calc(var(--mast-h, 120px) + 12px); max-height: calc(100vh - var(--mast-h, 120px) - 24px); overflow-y: auto; scrollbar-width: thin; } }
+.ro-main { min-width: 0; }
+.ro-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); font-size: 0.84rem; }
+.ro-table thead th { padding: 8px 8px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ro-table td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.ro-table th.ro-wk, .ro-table th.ro-num, .ro-table th.ro-rk, .ro-table th.ro-srk { text-align: right; }
+.ro-row { cursor: pointer; }
+.ro-row:hover td { background: var(--hover-bg); }
+.ro-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.ro-row.empty { cursor: default; } .ro-row.empty:hover td { background: none; }
+.ro-row.dim .ro-pl, .ro-row.inactive td:not(.ro-slot) { opacity: 0.62; }
+.ro-slot { width: 52px; padding-left: 10px !important; }
+.ro-sl { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 22px; padding: 0 5px; border-radius: 4px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: inset 2px 0 0 var(--c); }
+.ro-row.bn .ro-sl, .ro-row.inactive .ro-sl { --c: var(--muted) !important; box-shadow: none; background: color-mix(in srgb, var(--muted) 10%, transparent); }
+.ro-pl .pl-cell { gap: 10px; }
+.ro-pl .face.sm { width: 30px; height: 30px; }
+.ro-pl .pl-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ro-pl .pl-name { font-weight: 650; }
+.ro-tm { display: inline-flex; align-items: center; }
+.ro-tm .tlogo.xs { margin-right: 3px; }
+.ro-inj { padding: 0 6px; font-size: 0.6rem; }
+.ro-g { display: flex; align-items: center; font-size: 0.7rem; color: var(--muted); white-space: nowrap; margin-top: 1px; }
+.ro-g .tlogo.xs { width: 14px; height: 14px; margin-right: 4px; }
+.ro-g .live { color: var(--rb); font-weight: 650; } .ro-g .out { color: var(--st-out, var(--st-dnp)); font-weight: 650; }
+.ro-wk { width: 92px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ro-wk b { font-size: 0.98rem; font-weight: 800; color: var(--heading); }
+.ro-wk small { display: block; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ro-wk.up b { color: var(--ink); font-weight: 700; }
+.ro-wk.final b { color: var(--heading); }
+.ro-wk .ro-live { color: var(--rb); }
+.ro-wk small.ro-lp { letter-spacing: 0.02em; text-transform: none; font-size: 0.66rem; }
+.ro-wk.off, .ro-wk.none, .ro-wk.dnp { color: var(--muted); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; }
+.ro-wk.out { color: var(--st-out, var(--st-dnp)); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; }
+.ro-srk { width: 70px; text-align: right; white-space: nowrap; }
+.ro-rk { width: 74px; text-align: right; white-space: nowrap; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ro-rk small { display: block; font-size: 0.64rem; font-weight: 600; color: var(--muted); }
+.ro-num { width: 62px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
+.ro-sec td { background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface)); border-top: 1px solid color-mix(in srgb, var(--accent-primary) 28%, transparent); padding: 7px 14px 7px 10px; }
+.ro-sec-t { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); }
+.ro-sec-note { margin-left: 10px; font-size: 0.68rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.ro-total { float: right; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ro-total b { font-size: 0.9rem; color: var(--heading); font-weight: 800; }
+.ro-detail td { background: color-mix(in srgb, var(--bg) 40%, var(--surface)); padding-top: 8px; padding-bottom: 10px; }
+.ro-det { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; font-size: 0.8rem; }
+.ro-det i { display: block; font-style: normal; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ro-det b { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ro-note { margin-top: 8px; }
+.ro-sched { border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); padding: 10px 12px 8px; min-width: 0; }
+.ro-sw-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.ro-sw { display: flex; align-items: center; gap: 8px; min-height: 36px; border-top: 1px solid var(--line-soft); font-size: 0.78rem; padding: 0 4px; }
+.ro-sw:first-child { border-top: 0; }
+.ro-sw-btn { all: unset; box-sizing: border-box; flex: 1; min-width: 0; display: grid; grid-template-columns: 34px 26px 96px minmax(0, 1fr) 10px; align-items: center; gap: 6px; padding: 4px 0; cursor: pointer; }
+.ro-sw:has(.ro-sw-btn) { padding: 0 4px; }
+.ro-sw-btn:hover { background: var(--hover-bg); }
+.ro-sw-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.ro-sw-wk { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); }
+.ro-sw.now .ro-sw-wk { color: var(--accent-primary); }
+.ro-sw.sel { box-shadow: inset 2px 0 0 var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 6%, transparent); }
+.ro-res { display: inline-grid; place-items: center; width: 22px; height: 20px; border-radius: 4px; font-size: 0.64rem; font-weight: 800; color: var(--muted); }
+.ro-res.w { color: var(--rb); background: color-mix(in srgb, var(--rb) 15%, transparent); }
+.ro-res.l { color: var(--st-dnp); background: color-mix(in srgb, var(--st-dnp) 14%, transparent); }
+.ro-res.t { color: var(--ink-2); background: color-mix(in srgb, var(--muted) 15%, transparent); }
+.ro-res.now { width: auto; padding: 0 4px; font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-primary); }
+.ro-sw-sc { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+.ro-sw-sc i { font-style: normal; margin: 0 3px; color: var(--muted); }
+.ro-sw-opp { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; align-items: center; min-width: 0; }
+.ro-sw-opp .face { grid-row: span 2; }
+.ro-sw-on { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 600; }
+.ro-sw-opp small { font-size: 0.64rem; color: var(--muted); white-space: nowrap; }
+.ro-sw.vs-mine .ro-sw-on { color: var(--mine-accent); }
+.ro-sw-go { color: var(--muted); font-size: 0.9rem; }
+.ro-sw-load { font-size: 0.72rem; }
+@media (max-width: 900px) {
+  .ro-table th.ro-srk, .ro-table td.ro-srk, .ro-table th.ro-num:nth-last-child(3), .ro-table td.ro-num:nth-last-child(3) { display: none; }
+  .ro-pl .face.sm { display: none; }
+  .ro-table td, .ro-table thead th { padding-inline: 5px; }
+  .ro-pick { width: 64px; }
+}
+@media (max-width: 560px) {
+  .ro-table th.ro-num, .ro-table td.ro-num { display: none; }
+  .ro-table th.ro-num:last-child, .ro-table td.ro-num:last-child { display: table-cell; }
+  .ro-g { white-space: normal; }
+  .ro-week .select { min-width: 0; }
+}
 .pr-head {
   white-space: nowrap; padding: 0 18px 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
 }
@@ -3743,7 +3860,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T04:45Z";
+  const BUILD_ID = "2026-10-05T06:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7022,9 +7139,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      is on or Shift/Cmd/Ctrl is held). Nothing navigates away from the list. */
   const LT = { sub: window.spmWantFA ? "waivers" : "power", open: new Set(), keep: false, tradesFull: new Set(), loading: null, error: {},   // loading/error are per league id
     txType: "all", txWeek: "all", txTeam: "all",                       // Transactions filters
-    mx: {}, mxLoading: null, mxError: {}, mWeek: null, mOpen: new Set(), nfl: null };   // Matchups: cache per league|week (memory only)
+    mx: {}, mxLoading: null, mxError: {}, mWeek: null, mOpen: new Set(), nfl: null,   // Matchups: cache per league|week (memory only)
+    rTeam: null, rWeek: null, rOpen: new Set(), schedTried: {}, schedLoading: null };   // Rosters: selected team and week, expanded players
   // League hub sub-tabs. Old names still open the right one (#fa links, "trades" from earlier versions).
-  const LEAGUE_SUBS = [["power", "Power Rankings"], ["standings", "Standings"], ["matchups", "Matchups"], ["tx", "Transactions"], ["waivers", "Waiver Wire"]];
+  const LEAGUE_SUBS = [["power", "Power Rankings"], ["standings", "Standings"], ["matchups", "Matchups"], ["rosters", "Rosters"], ["tx", "Transactions"], ["waivers", "Waiver Wire"]];
   const LSUB_ALIAS = { fa: "waivers", trades: "tx" };
   function openTeam(rosterId) {   // My Team's "Position breakdown" and others: open that team in place
     LT.sub = "power"; LT.open = new Set([String(rosterId)]);
@@ -7043,7 +7161,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     let body;
     try {
       const ev = evaluateTeams();
-      body = faOn ? "" : LT.sub === "tx" ? txHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : LT.sub === "matchups" ? matchupsHtml(ev, d) : powerHtml(ev, d);
+      body = faOn ? "" : LT.sub === "tx" ? txHtml(ev, d) : LT.sub === "standings" ? standingsHtml(ev, d) : LT.sub === "matchups" ? matchupsHtml(ev, d) : LT.sub === "rosters" ? rostersHtml(ev, d) : powerHtml(ev, d);
     } catch (err) {   // never leave the old view up silently
       console.error(err);
       body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
@@ -7052,6 +7170,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const sub = faOn ? "Available players in this league · sorted by SPAM rank"
       : LT.sub === "tx" ? "Trades, waiver claims, adds and drops"
       : LT.sub === "matchups" ? "This league's weekly matchups, scored by Sleeper"
+      : LT.sub === "rosters" ? "Each team's lineup, weekly projections and season production"
       : `${leagueView() ? "League-adjusted" : "Base"} SPAM values`;
     box.innerHTML = `
       <div class="panel-head lg-head">
@@ -7066,6 +7185,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ${body}`;
     if (LT.sub === "tx" || faOn) ensureTrades();
     if (LT.sub === "matchups") ensureMatchups();
+    if (LT.sub === "rosters") { ensureRosters(); ensureTrades(); }
     if (faOn) renderFA();
   }
 
@@ -7428,16 +7548,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const tline = (t, right, mine) => `<li class="${mine ? "mine" : ""}">${teamFace(t, "xs")}<span class="rail-name">${esc(t.name)}</span><span class="rail-v">${right}</span></li>`;
     const out = [];
     // FAAB remaining: Sleeper's budget used per team; older saved data falls back to winning bids in the log
-    const S = d.league.settings || {}, budget = Number(S.waiver_budget);
-    if (S.waiver_type === 2 && budget > 0) {
-      const spent = new Map();
-      all.forEach(t => {
-        if (t.type === "waiver" && t.bid) spent.set(t.rosters[0], (spent.get(t.rosters[0]) || 0) + t.bid);
-        if (t.type === "trade") t.faab.forEach(b => { spent.set(b.sender, (spent.get(b.sender) || 0) + b.amount); spent.set(b.receiver, (spent.get(b.receiver) || 0) - b.amount); });
-      });
-      const rows = LG.teams.map(t => { const used = t.roster.settings && t.roster.settings.faabUsed; return { t, left: budget - (used != null ? used : spent.get(t.rosterId) || 0) }; })
-        .sort((a, b) => b.left - a.left || a.t.name.localeCompare(b.t.name));
-      out.push(box("FAAB remaining", `of $${budget}`, `<ol class="rail-list">${rows.map(r => tline(r.t, `$${r.left}`, r.t.mine)).join("")}</ol>`));
+    const S = d.league.settings || {}, F = faabLeft(d);
+    if (F) {
+      const rows = LG.teams.map(t => ({ t, left: F.left.get(t.rosterId) })).sort((a, b) => b.left - a.left || a.t.name.localeCompare(b.t.name));
+      out.push(box("FAAB remaining", `of $${F.budget}`, `<ol class="rail-list">${rows.map(r => tline(r.t, `$${r.left}`, r.t.mine)).join("")}</ol>`));
     }
     if (wk != null) {
       const wkTx = all.filter(t => t.week === wk), count = new Map();
@@ -7546,7 +7660,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     try { const list = await slGetTimed(`/league/${id}/matchups/${week}`); LT.mx[key] = { at: Date.now(), list: Array.isArray(list) ? list : [] }; }
     catch (err) { LT.mxError[id] = err.message || "unknown error"; }
     finally { if (LT.mxLoading === key) LT.mxLoading = null; }
-    if (currentTab === "league" && LT.sub === "matchups") renderLeague();
+    if (currentTab === "league" && (LT.sub === "matchups" || LT.sub === "rosters")) renderLeague();
   }
   function ensureMatchups() {
     const d = activeData(); if (!d || slSource() !== "sleeper") return;
@@ -7657,6 +7771,204 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return weekSel + `<div class="mx-list">${cards}</div>`;
   }
 
+  /* Rosters (Alan, Oct 4): one fantasy team's week as a dense dashboard. Lineup + weekly outlook per player
+     (the shared weekOutlook), season production in this league's scoring, league-adjusted SPAM rank, and the
+     team's season schedule. A past week shows the lineup Sleeper recorded for it (its /matchups); the current
+     and future weeks show the current lineup. League context only: nothing here changes ownership or rankings. */
+  const regularWeeks = d => { const ps = Number(d.league.settings && d.league.settings.playoff_week_start); return ps > 1 ? ps - 1 : 17; };
+  // FAAB left per roster id (Sleeper's budget used; older saved data falls back to the transaction log), or null if not a FAAB league
+  function faabLeft(d) {
+    const S = d.league.settings || {}, budget = Number(S.waiver_budget);
+    if (S.waiver_type !== 2 || !(budget > 0)) return null;
+    const spent = new Map();
+    (d.tx || []).forEach(t => {
+      if (t.type === "waiver" && t.bid) spent.set(t.rosters[0], (spent.get(t.rosters[0]) || 0) + t.bid);
+      if (t.type === "trade") (t.faab || []).forEach(b => { spent.set(b.sender, (spent.get(b.sender) || 0) + b.amount); spent.set(b.receiver, (spent.get(b.receiver) || 0) - b.amount); });
+    });
+    return { budget, left: new Map(LG.teams.map(t => { const used = t.roster.settings && t.roster.settings.faabUsed; return [t.rosterId, budget - (used != null ? used : spent.get(t.rosterId) || 0)]; })) };
+  }
+  const roRerender = () => { if (currentTab === "league" && LT.sub === "rosters") renderLeague(); };
+  function ensureRosters() {
+    const d = activeData(); if (!d) return;
+    const need = STATS_SEASONS.slice(0, 2).filter(y => statsCache[y] === undefined);
+    if (need.length) { Promise.all(need.map(loadSeason)).then(roRerender); }
+    if (slSource() !== "sleeper") return;
+    if (!LT.nfl) {
+      LT.nfl = "loading";
+      slGetTimed("/state/nfl").then(st => { LT.nfl = st || {}; }).catch(() => { LT.nfl = {}; }).then(roRerender);
+      return;
+    }
+    if (LT.nfl === "loading") return;
+    if (!LT.rWeek) LT.rWeek = mxCurrentWeek(d);
+    loadMatchups(LT.rWeek);
+    // the season schedule: every regular-season week's matchups, once per league (memory only)
+    const id = d.league.league_id;
+    const missing = Array.from({ length: regularWeeks(d) }, (_, i) => i + 1).filter(w => w !== LT.rWeek && !LT.mx[mxKey(id, w)]);
+    if (!missing.length || LT.schedTried[id]) return;
+    LT.schedTried[id] = true; LT.schedLoading = id;
+    Promise.all(missing.map(w => slGetTimed(`/league/${id}/matchups/${w}`)
+      .then(list => { LT.mx[mxKey(id, w)] = { at: Date.now(), list: Array.isArray(list) ? list : [] }; }).catch(() => {})))
+      .then(() => { if (LT.schedLoading === id) LT.schedLoading = null; roRerender(); });
+  }
+  // Slot colors: SPAM's position tokens; flex slots blend the positions they take
+  const SLOT_COLOR = { QB: "var(--qb)", RB: "var(--rb)", WR: "var(--wr)", TE: "var(--te)",
+    FLEX: "color-mix(in srgb, var(--rb) 50%, var(--wr))", "W/R": "color-mix(in srgb, var(--rb) 50%, var(--wr))", "W/T": "color-mix(in srgb, var(--wr) 50%, var(--te))",
+    SF: "color-mix(in srgb, var(--qb) 60%, var(--te))" };
+  const slotBadge = lab => `<span class="ro-sl" style="--c: ${SLOT_COLOR[lab] || "var(--pick)"}">${esc(lab)}</span>`;
+  // The selected team's lineup for a week: Sleeper's recorded lineup for past/current weeks, else the current lineup
+  // (SPAM's best lineup when none is set). IR and taxi are always the current roster's.
+  function rosterWeek(d, t, w, ev) {
+    const id = d.league.league_id, cur = mxCurrentWeek(d), r = t.roster;
+    const data = slSource() === "sleeper" ? LT.mx[mxKey(id, w)] : null, m = data && data.list.find(x => x.roster_id === t.rosterId);
+    const slots = (d.league.roster_positions || []).filter(x => !["BN", "IR", "TAXI"].includes(x));
+    const inactive = new Set([...(r.reserve || []), ...(r.taxi || [])].map(String));
+    const set = a => (a || []).some(s => s && String(s) !== "0");
+    let starters, pool, src;
+    if (w <= cur && m && set(m.starters)) { starters = m.starters.map(String); pool = (m.players || r.players || []).map(String); src = w < cur ? "recorded" : "sleeper"; }
+    else if (w < cur && m) { starters = []; pool = (m.players || []).map(String); src = "none"; }
+    else if (set(r.starters)) { starters = r.starters.map(String); pool = (r.players || []).map(String); src = "current"; }
+    else {   // no lineup set in Sleeper: SPAM's best lineup by value (as on My Team)
+      const x = ev.byRoster.get(String(t.rosterId)), left = x ? x.starters.slice() : [];
+      starters = slots.map(sl => { const lab = SLOT_LABEL[sl] || sl, i = left.findIndex(p => (x.role.get(p.id) || "") === lab); return i >= 0 ? String(left.splice(i, 1)[0].sleeperId) : "0"; });
+      pool = (r.players || []).map(String); src = "spam";
+    }
+    const pp = w <= cur && m ? m.players_points || {} : {};
+    const on = new Set(starters);
+    const bench = pool.filter(s => !on.has(s) && !inactive.has(s));
+    return { m, slots, starters, bench, ir: (r.reserve || []).map(String), taxi: (r.taxi || []).map(String), pp, src, points: m ? Number(m.custom_points ?? m.points ?? 0) : null };
+  }
+  const rostersHtml = (ev, d) => `<div class="ro-wrap">${rostersInner(ev, d)}</div>`;
+  function rostersInner(ev, d) {
+    const sleeper = slSource() === "sleeper";
+    if (sleeper && (!LT.nfl || LT.nfl === "loading")) return `<p class="empty-note lg-loading">Loading rosters…</p>`;
+    const cur = sleeper ? mxCurrentWeek(d) : (currentWeek() || 1);
+    if (!LT.rWeek) LT.rWeek = cur;
+    const w = sleeper ? LT.rWeek : cur, id = d.league.league_id;
+    if (LT.rLeague !== id) { LT.rLeague = id; LT.rTeam = null; LT.rOpen = new Set(); }   // another league: start on your team
+    const order = ev.list.slice().sort((a, b) => (b.team.mine - a.team.mine) || (a.power - b.power));
+    if (LT.rTeam == null || !LG.teams.some(t => String(t.rosterId) === String(LT.rTeam))) LT.rTeam = String(order[0].team.rosterId);
+    const x = ev.byRoster.get(String(LT.rTeam)), t = x.team, st = t.roster.settings || {}, F = faabLeft(d);
+    const lastWeek = 18;
+    // team picker: every team, yours first, then by SPAM power rank
+    const picker = `<div class="ro-picker" role="tablist" aria-label="Team">${order.map(o => `<button class="ro-pick${String(o.team.rosterId) === String(LT.rTeam) ? " on" : ""}${o.team.mine ? " mine" : ""}" type="button" role="tab" aria-selected="${String(o.team.rosterId) === String(LT.rTeam)}" data-ro-team="${esc(String(o.team.rosterId))}" title="${esc(o.team.name)}${o.team.manager && o.team.manager !== o.team.name ? " · " + esc(o.team.manager) : ""}">${teamFace(o.team, "sm")}<span>${esc(o.team.mine ? "You" : o.team.name)}</span></button>`).join("")}</div>`;
+    const weekNav = sleeper ? `<div class="ro-week" role="group" aria-label="Week">
+        <button class="ro-wk-btn" type="button" data-ro-week="${w - 1}" aria-label="Previous week"${w <= 1 ? " disabled" : ""}>‹</button>
+        <select class="select" id="ro-week" aria-label="Week">${Array.from({ length: lastWeek }, (_, i) => i + 1).map(n => `<option value="${n}"${n === w ? " selected" : ""}>Week ${n}${n === cur ? " · current" : ""}</option>`).join("")}</select>
+        <button class="ro-wk-btn" type="button" data-ro-week="${w + 1}" aria-label="Next week"${w >= lastWeek ? " disabled" : ""}>›</button>
+        ${w !== cur ? `<button class="btn link inline" type="button" data-ro-week="${cur}">Current week</button>` : ""}</div>` : `<div class="ro-week"><span class="ro-wk-static">Week ${w}</span></div>`;
+    const stat = (k, v, cls = "") => v ? `<span class="ro-stat ${cls}"><i>${k}</i><b>${v}</b></span>` : "";
+    const head = `<div class="ro-head${t.mine ? " mine" : ""}">
+        <div class="ro-id">${teamFace(t, "lg")}<div class="ro-id-t">
+          <h3 class="ro-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</h3>
+          <p class="ro-stats">${t.manager && t.manager !== t.name ? `<span class="ro-mgr">${esc(t.manager)}</span>` : ""}${stat("SPAM PR", `#${x.power}`)}${stat("Record", esc(recordText(st) || "0-0"))}${stat("PF", st.pf ? pts(st.pf) : "")}${stat("PA", st.pa ? pts(st.pa) : "")}${F ? stat("FAAB", `$${F.left.get(t.rosterId)}`, "faab") : ""}</p>
+        </div></div>
+        ${weekNav}
+      </div>`;
+    // The week's lineup
+    const data = sleeper ? LT.mx[mxKey(id, w)] : null;
+    if (sleeper && !data) {
+      const err = LT.mxError[id];
+      return picker + head + (err ? `<div class="lg-error"><p>Couldn't load Week ${w} from Sleeper (${esc(err)}).</p><button class="btn primary" type="button" data-ro-refresh>Retry</button></div>` : `<p class="empty-note lg-loading">Loading Week ${w}…</p>`);
+    }
+    const R = rosterWeek(d, t, w, ev), map = bySleeper(), season = seasonRanks(), D = defenseVsPos() || {};
+    const rep = w === currentWeek();
+    const entry = sid => { const e = rosterEntry(sid, map); e.o = weekOutlook(e, w, { pts: R.pp[sid] != null ? Number(R.pp[sid]) : undefined }); return e; };
+    const wkCell = o => {
+      if (!o) return `<td class="ro-wk"><span class="muted">—</span></td>`;
+      if (o.kind === "final") return o.dnp ? `<td class="ro-wk dnp">DNP<small>Final</small></td>` : o.pending ? `<td class="ro-wk dnp">—<small>Final · pts pending</small></td>` : `<td class="ro-wk final"><b>${fp(o.pts)}</b><small>Final</small></td>`;
+      if (o.kind === "live") return `<td class="ro-wk live"><b>${fp(o.pts)}</b><small><span class="ro-live">Live</span></small>${o.proj != null ? `<small class="ro-lp" title="${esc(projTip(o))}">Live proj ${fp(o.est)}</small>` : ""}</td>`;
+      if (o.kind === "bye") return `<td class="ro-wk off">BYE</td>`;
+      if (o.kind === "out") return `<td class="ro-wk out">OUT</td>`;
+      if (o.missing) return `<td class="ro-wk none" title="No SPAM projection and no ${STATS_SEASONS[0]} games in our stats">—</td>`;
+      return `<td class="ro-wk up" title="${esc(projTip(o))}"><b>${fp(o.proj)}</b><small>Proj${o.fallback ? " · szn PPG" : ""}</small></td>`;
+    };
+    const game = e => {
+      const g = e.o ? e.o.game : null;
+      if (!g || g.kind === "none") return e.team ? "" : `<span class="ro-g muted">No NFL team</span>`;
+      if (g.kind === "bye") return `<span class="ro-g muted">Bye week</span>`;
+      const status = e.o.kind === "out" ? `<span class="out">Out</span>` : g.kind === "final" ? esc(g.text) : g.kind === "live" ? `<span class="live">Live</span>` : esc(g.text);
+      return `<span class="ro-g">${teamLogo(g.oppTeam, "xs")}${g.home ? "vs" : "@"} ${esc(g.oppTeam)} · ${status}</span>`;
+    };
+    // Questionable / Doubtful beside the name (Out already shows as OUT in the week column)
+    const inj = e => { if (!rep) return ""; const r = injuryOf(e.team, e.sid), s = r && r.status; const k = s && { Questionable: "Q", Doubtful: "D" }[s]; return k ? `<span class="st-badge ro-inj ${statusCls(s)}" title="${esc(s)}${r.injury ? " · " + esc(r.injury.toLowerCase()) : ""}">${k}</span>` : ""; };
+    const cols = 8;
+    const row = (lab, sid, cls = "") => {
+      if (!sid || sid === "0") return `<tr class="ro-row empty"><td class="ro-slot">${slotBadge(lab)}</td><td colspan="${cols - 1}" class="muted">Empty</td></tr>`;
+      const e = entry(sid), sn = season.get(e.sid), open = LT.rOpen.has(sid);
+      const nameEl = EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name) : `<span class="pl-name">${esc(e.name)}</span>`;
+      const main = `<tr class="ro-row ${cls}${open ? " open" : ""}${e.o && (e.o.kind === "bye" || e.o.kind === "out") ? " dim" : ""}" data-ro-open="${esc(sid)}" tabindex="0" aria-expanded="${open}">
+        <td class="ro-slot">${slotBadge(lab)}</td>
+        <td class="ro-pl"><div class="pl-cell">${face(e.sid, e.name, "sm")}<div class="pl-text"><span class="pl-head">${nameEl}${e.team ? `<span class="ro-tm">${teamLogo(e.team, "xs")}${nflTag(e.team)}</span>` : ""}${inj(e)}</span>${game(e)}</div></div></td>
+        ${wkCell(e.o)}
+        <td class="ro-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${e.pos.toLowerCase()})">${e.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
+        <td class="ro-rk" title="${e.ranked ? `League-adjusted SPAM rank · ${esc(posLabel(e.p))}` : "Not on the SPAM Board"}">${e.ranked ? `${overallRank(e.p)}<small>${esc(posLabel(e.p))}</small>` : `<span class="muted">—</span>`}</td>
+        <td class="ro-num">${sn ? sn.g : "—"}</td>
+        <td class="ro-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
+        <td class="ro-num">${sn && sn.g ? fp(sn.ppg) : "—"}</td></tr>`;
+      if (!open) return main;
+      const g = e.o && e.o.game, dx = g && g.kind === "upcoming" ? (D[e.pos] || {})[g.oppTeam] : null;
+      const base = e.ranked && String(e.p.rank) !== String(overallRank(e.p)) ? `<span><i>SPAM Board</i><b>#${e.p.rank} · ${esc(e.p.pos + e.p.posNum)}</b></span>` : "";
+      return main + `<tr class="ro-detail"><td></td><td colspan="${cols - 1}"><div class="ro-det">
+        ${e.ranked ? `<span><i>SPAM value</i><b>${fmt(dv(e.p))}</b></span><span><i>League rank</i><b>#${overallRank(e.p)} · ${esc(posLabel(e.p))}</b></span>${base}` : `<span><i>SPAM</i><b>Not ranked</b></span>`}
+        ${dx ? `<span><i>Matchup</i><b class="fa-mx-v ${dx.grade}">${esc(VERDICT[dx.grade])}</b></span>` : ""}
+        ${EDIT_POS.includes(e.pos) ? `<span class="ro-det-form"><i>Recent form</i>${recentForm(e.sid, e.pos, e.team)}</span>` : ""}
+        ${EDIT_POS.includes(e.pos) ? `<button class="btn link inline" type="button" data-player="${esc(e.sid)}">Player page</button>` : ""}</div></td></tr>`;
+    };
+    const sortBench = list => list.slice().sort((a, b) => { const A = rosterEntry(a, map), B = rosterEntry(b, map);
+      return ((POS_ORDER[A.pos] ?? (A.pos === "K" ? 4 : A.pos === "DEF" ? 5 : 9)) - (POS_ORDER[B.pos] ?? (B.pos === "K" ? 4 : B.pos === "DEF" ? 5 : 9))) || ((B.p ? dv(B.p) : -1) - (A.p ? dv(A.p) : -1)); });
+    const starterRows = R.src === "none" ? `<tr class="ro-row empty"><td colspan="${cols}" class="muted">Sleeper has no lineup recorded for Week ${w}.</td></tr>`
+      : R.slots.map((s, i) => row(SLOT_LABEL[s] || s, R.starters[i])).join("");
+    // starters' week total: actual points once played, Live proj while games are on, Proj before
+    const st8 = R.src === "none" ? [] : R.starters.filter(s => s && s !== "0").map(entry);
+    const est = st8.reduce((a, e) => a + (e.o.est || 0), 0), partial = st8.some(e => e.o.missing);
+    const anyOn = st8.some(e => e.o.kind === "live" || e.o.kind === "final"), allDone = st8.length && st8.every(e => ["final", "bye", "out"].includes(e.o.kind));
+    const total = w < cur && R.points != null ? `<span class="ro-total"><b>${fp(R.points)}</b> pts</span>`
+      : allDone ? `<span class="ro-total"><b>${fp(R.points != null ? R.points : est)}</b> pts</span>`
+      : `<span class="ro-total" title="${esc(LIVE_PROJ_TIP)}">${anyOn ? `<b>${fp(R.points != null ? R.points : st8.reduce((a, e) => a + (e.o.pts || 0), 0))}</b> pts · ` : ""}${anyOn ? "Live proj" : "Proj"} <b>${fp(est)}</b>${partial ? "*" : ""}</span>`;
+    const sec = (title, rowsHtml, n, right = "", note = "") => rowsHtml ? `<tr class="ro-sec"><td colspan="${cols}"><span class="ro-sec-t">${title}<span class="mt-sec-n">${n}</span>${note ? `<span class="ro-sec-note">${note}</span>` : ""}</span>${right}</td></tr>${rowsHtml}` : "";
+    const srcNote = { recorded: `Sleeper's Week ${w} lineup`, sleeper: "Sleeper lineup", current: w > cur ? "Current lineup" : "", spam: "No lineup set in Sleeper: SPAM's best lineup", none: "" }[R.src];
+    const bench = sortBench(R.bench), past = w < cur ? "current" : "";
+    const tbody = sec("Starters", starterRows, R.src === "none" ? 0 : R.starters.filter(s => s && s !== "0").length, total, srcNote)
+      + sec("Bench", bench.map(s => row("BN", s, "bn")).join(""), bench.length)
+      + sec("Injured reserve", R.ir.map(s => row("IR", s, "inactive")).join(""), R.ir.length, "", past ? "Current IR" : "")
+      + sec("Taxi squad", R.taxi.map(s => row("TAXI", s, "inactive")).join(""), R.taxi.length, "", past ? "Current taxi squad" : "");
+    const table = `<div class="ro-main"><div class="table-scroll"><table class="ro-table">
+        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th>
+          <th scope="col" class="ro-wk" title="Week ${w} in this league's scoring: actual points once his game is final, points so far and Live proj during it, SPAM's projection before it (Vegas, matchup and props calibrated when available).">Wk ${w}</th>
+          <th scope="col" class="ro-srk" title="${STATS_SEASONS[0]} finish at his position by total fantasy points, in this league's scoring">Szn rk</th>
+          <th scope="col" class="ro-rk" title="League-adjusted SPAM rank (overall), position rank below">SPAM rk</th>
+          <th scope="col" class="ro-num" title="Games played this season">GP</th><th scope="col" class="ro-num">FPTS</th><th scope="col" class="ro-num">PPG</th></tr></thead>
+        <tbody>${tbody}</tbody></table></div>
+        <p class="method-note ro-note">Click a player for his SPAM value and recent form. Season stats use ${esc(d.league.name)}'s scoring; SPAM rk is league-adjusted.</p></div>`;
+    return picker + head + `<div class="ro-layout">${table}${scheduleHtml(d, t, ev, cur, w)}</div>`;
+  }
+  // The selected team's season schedule: result, score, opponent (avatar, record, SPAM PR); a row opens that matchup
+  function scheduleHtml(d, t, ev, cur, sel) {
+    if (slSource() !== "sleeper") return `<aside class="ro-sched"><h3 class="rail-title">Season schedule</h3><p class="rail-empty">The schedule comes from Sleeper, so it's available for Sleeper leagues.</p></aside>`;
+    const id = d.league.league_id, last = regularWeeks(d);
+    let played = 0, loading = false;
+    const rows = Array.from({ length: last }, (_, i) => i + 1).map(w => {
+      const data = LT.mx[mxKey(id, w)];
+      if (!data) { loading = true; return `<li class="ro-sw pending"><span class="ro-sw-wk">WK${w}</span><span class="muted ro-sw-load">${LT.schedLoading === id ? "Loading…" : "—"}</span></li>`; }
+      const m = data.list.find(x => x.roster_id === t.rosterId);
+      const o = m && m.matchup_id != null ? data.list.find(x => x.matchup_id === m.matchup_id && x.roster_id !== t.rosterId) : null;
+      if (!m || !o) return `<li class="ro-sw${w === sel ? " sel" : ""}"><span class="ro-sw-wk">WK${w}</span><span class="muted">No matchup</span></li>`;
+      const opp = LG.teams.find(x => x.rosterId === o.roster_id) || { name: `Team ${o.roster_id}`, roster: { settings: {} } }, ox = ev.byRoster.get(String(o.roster_id));
+      const a = Number(m.custom_points ?? m.points ?? 0), b = Number(o.custom_points ?? o.points ?? 0);
+      const done = w < cur, res = done ? (a > b ? "W" : a < b ? "L" : "T") : "";
+      if (done) played++;
+      const score = done || (w === cur && (a || b)) ? `<span class="ro-sw-sc">${fp(a)}<i>–</i>${fp(b)}</span>` : `<span class="ro-sw-sc muted">–</span>`;
+      return `<li class="ro-sw${w === cur ? " now" : ""}${w === sel ? " sel" : ""}${opp.mine ? " vs-mine" : ""}"><button type="button" class="ro-sw-btn" data-ro-mx="${w}|${m.matchup_id}" title="Open the Week ${w} matchup">
+        <span class="ro-sw-wk">WK${w}</span>
+        <span class="ro-res ${res ? res.toLowerCase() : w === cur ? "now" : ""}">${res || (w === cur ? "Now" : "")}</span>
+        ${score}
+        <span class="ro-sw-opp">${teamFace(opp, "xs")}<span class="ro-sw-on">${esc(opp.mine ? "You" : opp.name)}</span><small>${esc(recordText(opp.roster.settings) || "0-0")}${ox ? ` · PR #${ox.power}` : ""}</small></span>
+        <span class="ro-sw-go" aria-hidden="true">›</span></button></li>`;
+    }).join("");
+    return `<aside class="ro-sched"><h3 class="rail-title">Season schedule <span>${played} played${loading && LT.schedLoading === id ? " · loading" : ""}</span></h3><ol class="ro-sw-list">${rows}</ol>
+      <p class="rail-empty">Opponent records are today's. Click a week to open the matchup.</p></aside>`;
+  }
+
   function analyzeTrade(id) {
     const d = activeData(), t = d && d.trades && d.trades.find(x => x.id === id);
     if (!t) return;
@@ -7684,6 +7996,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const txt = e.target.closest("[data-tx-type]");
     if (txt) { LT.txType = txt.dataset.txType; LT.txShow = 1; renderLeague(); return; }
     if (e.target.closest("[data-tx-older]")) { LT.txShow = (LT.txShow || 1) + 1; renderLeague(); return; }
+    const rt = e.target.closest("[data-ro-team]");
+    if (rt) { LT.rTeam = rt.dataset.roTeam; LT.rOpen = new Set(); renderLeague(); return; }
+    const rw = e.target.closest("[data-ro-week]");
+    if (rw) { LT.rWeek = Math.max(1, Math.min(18, Number(rw.dataset.roWeek))); LT.rOpen = new Set(); renderLeague(); return; }
+    const rm = e.target.closest("[data-ro-mx]");
+    if (rm) { const d = activeData(), [w, mid] = rm.dataset.roMx.split("|"); LT.sub = "matchups"; LT.mWeek = Number(w); LT.mOpen = new Set([mxKey(d.league.league_id, Number(w)) + "|" + mid]);
+      renderLeague(); window.scrollTo({ top: 0 }); return; }
+    if (e.target.closest("[data-ro-refresh]")) { const d = activeData(); if (d) { LT.mxError[d.league.league_id] = ""; loadMatchups(LT.rWeek, true); } return; }
+    const ro = e.target.closest("[data-ro-open]");
+    if (ro && !e.target.closest("button, a, [data-player]")) { const k = ro.dataset.roOpen; if (LT.rOpen.has(k)) LT.rOpen.delete(k); else LT.rOpen.add(k); renderLeague(); return; }
     const mw = e.target.closest("[data-mx-week]");
     if (mw) { LT.mWeek = Number(mw.dataset.mxWeek); LT.mOpen = new Set(); renderLeague(); return; }
     if (e.target.closest("[data-mx-refresh]")) { const d = activeData(); if (d) { LT.mxError[d.league.league_id] = ""; loadMatchups(LT.mWeek, true); } return; }
@@ -7717,7 +8039,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   });
   $("league-body").addEventListener("keydown", e => {
     if (e.key !== "Enter" && e.key !== " ") return;
-    const row = e.target.closest("[data-toggle-team]"), st = e.target.closest("[data-standing-team]");
+    const row = e.target.closest("[data-toggle-team]"), st = e.target.closest("[data-standing-team]"), ro = e.target.closest("[data-ro-open]");
+    if (ro && e.target === ro) { e.preventDefault(); const k = ro.dataset.roOpen; if (LT.rOpen.has(k)) LT.rOpen.delete(k); else LT.rOpen.add(k); renderLeague(); return; }
     if (row && e.target === row) { e.preventDefault(); toggleTeam(row.dataset.toggleTeam, e.shiftKey); }
     else if (st && e.target === st) { e.preventDefault(); openTeam(st.dataset.standingTeam); }
   });
@@ -7725,6 +8048,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (e.target.id === "lg-keep") LT.keep = e.target.checked;
     if (e.target.id === "tx-week") { LT.txWeek = e.target.value; renderLeague(); }
     if (e.target.id === "tx-team") { LT.txTeam = e.target.value; LT.txShow = 1; renderLeague(); }
+    if (e.target.id === "ro-week") { LT.rWeek = Number(e.target.value); LT.rOpen = new Set(); renderLeague(); return; }
     if (e.target.id === "mx-week") { LT.mWeek = Number(e.target.value); LT.mOpen = new Set(); renderLeague(); }
   });
   // open/close a team in place, keeping the clicked row where it was on screen
