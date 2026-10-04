@@ -4028,7 +4028,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T16:30Z";
+  const BUILD_ID = "2026-10-05T17:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7656,6 +7656,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · expected ${o.mu.toFixed(1)} pts/week`;
     return `<td class="num st-odds ${tone}" title="${esc(tip)}"><b>${txt}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
   }
+  // the league's playoff rule in words: e.g. "the 3 division winners, then the next 3 best records (6 teams)"
+  const poRule = (divs, spots) => divs && divs.length <= spots
+    ? `the ${divs.length} division winners, then the next ${spots - divs.length} best record${spots - divs.length === 1 ? "" : "s"} (${spots} teams)`
+    : `the ${spots} best record${spots === 1 ? "" : "s"}`;
   function standingsHtml(ev, d) {
     const rows = LG.teams.map(t => ({ t, st: t.roster.settings || {}, x: ev.byRoster.get(String(t.rosterId)) })).filter(r => r.x);
     const games = r => (r.st.wins || 0) + (r.st.losses || 0) + (r.st.ties || 0);
@@ -7685,9 +7689,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         }).join("") + (rows.some(r => !divs.some(x => x.id === (r.st.division || 0))) ? `<tr class="st-div"><th colspan="${COLS}" scope="colgroup"><span class="st-div-name">No division</span></th></tr>` + rows.filter(r => !divs.some(x => x.id === (r.st.division || 0))).map((r, i) => row(r, i + 1)).join("") : "")
       : rows.map(r => row(r, r.recRank)).join("");
     const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
-    const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its SPAM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${spots} playoff team${spots === 1 ? "" : "s"}${divs ? ", each division winner in" : ""}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
+    const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its SPAM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${poRule(divs, spots)}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
     const toggle = divs ? `<div class="view-toggle st-view" role="group" aria-label="Standings view"><button class="vt-btn" type="button" data-st-view="div" aria-pressed="${byDiv}">By division</button><button class="vt-btn" type="button" data-st-view="league" aria-pressed="${!byDiv}">League</button></div>` : "";
-    return `<div class="st-top-row"><p class="method-note">Actual standings next to SPAM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} ${spots} teams make the playoffs${divs ? ` · ${divs.length} divisions` : ""}.</p>${toggle}</div>
+    return `<div class="st-top-row"><p class="method-note">Actual standings next to SPAM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
       <div class="table-scroll"><table class="st-table">
         <thead><tr><th scope="col">${byDiv ? "Div" : "Rk"}</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">SPAM Power Rank</th><th scope="col">Difference</th><th scope="col" class="st-odds-h">Playoff odds ${infoIcon(oddsInfo, "How playoff odds work")}</th></tr></thead>
         <tbody>${body}</tbody>
