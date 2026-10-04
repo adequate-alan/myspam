@@ -4028,7 +4028,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T17:10Z";
+  const BUILD_ID = "2026-10-05T18:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -8540,7 +8540,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      without touching any page. Season PPG is not a provider: it's a flagged fallback when no provider has him.
      Weekly projections never touch rankings, values, tiers or history. */
   const PROJ_PROVIDERS = [
-    { id: "spam", label: "SPAM", get: e => (e.p && e.p.projPPG != null ? { basePts: e.p.projPPG } : null) }
+    { id: "spam", label: "SPAM", get: e => (e.p && e.p.projPPG != null ? { basePts: e.p.projPPG } : null) },
+    // Kickers and team defenses (Steven, Oct 4): SPAM doesn't rank or project them, so Matchups use Sleeper's own
+    // weekly projection, scored with this league's K/DEF settings (sleeperPoints). See SLPROJ below.
+    { id: "sleeper", label: "Sleeper (K, DEF)", get: (e, week) => (SLPROJ_POS.includes(e.pos) ? slProjFor(e.sid, week) : null) }
   ];
   const projSource = () => PROJ_PROVIDERS.map(x => x.label).join(" / ");
   const leagueScoring = () => scoringNow();
@@ -8571,10 +8574,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return t / pl.g.length;
   }
   // Per-game projection for one player in a scoring system: { pts, source, fallback } or null (can't be projected)
-  function weeklyProjection(e, sc = leagueScoring()) {
+  function weeklyProjection(e, sc = leagueScoring(), week) {
     for (const prov of PROJ_PROVIDERS) {
-      const r = prov.get(e);
+      const r = prov.get(e, week);
       if (!r) continue;
+      if (r.raw) return { pts: sleeperPoints(r.raw, sc), source: prov.id, fallback: false };
       if (r.stats) return { pts: gamePoints(r.stats, e.pos, sc), source: prov.id, fallback: false };
       if (r.basePts != null) { const R = projRatios(sc); return { pts: r.basePts * ((e.p && R.get(e.p.id)) ?? R.get("pos:" + e.pos) ?? 1), source: prov.id, fallback: false }; }
     }
@@ -8613,6 +8617,61 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     return out;
   }
+  /* Sleeper's weekly projections for kickers and team defenses (Steven, Oct 4). SPAM's pipeline only projects
+     QB/RB/WR/TE, so a K or DEF starter used to leave a matchup "partial". The visitor's browser asks Sleeper
+     directly for that week's K/DEF projections (memory only, never stored or committed, like the rest of the
+     league data); each projection is a raw stat line (field goals by distance, extra points, sacks, takeaways,
+     points/yards allowed …) scored with the league's own scoring_settings, so it follows the league's K/DEF
+     rules. Sleeper's projections endpoint isn't in its public API docs (see CLAUDE.md §11): if it can't be
+     reached, K/DEF stay unprojected exactly as before (partial totals), never a made-up number. */
+  const SLPROJ_POS = ["K", "DEF"];
+  const SLPROJ = {};   // week -> { at, map: Map(sid -> raw stats) } | "loading" | { at, map: null, err }
+  const SLPROJ_URLS = (season, week) => [
+    `https://api.sleeper.com/projections/nfl/${season}/${week}?season_type=regular&position[]=K&position[]=DEF`,
+    `https://api.sleeper.app/projections/nfl/regular/${season}/${week}`,
+  ];
+  function parseSleeperProj(j) {
+    const map = new Map();
+    const add = (sid, st) => { if (sid != null && st && typeof st === "object") map.set(String(sid), st); };
+    if (Array.isArray(j)) j.forEach(r => { if (!r) return; const pos = (r.player && r.player.position) || r.position; if (!pos || SLPROJ_POS.includes(pos)) add(r.player_id, r.stats); });
+    else if (j && typeof j === "object") Object.entries(j).forEach(([sid, st]) => { if (/^[A-Z]{2,3}$/.test(sid) || (slPlayers && slPlayers[sid] && slPlayers[sid][1] === "K")) add(sid, st); });
+    return map;
+  }
+  function loadSleeperProj(week) {
+    const have = SLPROJ[week];
+    if (!week || have === "loading" || (have && Date.now() - have.at < 30 * 60e3)) return;   // refresh every 30 minutes
+    SLPROJ[week] = "loading";
+    const season = STATS_SEASONS[0];
+    const tryUrl = async urls => {
+      for (const u of urls) {
+        try { const r = await fetch(u); if (!r.ok) continue; const map = parseSleeperProj(await r.json()); if (map.size) return map; } catch (e) {}
+      }
+      return null;
+    };
+    tryUrl(SLPROJ_URLS(season, week)).then(map => {
+      SLPROJ[week] = { at: Date.now(), map };
+      if (map && typeof renderLeagueAll === "function") renderLeagueAll();
+    });
+  }
+  const slProjFor = (sid, week) => { const c = SLPROJ[week]; const st = c && c !== "loading" && c.map ? c.map.get(String(sid)) : null; return st ? { raw: st } : null; };
+  // Score a Sleeper stat line with a league's scoring_settings (every key they share), plus the points/yards-allowed
+  // brackets when the line only has the expected totals. Sleeper's own pts_* summaries are never added in.
+  const PA_BRACKETS = [[0, "pts_allow_0"], [6, "pts_allow_1_6"], [13, "pts_allow_7_13"], [20, "pts_allow_14_20"], [27, "pts_allow_21_27"], [34, "pts_allow_28_34"], [Infinity, "pts_allow_35p"]];
+  const YA_BRACKETS = [[99, "yds_allow_0_100"], [199, "yds_allow_100_199"], [299, "yds_allow_200_299"], [349, "yds_allow_300_349"], [399, "yds_allow_350_399"], [449, "yds_allow_400_449"], [499, "yds_allow_450_499"], [549, "yds_allow_500_549"], [Infinity, "yds_allow_550p"]];
+  function sleeperPoints(st, sc) {
+    let v = 0, hasPa = false, hasYa = false;
+    for (const [k, x] of Object.entries(st)) {
+      if (/^pts_(ppr|std|half_ppr)$/.test(k) || /^adp_|^gp$|^gms_active$/.test(k)) continue;
+      if (/^pts_allow_/.test(k)) hasPa = true;
+      if (/^yds_allow_/.test(k)) hasYa = true;
+      const w = Number(sc[k] || 0), n = Number(x);
+      if (w && isFinite(n)) v += w * n;
+    }
+    const bracket = (list, val) => list.find(([hi]) => val <= hi)[1];
+    if (!hasPa && st.pts_allow != null && isFinite(st.pts_allow)) v += Number(sc[bracket(PA_BRACKETS, Math.round(Number(st.pts_allow)))] || 0);
+    if (!hasYa && st.yds_allow != null && isFinite(st.yds_allow)) v += Number(sc[bracket(YA_BRACKETS, Math.round(Number(st.yds_allow)))] || 0);
+    return Math.round(v * 100) / 100;
+  }
   // Player props (optional file written by a future pipeline job; nothing fetched from sportsbooks in the browser)
   const PROPS = { data: undefined, loading: null };
   function loadProps() {
@@ -8650,8 +8709,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // The calibrated weekly projection for a game: SPAM base × Vegas × matchup, blended with props when available.
   // opts.props / opts.ctx override the inputs (tests); returns { pts, source, fallback, inputs } or null.
   function contextProjection(e, g, sc, opts = {}) {
-    const P = weeklyProjection(e, sc);
+    const P = weeklyProjection(e, sc, g && g.week);
     if (!P) return null;
+    // Sleeper's K/DEF projection is already a weekly, matchup-aware number: no Vegas / matchup / props layer on top
+    if (P.source === "sleeper") return { pts: P.pts, source: P.source, fallback: false, inputs: [`Sleeper's weekly ${e.pos === "DEF" ? "defense" : "kicker"} projection, scored with this league's settings`] };
     const ctx = opts.ctx || gameContext(e, g), inputs = [P.fallback ? `Season PPG (no SPAM projection)` : "SPAM projection: usage, results, team outlook", ...ctx.inputs];
     let pts = P.pts * ctx.env * ctx.mx;
     const pr = propsProjection(e, sc, opts.props !== undefined ? opts.props : (g && g.week ? propsFor(e.sid, g.week) : null));
@@ -8682,6 +8743,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     if (g.kind === "none" && !e.team) return { kind: "none", game: g, est: 0, missing: true, text: "" };
     if (PROPS.data === undefined) loadProps();
+    if (SLPROJ_POS.includes(e.pos) && slSource() === "sleeper") loadSleeperProj(week);
     const P = contextProjection(e, g, sc);
     const so = g.kind === "live" ? (sleeperPts ?? 0) : null;
     if (!P) return { kind: g.kind, game: g, pts: so, est: g.kind === "live" ? so : null, missing: true, text: g.text };
@@ -8733,6 +8795,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     check(`${wr.name}: no props (or an empty props line) leaves the SPAM projection unchanged`, nop, nop[0] === nop[1] && nop[0] === Math.round(10 * weeklyProjection(we, sc0).pts) / 10);
     const none = weeklyProjection({ sid: "0", pos: "K", team: "BUF", p: null }, scOf({}));
     check("A kicker with no projection and no stats isn't given a made-up projection", [String(none)], none === null);
+    // Sleeper K/DEF projections are scored with the league's own K/DEF settings (Sleeper's pts_* summaries ignored)
+    const kdSc = { xpm: 1, fgm_30_39: 3, fgm_40_49: 4, fgmiss: -1, sack: 1, int: 2, def_td: 6, pts_allow_14_20: 1, pts_allow_0: 10 };
+    const kPts = sleeperPoints({ xpm: 3, fgm_30_39: 1, fgm_40_49: 0.5, fgmiss: 0.5, pts_ppr: 99 }, kdSc), kPts2 = sleeperPoints({ xpm: 3, fgm_30_39: 1, fgm_40_49: 0.5, fgmiss: 0.5 }, { ...kdSc, fgm_40_49: 5 });
+    check("Sleeper kicker projection scored with the league's kicker settings", [kPts, kPts2], kPts === 7.5 && kPts2 === 8);
+    const dPts = sleeperPoints({ sack: 3, int: 1, def_td: 0.1, pts_allow: 18.4 }, kdSc), dPts2 = sleeperPoints({ sack: 3, int: 1, pts_allow_14_20: 0.5, pts_allow_0: 0.1, pts_allow: 18.4 }, kdSc);
+    check("Sleeper defense projection: takeaways, sacks and the points-allowed bracket", [dPts, dPts2], dPts === 6.6 && dPts2 === 6.5);
     if (out.some(c => !c.pass)) console.warn("SPAM projection check failed", out); else console.info("SPAM projection check passed", out);
     return out;
   }
