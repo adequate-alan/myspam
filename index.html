@@ -975,9 +975,24 @@ main { padding-block: 32px 72px; }
 
 /* ---------- Rankings controls ---------- */
 .controls {
-  display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; justify-content: space-between;
-  margin-bottom: 16px; border-bottom: 1px solid var(--line-soft);
+  display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 14px; border-bottom: 1px solid var(--line-soft);
 }
+/* one toolbar row (Alan, Oct 4): positions · view switch + format note · Show + search */
+.controls .league-controls { margin: 0 auto 6px 0; flex: 1 1 0; min-width: 0; justify-content: flex-start; flex-wrap: nowrap; }
+.controls .fmt-note { flex: 1 1 0; min-width: 0; flex-wrap: nowrap; }
+.controls .fmt-note > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.controls .fmt-note .btn.link { white-space: nowrap; }
+@media (max-width: 900px) {
+  .controls .league-controls { flex-basis: 100%; flex-wrap: wrap; }
+  .controls .fmt-note { flex-basis: 100%; flex-wrap: wrap; }
+  .controls .fmt-note > span:first-child { white-space: normal; }
+  .ctl-right { flex-basis: 100%; margin-left: 0; min-width: 0; }
+  .ctl-right .search { flex: 1 1 0; width: auto; min-width: 0; }
+  .ctl-right .owner-filter { flex: none; }
+}
+.ctl-right { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; margin-left: auto; }
+.ctl-right .search { margin-bottom: 0; width: min(240px, 100%); }
 .chips { display: inline-flex; flex-wrap: wrap; gap: 26px; }
 .chip-btn { height: 36px; padding: 0 1px; }
 .chip-btn::after { bottom: -1px; }
@@ -995,7 +1010,7 @@ tbody td { padding: 11px 20px; border-bottom: 1px solid var(--line-soft); vertic
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr.player td { transition: background 0.16s ease; }
 tbody tr.player:hover td { background: var(--surface-hover); }
-td.rk { font-size: 0.9rem; font-weight: 600; width: 70px; color: var(--rank); font-variant-numeric: tabular-nums; }
+td.rk { font-size: 0.96rem; font-weight: 720; width: 70px; color: var(--rank); font-variant-numeric: tabular-nums; }
 .pl-name { font-weight: 680; font-size: 0.96rem; letter-spacing: -0.01em; color: var(--ink); }
 .pl-team {
   font-size: 0.64rem; font-weight: 600; color: var(--muted); letter-spacing: 0.1em;
@@ -1065,9 +1080,9 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 #panel-rankings thead th { position: sticky; top: var(--mast-h, 0px); z-index: 2; background: var(--surface); box-shadow: inset 0 -1px 0 var(--line-soft); }
 @media (max-width: 640px) { body.editing #panel-rankings .table-scroll { overflow-x: auto; } body.editing #panel-rankings thead th { position: static; } }
 .valbar { display: flex; align-items: center; gap: 12px; }
-.valbar .track { flex: 0 1 200px; height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
-.valbar .fill { height: 100%; background: var(--c, var(--cream)); border-radius: 2px; opacity: 0.9; }
-.valbar .num { font-size: 0.94rem; font-weight: 650; min-width: 52px; text-align: right; color: var(--cream); font-variant-numeric: tabular-nums; }
+.valbar .track { flex: 0 1 200px; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.valbar .fill { height: 100%; background: var(--c, var(--cream)); border-radius: 2px; opacity: 0.7; }
+.valbar .num { font-size: 0.9rem; font-weight: 560; min-width: 52px; text-align: right; color: var(--cream); font-variant-numeric: tabular-nums; }
 .num-empty { font-size: 0.82rem; color: var(--muted); font-style: italic; }
 .empty { padding: 40px 22px; text-align: center; color: var(--muted); }
 .count { font-size: 0.78rem; color: var(--muted); margin-top: 12px; }
@@ -1076,7 +1091,7 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 .editor-bar {
   display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
   background: var(--editor-bg); border: 1px solid var(--editor-line); border-radius: var(--radius);
-  padding: 8px 8px 8px 14px; margin-bottom: 18px; font-size: 0.82rem;
+  padding: 5px 8px 5px 14px; margin-bottom: 12px; font-size: 0.82rem;
 }
 .eb-left { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: center; min-width: 0; flex: 1 1 260px; }
 .eb-left strong {
@@ -1616,8 +1631,13 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
   display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; justify-content: space-between;
   margin: -6px 0 14px;
 }
-.view-toggle { display: inline-flex; gap: 22px; }
-.view-toggle .chip-btn { height: 30px; font-size: 0.72rem; }
+/* SPAM Board / League-adjusted: a clear segmented switch (it changes every value on the board) */
+.view-toggle { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.vt-btn { all: unset; box-sizing: border-box; height: 28px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: 5px; cursor: pointer;
+  font-size: 0.74rem; font-weight: 650; color: var(--muted); white-space: nowrap; transition: background 0.15s, color 0.15s; }
+.vt-btn:hover { color: var(--ink); }
+.vt-btn[aria-pressed="true"] { background: var(--accent-primary); color: var(--bg); }
+.vt-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .owner-filter { display: inline-flex; align-items: center; gap: 10px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .select {
   appearance: none; -webkit-appearance: none;
@@ -1652,6 +1672,19 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 .own-tag.mine { color: var(--mine-accent); font-weight: 750; }
 .own-tag.fa { color: color-mix(in srgb, var(--rb) 60%, var(--muted)); }
 .own-tag.inline { display: inline; margin-top: 0; }
+#rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.72; }   /* other owners stay secondary on the board; My team keeps full gold */
+.tier-tag { display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line-soft); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; color: var(--muted); vertical-align: middle; cursor: default; }
+.tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 40%, transparent); }
+.rr-jump { all: unset; cursor: pointer; }
+.rr-jump:hover { text-decoration: underline; text-underline-offset: 2px; }
+.rr-jump:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
+@keyframes rowFlash { 0%, 30% { background: color-mix(in srgb, var(--gold) 22%, var(--surface)); } 100% { background: transparent; } }
+#rank-body tr.flash td { animation: rowFlash 1.8s ease-out; }
+/* editor arrows appear on hover on desktop (drag stays the main move); always visible on touch screens */
+@media (hover: hover) and (pointer: fine) {
+  #rank-body .arrow { opacity: 0; transition: opacity 0.12s; }
+  #rank-body tr.player:hover .arrow, #rank-body .arrow:focus-visible { opacity: 1; }
+}
 .r-stack { display: flex; flex-direction: column; }
 .r-stack .pl-head > :first-child { font-weight: 680; }
 .tf-who { display: inline-flex; flex-direction: column; min-width: 0; }
@@ -3106,17 +3139,19 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     </div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
-      <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
-    </div>
-    <div class="league-controls" id="league-controls" hidden>
-      <div class="view-toggle" role="group" aria-label="Rankings view">
-        <button class="chip-btn" type="button" data-view="base" aria-pressed="false">SPAM Board</button>
-        <button class="chip-btn" type="button" data-view="league" aria-pressed="true" id="view-adj">League-adjusted</button>
+      <div class="league-controls" id="league-controls" hidden>
+        <div class="view-toggle" role="group" aria-label="Rankings view">
+          <button class="vt-btn" type="button" data-view="base" aria-pressed="false" title="SPAM Board: Steven & Alan's base rankings and values (12-team Superflex, Full PPR, TE premium +)">SPAM Board</button>
+          <button class="vt-btn" type="button" data-view="league" aria-pressed="true" id="view-adj" title="League-adjusted: values re-priced for your league's size, lineup and scoring; the order follows those values">League-adjusted</button>
+        </div>
+        <span class="fmt-note" id="fmt-note"></span>
       </div>
-      <span class="fmt-note" id="fmt-note"></span>
-      <label class="owner-filter" id="owner-filter-wrap"><span>Show</span>
-        <select class="select" id="owner-filter" aria-label="Filter by owner"></select>
-      </label>
+      <div class="ctl-right">
+        <label class="owner-filter" id="owner-filter-wrap"><span>Show</span>
+          <select class="select" id="owner-filter" aria-label="Filter by owner"></select>
+        </label>
+        <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
+      </div>
     </div>
     <div class="rk-layout">
       <div class="rk-main">
@@ -3886,7 +3921,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T11:00Z";
+  const BUILD_ID = "2026-10-05T11:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -3974,6 +4009,19 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     renderRankings();
   });
   $("rank-search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderRankings(); });
+  // Rail risers/fallers: jump to that player's row on the board (All players, no search or owner filter) and flash it
+  document.addEventListener("click", e => {
+    const j = e.target.closest("[data-jump]"); if (!j) return;
+    const id = j.dataset.jump;
+    posFilter = "ALL"; query = ""; $("rank-search").value = "";
+    $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.pos === "ALL"));
+    if (LG.ownerFilter !== "all") { LG.ownerFilter = "all"; const o = $("owner-filter"); if (o) { o.value = "all"; } }
+    renderRankings();
+    const tr = $("rank-body").querySelector(`tr[data-id="${id}"]`); if (!tr) return;
+    const top = tr.getBoundingClientRect().top + window.scrollY - (document.querySelector(".masthead") || { offsetHeight: 0 }).offsetHeight - 80;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    tr.classList.remove("flash"); void tr.offsetWidth; tr.classList.add("flash");
+  });
 
   function valueCell(p) {
     if (!p.hasValue) return `<span class="num-empty">Value pending</span>`;
@@ -4022,6 +4070,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return presetTierName(pos, tier);
   }
   const isTagTier = t => Number(t) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+  // "All" view: his positional tier as a small tag beside the position badge (tiers are per position, so no bands here)
+  const tierTag = p => `<span class="tier-tag${isTagTier(p.tier) ? " tagged" : ""}" title="${esc(p.pos)} ${esc(tierLabel(p.pos, p.tier))}">${isTagTier(p.tier) ? esc(tierNameOf(p.pos, p.tier) || "Tagged") : "T" + esc(String(p.tier))}</span>`;
   function tierLabel(pos, tier) {
     const name = pos === "OVERALL" ? presetTierName(pos, tier) : tierNameOf(pos, tier);
     if (isTagTier(tier)) return name || "Tagged";
@@ -4152,7 +4202,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       out.push(`<tr class="player" data-id="${p.id}">${editCol}
         <td class="rk">${rk(p)}</td>
         <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
-        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
@@ -4188,7 +4238,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         const prev = historyOf(p.sleeperId).filter(x => x.date < today && x.rank != null).pop();
         if (prev && prev.rank !== p.rank) { moves.push({ p, d: prev.rank - p.rank }); if (prev.date > since) since = prev.date; }
       });
-      const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span>${nameLink(m.p.sleeperId, m.p.name, "rr-name")}<span class="rr-sub">#${m.p.rank}</span></li>`;
+      const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span><button class="rr-name rr-jump" type="button" data-jump="${m.p.id}" title="Show ${esc(m.p.name)} in the rankings">${esc(m.p.name)}</button><span class="rr-sub">#${m.p.rank}</span></li>`;
       const up = moves.filter(m => m.d > 0).sort((a, b) => b.d - a.d).slice(0, 3), dn = moves.filter(m => m.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
       const when = since ? ` <span class="rr-when">since ${esc(new Date(since + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }))}</span>` : "";
       if (up.length) parts.push(sec("Biggest risers" + when, `<ul class="rr-list">${up.map(row).join("")}</ul>`));
@@ -6196,7 +6246,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span>${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. The order is the SPAM Board unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (and never more than " + FORMAT_ADJUST.maxPosMove + " spots within his position). ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
+      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the SPAM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
       : `<span>Showing the SPAM Board · <b>${esc(formatLabel())}</b></span>`;
     if (!d) {
       $("fmt-override").hidden = true; $("league-chip").classList.remove("custom");
