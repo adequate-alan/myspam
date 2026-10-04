@@ -2077,7 +2077,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-pts.up b { color: var(--gold); font-weight: 650; }
 .mx-livetag { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rb); }
 .mx-table tr.bye, .mx-table tr.out { opacity: 0.65; }
-#fa-wrap { max-width: 1180px; }
+#fa-wrap { max-width: 1180px; margin-inline: auto; }   /* centered in the page on wide screens, like Transactions */
 .fa-table td { padding-top: 8px; padding-bottom: 8px; }
 .fa-proj { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .fa-proj b { font-size: 0.98rem; font-weight: 800; color: var(--heading); }
@@ -3743,7 +3743,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T04:30Z";
+  const BUILD_ID = "2026-10-05T04:45Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
