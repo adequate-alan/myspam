@@ -1958,7 +1958,9 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 }
 .tx-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 28px; align-items: start; }
 @media (min-width: 1320px) {
-  .tx-layout { grid-template-columns: minmax(0, 960px) 300px; }
+  /* feed + rail as one balanced block, centered in the page */
+  .tx-wrap { max-width: 1326px; margin-inline: auto; }
+  .tx-layout { grid-template-columns: minmax(0, 960px) 330px; gap: 20px 36px; }
   .tx-rail { position: sticky; top: calc(var(--mast-h, 120px) + 12px); max-height: calc(100vh - var(--mast-h, 120px) - 24px); overflow-y: auto; scrollbar-width: thin; }
 }
 @media (max-width: 1319px) { .tx-rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; max-width: 960px; } }
@@ -3741,7 +3743,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T04:00Z";
+  const BUILD_ID = "2026-10-05T04:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7380,18 +7382,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!TX_TYPES.some(([k]) => k === LT.txType)) LT.txType = "all";
     const list = all.filter(t => (LT.txType === "all" || (LT.txType === "trade") === (t.type === "trade"))
       && (LT.txWeek === "all" || t.week === Number(LT.txWeek)) && (LT.txTeam === "all" || t.rosters.map(String).includes(LT.txTeam)));
-    const head = `<div class="tx-filters">
+    const head = `<div class="tx-wrap"><div class="tx-filters">
         <div class="chips" role="group" aria-label="Transaction type">${TX_TYPES.map(([k, l]) => `<button class="chip-btn" type="button" data-tx-type="${k}" aria-pressed="${LT.txType === k}">${l}</button>`).join("")}</div>
         <span class="tx-selects">
           <select class="select" id="tx-week" aria-label="Week"><option value="all">All weeks</option>${weeks.map(w => `<option value="${w}"${String(w) === String(LT.txWeek) ? " selected" : ""}>Week ${w}</option>`).join("")}</select>
           <select class="select" id="tx-team" aria-label="Team"><option value="all">All teams</option>${LG.teams.map(t => `<option value="${t.rosterId}"${String(t.rosterId) === LT.txTeam ? " selected" : ""}>${esc(t.mine ? t.name + " (you)" : t.name)}</option>`).join("")}</select>
           <button class="btn" type="button" data-th-refresh${loading ? " disabled" : ""}>${loading ? "Loading…" : "Refresh"}</button>
         </span></div>`;
-    if (error) return head + `<div class="lg-error"><p>Couldn't load transactions for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div>`;
-    if (!d.tx) return head + `<p class="empty-note lg-loading">Loading transactions for ${esc(d.league.name)}…</p>`;
+    if (error) return head + `<div class="lg-error"><p>Couldn't load transactions for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div></div>`;
+    if (!d.tx) return head + `<p class="empty-note lg-loading">Loading transactions for ${esc(d.league.name)}…</p></div>`;
     const tradeNote = LT.txType === "all" || LT.txType === "trade"
       ? `<p class="method-note">Trades are judged with SPAM values from the time of the trade when ranking history covers it. Trades from before SPAM rankings existed are labeled Pre-SPAM and evaluated as a retrospective with current values.</p>` : "";
-    if (!list.length) return head + `<div class="tx-layout"><div class="tx-main"><p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p></div>${txRail(d)}</div>`;
+    if (!list.length) return head + `<div class="tx-layout"><div class="tx-main"><p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p></div>${txRail(d)}</div></div>`;
     // grouped by week, newest first; the latest week shows by default and older weeks load on request
     const byWeek = new Map();
     list.forEach(t => { if (!byWeek.has(t.week)) byWeek.set(t.week, []); byWeek.get(t.week).push(t); });
@@ -7414,7 +7416,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const hidden = wkList.length - shown.length;
     return head + tradeNote + `<div class="tx-layout"><div class="tx-main"><div class="tx-feed">${shown.map(section).join("")}</div>
       ${hidden > 0 ? `<div class="tx-older"><button class="btn" type="button" data-tx-older>Load older transactions · Week ${wkList[shown.length]}</button><span class="muted">${hidden} older week${hidden === 1 ? "" : "s"}</span></div>` : ""}
-      <p class="count">${shown.reduce((a, w) => a + byWeek.get(w).length, 0)} of ${all.length} transaction${all.length === 1 ? "" : "s"} shown</p></div>${txRail(d)}</div>`;
+      <p class="count">${shown.reduce((a, w) => a + byWeek.get(w).length, 0)} of ${all.length} transaction${all.length === 1 ? "" : "s"} shown</p></div>${txRail(d)}</div></div>`;
   }
   /* League Activity rail beside the Transactions feed (wide desktop; below the feed on smaller screens):
      FAAB remaining, most active teams and top waiver claims for the week in view (the Week filter, else the latest
