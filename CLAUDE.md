@@ -188,7 +188,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Dense rows (~53px). Tier bands: a soft full-width band with the tier name as the focus (normal case, not oversized). A small muted note "N players · high–low" is derived only from the players currently in that tier; never show a formula-style value range as the headline.
   - Typography: big headings (page titles, card titles, verdicts, player name in the modal) and the main tabs use normal case; uppercase with letter spacing is kept for small labels (column guides, tags, badges).
   - Owner "Show" filter when a league is connected.
-  - **"Updated" date** (header, and the rail's Last updated) = `lastUpdated()`: the newer of the weekly job's stamp (`SITE.updated`, written Tuesdays by `stamp_date.py`) and the latest Ranking History entry, so a publish shows its date right away on every screen (Oct 4: phones showed the stale Tuesday stamp while the desktop rail showed the publish date).
+  - **"Last updated" date** (header and the rail; Alan: it should show the day of every published ranking change) = `lastUpdated()`: the newer of the weekly job's stamp (`SITE.updated`, written Tuesdays by `stamp_date.py`) and the latest Ranking History entry, so a publish shows its date right away on every screen (Oct 4: phones showed the stale Tuesday stamp while the desktop rail showed the publish date).
 - **Editor** (top bar, temporary: open to everyone):
   - Drag or arrows to reorder.
   - Click a value to type it.
