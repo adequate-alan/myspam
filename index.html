@@ -1457,13 +1457,25 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 #panel-finder .tf-more { padding-top: 12px; border-top: 1px solid var(--line-soft); }
 #panel-finder .tf-more-row { gap: 12px 26px; align-items: center; }
 #panel-finder .tf-more-row .tf-check { height: 34px; }
-#panel-finder .tf-card { gap: 10px; padding: 14px 16px 12px; }
+#panel-finder .tf-card { gap: 10px; padding: 14px 16px 10px; background: color-mix(in srgb, var(--surface) 88%, var(--cream) 3%); box-shadow: 0 1px 0 color-mix(in srgb, var(--cream) 4%, transparent) inset, 0 6px 18px -14px var(--shadow-color); border-color: color-mix(in srgb, var(--line) 70%, transparent); }
 #panel-finder .tf-head { gap: 10px; }
-#panel-finder .tf-team b { font-size: 1.02rem; }
-#panel-finder .tf-vline { flex-direction: column; align-items: flex-start; gap: 3px; }
-#panel-finder .tf-verdict-big { font-size: 1.12rem; }
+#panel-finder .tf-head .face.team { width: 34px; height: 34px; }
+#panel-finder .tf-team b { font-size: 1.08rem; font-weight: 750; }
+#panel-finder .tf-with { font-size: 0.56rem; }
+#panel-finder .tf-vline { flex-direction: column; align-items: flex-start; gap: 2px; }
+#panel-finder .tf-verdict-big { font-size: 1.28rem; letter-spacing: -0.005em; }
 #panel-finder .tf-verdict-big.fair { color: var(--text-strong); }
-#panel-finder .tf-diff { font-size: 0.7rem; color: color-mix(in srgb, var(--muted) 85%, transparent); letter-spacing: 0.01em; }
+#panel-finder .tf-diff { font-size: 0.66rem; color: color-mix(in srgb, var(--muted) 75%, transparent); letter-spacing: 0.01em; }
+#panel-finder .tf-card.good-fit { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--rb) 70%, transparent), 0 6px 18px -14px var(--shadow-color); }
+#panel-finder .tf-card.bad-fit { opacity: 0.62; background: var(--surface); box-shadow: none; }
+#panel-finder .tf-card.bad-fit:hover, #panel-finder .tf-card.bad-fit:focus-within { opacity: 1; }
+#panel-finder .tf-card.bad-fit .tf-verdict-big { color: var(--st-dnp, var(--accent-primary)); }
+#panel-finder .tf-act { all: unset; cursor: pointer; font-size: 0.7rem; font-weight: 600; color: var(--muted); padding: 3px 0; }
+#panel-finder .tf-act:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+#panel-finder .tf-act:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+#panel-finder .tf-more-wrap { display: flex; justify-content: center; margin: 16px 0 6px; }
+#panel-finder .tf-lead:empty { display: none; }
+#panel-finder .tf-lead { padding: 12px 16px; border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: var(--radius); background: var(--surface); margin-bottom: 16px; }
 #panel-finder .tf-sides { gap: 12px 16px; padding: 10px 0 2px; border-top: 1px solid var(--line-soft); }
 #panel-finder .tf-side h4 { margin-bottom: 6px; }
 #panel-finder .tf-side ul { gap: 7px; }
@@ -1473,8 +1485,7 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 #panel-finder .tf-pr { font-weight: 700; color: var(--c, var(--muted)); letter-spacing: 0.02em; }
 #panel-finder .tf-cpl .tf-v { font-size: 0.86rem; color: var(--text-strong); align-self: start; padding-top: 1px; }
 #panel-finder .tf-why { font-size: 0.8rem; line-height: 1.45; color: var(--text-secondary); }
-#panel-finder .tf-foot { padding-top: 4px; }
-#panel-finder .tf-foot .btn { height: 30px; font-size: 0.76rem; }
+#panel-finder .tf-foot { padding-top: 2px; justify-content: space-between; gap: 16px; }
 
 /* Power Rankings row polish: whole-row hover, your-team accent, quieter method note */
 :root, :root[data-theme="dark"] { --mine-accent: #F4B979; }
@@ -3710,7 +3721,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T01:00Z";
+  const BUILD_ID = "2026-10-05T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9140,7 +9151,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      Optional 3-team ideas only appear when every team improves its lineup and the direct
      2-team swap wouldn't work for the partner. */
   const TF = { src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", size: "pkg", three: false,
-               gap: 10, fair: false, sort: "best", q: "", ideas: [], ideas3: [], openFull: new Set() };
+               gap: 10, fair: false, sort: "best", q: "", ideas: [], ideas3: [], openFull: new Set(), show: 10, showKey: "" };
+  const TF_PAGE = 10;   // ideas shown at first; "Show more" adds this many
   function openFinder(sid) {
     TF.sid = String(sid); TF.sid2 = ""; TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
     const p = bySleeper().get(TF.sid), o = p ? LG.ownerOf.get(p.id) : null;
@@ -9506,11 +9518,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag">${ownPill(from, "inline")}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     // compact row: photo · name · value, then "RB2 · starts at RB1"
     const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
-    const cards = ideas.map((it, i) => {
+    // scan order: partner → verdict → players → fit; first TF_PAGE ideas, then "Show more"
+    const showKey = [TF.src, TF.sid, TF.sid2, TF.from, TF.against, TF.pos, TF.size, TF.gap, TF.fair, TF.sort, TF.srcTeam].join("|");
+    if (TF.showKey !== showKey) { TF.showKey = showKey; TF.show = TF_PAGE; }
+    const cards = ideas.slice(0, TF.show).map((it, i) => {
       const sAhead = it.m.a >= it.m.b, v = finderVerdict(it.more, sAhead, S, it.team);
       const full = TF.openFull.has(i), fw = fullWhy(it);
-      return `<article class="tf-card">
-        <header class="tf-head">${teamFace(it.team, "sm")}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size">${it.give.length}-for-${it.get.length}</span></header>
+      const badFit = it.fS.net <= -8 || it.fT.net <= -8, goodFit = !badFit && it.fS.net >= 3 && it.fT.net >= 3;
+      return `<article class="tf-card${badFit ? " bad-fit" : goodFit ? " good-fit" : ""}">
+        <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size">${it.give.length}-for-${it.get.length}</span></header>
         <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}" title="${esc(fitBadge0(it, v))}">${esc(fitBadge(it, v))}</span><span class="tf-diff">${it.more.toFixed(1)}% raw difference · ${fmtNet(it.fS.net)} fit for ${esc(S.mine ? "you" : S.name)} · ${fmtNet(it.fT.net)} fit for them</span></div>
         <div class="tf-sides">
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => crow(p, "")).join("")}</ul></div>
@@ -9520,7 +9536,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         ${full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
           <dl class="tf-nums"><div><dt>Raw · give vs get</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
           <div><dt>Adjusted · give vs get</dt><dd>${fmt(it.m.b)} <span>vs</span> ${fmt(it.m.a)}</dd></div></dl></div>` : ""}
-        <div class="tf-foot"><button class="footer-link" type="button" data-tf-full="${i}">${full ? "Hide analysis" : "View full analysis"}</button><button class="btn" type="button" data-tf-open="${i}">Open in trade calculator</button></div>
+        <div class="tf-foot"><button class="tf-act" type="button" data-tf-full="${i}" aria-expanded="${full}">${full ? "Hide analysis" : "Full analysis"}</button><button class="tf-act" type="button" data-tf-open="${i}">Open in calculator →</button></div>
       </article>`;
     }).join("");
     const cards3 = TF.ideas3.map((f, i) => {
@@ -9538,7 +9554,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <div class="tf-foot"><button class="btn" type="button" data-tf-open3="${i}">Open in trade calculator</button></div>
       </article>`;
     }).join("");
-    body.innerHTML = (ideas.length ? `<div class="tf-list">${cards}</div>`
+    const more = ideas.length - Math.min(TF.show, ideas.length);
+    body.innerHTML = (ideas.length ? `<div class="tf-list">${cards}</div>${more > 0 ? `<div class="tf-more-wrap"><button class="btn" type="button" data-tf-more>Show ${Math.min(TF_PAGE, more)} more idea${Math.min(TF_PAGE, more) === 1 ? "" : "s"} <span class="muted">(${more} left)</span></button></div>` : ""}`
         : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${TF.size === "1" ? " or allow packages" : ""}.</p>`) +
       (TF.three && !pkg ? `<h3 class="section-label">3-team ideas</h3>` + (cards3 ? `<div class="tf-list">${cards3}</div>` : `<p class="pp-note">No 3-team deal solves something a 2-team trade can't here.</p>`) : "");
   }
@@ -9568,6 +9585,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("tf-sort").addEventListener("change", e => { TF.sort = e.target.value; TF.openFull = new Set(); renderFinder(); });
   $("tf-size").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { TF.size = b.dataset.size; renderFinder(); } });
   $("tf-body").addEventListener("click", e => {
+    if (e.target.closest("[data-tf-more]")) { TF.show += TF_PAGE; renderFinder(); return; }
     const fb = e.target.closest("[data-tf-full]");
     if (fb) { const i = Number(fb.dataset.tfFull); TF.openFull.has(i) ? TF.openFull.delete(i) : TF.openFull.add(i); renderFinder(); return; }
     const b3 = e.target.closest("[data-tf-open3]");
