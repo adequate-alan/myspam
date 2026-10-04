@@ -1679,6 +1679,8 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 .vt-btn:hover { color: var(--ink); }
 .vt-btn[aria-pressed="true"] { background: var(--accent-primary); color: var(--bg); }
 .vt-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.vt-btn:disabled { opacity: 0.4; cursor: default; }
+#tf-size { flex-wrap: wrap; }
 .owner-filter { display: inline-flex; align-items: center; gap: 10px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .select {
   appearance: none; -webkit-appearance: none;
@@ -2135,7 +2137,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-table .face.xs { width: 24px; height: 24px; }
 .mx-lineup h4 { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 0.88rem; color: var(--ink); }
 .mx-lineup h4 small { font-size: 0.7rem; font-weight: 500; color: var(--muted); }
-.mx-lineup h4 span { margin-left: auto; font-variant-numeric: tabular-nums; text-align: right; }
+.mx-lineup h4 > span:last-child { margin-left: auto; font-variant-numeric: tabular-nums; text-align: right; }
 .mx-lu-proj { display: block; font-size: 0.64rem; font-weight: 600; color: var(--muted); }
 .mx-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .mx-table td { padding: 6px 6px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
@@ -2209,6 +2211,40 @@ th.fa-proj { text-align: right; }
   .mx-game { white-space: normal; font-size: 0.74rem; }
   .st-mgr { display: none; }
   #fa-wrap .fa-fit, #fa-wrap .fa-srk, #fa-wrap .fa-num { display: none; }
+}
+/* Matchups on phones (Steven, Oct 4): every number stays reachable. Team names wrap instead of truncating, each
+   lineup row becomes slot | player (game under the name) | points, and the lineup area can scroll sideways as a
+   last resort instead of clipping. */
+.mx-detail { overflow-x: auto; }
+@media (max-width: 600px) {
+  .mx-row { gap: 4px 6px; padding: 12px 10px 6px; }
+  .mx-tname b { white-space: normal; overflow-wrap: anywhere; line-height: 1.15; font-size: 0.92rem; }
+  .mx-tname span { white-space: normal; font-size: 0.7rem; }
+  .mx-proj { white-space: normal; text-align: center; line-height: 1.2; }
+  .mx-proj b { display: block; margin-left: 0; }
+  .mx-left-row { flex-wrap: wrap; padding-inline: 10px; }
+  .mx-left-row span:last-child { margin-left: auto; text-align: right; }
+  .mx-bar-row { grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; padding-inline: 10px; }
+  .mx-pct { font-size: 0.76rem; }
+  .mx-detail { padding: 2px 8px 12px; gap: 8px; }
+  .mx-lineup h4 { font-size: 0.84rem; line-height: 1.2; }
+  .mx-lineup h4 small { min-width: 0; }
+  .mx-lineup h4 > span:last-child { flex: none; }
+  .mx-table, .mx-table tbody { display: block; width: 100%; }
+  .mx-table tr { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 6px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
+  .mx-table td { border: 0; padding: 0 !important; min-width: 0; }
+  .mx-table td.mx-slot { grid-row: 1 / span 2; width: auto; }
+  .mx-table td:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .mx-table td:nth-child(3) { display: none; }
+  .mx-table td.mx-game { grid-column: 2; grid-row: 2; display: flex; align-items: center; gap: 6px; font-size: 0.7rem; white-space: nowrap; overflow: hidden; }
+  .mx-table td.mx-game small { display: inline; font-size: 0.66rem; }
+  .mx-table td.mx-pts { grid-column: 3; grid-row: 1 / span 2; text-align: right; }
+  .mx-table tr.mx-empty td[colspan] { grid-column: 2; grid-row: 1 / span 2; }
+  .mx-pl .pl-head { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+  .mx-pl .pl-head { flex-wrap: wrap; }
+  .mx-name { overflow-wrap: anywhere; min-width: 0; }
+  .mx-pts.up span, .mx-pts small { font-size: 0.66rem; }
+  .mx-pts.up b { font-size: 0.86rem; }
 }
 /* League → Rosters: team picker, team header with week nav, dense roster table + season schedule */
 .ro-wrap { max-width: 1326px; margin-inline: auto; }
@@ -2415,6 +2451,33 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .st-table .bm { font-size: 0.8rem; margin-left: 0; }
 .st-row:hover td { background: var(--surface-hover); }
 .st-row.mine td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+/* Player modal: Depth Chart tab */
+.dc-table th.dc-slot { text-align: left; white-space: nowrap; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-2); text-transform: none; }
+.dc-table td, .dc-table thead th { white-space: nowrap; text-align: left !important; }
+.dc-table th.dc-slot, .dc-table thead th:first-child { width: 150px; }
+.dc-table td.dc-start .pl-name { font-weight: 700; }
+.dc-pl { display: inline-flex; align-items: center; gap: 6px; }
+.dc-pl .st-badge { font-size: 0.6rem; }
+.dc-me { padding: 1px 7px; margin-left: -7px; border-radius: 6px; background: color-mix(in srgb, var(--gold) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 55%, transparent); }
+.dc-me .pl-name { color: var(--heading); font-weight: 750; }
+.dc-row-me th.dc-slot { color: var(--heading); }
+.dc-more { display: block; font-size: 0.64rem; color: var(--muted); }
+.dc-mine { font-weight: 700; color: var(--heading); }
+/* Standings: Sleeper divisions + playoff odds */
+.st-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.st-top-row .method-note { flex: 1 1 320px; margin-bottom: 10px; }
+.st-view { flex: none; margin-bottom: 10px; }
+.st-table tr.st-div th { text-align: left; padding: 14px 12px 7px; background: color-mix(in srgb, var(--accent-primary) 9%, var(--surface)); border-bottom: 1px solid var(--line-soft); font-size: 0.86rem; font-weight: 750; letter-spacing: 0; text-transform: none; color: var(--heading); }
+.st-div-name { display: inline-flex; align-items: center; gap: 8px; }
+.st-div-name img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+.st-odds-h { text-align: right; }
+.st-table td.st-odds { text-align: right; min-width: 92px; }
+.st-odds b { display: block; font-size: 0.92rem; font-weight: 750; color: var(--heading); }
+.st-odds.lo b { color: var(--muted); }
+.st-odds-bar { display: block; margin: 4px 0 0 auto; width: 64px; height: 4px; border-radius: 2px; background: var(--line-soft); overflow: hidden; }
+.st-odds-bar span { display: block; height: 100%; background: var(--muted); }
+.st-odds.hi .st-odds-bar span { background: var(--rb); }
+.st-odds.mid .st-odds-bar span { background: var(--gold); }
 /* trade history */
 .th-feed { display: flex; flex-direction: column; gap: 14px; }
 .th-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 14px 18px 12px; }
@@ -3258,7 +3321,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <label class="tf-field"><span class="ctl-label">Trade goal</span><select class="select" id="tf-goal" aria-label="Trade goal"></select></label>
       <div class="tf-field tf-type"><span class="sr-only">Trade type</span>
         <div class="view-toggle" id="tf-size" role="group" aria-label="Trade type">
-          <button class="chip-btn" type="button" data-size="1" aria-pressed="false">1-for-1</button><button class="chip-btn" type="button" data-size="pkg" aria-pressed="true">Packages</button>
+          <button class="vt-btn" type="button" data-size="11" aria-pressed="false">1-for-1</button><button class="vt-btn" type="button" data-size="12" aria-pressed="false">1-for-2</button><button class="vt-btn" type="button" data-size="21" aria-pressed="false">2-for-1</button><button class="vt-btn" type="button" data-size="all" aria-pressed="true">All packages</button>
         </div>
       </div>
       <details class="tf-more">
@@ -3965,7 +4028,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T14:10Z";
+  const BUILD_ID = "2026-10-05T16:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5937,8 +6000,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const trimLeague = l => ({
     league_id: l.league_id, name: l.name, season: l.season, status: l.status, total_rosters: l.total_rosters,
     roster_positions: l.roster_positions || [], scoring_settings: l.scoring_settings || {},
-    settings: (({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg }) =>
-      ({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg }))(l.settings || {}),
+    settings: (({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg, divisions, playoff_teams, playoff_seed_type }) =>
+      ({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg, divisions, playoff_teams, playoff_seed_type }))(l.settings || {}),
+    // division names (and avatars) as the league set them on Sleeper: metadata.division_1, division_1_avatar, ...
+    divisions: Array.from({ length: Math.min(12, Number((l.settings || {}).divisions) || 0) }, (_, i) => {
+      const m = l.metadata || {}, av = String(m[`division_${i + 1}_avatar`] || "");
+      return { id: i + 1, name: String(m[`division_${i + 1}`] || "").trim() || `Division ${i + 1}`, avatar: /^https:\/\//.test(av) ? av : "" };
+    }),
     draft_id: l.draft_id || null, previous_league_id: l.previous_league_id || null
   });
   const summary = l => ({ id: l.league_id, name: l.name, season: l.season, status: l.status, format: formatParts(l).join(" · ") });
@@ -6499,7 +6567,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           wins: st.wins || 0, losses: st.losses || 0, ties: st.ties || 0,
           pf: (st.fpts || 0) + (st.fpts_decimal || 0) / 100, pa: (st.fpts_against || 0) + (st.fpts_against_decimal || 0) / 100,
           streak: (r.metadata && r.metadata.streak) || "",
-          faabUsed: st.waiver_budget_used != null ? Number(st.waiver_budget_used) : null
+          faabUsed: st.waiver_budget_used != null ? Number(st.waiver_budget_used) : null,
+          division: Number(st.division) || 0   // Sleeper's division number (1-based), 0 without divisions
         }))(r.settings || {})
       })),
       syncedAt: Date.now()
@@ -7379,6 +7448,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ${body}`;
     if (LT.sub === "tx" || faOn) ensureTrades();
     if (LT.sub === "matchups") ensureMatchups();
+    if (LT.sub === "standings") ensureStandings();
     if (LT.sub === "rosters") { ensureRosters(); ensureTrades(); }
     if (faOn) renderFA();
   }
@@ -7463,27 +7533,164 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   /* Standings: record order next to SPAM power rank */
   const streakText = s => { const m = String(s || "").match(/(\d+)\s*([WLT])/i) || String(s || "").match(/([WLT])\s*(\d+)/i); if (!m) return "–"; const [num, k] = /\d/.test(m[1]) ? [m[1], m[2]] : [m[2], m[1]]; return k.toUpperCase() + num; };
+  /* Standings (Steven, Oct 4): Sleeper's own divisions (names and grouping) and a playoff odds column.
+     Divisions: when the league has them, teams are grouped under each division's name and ranked inside it
+     (wins, then points for, as Sleeper does); "League" shows one table. Playoff odds: a Monte Carlo of the rest
+     of the regular season on Sleeper's real schedule (so strength of schedule is built in), with each team's
+     weekly score drawn around a blend of its scoring so far and its SPAM roster strength, then the league's
+     playoff settings applied (playoff_teams; division winners in first when there are divisions; ties on PF). */
+  const stDivs = d => (d.league.divisions || []).length > 1 && LG.teams.some(t => (t.roster.settings || {}).division) ? d.league.divisions : null;
+  const winPct = st => { const g = (st.wins || 0) + (st.losses || 0) + (st.ties || 0); return g ? ((st.wins || 0) + 0.5 * (st.ties || 0)) / g : 0; };
+  const stOrder = (a, b) => (winPct(b) - winPct(a)) || ((b.wins || 0) - (a.wins || 0)) || ((b.pf || 0) - (a.pf || 0));
+  function ensureStandings() {
+    const d = activeData(); if (!d || slSource() !== "sleeper") return;
+    const rerender = () => { if (currentTab === "league" && LT.sub === "standings") renderLeague(); };
+    if (!statsCache[STATS_SEASONS[0]]) loadSeason(STATS_SEASONS[0]).then(rerender);
+    if (!LT.nfl) { LT.nfl = "loading"; slGetTimed("/state/nfl").then(st => { LT.nfl = st || {}; }).catch(() => { LT.nfl = {}; }).then(rerender); return; }
+    if (LT.nfl === "loading") return;
+    loadSchedule(d, rerender);
+  }
+  // Every regular-season week's matchups for this league, once (memory only; shared with Matchups and Rosters)
+  function loadSchedule(d, done, skip) {
+    const id = d.league.league_id;
+    const missing = Array.from({ length: regularWeeks(d) }, (_, i) => i + 1).filter(w => w !== skip && !LT.mx[mxKey(id, w)]);
+    if (!missing.length || LT.schedTried[id]) return;
+    LT.schedTried[id] = true; LT.schedLoading = id;
+    Promise.all(missing.map(w => slGetTimed(`/league/${id}/matchups/${w}`)
+      .then(list => { LT.mx[mxKey(id, w)] = { at: Date.now(), list: Array.isArray(list) ? list : [] }; }).catch(() => {})))
+      .then(() => { if (LT.schedLoading === id) LT.schedLoading = null; done(); });
+  }
+  const PO_SIMS = 10000;
+  let poCache = { key: "", res: null };
+  // small seeded RNG so the odds don't jitter between redraws
+  const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  function playoffOdds(ev, d) {
+    if (slSource() !== "sleeper") return { none: "Playoff odds need the league's schedule from Sleeper." };
+    if (!LT.nfl || LT.nfl === "loading") return { loading: true };
+    const S = d.league.settings || {}, id = d.league.league_id, last = regularWeeks(d);
+    const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
+    const cur = mxCurrentWeek(d);
+    // weeks still to decide: Sleeper's records include every finished week; the current week counts once it's over
+    const weeks = [];
+    for (let w = Math.max(1, cur); w <= last; w++) weeks.push(w);
+    const missing = weeks.filter(w => !LT.mx[mxKey(id, w)]);
+    if (missing.length) return LT.schedLoading === id || !LT.schedTried[id] ? { loading: true } : { none: "Sleeper didn't return the rest of the schedule." };
+    const divs = stDivs(d);
+    const teams = LG.teams.map(t => {
+      const st = t.roster.settings || {}, g = (st.wins || 0) + (st.losses || 0) + (st.ties || 0), x = ev.byRoster.get(String(t.rosterId));
+      return { t, rid: t.rosterId, st, g, ppg: g ? (st.pf || 0) / g : null, score: x ? x.score : 0, div: divs ? (st.division || 0) : 0 };
+    });
+    const played = teams.filter(x => x.g), lgPpg = played.length ? played.reduce((a, x) => a + x.ppg, 0) / played.length : 115;
+    const avgScore = teams.reduce((a, x) => a + x.score, 0) / (teams.length || 1) || 1;
+    teams.forEach(x => {
+      // team strength: SPAM roster score as points (square root, so the 10,000-point value scale doesn't overstate gaps),
+      // blended with actual points per game as the season goes on
+      const strength = lgPpg * Math.sqrt(Math.max(0.05, x.score / avgScore)), wAct = x.g / (x.g + 6);
+      x.mu = x.ppg != null ? wAct * x.ppg + (1 - wAct) * strength : strength;
+      x.sd = 0.19 * x.mu;
+    });
+    const byRid = new Map(teams.map(x => [x.rid, x]));
+    // the remaining games (pairs of roster ids); the current week starts from the points already scored
+    const games = [];
+    weeks.forEach(w => {
+      const list = LT.mx[mxKey(id, w)].list, groups = new Map();
+      list.forEach(m => { if (m.matchup_id == null || !byRid.has(m.roster_id)) return; if (!groups.has(m.matchup_id)) groups.set(m.matchup_id, []); groups.get(m.matchup_id).push(m); });
+      groups.forEach(ms => {
+        if (ms.length !== 2) return;
+        const side = m => {
+          const x = byRid.get(m.roster_id), sp = Number(m.custom_points ?? m.points ?? 0);
+          if (w !== cur || !sp) return { rid: m.roster_id, base: 0, left: 1 };
+          // in progress: points so far + the team's expected scoring for the share of its starters still to play
+          const starters = (m.starters || []).map(String).filter(sid => sid && sid !== "0");
+          const map = bySleeper(), left = starters.length ? starters.reduce((a, sid) => { const e = rosterEntry(sid, map), k = nflGameState(e.team, w).kind; return a + (k === "upcoming" ? 1 : k === "live" ? 0.5 : 0); }, 0) / starters.length : 0;
+          return { rid: m.roster_id, base: sp, left };
+        };
+        games.push([side(ms[0]), side(ms[1])]);
+      });
+    });
+    // remaining strength of schedule: average expected score of the opponents still to play
+    const opp = new Map(teams.map(x => [x.rid, []]));
+    games.forEach(([a, b]) => { opp.get(a.rid).push(byRid.get(b.rid).mu); opp.get(b.rid).push(byRid.get(a.rid).mu); });
+    const key = [id, spots, divs ? 1 : 0, weeks.join(","), teams.map(x => [x.rid, x.st.wins, x.st.losses, x.st.ties, Math.round(x.st.pf || 0), Math.round(x.mu), x.div].join(":")).join("|"),
+                 games.map(([a, b]) => `${a.rid}-${b.rid}-${Math.round(a.base)}-${Math.round(b.base)}`).join(",")].join("#");
+    if (poCache.key === key) return poCache.res;
+    const n = teams.length, idx = new Map(teams.map((x, i) => [x.rid, i])), made = new Float64Array(n), wins = new Float64Array(n);
+    let seed = 0; for (const c of id) seed = (seed * 31 + c.charCodeAt(0)) | 0;
+    const rnd = mulberry(seed), gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const W = new Float64Array(n), PF = new Float64Array(n), form = new Float64Array(n), order = teams.map((_, i) => i);
+    const divIds = divs ? [...new Set(teams.map(x => x.div).filter(Boolean))] : [];
+    for (let s = 0; s < PO_SIMS; s++) {
+      for (let i = 0; i < n; i++) {
+        const x = teams[i]; W[i] = (x.st.wins || 0) + 0.5 * (x.st.ties || 0); PF[i] = x.st.pf || 0;
+        form[i] = 1 + 0.06 * gauss();   // how good each team really is this season is itself uncertain
+      }
+      for (const [a, b] of games) {
+        const i = idx.get(a.rid), j = idx.get(b.rid), A = teams[i], B = teams[j];
+        const sa = a.base + a.left * A.mu * form[i] + Math.sqrt(a.left) * A.sd * gauss();
+        const sb = b.base + b.left * B.mu * form[j] + Math.sqrt(b.left) * B.sd * gauss();
+        PF[i] += sa; PF[j] += sb;
+        if (sa > sb) W[i] += 1; else if (sb > sa) W[j] += 1; else { W[i] += 0.5; W[j] += 0.5; }
+      }
+      order.sort((p, q) => (W[q] - W[p]) || (PF[q] - PF[p]));
+      const inSet = new Set();
+      if (divIds.length && divIds.length <= spots) divIds.forEach(dv_ => { const top = order.find(i => teams[i].div === dv_); if (top != null) inSet.add(top); });
+      for (const i of order) { if (inSet.size >= spots) break; inSet.add(i); }
+      inSet.forEach(i => { made[i]++; });
+      for (let i = 0; i < n; i++) wins[i] += W[i];
+    }
+    const res = { spots, gamesLeft: games.length, divs: !!divIds.length, byRid: new Map() };
+    const sosList = teams.map(x => ({ rid: x.rid, sos: opp.get(x.rid).length ? opp.get(x.rid).reduce((a, v) => a + v, 0) / opp.get(x.rid).length : null }));
+    const sosRank = new Map(sosList.filter(x => x.sos != null).sort((a, b) => b.sos - a.sos).map((x, k) => [x.rid, k + 1]));
+    teams.forEach((x, i) => res.byRid.set(x.rid, { p: made[i] / PO_SIMS, projW: wins[i] / PO_SIMS, left: opp.get(x.rid).length, sos: sosRank.get(x.rid) || null, mu: x.mu }));
+    res.sosN = sosRank.size;
+    poCache = { key, res };
+    return res;
+  }
+  function oddsCell(po, rid) {
+    if (!po || po.loading) return `<td class="num st-odds"><span class="muted">…</span></td>`;
+    if (po.none) return `<td class="num st-odds"><span class="muted" title="${esc(po.none)}">—</span></td>`;
+    const o = po.byRid.get(rid); if (!o) return `<td class="num st-odds"><span class="muted">—</span></td>`;
+    const pct = 100 * o.p, txt = !po.gamesLeft ? (o.p >= 0.5 ? "In" : "Out") : pct >= 99.5 ? ">99%" : pct > 0 && pct < 0.5 ? "<1%" : pct === 0 ? "0%" : Math.round(pct) + "%";
+    const tone = pct >= 75 ? "hi" : pct >= 35 ? "mid" : "lo";
+    const tip = !po.gamesLeft ? "Regular season over" : `${Math.round(pct * 10) / 10}% of ${PO_SIMS.toLocaleString("en-US")} simulated seasons · projected ${o.projW.toFixed(1)} wins · ${o.left} game${o.left === 1 ? "" : "s"} left`
+      + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · expected ${o.mu.toFixed(1)} pts/week`;
+    return `<td class="num st-odds ${tone}" title="${esc(tip)}"><b>${txt}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
+  }
   function standingsHtml(ev, d) {
     const rows = LG.teams.map(t => ({ t, st: t.roster.settings || {}, x: ev.byRoster.get(String(t.rosterId)) })).filter(r => r.x);
     const games = r => (r.st.wins || 0) + (r.st.losses || 0) + (r.st.ties || 0);
     const played = rows.some(r => games(r) > 0);
-    rows.sort((a, b) => ((b.st.wins || 0) - (a.st.wins || 0)) || ((a.st.losses || 0) - (b.st.losses || 0)) || ((b.st.ties || 0) - (a.st.ties || 0)) || ((b.st.pf || 0) - (a.st.pf || 0)));
+    rows.sort((a, b) => stOrder(a.st, b.st));
     rows.forEach((r, i) => { r.recRank = i + 1; });
+    const divs = stDivs(d), byDiv = divs && LT.stView !== "league";
+    const po = playoffOdds(ev, d), S = d.league.settings || {};
     const vs = r => {
       const dlt = r.recRank - r.x.power;
       if (!played || !dlt) return `<span class="muted">–</span>`;
       return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, SPAM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">▲${dlt} <small>roster ahead</small></span>`
                      : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, SPAM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">▼${-dlt} <small>record ahead</small></span>`;
     };
-    return `<p class="method-note">Actual standings next to SPAM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."}</p>
-      <div class="table-scroll"><table class="st-table">
-        <thead><tr><th scope="col">Rk</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">SPAM Power Rank</th><th scope="col">Difference</th></tr></thead>
-        <tbody>${rows.map(r => `<tr class="st-row${r.t.mine ? " mine" : ""}" data-standing-team="${r.t.rosterId}" tabindex="0">
-          <td class="rk">${r.recRank}</td>
+    const row = (r, rk) => `<tr class="st-row${r.t.mine ? " mine" : ""}" data-standing-team="${r.t.rosterId}" tabindex="0">
+          <td class="rk">${rk}</td>
           <td><div class="pl-cell">${teamFace(r.t, "sm")}<div class="pl-text"><span class="pl-name">${esc(r.t.name)}</span>${r.t.mine ? `<span class="owner mine">You</span>` : ""}</div></div></td>
           <td class="st-mgr">${esc(r.t.manager)}</td>
           <td class="num">${esc(recordText(r.st) || "0-0")}</td><td class="num">${r.st.pf ? pts(r.st.pf) : "–"}</td><td class="num">${r.st.pa ? pts(r.st.pa) : "–"}</td>
-          <td class="num">${esc(streakText(r.st.streak))}</td><td class="num"><b>${ordinal(r.x.power)}</b></td><td class="num">${vs(r)}</td></tr>`).join("")}</tbody>
+          <td class="num">${esc(streakText(r.st.streak))}</td><td class="num"><b>${ordinal(r.x.power)}</b></td><td class="num">${vs(r)}</td>${oddsCell(po, r.t.rosterId)}</tr>`;
+    const COLS = 10;
+    const body = byDiv
+      ? divs.map(dv_ => {
+          const list = rows.filter(r => (r.st.division || 0) === dv_.id);
+          if (!list.length) return "";
+          return `<tr class="st-div"><th colspan="${COLS}" scope="colgroup"><span class="st-div-name">${dv_.avatar ? `<img src="${esc(dv_.avatar)}" alt="" loading="lazy">` : ""}${esc(dv_.name)}</span></th></tr>` + list.map((r, i) => row(r, i + 1)).join("");
+        }).join("") + (rows.some(r => !divs.some(x => x.id === (r.st.division || 0))) ? `<tr class="st-div"><th colspan="${COLS}" scope="colgroup"><span class="st-div-name">No division</span></th></tr>` + rows.filter(r => !divs.some(x => x.id === (r.st.division || 0))).map((r, i) => row(r, i + 1)).join("") : "")
+      : rows.map(r => row(r, r.recRank)).join("");
+    const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
+    const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its SPAM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${spots} playoff team${spots === 1 ? "" : "s"}${divs ? ", each division winner in" : ""}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
+    const toggle = divs ? `<div class="view-toggle st-view" role="group" aria-label="Standings view"><button class="vt-btn" type="button" data-st-view="div" aria-pressed="${byDiv}">By division</button><button class="vt-btn" type="button" data-st-view="league" aria-pressed="${!byDiv}">League</button></div>` : "";
+    return `<div class="st-top-row"><p class="method-note">Actual standings next to SPAM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} ${spots} teams make the playoffs${divs ? ` · ${divs.length} divisions` : ""}.</p>${toggle}</div>
+      <div class="table-scroll"><table class="st-table">
+        <thead><tr><th scope="col">${byDiv ? "Div" : "Rk"}</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">SPAM Power Rank</th><th scope="col">Difference</th><th scope="col" class="st-odds-h">Playoff odds ${infoIcon(oddsInfo, "How playoff odds work")}</th></tr></thead>
+        <tbody>${body}</tbody>
       </table></div>`;
   }
 
@@ -7882,6 +8089,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function matchupsHtml(ev, d) {
     if (slSource() !== "sleeper") return `<p class="empty-note">Matchups come from Sleeper, so they're available for Sleeper leagues.</p>`;
     const id = d.league.league_id;
+    if (LT.nfl && LT.nfl !== "loading" && !LT.mWeek) LT.mWeek = mxCurrentWeek(d);   // Sleeper's week may already be known (Standings, Rosters)
     if (!LT.nfl || LT.nfl === "loading" || !LT.mWeek) return `<p class="empty-note lg-loading">Loading this week's matchups…</p>`;
     const cur = mxCurrentWeek(d), w = LT.mWeek, key = mxKey(id, w), data = LT.mx[key], err = LT.mxError[id];
     const lastWeek = Math.max(cur, 17, Number(d.league.settings && d.league.settings.playoff_week_start || 0) + 2);
@@ -7925,7 +8133,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <span>${esc([s.team.manager !== s.team.name ? s.team.manager : "", recordText(s.team.roster.settings) || "0-0"].filter(Boolean).join(" · "))}</span></div></div>`;
       const score = (s, which) => `<div class="mx-sc ${which}${win === which ? " win" : ""}"><span class="mx-score">${fp(s.pts)}</span>
           ${state === "final" ? (win === which ? `<span class="mx-res win">Win</span>` : win === "T" ? `<span class="mx-res">Tie</span>` : `<span class="mx-res">Final</span>`)
-            : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Partial: one or more starters could not be projected. " : ""}${esc(LIVE_PROJ_TIP)}">Live proj <b>${fp(s.proj)}</b>${s.partial ? "*" : ""}</span>`}</div>`;
+            : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Partial: one or more starters could not be projected. " : ""}${esc(LIVE_PROJ_TIP)}">Live proj <b>${fp(s.proj)}${s.partial ? "*" : ""}</b></span>`}</div>`;
       const mid2 = `<span class="mx-mid"><span class="mx-state ${state}">${state === "final" ? "Final" : state === "live" ? "Live" : "Upcoming"}</span><span class="mx-vs">vs</span></span>`;
       // projected share of the two totals; only when both lineups are fully projected (a partial total would mislead)
       const tot = A.proj + B.proj, partial = A.partial || B.partial, showBar = state !== "final" && tot > 0 && !partial;
@@ -7996,13 +8204,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!LT.rWeek) LT.rWeek = mxCurrentWeek(d);
     loadMatchups(LT.rWeek);
     // the season schedule: every regular-season week's matchups, once per league (memory only)
-    const id = d.league.league_id;
-    const missing = Array.from({ length: regularWeeks(d) }, (_, i) => i + 1).filter(w => w !== LT.rWeek && !LT.mx[mxKey(id, w)]);
-    if (!missing.length || LT.schedTried[id]) return;
-    LT.schedTried[id] = true; LT.schedLoading = id;
-    Promise.all(missing.map(w => slGetTimed(`/league/${id}/matchups/${w}`)
-      .then(list => { LT.mx[mxKey(id, w)] = { at: Date.now(), list: Array.isArray(list) ? list : [] }; }).catch(() => {})))
-      .then(() => { if (LT.schedLoading === id) LT.schedLoading = null; roRerender(); });
+    loadSchedule(d, roRerender, LT.rWeek);
   }
   // Slot colors: SPAM's position tokens; flex slots blend the positions they take
   const SLOT_COLOR = { QB: "var(--qb)", RB: "var(--rb)", WR: "var(--wr)", TE: "var(--te)",
@@ -8187,6 +8389,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("league-body").addEventListener("click", e => {
     const sub = e.target.closest("[data-lsub]");
     if (sub) { LT.sub = sub.dataset.lsub; renderLeague(); return; }
+    const stv = e.target.closest("[data-st-view]");
+    if (stv) { LT.stView = stv.dataset.stView; renderLeague(); return; }
     const txt = e.target.closest("[data-tx-type]");
     if (txt) { LT.txType = txt.dataset.txType; LT.txShow = 1; renderLeague(); return; }
     if (e.target.closest("[data-tx-older]")) { LT.txShow = (LT.txShow || 1) + 1; renderLeague(); return; }
@@ -8891,7 +9095,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      and never changes the page underneath. Click any player name or photo to open or switch. */
   const PP = { sid: null, tab: "overview", perf: String(STATS_SEASONS[0]), season: STATS_SEASONS[0], trail: [], compare: null, picking: false, pickQuery: "", opener: null, charts: [] };
   const PP_TABS = [["overview", "Overview"], ["log", "Game Log"], ["schedule", "Schedule"], ["stats", "Stats"], ["perf", "Fantasy Performance"],
-                   ["history", "Ranking History"], ["value", "Trade Value"], ["practice", "Practice Report"]];
+                   ["history", "Ranking History"], ["value", "Trade Value"], ["depth", "Depth Chart"], ["practice", "Practice Report"]];
   const modal = $("player-modal");
   const modalOpen = () => modal.open;
 
@@ -9023,6 +9227,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (PP.tab === "log") return ppGameLog(info);
     if (PP.tab === "schedule") return ppSchedule(info);
     if (PP.tab === "practice") return ppPractice(info);
+    if (PP.tab === "depth") return ppDepth(info);
     if (PP.tab === "stats") return ppStats(info);
     if (PP.tab === "perf") return ppPerformance(info);
     if (PP.tab === "history") return ppHistory(info);
@@ -9272,6 +9477,66 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       (R ? `<button class="btn pr-full" type="button" data-pr-full aria-expanded="${full}">${full ? "Show only what matters for him" : "View full report"}</button>` : "") +
       `<p class="pp-note">Official practice report (nflverse): FP full, LP limited, DNP did not practice. ${anyDaily ? "Each day fills in from our Wednesday, Thursday and Friday evening updates; a dash means that day wasn't captured." : "Shows the latest day reported."}</p>`;
   }
+
+  /* Depth Chart (Steven, Oct 4): his NFL team's depth chart from Sleeper (depth_chart_position / depth_chart_order in
+     Sleeper's player database). The pipeline writes data/depth_charts.json with every stats refresh (Sleeper asks for
+     that ~5 MB file at most daily, so browsers never fetch it). Offense first, his own slot highlighted; the offensive
+     line, defense and special teams behind "Full depth chart". Never changes rankings or values. */
+  let DEPTH = null;   // null = not loaded, "loading", {} = missing, else the file
+  function loadDepth() {
+    if (DEPTH) return;
+    DEPTH = "loading";
+    fetch("data/depth_charts.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : {})).catch(() => ({}))
+      .then(j => { DEPTH = j && j.teams ? j : {}; if (modalOpen() && PP.tab === "depth") renderPlayer(); });
+  }
+  const DC_ROWS = [
+    ["Offense", [["QB", "QB"], ["RB", "RB"], ["FB", "FB"], ["LWR", "WR · outside left"], ["RWR", "WR · outside right"], ["SWR", "WR · slot"], ["WR", "WR"], ["TE", "TE"]]],
+    ["Offensive line", [["LT", "LT"], ["LG", "LG"], ["C", "C"], ["RG", "RG"], ["RT", "RT"], ["OL", "OL"]]],
+    ["Defense", [["LDE", "DE · left"], ["DE", "DE"], ["LDT", "DT · left"], ["NT", "NT"], ["DT", "DT"], ["RDT", "DT · right"], ["RDE", "DE · right"], ["WLB", "LB · weak"], ["LOLB", "OLB · left"], ["LILB", "ILB · left"], ["MLB", "LB · middle"], ["ILB", "ILB"], ["RILB", "ILB · right"], ["ROLB", "OLB · right"], ["OLB", "OLB"], ["SLB", "LB · strong"], ["LB", "LB"], ["LCB", "CB · left"], ["CB", "CB"], ["NB", "Nickel"], ["RCB", "CB · right"], ["SS", "S · strong"], ["FS", "S · free"], ["S", "S"], ["DB", "DB"]]],
+    ["Special teams", [["K", "K"], ["PK", "K"], ["P", "P"], ["LS", "LS"], ["H", "Holder"], ["KR", "Kick returner"], ["PR", "Punt returner"]]],
+  ];
+  const DC_INJ = { Questionable: ["Questionable", "Q"], Doubtful: ["Doubtful", "D"], Out: ["Out", "Out"], IR: ["IR", "IR"], PUP: ["IR", "PUP"], Sus: ["Out", "Susp"], COV: ["Out", "COV"] };
+  function ppDepth(info) {
+    if (!info.team) return `<p class="empty-note">${esc(info.name)} isn't on an NFL team.</p>`;
+    loadDepth();
+    if (DEPTH === "loading" || !DEPTH) return `<p class="empty-note lg-loading">Loading the ${esc(info.team)} depth chart…</p>`;
+    const m = teamMeta(info.team), chart = DEPTH.teams && DEPTH.teams[info.team];
+    const head = `<div class="pr-team tm" style="${teamStyle(info.team)}">${teamLogo(info.team, "md")}<b>${esc(m ? m.name : info.team)}</b><span class="pr-wk">Depth chart</span></div>`;
+    if (!chart) return `<section class="pr-sec">${head}<p class="pp-note">${DEPTH.teams ? `Sleeper has no depth chart for ${esc(info.team)} right now.` : "Depth charts arrive with the next data update (they refresh with every stats update)."}</p></section>`;
+    const me = String(info.sid), full = !!PP.fullDepth;
+    const known = new Set(DC_ROWS.flatMap(([, rows]) => rows.map(([k]) => k)));
+    const groups = DC_ROWS.map(([label, rows]) => [label, rows.filter(([k]) => chart[k] && chart[k].length)])
+      .concat([["Other", Object.keys(chart).filter(k => !known.has(k)).sort().map(k => [k, k])]])
+      .filter(([, rows]) => rows.length);
+    const mySlot = Object.keys(chart).find(k => chart[k].some(r => r[0] === me));
+    // offense by default (plus his own group if he isn't on offense); everything when "Full depth chart" is on
+    const shown = full ? groups : groups.filter(([label, rows]) => label === "Offense" || rows.some(([k]) => k === mySlot));
+    const depthN = Math.min(4, Math.max(2, ...shown.flatMap(([, rows]) => rows.map(([k]) => chart[k].length))));
+    const pl = r => {
+      const [sid, name, pos, inj] = r, b = DC_INJ[inj];
+      const nm = EDIT_POS.includes(pos) ? nameLink(sid, name) : `<span class="pl-name">${esc(name)}</span>`;
+      return `<span class="dc-pl${sid === me ? " dc-me" : ""}">${nm}${b ? stBadge(b[0], b[1]) : ""}</span>`;
+    };
+    const row = ([k, label]) => {
+      const list = chart[k], extra = list.length - depthN;
+      return `<tr class="${list.some(r => r[0] === me) ? "dc-row-me" : ""}"><th scope="row" class="dc-slot">${esc(label)}</th>${Array.from({ length: depthN }, (_, i) =>
+        `<td class="${i ? "" : "dc-start"}">${list[i] ? pl(list[i]) : `<span class="muted">–</span>`}${i === depthN - 1 && extra > 0 ? `<small class="dc-more" title="${esc(list.slice(depthN).map(r => r[1]).join(", "))}">+${extra} more</small>` : ""}</td>`).join("")}</tr>`;
+    };
+    const cols = ["Starter", "2nd", "3rd", "4th"].slice(0, depthN);
+    const status = mySlot ? (() => { const list = chart[mySlot], i = list.findIndex(r => r[0] === me), lbl = (DC_ROWS.flatMap(([, r]) => r).find(([k]) => k === mySlot) || [mySlot, mySlot])[1];
+        return `<div class="pr-me"><span class="dc-mine">${i === 0 ? "Starter" : ordinal(i + 1) + " on the depth chart"} · ${esc(lbl)}</span>${i > 0 ? `<span class="pr-scope">Behind ${esc(list.slice(0, i).map(r => r[1]).join(", "))}</span>` : ""}</div>`; })()
+      : `<div class="pr-me"><span class="muted">${esc(info.name)} isn't listed on ${esc(info.team)}'s depth chart.</span></div>`;
+    const updated = DEPTH.updated ? Date.parse(DEPTH.updated.replace(/Z$/, ":00Z")) : NaN;
+    return status + `<section class="pr-sec">${head}<div class="table-scroll"><table class="gl-table dc-table">
+        <thead><tr><th scope="col">Position</th>${cols.map(c => `<th scope="col">${c}</th>`).join("")}</tr></thead>
+        <tbody>${shown.map(([label, rows]) => `<tr class="pr-group"><td colspan="${depthN + 1}">${esc(label)}</td></tr>` + rows.map(row).join("")).join("")}</tbody></table></div></section>` +
+      (groups.length > shown.length || full ? `<button class="btn pr-full" type="button" data-dc-full aria-expanded="${full}">${full ? "Show offense only" : "Full depth chart"}</button>` : "") +
+      `<p class="pp-note">Depth chart from Sleeper${isFinite(updated) ? ` · updated ${esc(ago(updated))}` : ""}. Refreshes with every stats update; teams change it during the week, so check close to kickoff.</p>`;
+  }
+  document.addEventListener("click", e => {
+    if (!e.target.closest("[data-dc-full]")) return;
+    PP.fullDepth = !PP.fullDepth; renderPlayer();
+  });
 
   const GROUP_SHORT = { QB: "QB", RB: "RB", FB: "RB", WR: "WR", TE: "TE", T: "OL", OT: "OL", G: "OL", OG: "OL", C: "OL", OL: "OL",
     DE: "DL", DT: "DL", NT: "DL", DL: "DL", LB: "LB", OLB: "LB", ILB: "LB", MLB: "LB", CB: "DB", S: "DB", FS: "DB", SS: "DB", DB: "DB", SAF: "DB" };
@@ -9737,9 +10002,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      premium via league values, bench depth, roster spots) ranks the value-matched ideas.
      Optional 3-team ideas only appear when every team improves its lineup and the direct
      2-team swap wouldn't work for the partner. */
-  const TF = { src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", size: "pkg", three: false,
+  const TF = { src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", size: "all", three: false,
                gap: 10, fair: false, goal: "fair", sort: "best", q: "", ideas: [], ideas3: [], openFull: new Set(), show: 10, showKey: "" };
   const TF_PAGE = 10;   // ideas shown at first; "Show more" adds this many
+  // Trade types (Steven, Oct 4): 1-for-1, 1-for-2, 2-for-1 or All packages (incl. 2-for-2), counted from the starting team's side.
+  // A 2-player package already fixes one side at 2: shopping it (give) allows 2-for-1, getting it allows 1-for-2.
+  const tfSizeOk = (k, pkg, mode) => k === "all" || !pkg || (mode === "give" ? k[0] === "2" : k[1] === "2");
+  const tfSize = (pkg, mode) => (tfSizeOk(TF.size, pkg, mode) ? TF.size : "all");
   function openFinder(sid) {
     TF.sid = String(sid); TF.sid2 = ""; TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
     const p = bySleeper().get(TF.sid), o = p ? LG.ownerOf.get(p.id) : null;
@@ -9845,6 +10114,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         giveSets = sPool.filter(p => V(p) >= 0.3 * xv && V(p) <= 1.4 * xv).map(p => [p]).concat(opts.packages ? pairs(sPool, null, 1.15 * xv) : []);
       }
       for (const give of giveSets) for (const get of getSets) {
+        if (opts.shape && (give.length !== opts.shape[0] || get.length !== opts.shape[1])) continue;   // trade type: S gives n, gets m
         const rawGive = sum(give), rawGet = sum(get), lo = Math.min(rawGive, rawGet), hi = Math.max(rawGive, rawGet);
         if (lo <= 0 || (hi - lo) / lo * 100 > opts.gap + 9) continue;   // the roster adjustment is capped well under 9%
         if (give.length === 2 && get.length === 2 && Math.min(V(give[1]), V(get[1])) < 0.3 * Math.min(V(give[0]), V(get[0]))) continue;
@@ -10102,9 +10372,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("tf-gap").value = String(TF.gap); $("tf-gap").disabled = TF.fair || goalOn;
     $("tf-fair").disabled = goalOn;
     $("tf-fair").checked = TF.fair; $("tf-three").checked = TF.three;
+    // Trade type, from the starting team's side: 1-for-2 = it gives 1 player and gets 2. A 2-player package fixes one side at 2.
+    const size = tfSize(pkg, mode), sWho = S && !S.mine ? S.name : "you";
     $("tf-size").querySelectorAll("button").forEach(b => {
-      b.setAttribute("aria-pressed", b.dataset.size === TF.size);
-      b.textContent = b.dataset.size === "1" ? (pkg ? "2-for-1" : "1-for-1") : (pkg ? "2-for-1 or 2-for-2" : "Packages");
+      const k = b.dataset.size, ok = tfSizeOk(k, pkg, mode);
+      b.setAttribute("aria-pressed", k === size); b.disabled = !ok;
+      b.title = k === "all" ? "Every shape: 1-for-1, 1-for-2, 2-for-1 and 2-for-2"
+        : !ok ? `Not possible with a 2-player package (${mode === "give" ? sWho + " give" + (sWho === "you" ? "" : "s") + " 2" : sWho + " get" + (sWho === "you" ? "" : "s") + " 2"})`
+        : `${sWho === "you" ? "You give" : sWho + " gives"} ${k[0]} player${k[0] === "1" ? "" : "s"}, ${sWho === "you" ? "get" : "gets"} ${k[1]}`;
     });
     const sName = S ? (S.mine ? "me" : S.name) : "starting team";
     $("tf-sort").innerHTML = [["best", "Best match"], ["fair", "Fairest"], ["start", `Best for ${sName}`], ["roster", "Biggest roster improvement"], ["oneone", "1-for-1 first"], ["fewest", "Fewest players"]]
@@ -10121,7 +10396,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     if (mode === "get" && !owner) { body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent, so there's no one to trade with. ${esc(S.mine ? "You" : S.name)} can pick him up off waivers.</p>`; return; }
     const gap = TF.goal === "edge" ? 10 : TF.goal === "value" ? 15 : TF.goal === "any" ? Math.max(TF.gap, 15) : TF.fair ? 2.99 : TF.gap;
-    const opts = { pos: TF.pos, against: TF.against, gap, packages: TF.size === "pkg", goal: TF.goal };
+    const opts = { pos: TF.pos, against: TF.against, gap, packages: tfSize(pkg, mode) !== "11", shape: tfSize(pkg, mode) === "all" ? null : tfSize(pkg, mode).split("").map(Number), goal: TF.goal };
     const within = TF.goal === "edge" ? `with a ${GOAL_RANGE.edge.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "value" ? `with a ${GOAL_RANGE.value.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "any" ? `within ${gap}%` : TF.fair ? "within the fair range" : `within ${TF.gap}%`;
     let ideas = findTrades(pkg || X, mode, S, opts);
     const sortKey = {
@@ -10180,8 +10455,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }).join("");
     const more = ideas.length - Math.min(TF.show, ideas.length);
     body.innerHTML = (ideas.length ? `<div class="tf-list">${cards}</div>${more > 0 ? `<div class="tf-more-wrap"><button class="btn" type="button" data-tf-more>Show ${Math.min(TF_PAGE, more)} more idea${Math.min(TF_PAGE, more) === 1 ? "" : "s"} <span class="muted">(${more} left)</span></button></div>` : ""}`
-        : GOAL_RANGE[TF.goal] ? `<p class="empty-note">No realistic trades ${esc(within)} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}: every one that favors ${esc(S.mine ? "you" : S.name)} by that much doesn't make enough sense for the other team. Try ${TF.goal === "value" ? "Slight edge" : "Fair / balanced"}${TF.size === "1" ? " or allow packages" : ""}.</p>`
-        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${TF.size === "1" ? " or allow packages" : ""}.</p>`) +
+        : GOAL_RANGE[TF.goal] ? `<p class="empty-note">No realistic trades ${esc(within)} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}: every one that favors ${esc(S.mine ? "you" : S.name)} by that much doesn't make enough sense for the other team. Try ${TF.goal === "value" ? "Slight edge" : "Fair / balanced"}${tfSize(pkg, mode) !== "all" ? " or All packages" : ""}.</p>`
+        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${tfSize(pkg, mode) !== "all" ? " or All packages" : ""}.</p>`) +
       (TF.three && !pkg ? `<h3 class="section-label">3-team ideas</h3>` + (cards3 ? `<div class="tf-list">${cards3}</div>` : `<p class="pp-note">No 3-team deal solves something a 2-team trade can't here.</p>`) : "");
   }
   $("tf-src").addEventListener("click", e => { const b = e.target.closest("button[data-src]"); if (!b) return; TF.src = b.dataset.src; TF.sid2 = ""; TF.from = "auto"; TF.openFull = new Set(); renderFinder(); });
@@ -10329,7 +10604,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     loadStatic().then(() => {
       renderLeagueAll(); showTab((location.hash || "#rankings").slice(1));
       const d = activeData();
-      const stale = !d || Date.now() - d.syncedAt > 6 * 3600 * 1000 || !d.rosters.every(r => r.settings && "pf" in r.settings && "streak" in r.settings);
+      const stale = !d || Date.now() - d.syncedAt > 6 * 3600 * 1000 || !d.rosters.every(r => r.settings && "pf" in r.settings && "streak" in r.settings && "division" in r.settings) || !("divisions" in d.league);
       if (stale && slSource() === "sleeper") syncLeague(sl.activeId).catch(() => {});
       else if (stale && slSource() === "espn") refreshEspn(false);
     });

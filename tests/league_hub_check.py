@@ -15,7 +15,7 @@ sids = [r["sleeper_id"] for r in rows if r["sleeper_id"]]
 name_of = {r["sleeper_id"]: r["player"] for r in rows}
 NOW = int(time.time() * 1000)
 
-def make_league(lid, name, teams, positions, scoring):
+def make_league(lid, name, teams, positions, scoring, divisions=None):
     pool = [x for x in sids if x != "7600"][:teams * 12]   # Pat Freiermuth (PIT, played Thursday of week 4) stays available
     rosters = [{"roster_id": i + 1, "owner_id": f"{lid}u{i+1}", "co_owners": [], "players": pool[i::teams], "starters": [], "reserve": [], "taxi": [],
                 "settings": {"wins": (i * 7) % 4, "losses": 3 - (i * 7) % 4, "ties": 0, "fpts": 380 + 9 * i, "fpts_against": 400 - 5 * i}, "metadata": {"streak": "2W" if i % 2 else "1L"}} for i in range(teams)]
@@ -41,6 +41,10 @@ def make_league(lid, name, teams, positions, scoring):
     rosters[0]["settings"]["waiver_budget_used"] = 40      # Sleeper's own FAAB used for team 1
     # team 5 has two players on IR (still on the roster, as on Sleeper)
     rosters[4]["reserve"] = rosters[4]["players"][2:4]
+    if divisions:   # Sleeper divisions: league metadata names them, each roster's settings.division points to one
+        league["settings"].update({"divisions": len(divisions), "playoff_teams": 6, "playoff_week_start": 15})
+        league["metadata"] = {f"division_{k + 1}": nm for k, nm in enumerate(divisions)}
+        for i, r in enumerate(rosters): r["settings"]["division"] = 1 + i * len(divisions) // teams
     mx = []
     for i, r in enumerate(rosters):
         pts = {s: round(3 + (j * 1.7 + i * 2.3) % 20, 2) for j, s in enumerate(r["starters"])}
@@ -49,7 +53,7 @@ def make_league(lid, name, teams, positions, scoring):
     return {"league": league, "users": users, "rosters": rosters, "tx": tx, "mx": mx, "free": free}
 
 SF = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SUPER_FLEX"] + ["BN"] * 6
-L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5})
+L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5}, divisions=["North Shore", "South Side"])
 L2 = make_league("L2", "Beta League", 10, ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6, {"rec": 0.5, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2})
 LEAGUES = {"L1": L1, "L2": L2}
 TRENDING = sids[200]   # on no roster in either league: Sleeper-wide trending adds
@@ -160,7 +164,32 @@ with sync_playwright() as p:
     pg.click("[data-lsub=standings]"); pg.wait_for_timeout(400)
     st = pg.inner_text(".st-table thead")
     ok("SPAM POWER RANK" in st.upper() and "MANAGER" in st.upper() and "DIFFERENCE" in st.upper(), "Standings show manager, SPAM Power Rank and the difference")
-    ok(pg.locator(".st-table tbody tr").count() == 12, "Standings list all teams")
+    ok(pg.locator(".st-table tbody tr.st-row").count() == 12, "Standings list all teams")
+    # Sleeper divisions: grouped under their names, ranked inside each division (wins, then PF)
+    pg.wait_for_timeout(1500)
+    divs = pg.locator(".st-table tr.st-div").all_inner_texts()
+    ok([x.strip() for x in divs] == ["North Shore", "South Side"], f"Standings are grouped by the league's division names: {divs}")
+    groups = pg.evaluate("""() => { const out = []; let cur = null; document.querySelectorAll('.st-table tbody tr').forEach(tr => {
+        if (tr.classList.contains('st-div')) { cur = []; out.push(cur); return; }
+        const c = tr.querySelectorAll('td'); cur.push([c[0].textContent.trim(), c[3].textContent.trim(), Number(c[4].textContent.replace(/,/g, '')) || 0, tr.dataset.standingTeam]); }); return out; }""")
+    def wins(rec): return int(rec.split("-")[0])
+    ordered = all([g[i][0] for i in range(len(g))] == [str(i + 1) for i in range(len(g))] and all((wins(g[i][1]), g[i][2]) >= (wins(g[i + 1][1]), g[i + 1][2]) for i in range(len(g) - 1)) for g in groups)
+    ok(len(groups) == 2 and all(len(g) == 6 for g in groups) and ordered, f"Each division has its 6 teams ranked 1-6 by wins, then PF")
+    ok(set(r[3] for r in groups[0]) == {str(i) for i in range(1, 7)}, "Teams sit in their Sleeper division")
+    # playoff odds: far right column, a percentage per team, summing to the 6 playoff spots
+    head = pg.locator(".st-table thead th").all_inner_texts()
+    ok(head[-1].strip().upper().startswith("PLAYOFF ODDS"), f"Playoff odds is the last column: {head[-1]}")
+    odds = pg.evaluate("() => [...document.querySelectorAll('.st-table td.st-odds')].map(td => (td.querySelector('b') || td).textContent.trim())")
+    nums = [100.0 if o == ">99%" else 0.5 if o == "<1%" else float(o.rstrip("%")) for o in odds if o.endswith("%")]
+    ok(len(nums) == 12 and abs(sum(nums) - 600) < 25, f"Playoff odds for all 12 teams add up to ~6 spots: {odds}")
+    tip = pg.locator(".st-table td.st-odds").first.get_attribute("title") or ""
+    ok("projected" in tip and "remaining schedule" in tip, f"Odds tooltip: projected wins and remaining schedule ({tip[:90]})")
+    po = pg.evaluate("""() => { const r = {}; document.querySelectorAll('.st-table tr.st-row').forEach(tr => { r[tr.dataset.standingTeam] = (tr.querySelector('.st-odds b') || {}).textContent; }); return r; }""")
+    pg.click("[data-st-view=league]"); pg.wait_for_timeout(300)
+    ok(pg.locator(".st-table tr.st-div").count() == 0 and pg.locator(".st-table tr.st-row").count() == 12, "League view: one table, no division headers")
+    po2 = pg.evaluate("""() => { const r = {}; document.querySelectorAll('.st-table tr.st-row').forEach(tr => { r[tr.dataset.standingTeam] = (tr.querySelector('.st-odds b') || {}).textContent; }); return r; }""")
+    ok(po == po2, "Odds are stable between redraws (seeded simulation)")
+    pg.click("[data-st-view=div]"); pg.wait_for_timeout(300)
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_standings.png")
 
     pg.click("[data-lsub=matchups]"); pg.wait_for_timeout(1500)
@@ -231,6 +260,21 @@ with sync_playwright() as p:
                 good = good and vt.startswith(word) and "STEAL" not in vt and lo - 0.05 <= df <= hi + 0.05
         ok(seen > 0 and good, f"Trade goal '{goal}': {seen} ideas, all {lo}-{hi}% in your favor and labelled '{word.title()}'")
     pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
+    # Trade types: 1-for-1, 1-for-2, 2-for-1, All packages (counted from the starting team's side)
+    labels = pg.locator("#tf-size button").all_inner_texts()
+    ok(labels == ["1-for-1", "1-for-2", "2-for-1", "All packages"], f"Trade type buttons: {labels}")
+    def shapes(kind):
+        pg.click(f"#tf-size [data-size='{kind}']"); pg.wait_for_timeout(250)
+        out = set()
+        for v in pv[:4]:
+            pg.evaluate(f"() => {{ const s = document.getElementById('tf-player'); s.value = '{v}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(250)
+            out |= set(t.strip().lower() for t in pg.locator(".tf-card:not(.tf3) .tf-size").all_inner_texts())
+        return out
+    for kind, want in (("11", {"1-for-1"}), ("12", {"1-for-2"}), ("21", {"2-for-1"})):
+        got = shapes(kind)
+        ok(got == want, f"Trade type {want.pop()}: only that shape ({got})")
+    got = shapes("all")
+    ok(len(got) >= 2 and got <= {"1-for-1", "1-for-2", "2-for-1", "2-for-2"}, f"All packages mixes shapes ({got})")
     pg.click("#tab-league"); pg.wait_for_timeout(500)
 
     # Rosters: team picker, header, week nav, dense table by section, season schedule
@@ -245,7 +289,7 @@ with sync_playwright() as p:
     slots = [t.strip() for t in pg.locator(".ro-row:not(.bn):not(.inactive) .ro-sl").all_inner_texts()]
     ok(slots == ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SF"], f"Starter slots in league order with SPAM slot colors: {slots}")
     ok(pg.locator(".ro-row:not(.bn) td.ro-wk").count() >= 9 and pg.locator(".ro-row .ro-g").count() >= 9, "Each starter shows his week and the matchup under his name")
-    ok(pg.locator(".ro-sw").count() == 17 and "3 played" in pg.inner_text(".ro-sched .rail-title"), f"Season schedule lists every week with 3 played ({pg.locator('.ro-sw').count()})")
+    ok(pg.locator(".ro-sw").count() == 14 and "3 played" in pg.inner_text(".ro-sched .rail-title"), f"Season schedule lists every regular-season week (playoffs start week 15) with 3 played ({pg.locator('.ro-sw').count()})")
     ok(pg.locator(".ro-res.w, .ro-res.l, .ro-res.t").count() == 3, "Played weeks show W/L")
     pg.locator(".ro-row:not(.bn)").first.click(); pg.wait_for_timeout(300)
     ok("SPAM VALUE" in pg.inner_text(".ro-detail").upper(), "A player row expands to show his SPAM value")
@@ -403,6 +447,36 @@ with sync_playwright() as p:
     pg2.locator(".mx-card.live .mx-show").first.click(); pg2.wait_for_timeout(400)
     ok(pg2.locator(".mx-card.open .mx-pts.live").count() >= 1 and pg2.locator(".mx-card.open .mx-livetag").count() >= 1, "Live starters show LIVE points with their projection")
     if SHOTS: pg2.screenshot(path=f"{SHOTS}/hub_matchups_live.png", full_page=True)
+    # phones (Steven, Oct 4): nothing in a matchup card, incl. the open lineups' points and projections, is cut off
+    for w in (360, 320):
+        pg2.set_viewport_size({"width": w, "height": 800}); pg2.wait_for_timeout(300)
+        clipped = pg2.evaluate("""() => [...document.querySelectorAll('.mx-card *')].filter(el => { const r = el.getBoundingClientRect(), c = el.closest('.mx-card').getBoundingClientRect();
+            return r.width && (r.right > c.right + 1 || r.left < c.left - 1); }).map(el => el.className).slice(0, 5)""")
+        ok(not clipped and pg2.locator(".mx-card.open .mx-pts").first.is_visible(), f"Matchups at {w}px: nothing clipped ({clipped})")
+    if SHOTS: pg2.screenshot(path=f"{SHOTS}/hub_matchups_phone.png", full_page=True)
+    # Depth Chart tab in the player modal (synthetic depth chart file: no network)
+    qb = next(r for r in rows if r["pos"] == "QB" and r["sleeper_id"] and r["team"])
+    wr = next(r for r in rows if r["pos"] == "WR" and r["sleeper_id"] and r["team"] == qb["team"]) if any(r["pos"] == "WR" and r["team"] == qb["team"] and r["sleeper_id"] for r in rows) else None
+    chart = {"QB": [["900001", "Backup Starter", "QB", ""], [qb["sleeper_id"], qb["player"], "QB", "Questionable"]], "RB": [["900002", "Some Back", "RB", ""]],
+             "LWR": [[wr["sleeper_id"], wr["player"], "WR", ""]] if wr else [["900003", "Some Receiver", "WR", ""]], "TE": [["900004", "Some End", "TE", "Out"]],
+             "LT": [["900005", "Big Tackle", "OT", ""]], "LCB": [["900006", "Corner One", "CB", ""]], "K": [["900007", "Leg Man", "K", ""]]}
+    dc = {"updated": "2026-10-04T12:00Z", "source": "Sleeper", "teams": {qb["team"]: chart}}
+    pg.route("**/data/depth_charts.json", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(dc)))
+    pg.click("#tab-rankings"); pg.wait_for_timeout(400)
+    pg.evaluate(f"() => document.querySelector('[data-player=\"{qb['sleeper_id']}\"]').click()"); pg.wait_for_timeout(800)
+    tabs_pm = [t.strip() for t in pg.locator("#player-modal [data-pp-tab], #player-modal .pp-tabs button").all_inner_texts()]
+    ok("Depth Chart" in tabs_pm and tabs_pm.index("Depth Chart") == tabs_pm.index("Practice Report") - 1, f"Player modal has a Depth Chart tab before Practice Report: {tabs_pm}")
+    pg.locator("#player-modal button", has_text="Depth Chart").first.click(); pg.wait_for_timeout(800)
+    body = pg.inner_text("#player-modal")
+    ok("2nd on the depth chart" in body and "Behind Backup Starter" in body, "Depth chart: his slot and who's ahead of him")
+    ok(pg.locator("#player-modal .dc-me").count() == 1 and "Big Tackle" not in body and "Corner One" not in body, "Offense by default with him highlighted; line and defense hidden")
+    ok(pg.locator("#player-modal .dc-row-me .st-badge").count() == 1, "Injury status badge from Sleeper")
+    pg.click("[data-dc-full]"); pg.wait_for_timeout(300)
+    body = pg.inner_text("#player-modal")
+    ok("Big Tackle" in body and "Corner One" in body and "Leg Man" in body, "Full depth chart adds the line, defense and special teams")
+    ok("Depth chart from Sleeper" in body, "Source line names Sleeper")
+    if SHOTS: pg.locator("#player-modal").screenshot(path=f"{SHOTS}/depth_chart.png")
+    pg.keyboard.press("Escape")
     ok(not errs, f"No page errors {errs}")
     br.close()
 
