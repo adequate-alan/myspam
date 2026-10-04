@@ -3829,7 +3829,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const nm = esc(SITE.name);
   $("brand-name").innerHTML = nm;   // one strong word; the small accent mark comes from CSS
   $("brand-tag").textContent = SITE.tagline;
-  $("meta").textContent = SITE.updated ? "Updated " + SITE.updated : "";
+  // "Updated" = the newer of the weekly job's stamp (SITE.updated) and the latest published ranking change
+  // (Ranking History), so a publish shows today's date everywhere without waiting for Tuesday
+  function lastUpdated() {
+    const stamp = Date.parse(SITE.updated) || 0;
+    let ts = 0;
+    try { ts = rankHistory && rankHistory.players ? Math.max(0, ...Object.values(rankHistory.players).flatMap(l => l.map(e => Date.parse(e[0]) || 0))) : 0; } catch (e) {}   // history loads later in the script
+    const t = Math.max(stamp, ts);
+    return t ? new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : SITE.updated;
+  }
+  const setMeta = () => { const u = lastUpdated(); $("meta").textContent = u ? "Updated " + u : ""; };
+  setMeta();
+  setTimeout(() => loadHistory().then(setMeta), 0);   // after the whole script has run
   $("footer-text").textContent = SITE.name + " rankings and trade model · Base format: " + formatLabel();
   $("sample-notice").hidden = !SITE.sampleData;
   if (SITE.sampleNote) $("sample-note").textContent = SITE.sampleNote;
@@ -3875,7 +3886,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T09:40Z";
+  const BUILD_ID = "2026-10-05T10:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4161,8 +4172,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (rankHistory === undefined) { loadHistory().then(renderRail); }
     const sec = (label, body) => body ? `<section class="rr-sec"><h3 class="rr-label">${label}</h3>${body}</section>` : "";
     const parts = [];
-    const ts = rankHistory && rankHistory.players ? Math.max(0, ...Object.values(rankHistory.players).flatMap(l => l.map(e => Date.parse(e[0]) || 0))) : 0;
-    parts.push(sec("Last updated", `<p class="rr-big">${esc(ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : SITE.updated)}</p>`));
+    parts.push(sec("Last updated", `<p class="rr-big">${esc(lastUpdated().replace(/, \d{4}$/, ""))}</p>`));
     const vl = valueLeague();
     parts.push(sec(leagueView() && vl ? "Values for" : "Format", `<p class="rr-text">${esc(leagueView() && vl ? formatLabel(vl) : formatLabel())}</p>`));
     if (LG.active && LG.myRosterId != null) {
@@ -6149,7 +6159,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("league-pick").hidden = !d;
     $("meta").hidden = !!d;
     $("fmt-chip").hidden = !!d;
-    $("meta").textContent = SITE.updated ? "Updated " + SITE.updated : "";
+    setMeta();
     $("fc-format").textContent = formatParts(FMT ? fmtLeague(FMT) : fmtLeague(FMT_DEFAULT)).join(" · ");
     $("fmt-chip").classList.toggle("custom", !!FMT);
     $("fmt-chip").title = FMT ? "Values follow the settings you picked. Click to change." : "Pick your league's scoring and lineup";
