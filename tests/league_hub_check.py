@@ -30,8 +30,10 @@ def make_league(lid, name, teams, positions, scoring, divisions=None):
           4: [{"transaction_id": f"{lid}w1", "type": "waiver", "status": "complete", "roster_ids": [3], "leg": 4, "status_updated": NOW - 86400e3,
                "adds": {free[0]: 3}, "drops": {rosters[2]["players"][11]: 3}, "settings": {"waiver_bid": 12}},
               {"transaction_id": f"{lid}w2", "type": "waiver", "status": "failed", "roster_ids": [4], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 4}, "drops": None, "settings": {"waiver_bid": 9}},
-              {"transaction_id": f"{lid}w3", "type": "waiver", "status": "failed", "roster_ids": [5], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 5}, "drops": None, "settings": {"waiver_bid": 3}},
+              {"transaction_id": f"{lid}w3", "type": "waiver", "status": "failed", "roster_ids": [5], "leg": 4, "status_updated": NOW - 86400e3 - 5 * 3600e3, "adds": {free[0]: 5}, "drops": None, "settings": {"waiver_bid": 3}},
               {"transaction_id": f"{lid}w4", "type": "waiver", "status": "failed", "roster_ids": [6], "leg": 4, "status_updated": NOW - 86400e3, "adds": {free[0]: 6}, "drops": None, "settings": {"waiver_bid": 12}, "metadata": {"notes": "Lost on waiver priority."}},
+              # Sleeper stamps losing claims at other times than the winner (Oct 4 report): a higher bid that failed on roster size, 9 h earlier
+              {"transaction_id": f"{lid}w5", "type": "waiver", "status": "failed", "roster_ids": [7], "leg": 4, "status_updated": NOW - 86400e3 - 9 * 3600e3, "adds": {free[0]: 7}, "drops": None, "settings": {"waiver_bid": 20}, "metadata": {"notes": "Unfortunately, your roster will have too many players after this transaction."}},
               {"transaction_id": f"{lid}f1", "type": "free_agent", "status": "complete", "roster_ids": [1], "leg": 4, "status_updated": NOW - 3600e3, "adds": {free[1]: 1}, "drops": None},
               {"transaction_id": f"{lid}d1", "type": "free_agent", "status": "complete", "roster_ids": [6], "leg": 4, "status_updated": NOW - 7200e3, "adds": None, "drops": {rosters[5]["players"][11]: 6}}]}
     # rosters as they are after these moves: team 3 claimed free[0] and dropped its last player, team 1 added free[1]
@@ -216,7 +218,8 @@ with sync_playwright() as p:
     card.locator(".mx-show").click(); pg.wait_for_timeout(400)
     ok(pg.locator(".mx-card.open .mx-lineup").count() == 2, "Show lineups expands both starting lineups side by side")
     ok(pg.locator(".mx-card.open .mx-table tr").count() >= 16, "Lineups list every starter")
-    ok(pg.locator(".mx-card.open .mx-pts.up b").count() >= 10, "Upcoming starters show their projection")
+    # by game state (the test runs against the real clock): upcoming = projection, live = points + Live proj, final = points
+    ok(pg.locator(".mx-card.open .mx-pts.up b, .mx-card.open .mx-pts.live b, .mx-card.open .mx-pts.final b").count() >= 10, "Every starter shows his projection or points")
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_matchups.png", full_page=True)
     pg.evaluate("() => { const s = document.getElementById('mx-week'); s.value = '3'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(1200)
     ok(pg.locator(".mx-card.final").count() == 6 and pg.locator(".mx-res.win").count() >= 5 and pg.locator(".mx-bar").count() == 0, "A past week: final scores, the winner marked, no projection bar")
@@ -317,7 +320,7 @@ with sync_playwright() as p:
     ok(tx_filters == ["All", "Trades", "Waiver Wire"], f"Transaction filters: {tx_filters}")
     tags = sorted(t.strip().lower() for t in pg.locator(".mv-row .mv-tag").all_inner_texts())
     ok(tags == ["drop", "free agent", "waiver claim"], f"Each move card says what it was: {tags}")
-    ok(pg.locator(".mv-bidders").first.inner_text().strip().lower() == "4 bidders", "Waiver claim counts 4 bidders from the failed claims")
+    ok(pg.locator(".mv-bidders").first.inner_text().strip().lower() == "5 bidders", "Waiver claim counts all 5 bidders, incl. failed claims stamped hours apart")
     ok(pg.locator(".mv-row.waiver .mv-kind .mv-bidders").count() == 1 and pg.locator(".mv-row.waiver .mv-acts .mv-bidders").count() == 0, "Bidder count sits beside WAIVER CLAIM, FAAB stays with the claim")
     ok(pg.evaluate("() => getComputedStyle(document.querySelector('.tx-rail')).position") == "sticky", "The League Activity rail is sticky on desktop")
     rail = pg.locator(".tx-rail")
@@ -335,8 +338,9 @@ with sync_playwright() as p:
     ok(pg.locator("#bids-dialog").is_visible(), "Clicking the bidder count opens the bids")
     bids = [" | ".join(x.split()) for x in pg.locator("#bids-dialog .bids-list li").all_inner_texts()]
     print("   bids:", bids)
-    ok(len(bids) == 4 and bids[0].startswith("$12") and "WON" in bids[0].upper() and "Team | 3" in bids[0], "Winner first, even when tied at the top bid")
-    ok("TIE-BREAK" in bids[1].upper() and "$12" in bids[1] and "OUTBID" in bids[2].upper() and bids[2].startswith("$9") and bids[3].startswith("$3"), "Tie shown as lost tie-break, then outbid bids high to low")
+    ok(len(bids) == 5 and bids[0].startswith("$12") and "WON" in bids[0].upper() and "Team | 3" in bids[0], "Winner first, even when a failed claim bid more")
+    ok(bids[1].startswith("$20") and "NOT | AWARDED" in bids[1].upper() and "too | many | players" in bids[1], "A higher bid that failed shows Sleeper's reason (roster too full)")
+    ok("TIE-BREAK" in bids[2].upper() and "$12" in bids[2] and "OUTBID" in bids[3].upper() and bids[3].startswith("$9") and bids[4].startswith("$3"), "Tie shown as lost tie-break, then outbid bids high to low")
     ok("tie at $12" in pg.inner_text("#bids-dialog").lower(), "The tie is explained, without inventing a waiver priority")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
     ok(not pg.locator("#bids-dialog").is_visible(), "Escape closes the bids")
