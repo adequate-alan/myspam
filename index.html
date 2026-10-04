@@ -3838,7 +3838,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const t = Math.max(stamp, ts);
     return t ? new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : SITE.updated;
   }
-  const setMeta = () => { const u = lastUpdated(); $("meta").textContent = u ? "Updated " + u : ""; };
+  const setMeta = () => { const u = lastUpdated(); $("meta").textContent = u ? "Last updated " + u : ""; };
   setMeta();
   setTimeout(() => loadHistory().then(setMeta), 0);   // after the whole script has run
   $("footer-text").textContent = SITE.name + " rankings and trade model · Base format: " + formatLabel();
@@ -3886,7 +3886,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T10:10Z";
+  const BUILD_ID = "2026-10-05T10:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
