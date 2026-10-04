@@ -1919,16 +1919,48 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .tx-selects { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .st-mgr { color: var(--muted); font-size: 0.84rem; white-space: nowrap; }
 .st-table .bm small { font-size: 0.66rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
-.th-card.mv-card { padding: 0; overflow: hidden; }
-.mv-card .th-head { margin: 0; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); align-items: center; }
 .mv-tags { display: inline-flex; gap: 6px; }
 .mv-tag { padding: 3px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-2); }
 .mv-tag.waiver { color: var(--wr); border-color: color-mix(in srgb, var(--wr) 45%, transparent); background: color-mix(in srgb, var(--wr) 8%, transparent); }
 .mv-tag.free_agent { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 45%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
 .mv-tag.drop { color: var(--st-dnp, var(--accent-primary)); border-color: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 45%, transparent); background: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 7%, transparent); }
-.th-feed.tx-feed, .tx-feed + .count { max-width: 960px; }
+.tx-feed, .tx-older, .tx-feed ~ .count { max-width: 960px; }
+.tx-feed { display: flex; flex-direction: column; gap: 22px; }
+.tx-week { display: flex; flex-direction: column; gap: 10px; }
+.tx-week-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.tx-week-head h3 { margin: 0; font-size: 1.05rem; color: var(--heading); }
+.tx-week-sum { font-size: 0.78rem; color: var(--ink-2); }
+.tx-older { display: flex; align-items: center; gap: 12px; margin: 16px 0 4px; }
+.mv-list { border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.mv-row { display: grid; grid-template-columns: 206px minmax(120px, 180px) minmax(0, 1fr) 84px; align-items: center; gap: 6px 14px; padding: 7px 12px; border-top: 1px solid var(--line-soft); font-size: 0.82rem; }
+.mv-row:first-child { border-top: 0; }
+.mv-row .mv-kind { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mv-row .mv-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.mv-row .mv-team b { font-size: 0.82rem; font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mv-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; min-width: 0; }
+.mv-p { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.mv-p i { font-style: normal; font-weight: 800; width: 10px; text-align: center; }
+.mv-p.add i { color: var(--rb); }
+.mv-p.drop i { color: var(--st-dnp, var(--accent-primary)); }
+.mv-p.drop .mv-name { color: var(--ink-2); font-weight: 550; }
+.mv-p .mv-name { font-size: 0.84rem; }
+.mv-p .pos { font-size: 0.6rem; padding: 1px 5px; }
+.mv-faab-amt { display: inline-flex; align-items: baseline; gap: 3px; font-weight: 750; color: var(--ink); font-variant-numeric: tabular-nums; }
+.mv-faab-amt small { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); }
+.mv-faab-amt.zero { color: var(--muted); font-weight: 600; }
+.mv-faab-amt.big { color: var(--gold); font-size: 0.98rem; }
+.mv-when { text-align: right; font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+.mv-tag.trade { margin-right: 8px; color: var(--gold); border-color: color-mix(in srgb, var(--gold) 55%, transparent); background: color-mix(in srgb, var(--gold) 10%, transparent); }
+.th-card.tx-trade-card { border-color: color-mix(in srgb, var(--gold) 40%, var(--line)); box-shadow: inset 3px 0 0 var(--gold), 0 8px 22px -16px var(--shadow-color); }
+@media (max-width: 760px) {
+  .mv-row { grid-template-columns: 1fr auto; grid-template-areas: "kind when" "team team" "acts acts"; }
+  .mv-row .mv-kind { grid-area: kind; } .mv-row .mv-when { grid-area: when; } .mv-row .mv-team { grid-area: team; } .mv-acts { grid-area: acts; }
+}
 .tx-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 28px; align-items: start; }
-@media (min-width: 1320px) { .tx-layout { grid-template-columns: minmax(0, 960px) 300px; } }
+@media (min-width: 1320px) {
+  .tx-layout { grid-template-columns: minmax(0, 960px) 300px; }
+  .tx-rail { position: sticky; top: calc(var(--mast-h, 120px) + 12px); max-height: calc(100vh - var(--mast-h, 120px) - 24px); overflow-y: auto; scrollbar-width: thin; }
+}
 @media (max-width: 1319px) { .tx-rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; max-width: 960px; } }
 .tx-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .rail-card { border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); padding: 10px 12px 8px; }
@@ -1946,12 +1978,7 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .rail-amt { font-weight: 800; color: var(--heading); font-variant-numeric: tabular-nums; }
 .rail-pl { font-weight: 600; }
 .rail-bids { all: unset; cursor: pointer; color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
-.rail-sum { margin: -2px 0 6px; font-size: 0.74rem; color: var(--ink-2); }
 .rail-empty { margin: 0 0 4px; font-size: 0.76rem; color: var(--muted); }
-.mv-body { display: grid; grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 10px 22px; padding: 10px 14px 12px; }
-.mv-body.one { grid-template-columns: minmax(150px, 210px) minmax(0, 1fr); }
-.mv-faab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 7px; font-size: 0.74rem; color: var(--muted); }
-.mv-faab-amt b { font-size: 1rem; font-weight: 800; color: var(--heading); font-variant-numeric: tabular-nums; margin-right: 2px; }
 .mv-bidders { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); color: var(--gold); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
 .mv-bidders:hover { background: color-mix(in srgb, var(--gold) 12%, transparent); }
 .mv-bidders:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -1981,19 +2008,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .bids-list li.won .bids-st { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 55%, transparent); }
 .bids-note { margin: 10px 0 0; font-size: 0.72rem; line-height: 1.45; color: var(--muted); }
 .mv-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.mv-team b { display: block; font-size: 0.9rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mv-team span { font-size: 0.74rem; color: var(--muted); }
-.mv-col { min-width: 0; }
-.mv-col p { margin: 2px 0 0; }
-.mv-label { display: block; margin-bottom: 4px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-.mv-col.add .mv-label { color: var(--rb); }
-.mv-col.drop .mv-label { color: var(--st-dnp, var(--accent-primary)); }
-.mv-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.mv-col li { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.mv-txt { display: flex; flex-direction: column; min-width: 0; }
 .mv-name { font-weight: 650; font-size: 0.86rem; color: var(--cream); }
-.mv-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--muted); }
-.mv-v { font-variant-numeric: tabular-nums; }
 .mx-list { display: flex; flex-direction: column; gap: 12px; max-width: 1080px; }
 .mx-filters { max-width: 1080px; }
 .mx-source { font-size: 0.74rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
@@ -2088,7 +2103,6 @@ th.fa-proj { text-align: right; }
 .fa-fit-t.deep { color: var(--muted); }
 #fa-wrap .controls { flex-wrap: wrap; gap: 10px; }
 @media (max-width: 900px) {
-  .mv-body, .mv-body.one { grid-template-columns: 1fr; }
   .mx-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "ta mid tb" "sa mid sb"; gap: 4px 8px; padding: 12px 12px 6px; }
   .mx-team.A { grid-area: ta; } .mx-team.B { grid-area: tb; } .mx-sc.A { grid-area: sa; } .mx-sc.B { grid-area: sb; } .mx-mid { grid-area: mid; }
   .mx-team .face { display: none; }
@@ -3727,7 +3741,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T03:00Z";
+  const BUILD_ID = "2026-10-05T04:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7378,8 +7392,29 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const tradeNote = LT.txType === "all" || LT.txType === "trade"
       ? `<p class="method-note">Trades are judged with SPAM values from the time of the trade when ranking history covers it. Trades from before SPAM rankings existed are labeled Pre-SPAM and evaluated as a retrospective with current values.</p>` : "";
     if (!list.length) return head + `<div class="tx-layout"><div class="tx-main"><p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p></div>${txRail(d)}</div>`;
-    return head + tradeNote + `<div class="tx-layout"><div class="tx-main"><div class="th-feed tx-feed">${list.map(t => t.type === "trade" ? tradeCard(evalTrade(t)) : moveCard(t)).join("")}</div>
-      <p class="count">${list.length} of ${all.length} transaction${all.length === 1 ? "" : "s"}</p></div>${txRail(d)}</div>`;
+    // grouped by week, newest first; the latest week shows by default and older weeks load on request
+    const byWeek = new Map();
+    list.forEach(t => { if (!byWeek.has(t.week)) byWeek.set(t.week, []); byWeek.get(t.week).push(t); });
+    const wkList = [...byWeek.keys()].sort((a, b) => b - a), shown = LT.txWeek !== "all" ? wkList : wkList.slice(0, Math.max(1, LT.txShow || 1));
+    const budget = Number(d.league.settings && d.league.settings.waiver_budget) || 0;
+    const section = w => {
+      const items = byWeek.get(w), inWeek = all.filter(t => t.week === w && (LT.txTeam === "all" || t.rosters.map(String).includes(LT.txTeam)));
+      const n = k => inWeek.filter(t => k.includes(txKind(t))).length, spent = inWeek.reduce((a, t) => a + (t.type === "waiver" && t.bid ? t.bid : 0), 0);
+      const sum = [[n(["waiver"]), "claim"], [n(["free_agent", "drop", "commissioner"]), "add/drop"], [n(["trade"]), "trade"]].filter(([c]) => c)
+        .map(([c, wd]) => `${c} ${c === 1 ? wd : wd === "add/drop" ? "adds/drops" : wd + "s"}`).join(" · ") + (spent ? ` · $${spent} FAAB spent` : "");
+      let out = "", rows = "";
+      const flush = () => { if (rows) out += `<div class="mv-list">${rows}</div>`; rows = ""; };
+      items.forEach(t => {
+        if (t.type === "trade") { flush(); out += tradeCard(evalTrade(t)).replace('<article class="th-card">', '<article class="th-card tx-trade-card">').replace('<header class="th-head"><span class="th-date">', '<header class="th-head"><span class="th-date"><span class="mv-tag trade">Trade</span>'); }
+        else rows += moveRow(t, budget);
+      });
+      flush();
+      return `<section class="tx-week"><header class="tx-week-head"><h3>Week ${w}</h3><span class="tx-week-sum">${esc(sum)}</span></header>${out}</section>`;
+    };
+    const hidden = wkList.length - shown.length;
+    return head + tradeNote + `<div class="tx-layout"><div class="tx-main"><div class="tx-feed">${shown.map(section).join("")}</div>
+      ${hidden > 0 ? `<div class="tx-older"><button class="btn" type="button" data-tx-older>Load older transactions · Week ${wkList[shown.length]}</button><span class="muted">${hidden} older week${hidden === 1 ? "" : "s"}</span></div>` : ""}
+      <p class="count">${shown.reduce((a, w) => a + byWeek.get(w).length, 0)} of ${all.length} transaction${all.length === 1 ? "" : "s"} shown</p></div>${txRail(d)}</div>`;
   }
   /* League Activity rail beside the Transactions feed (wide desktop; below the feed on smaller screens):
      FAAB remaining, most active teams and top waiver claims for the week in view (the Week filter, else the latest
@@ -7406,9 +7441,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const wkTx = all.filter(t => t.week === wk), count = new Map();
       wkTx.forEach(t => t.rosters.forEach(rid => count.set(rid, (count.get(rid) || 0) + 1)));
       const busy = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-      const n = k => wkTx.filter(t => txKind(t) === k).length;
-      const summary = [[n("waiver"), "claim"], [n("free_agent") + n("commissioner"), "add"], [n("drop"), "drop"], [n("trade"), "trade"]].filter(([c]) => c).map(([c, w]) => `${c} ${w}${c === 1 ? "" : "s"}`).join(" · ");
-      out.push(box("Most active", `Week ${wk}`, (summary ? `<p class="rail-sum">${summary}</p>` : "") + (busy.length
+      out.push(box("Most active", `Week ${wk}`, (busy.length
         ? `<ol class="rail-list">${busy.map(([rid, c]) => { const t = teamByRid(rid); return tline(t, `${c} move${c === 1 ? "" : "s"}`, t.mine); }).join("")}</ol>` : `<p class="rail-empty">No moves this week.</p>`)));
       const claims = moves.filter(t => t.week === wk && t.type === "waiver" && t.bid > 0).sort((a, b) => b.bid - a.bid).slice(0, 5);
       if (S.waiver_type === 2) {
@@ -7421,28 +7454,26 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     return out.length ? `<aside class="tx-rail" aria-label="League activity">${out.join("")}</aside>` : "";
   }
-  // A waiver claim, free-agent pickup or drop: team | adds (+ FAAB and bidders) | drops. An empty side collapses.
-  function moveCard(t) {
+  // A waiver claim, free-agent pickup or drop as one dense row: type badge (+ bidders) · team · + adds, FAAB, − drops · time.
+  // Only what exists is shown; a $0 claim stays quiet and a big bid (10%+ of the budget) stands out.
+  function moveRow(t, budget = 0) {
     const map = bySleeper(), rid = t.rosters[0], team = teamByRid(rid);
-    const line = sid => {
+    const pl = (sid, sign) => {
       const e = rosterEntry(sid, map);
-      return `<li>${face(e.sid, e.name, "sm")}<span class="mv-txt"><span class="pl-head">${EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name, "mv-name") : `<span class="mv-name">${esc(e.name)}</span>`}${nflTag(e.team)}</span>
-        <span class="mv-sub"><span class="pos ${esc(e.pos)}">${esc(e.p ? posLabel(e.p) : e.pos || "–")}</span>${e.p ? `<span class="mv-v">${fmt(dv(e.p))}</span>` : `<span class="muted">Unranked</span>`}</span></span></li>`;
+      return `<span class="mv-p ${sign === "+" ? "add" : "drop"}"><i aria-hidden="true">${sign === "+" ? "+" : "−"}</i>${face(e.sid, e.name, "xs")}${EDIT_POS.includes(e.pos) ? nameLink(e.sid, e.name, "mv-name") : `<span class="mv-name">${esc(e.name)}</span>`}${nflTag(e.team)}<span class="pos ${esc(e.pos)}">${esc(e.p ? posLabel(e.p) : e.pos || "–")}</span></span>`;
     };
     const adds = Object.keys(t.adds).filter(sid => t.adds[sid] === rid), drops = Object.keys(t.drops).filter(sid => t.drops[sid] === rid);
     const faabOn = activeData().league.settings && activeData().league.settings.waiver_type === 2;
-    const faab = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0) ? `<span class="mv-faab-amt"><b>$${t.bid}</b> FAAB</span>` : "";
+    const faab = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0)
+      ? `<span class="mv-faab-amt${t.bid === 0 ? " zero" : budget && t.bid >= 0.1 * budget ? " big" : ""}">$${t.bid}<small>FAAB</small></span>` : "";
     const bidders = t.bids && t.bids.length > 1 ? `<button class="mv-bidders" type="button" data-bids="${esc(t.id)}" aria-haspopup="dialog" title="See every bid">${t.bids.length} bidders</button>` : "";
-    const col = (cls, label, list, extra) => `<div class="mv-col ${cls}"><span class="mv-label">${label}</span><ul>${list.map(line).join("")}</ul>${extra}</div>`;
-    return `<article class="th-card mv-card ${txKind(t)}">
-      <header class="th-head"><span class="mv-tags"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span>${bidders}</span>
-        <span class="th-date">Week ${t.week} · ${esc(txWhen(t.at))}</span></header>
-      <div class="mv-body${adds.length && drops.length ? "" : " one"}">
-        <div class="mv-team">${teamFace(team, "sm")}<div><b>${esc(team.name)}</b>${team.manager && team.manager !== team.name ? `<span>${esc(team.manager)}</span>` : ""}</div></div>
-        ${adds.length ? col("add", "Adds", adds, faab ? `<div class="mv-faab">${faab}</div>` : "") : ""}
-        ${drops.length ? col("drop", "Drops", drops, !adds.length && faab ? `<div class="mv-faab">${faab}</div>` : "") : ""}
-      </div>
-    </article>`;
+    const when = new Date(t.at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+    return `<div class="mv-row ${txKind(t)}">
+      <span class="mv-kind"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span>${bidders}</span>
+      <span class="mv-team">${teamFace(team, "xs")}<b title="${esc(team.manager || "")}">${esc(team.name)}</b></span>
+      <span class="mv-acts">${adds.map(sid => pl(sid, "+")).join("")}${faab}${drops.map(sid => pl(sid, "−")).join("")}</span>
+      <span class="mv-when" title="${esc(txWhen(t.at))}">${esc(when)}</span>
+    </div>`;
   }
   const teamByRid = rid => LG.teams.find(x => x.rosterId === rid) || { name: `Team ${rid}`, manager: "", avatar: "", rosterId: rid };
   // FAAB bids for one waiver claim: every claim Sleeper logged for that player in that waiver run, highest first
@@ -7649,7 +7680,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const sub = e.target.closest("[data-lsub]");
     if (sub) { LT.sub = sub.dataset.lsub; renderLeague(); return; }
     const txt = e.target.closest("[data-tx-type]");
-    if (txt) { LT.txType = txt.dataset.txType; renderLeague(); return; }
+    if (txt) { LT.txType = txt.dataset.txType; LT.txShow = 1; renderLeague(); return; }
+    if (e.target.closest("[data-tx-older]")) { LT.txShow = (LT.txShow || 1) + 1; renderLeague(); return; }
     const mw = e.target.closest("[data-mx-week]");
     if (mw) { LT.mWeek = Number(mw.dataset.mxWeek); LT.mOpen = new Set(); renderLeague(); return; }
     if (e.target.closest("[data-mx-refresh]")) { const d = activeData(); if (d) { LT.mxError[d.league.league_id] = ""; loadMatchups(LT.mWeek, true); } return; }
@@ -7690,7 +7722,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("league-body").addEventListener("change", e => {
     if (e.target.id === "lg-keep") LT.keep = e.target.checked;
     if (e.target.id === "tx-week") { LT.txWeek = e.target.value; renderLeague(); }
-    if (e.target.id === "tx-team") { LT.txTeam = e.target.value; renderLeague(); }
+    if (e.target.id === "tx-team") { LT.txTeam = e.target.value; LT.txShow = 1; renderLeague(); }
     if (e.target.id === "mx-week") { LT.mWeek = Number(e.target.value); LT.mOpen = new Set(); renderLeague(); }
   });
   // open/close a team in place, keeping the clicked row where it was on screen
