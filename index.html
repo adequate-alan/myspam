@@ -2100,6 +2100,16 @@ th.fa-proj { text-align: right; }
 .fa-fitlbl { margin-left: auto; }
 .fa-avail { font-size: 0.7rem; color: var(--muted); }
 .fa-avail.waivers { color: var(--mine-accent); }
+/* Waiver Wire polish (Alan, Oct 4): whole row opens the player page; secondary signals stay quiet */
+.fa-row { cursor: pointer; }
+.fa-row:hover td { background: var(--hover-bg); }
+.fa-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.fa-trend { display: block; font-size: 0.66rem; font-weight: 650; color: var(--rb); white-space: nowrap; }
+#fa-wrap .fa-srk-b { background: none; padding: 0; font-weight: 600; color: var(--muted); }
+#fa-wrap .rf-wk { font-size: 0.56rem; opacity: 0.75; }
+#fa-wrap .rf-sub { font-size: 0.64rem; opacity: 0.8; }
+#fa-wrap .rf-trend { font-weight: 600; }
+.fa-proj.final small, .fa-proj.ok small { color: var(--ink-2); }
 .fa-fit-t { font-size: 0.78rem; color: var(--ink-2); white-space: nowrap; }
 .fa-fit-t.start { color: var(--rb); font-weight: 600; }
 .fa-fit-t.deep { color: var(--muted); }
@@ -3132,7 +3142,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <input class="search" id="fa-search" type="search" placeholder="Search available players" aria-label="Search available players">
       <select class="select" id="fa-sort" aria-label="Sort available players">
         <option value="rank">Sort: SPAM rank</option><option value="proj">Sort: weekly projection</option><option value="form">Sort: recent form</option>
-        <option value="ppg">Sort: season PPG</option><option value="matchup">Sort: matchup</option><option value="posrank">Sort: position rank</option>
+        <option value="ppg">Sort: season PPG</option><option value="matchup">Sort: matchup</option><option value="posrank">Sort: position rank</option><option value="trend">Sort: trending adds</option>
       </select>
       <label class="lg-keep fa-fitlbl" title="Nudges players who'd start for you up the list. SPAM rank still leads."><input type="checkbox" id="fa-fitsort"> My team fit</label>
     </div>
@@ -3860,7 +3870,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T06:30Z";
+  const BUILD_ID = "2026-10-05T07:20Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -8128,7 +8138,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (role) return /FLEX|SF|W\/R|W\/T/.test(role) ? { text: `Starts at ${role}`, cls: "start" } : { text: `${p.pos} upgrade`, cls: "start" };
     const ahead = K.healthy(me).filter(x => x.pos === p.pos && dv(x) > dv(p)).length;
     const benchAhead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
-    return benchAhead >= 2 && p.pos !== "QB" ? { text: "Bench depth", cls: "deep" } : { text: `Your ${p.pos}${ahead + 1}`, cls: "" };
+    return benchAhead >= 2 && p.pos !== "QB" ? { text: "Bench depth", cls: "deep" } : { text: `Would be ${p.pos}${ahead + 1}`, cls: "" };
   }
   /* ---------- Weekly projections: one shared module (Waiver Wire, Matchups, player modal, future start/sit) ----------
      provider (per-game expectation) → league scoring engine → weekly projection → game status (weekOutlook).
@@ -8372,6 +8382,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return `<span class="fa-mx"><span class="fa-mx-top">${teamLogo(g.oppTeam, "xs")}${g.home ? "vs" : "@"} <b>${esc(g.oppTeam)}</b></span>
       <span class="fa-mx-sub ${g.kind}">${esc(g.text)}${word ? ` · <span class="fa-mx-v ${x.grade}" title="${esc(VERDICT[x.grade])}">${word}</span>` : ""}</span></span>`;
   }
+  /* Trending adds: Sleeper's documented, keyless trending endpoint (adds across all Sleeper leagues in the last
+     24 hours). Not roster %, which Sleeper's public API doesn't provide. Memory only, refreshed every 10 minutes. */
+  const TREND = { at: 0, map: null, loading: false };
+  function loadTrending() {
+    if (TREND.loading || (TREND.map && Date.now() - TREND.at < 600e3)) return;
+    TREND.loading = true;
+    slGetTimed("/players/nfl/trending/add?lookback_hours=24&limit=300")
+      .then(list => { TREND.map = new Map((Array.isArray(list) ? list : []).map(x => [String(x.player_id), Number(x.count) || 0])); TREND.at = Date.now(); })
+      .catch(() => { TREND.map = TREND.map || new Map(); TREND.at = Date.now(); })
+      .then(() => { TREND.loading = false; if (!$("fa-wrap").hidden) renderFA(); });
+  }
+  const trendCount = n => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "") + "k" : String(n));
   let faFitSort = false;
   $("fa-fitsort").addEventListener("change", e => { faFitSort = e.target.checked; renderFA(); });
   function renderFA() {
@@ -8379,6 +8401,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!d) { $("fa-body").innerHTML = ""; $("fa-wrap").hidden = true; return; }
     const need = STATS_SEASONS.slice(0, 2).filter(y => !statsCache[y]);
     if (need.length) Promise.all(need.map(loadSeason)).then(() => { if (!$("fa-wrap").hidden) renderFA(); });
+    loadTrending();
+    const trend = TREND.map || new Map();
     let list = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && !LG.ownerOf.has(p.id));
     if (faPos !== "ALL") list = list.filter(p => p.pos === faPos);
     if (faQuery) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(faQuery));
@@ -8398,6 +8422,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       rank: byRank, proj: num(proj, x => x.v), form: num(form, x => x.avg),
       ppg: (a, b) => (((season.get(b.sleeperId) || {}).ppg ?? -1) - ((season.get(a.sleeperId) || {}).ppg ?? -1)) || byRank(a, b),
       matchup: (a, b) => (grade(a) - grade(b)) || byRank(a, b),
+      trend: (a, b) => ((trend.get(b.sleeperId) || 0) - (trend.get(a.sleeperId) || 0)) || byRank(a, b),
       posrank: (a, b) => ((LG.adjPos.get(a.id) ?? a.posNum ?? 999) - (LG.adjPos.get(b.id) ?? b.posNum ?? 999)) || byRank(a, b)
     };
     list.sort(sorts[faSort] || byRank);
@@ -8409,10 +8434,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <th scope="col" class="fa-fit" title="Where he'd fit on your roster in this league's lineup. Context only: it never changes his SPAM rank.">Fit</th></tr>`;
     $("fa-body").innerHTML = list.length ? list.map(p => {
       const wv = waiverUntil(p), f = fit.get(p.id), pj = proj.get(p.id), sn = season.get(p.sleeperId);
-      return `<tr class="player">
+      const tc = trend.get(p.sleeperId);
+      return `<tr class="player fa-row" data-player="${esc(p.sleeperId)}" tabindex="0" aria-label="${esc(p.name)}: open player page">
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
-        <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span></div></div></td>
+        <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span>${tc ? `<span class="fa-trend" title="Added in ${tc.toLocaleString("en-US")} Sleeper leagues in the last 24 hours (all of Sleeper, not just this league)">▲ ${trendCount(tc)} adds · 24h</span>` : ""}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
       <td class="fa-proj ${pj.kind}"${pj.tip ? ` title="${esc(pj.tip)}"` : ""}>${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
       <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
@@ -8423,7 +8449,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <td class="fa-fit">${f ? `<span class="fa-fit-t ${f.cls}">${esc(f.text)}</span>` : `<span class="muted">—</span>`}</td></tr>`;
     }).join("")
       : `<tr><td class="empty" colspan="10">No ranked players available${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
-    $("fa-count").textContent = `${list.length} ranked player${list.length === 1 ? "" : "s"} available in ${d.league.name}. Projections are SPAM's (rescored for this league), not matchup-adjusted. Roster % isn't shown: Sleeper's public data doesn't include it.`;
+    $("fa-count").textContent = `${list.length} ranked player${list.length === 1 ? "" : "s"} available in ${d.league.name}. Projections are SPAM's (rescored for this league), not matchup-adjusted. Trending = adds across all Sleeper leagues in the last 24 hours (Sleeper's public data has no roster %). Click a row for the player page.`;
   }
 
   /* Trade calculator: pick teams and click players from their rosters */
