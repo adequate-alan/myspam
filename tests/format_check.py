@@ -96,6 +96,7 @@ with sync_playwright() as p:
     pg.evaluate("() => { const s = document.getElementById('tc-league'); s.value = 'none'; s.dispatchEvent(new Event('change', { bubbles: true })); }")
     pg.wait_for_timeout(400)
     pg.fill("#search-B", "George Kittle"); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
+    pg.fill("#search-A", "Bijan Robinson"); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(500)   # the calculator opens empty: give side A a player too
     v_none = calc_value(pg, "George Kittle")
     base_k = num(base0["George Kittle"])
     ok(v_none < base_k, f"No league mode, league without TE premium: Kittle {v_none} < base {base_k}")

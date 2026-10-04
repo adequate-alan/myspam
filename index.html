@@ -3964,7 +3964,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T13:00Z";
+  const BUILD_ID = "2026-10-05T13:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -10302,10 +10302,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   rebuild();   // show any edits saved in this browser
   renderLeagueUI();   // header settings chip and the rankings view row
 
-  // Open with an example trade so the calculator shows what it does
-  const find = n => players.find(p => p.name === n);
-  const ex = [find("Jahmyr Gibbs")], exB = [find("Ashton Jeanty"), find("Kyren Williams")];
-  if (ex.every(Boolean) && exB.every(Boolean)) { sides.A = ex.map(p => p.id); sides.B = exB.map(p => p.id); }
+  // The calculator opens empty (Alan, Oct 4: no example trade pre-filled)
   renderTrade();
 })();
 </script>
