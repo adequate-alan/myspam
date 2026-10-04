@@ -1329,6 +1329,45 @@ body.editing #panel-rankings td.val { min-width: 330px; }
 .roster-toggle[aria-expanded="true"]::before { content: "– "; }
 .roster-toggle:hover { color: var(--cream); }
 .team-roster .tr-list { max-height: 260px; }
+/* 2-team league mode: the partner's roster as a horizontal strip of player cards (Alan, Oct 4; Flock-inspired workflow) */
+.rs-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
+.rs-card { all: unset; box-sizing: border-box; flex: 0 0 auto; width: 92px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 7px;
+  border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; text-align: center; transition: border-color 0.12s, background 0.12s; }
+.rs-card .face { width: 40px; height: 40px; }
+.rs-card .pos { min-width: 0; height: 18px; font-size: 0.6rem; padding: 0 5px; }
+.rs-name { max-width: 100%; font-size: 0.72rem; font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-val { font-size: 0.66rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+button.rs-card:hover { border-color: var(--border-strong); background: var(--hover-bg); }
+button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.rs-card.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, var(--surface)); box-shadow: inset 0 -2px 0 var(--gold); }
+.rs-card.on .rs-val { color: var(--gold-bright); }
+.rs-card.off { opacity: 0.45; cursor: default; }
+/* Before → after roster impact, right under the verdict */
+.ba { margin: 14px 0 4px; }
+.ba-title { margin: 0 0 8px; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.ba-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .ba-cols { grid-template-columns: 1fr; } }
+.ba-col { border: 1px solid var(--line-soft); border-radius: var(--radius); background: color-mix(in srgb, var(--bg) 30%, var(--surface)); padding: 10px 12px; min-width: 0; }
+.ba-col.mine { box-shadow: inset 3px 0 0 var(--mine-accent); }
+.ba-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ba-head b { font-size: 0.92rem; color: var(--ink); }
+.ba-col.mine .ba-head b { color: var(--mine-accent); }
+.ba-power { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; background: var(--surface); margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+.ba-lbl { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ba-power b { font-size: 1.05rem; }
+.ba-arr { color: var(--muted); margin: 0 2px; }
+.ba-pos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ba-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; border-radius: 6px; border: 1px solid var(--line-soft); font-size: 0.76rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ba-chip .pos { min-width: 0; height: 18px; font-size: 0.6rem; padding: 0 5px; }
+.ba-chip.up, .ba-power.up { border-color: color-mix(in srgb, var(--rb) 45%, transparent); }
+.ba-chip.up b, .ba-power.up b { color: var(--rb); }
+.ba-chip.down, .ba-power.down { border-color: color-mix(in srgb, var(--st-dnp) 40%, transparent); }
+.ba-chip.down b, .ba-power.down b { color: var(--st-dnp); }
+.ba-chip.same { opacity: 0.75; }
+.ba-ch { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--ink-2); }
+.ba-ch li::before { content: "•"; margin-right: 6px; color: var(--muted); }
+.ba-ch li.lc-in::before { color: var(--rb); } .ba-ch li.lc-out::before { color: var(--st-dnp); }
+.ba-none { margin: 0; font-size: 0.76rem; color: var(--muted); }
 .btn.balance-btn { align-self: flex-start; border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); color: var(--gold-bright); }
 .btn.balance-btn[aria-expanded="true"] { background: color-mix(in srgb, var(--gold) 10%, var(--control)); }
 .balance { margin-top: -4px; }
@@ -3312,6 +3351,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <button class="chip-btn" type="button" data-lens="market" aria-pressed="true">Market value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false">League fit</button>
           </div>
           <button class="btn balance-btn" id="balance-btn" type="button" aria-expanded="false" aria-controls="balance" hidden>Balance this trade</button>
+          <button class="btn link" id="bal-undo" type="button" hidden>Undo</button>
           <button class="btn" id="swap-btn" type="button">Swap sides</button>
           <button class="btn" id="clear-btn" type="button">Clear</button>
         </div>
@@ -3320,15 +3360,19 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <div class="meter idle" id="meter"><div class="ma" id="meter-a" style="width:50%"></div><div class="mb"></div></div>
         <div class="meter-labels"><span id="score-A">You</span><span id="score-B">They</span></div>
       </div>
+      <div class="ba" id="tc-ba" hidden></div>
       <div class="balance" id="balance" hidden>
         <p class="balance-sub" id="balance-sub"></p>
         <div class="balance-list" id="balance-list"></div>
       </div>
       <div class="tc-more">
         <details id="tc-why"><summary>Why?</summary><div class="tc-more-body" id="tc-why-body"></div></details>
-        <details id="tc-impact"><summary>Roster impact <span class="sum-hint" id="tc-impact-hint"></span></summary>
+        <details id="tc-impact"><summary>Lineup changes &amp; team-specific value <span class="sum-hint" id="tc-impact-hint"></span></summary>
           <div class="tc-more-body">
             <div class="tc-analysis" id="tc-analysis" hidden></div>
+          </div>
+        </details>
+        <details id="tc-breakdown"><summary>How SPAM calculated this</summary><div class="tc-more-body"><div id="tc-breakdown-body"></div>
             <div class="needs">
               <div class="needs-head">
                 <span class="ctl-label">Your roster needs</span>
@@ -3336,10 +3380,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
                 <button class="footer-link" id="needs-reset" type="button" hidden>Reset</button>
               </div>
               <div class="needs-grid" id="needs-grid"></div>
-            </div>
-          </div>
-        </details>
-        <details id="tc-breakdown"><summary>Value breakdown</summary><div class="tc-more-body" id="tc-breakdown-body"></div></details>
+            </div></div></details>
       </div>
     </div>
   </section>
@@ -3923,7 +3964,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T12:10Z";
+  const BUILD_ID = "2026-10-05T13:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4790,9 +4831,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("three-verdicts").hidden = !three;
     ["verdict-title", "verdict-gap", "verdict-sub", "meter-wrap", "swap-btn"].forEach(id => { $(id).hidden = three; });
     if (three) $("tc-lens").hidden = true;
-    if (three) { renderTrade3(); return; }
+    $("bal-undo").hidden = !(TC_UI.undo && JSON.stringify([sides.A, sides.B, sides.C]) === TC_UI.undo.after);
+    if (three) { $("tc-ba").hidden = true; renderTrade3(); return; }
+    autoPickTeams();
     renderTradeContext();
     TC_UI.ctx = tcLeague() && (sides.A.length || sides.B.length) ? rosterContext() : null;
+    renderBeforeAfter(TC_UI.ctx);
     renderRoster("A");
     renderRoster("B");
     if (typeof renderTeamRosters === "function") renderTeamRosters();
@@ -4909,6 +4953,47 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("balance").hidden = !(shown && TC_UI.balance);
     $("balance-btn").setAttribute("aria-expanded", shown && TC_UI.balance);
     $("balance-btn").textContent = TC_UI.balance ? "Hide suggestions" : "Balance this trade";
+  }
+  // League mode: a team left on "Pick a team" is filled from the owner of the players it sends (all one team),
+  // so a trade built from search still shows real team names and roster impact. Never overrides a picked team.
+  function autoPickTeams() {
+    if (!tcLeague() || TC3.on) return;
+    const owner = list => { const ts = [...new Set(list.map(id => { const o = LG.ownerOf.get(id); return o ? String(o.rosterId) : ""; }))]; return ts.length === 1 && ts[0] ? ts[0] : null; };
+    if (!$("team-A").value) { const r = owner(sides.B); if (r && r !== $("team-B").value) $("team-A").value = r; }
+    if (!$("team-B").value) { const r = owner(sides.A); if (r && r !== $("team-A").value) $("team-B").value = r; }
+  }
+  /* Before → after: each team's Power Rank and position ranks with the trade, from the same league-adjusted
+     lineup method as Power Rankings (other teams unchanged), plus the main lineup changes. */
+  function renderBeforeAfter(ctx) {
+    const box = $("tc-ba");
+    if (!ctx) {
+      const need = tcLeague() && (sides.A.length || sides.B.length) && !(sideTeam("A") && sideTeam("B"));
+      box.hidden = !need;
+      box.innerHTML = need ? `<p class="pp-note">Pick both teams above to see how this trade changes each roster.</p>` : "";
+      return;
+    }
+    const ev = evaluateTeams(), names = { A: sideName("A"), B: sideName("B") };
+    const powerOf = (X, Y) => {
+      const ex = ev.byRoster.get(String(X.t.rosterId)), ey = ev.byRoster.get(String(Y.t.rosterId));
+      if (!ex || !ey) return null;
+      const ax = ex.score + (X.after.score - X.before.score), ay = ey.score + (Y.after.score - Y.before.score);
+      const after = 1 + ev.list.filter(z => z.team !== X.t && z.team !== Y.t && z.score > ax).length + (ay > ax ? 1 : 0);
+      return [ex.power, after];
+    };
+    const cls = ([b, a]) => (a < b ? "up" : a > b ? "down" : "same");
+    const arrow = ([b, a], fmtF) => `${fmtF(b)} <span class="ba-arr">→</span> <b>${fmtF(a)}</b>`;
+    const col = (s, X, Y) => {
+      const pr = powerOf(X, Y), pri = ["in", "out", "move", "bench"], ch = X.changes.slice().sort((a, b) => pri.indexOf(a.kind) - pri.indexOf(b.kind)).slice(0, 4);
+      return `<div class="ba-col side-${s}${X.t.mine ? " mine" : ""}">
+        <div class="ba-head">${teamFace(X.t, "sm")}<b>${esc(names[s])}</b></div>
+        ${pr ? `<div class="ba-power ${cls(pr)}"><span class="ba-lbl">Power rank</span><span>${arrow(pr, n => "#" + n)}</span></div>` : ""}
+        <div class="ba-pos">${EDIT_POS.map(pos => { const pl = X.places[pos]; return `<span class="ba-chip ${cls(pl)}"><span class="pos ${pos}">${pos}</span>${arrow(pl, ordinal)}</span>`; }).join("")}</div>
+        ${ch.length ? `<ul class="ba-ch">${ch.map(c => `<li class="lc-${c.kind}">${esc(c.text)}</li>`).join("")}</ul>` : `<p class="ba-none">No lineup changes</p>`}
+      </div>`;
+    };
+    box.innerHTML = `<h3 class="ba-title">How each roster changes ${infoIcon("League ranks before → after the trade, from the same league-adjusted lineup and position-strength method as Power Rankings (other teams unchanged). Green = better, red = worse.", "About roster impact")}</h3>
+      <div class="ba-cols">${col("A", ctx.A, ctx.B)}${col("B", ctx.B, ctx.A)}</div>`;
+    box.hidden = false;
   }
   /* ---------- 3-team trades (off by default) ----------
      sides.X = players team X receives; origin tells which team sends each player. Every team
@@ -5215,7 +5300,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("tc-lens").addEventListener("click", e => { const b = e.target.closest("[data-lens]"); if (b) { TC_UI.lens = b.dataset.lens; renderTrade(); } });
   $("balance-list").addEventListener("click", e => {
     const b = e.target.closest("button[data-ids]"); if (!b) return;
+    const before = JSON.stringify([sides.A, sides.B, sides.C]);
     b.dataset.ids.split(",").forEach(id => { sides[b.dataset.side].push(Number(id)); if (b.dataset.origin) origin.set(Number(id), b.dataset.origin); });
+    TC_UI.undo = { before, after: JSON.stringify([sides.A, sides.B, sides.C]) };   // Undo shows while the trade is unchanged since
+    renderTrade();
+  });
+  $("bal-undo").addEventListener("click", () => {
+    if (!TC_UI.undo) return;
+    [sides.A, sides.B, sides.C] = JSON.parse(TC_UI.undo.before); TC_UI.undo = null;
     renderTrade();
   });
   $("swap-btn").addEventListener("click", () => {
@@ -8551,9 +8643,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const src = TC3.on ? s : s === "A" ? "B" : "A";
       const box = $("teamroster-" + s), tog = $("rtoggle-" + s), id = $("team-" + src).value;
       const team = tcLeague() && id ? LG.teams.find(t => String(t.rosterId) === id) : null;
-      const open = !!team && TC_UI.open[s];
+      const open = !!team && (TC3.on ? TC_UI.open[s] : true);   // 2-team: the partner's roster strip is always there
       const whose = team ? (team.mine ? "your" : team.name + "'s") : "";
-      tog.hidden = !team;
+      tog.hidden = !team || !TC3.on;
       tog.classList.toggle("main", !!team && !TC3.on);
       tog.setAttribute("aria-expanded", open);
       tog.textContent = TC3.on ? (open ? "Hide roster" : "Add from roster") : open ? `Hide ${whose} roster` : `Add from ${whose} roster`;
@@ -8567,6 +8659,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             ${others3(s).map(x => `<button class="tr-send" type="button" data-id="${e.p.id}" data-side="${x}" data-origin="${s}"${inTrade(e.p.id) ? " disabled" : ""} title="Send to ${esc(sideName(x))}">${esc(shortName(sideName(x)))}</button>`).join("")}</div>`).join("")}</div>`;
         return;
       }
+      // a horizontal strip of player cards: click adds him to this side, click again removes him
+      const short = n => { const parts = String(n).split(/\s+/); return parts.length > 1 ? parts[0][0] + ". " + compactName(n) : n; };
+      box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Click to add to ${esc(sideName(s))} · click again to remove</span></div>
+        <div class="rs-strip">${entries.map(e => {
+          if (!e.ranked) return `<div class="rs-card off" title="${esc(e.name)}: not on the SPAM Board">${face(e.sid, e.name, "", false)}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="rs-name">${esc(short(e.name))}</span></div>`;
+          const on = sides[s].includes(e.p.id);
+          return `<button class="rs-card${on ? " on" : ""}" type="button" data-id="${e.p.id}" data-side="${s}" aria-pressed="${on}" title="${esc(e.name)} · ${esc(posLabel(e.p))} · ${fmt(tv(e.p))}">${face(e.sid, e.name, "", false)}<span class="pos ${esc(e.pos)}">${esc(posLabel(e.p))}</span><span class="rs-name">${esc(short(e.name))}</span><span class="rs-val">${fmt(tv(e.p))}</span></button>`;
+        }).join("")}</div>`;
+      return;
       box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Goes to ${esc(sideName(s))}</span></div>
         <div class="tr-list">${entries.map(e => e.ranked
           ? `<button class="tr-player${inTrade(e.p.id) ? " in" : ""}" type="button" data-id="${e.p.id}" data-side="${s}"${inTrade(e.p.id) ? " disabled" : ""}>
@@ -8581,7 +8682,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("teamroster-" + s).addEventListener("click", e => {
       const b = e.target.closest("button[data-id]");
       if (!b) return;
-      sides[b.dataset.side].push(Number(b.dataset.id));
+      const id = Number(b.dataset.id), sd = b.dataset.side;
+      if (!TC3.on && sides[sd].includes(id)) { sides[sd] = sides[sd].filter(x => x !== id); renderTrade(); return; }   // strip: click again removes
+      if (inTrade(id)) return;
+      sides[sd].push(id);
       if (b.dataset.origin) origin.set(Number(b.dataset.id), b.dataset.origin);
       renderTrade();
     });

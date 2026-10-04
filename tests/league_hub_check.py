@@ -193,6 +193,30 @@ with sync_playwright() as p:
     ok(pg.locator(".mx-card.final").count() == 6 and pg.locator(".mx-res.win").count() >= 5 and pg.locator(".mx-bar").count() == 0, "A past week: final scores, the winner marked, no projection bar")
     pg.click("[data-mx-week='4']"); pg.wait_for_timeout(800)
 
+    # Trade Calculator: roster strips, auto-picked teams, before -> after impact, balance + Undo
+    pg.click("#tab-trade"); pg.wait_for_timeout(600); pg.click("#clear-btn")
+    pg.evaluate("() => { for (const s of ['A','B']) { const x = document.getElementById('team-'+s); x.value=''; x.dispatchEvent(new Event('change', {bubbles:true})); } }"); pg.wait_for_timeout(300)
+    pg.fill("#search-A", name_of[L1["rosters"][2]["players"][0]]); pg.wait_for_timeout(300); pg.locator("#results-A li, #results-A button").first.click(); pg.wait_for_timeout(300)
+    pg.fill("#search-B", name_of[L1["rosters"][0]["players"][1]]); pg.wait_for_timeout(300); pg.locator("#results-B li, #results-B button").first.click(); pg.wait_for_timeout(500)
+    ok(pg.input_value("#team-A") == "1" and pg.input_value("#team-B") == "3", "Calculator: empty team pickers fill from the owners of the players each side sends")
+    ok("Alpha League Team 1" in pg.inner_text("#side-title-A") and "Alpha League Team 3" in pg.inner_text("#side-title-B"), "Cards are headed with the real team names")
+    ok(pg.locator("#teamroster-A .rs-card").count() >= 10 and pg.locator("#teamroster-B .rs-card").count() >= 10 and pg.locator(".rs-card.on").count() == 2, "Each side shows the partner's roster as a strip; players in the deal are selected")
+    ba = pg.inner_text("#tc-ba").upper()
+    ok(pg.locator("#tc-ba").is_visible() and "POWER RANK" in ba and ba.count("→") >= 10, "Before -> after: Power rank and QB/RB/WR/TE ranks for both teams")
+    n0 = pg.locator(".rs-card.on").count()
+    pg.locator("#teamroster-A button.rs-card:not(.on)").first.click(); pg.wait_for_timeout(300)
+    n1 = pg.locator(".rs-card.on").count()
+    pg.locator("#teamroster-A button.rs-card.on").last.click(); pg.wait_for_timeout(300)
+    ok(n1 == n0 + 1 and pg.locator(".rs-card.on").count() == n0, "Clicking a roster card adds him; clicking again removes him")
+    if pg.locator("#balance-btn").is_visible():
+        pg.click("#balance-btn"); pg.wait_for_timeout(300)
+        if pg.locator("#balance-list button").count():
+            c0 = pg.locator(".roster li").count(); pg.locator("#balance-list button").first.click(); pg.wait_for_timeout(400)
+            c1 = pg.locator(".roster li").count(); pg.click("#bal-undo"); pg.wait_for_timeout(400)
+            ok(c1 > c0 and pg.locator(".roster li").count() == c0, "A balance suggestion adds itself to the trade, and Undo takes it back")
+    ok("HOW SPAM CALCULATED THIS" in pg.inner_text("#tc-breakdown summary").upper(), "Technical math sits in one collapsed 'How SPAM calculated this' section")
+    pg.click("#clear-btn"); pg.click("#tab-league"); pg.wait_for_timeout(500)
+
     # Rosters: team picker, header, week nav, dense table by section, season schedule
     pg.click("[data-lsub=rosters]"); pg.wait_for_timeout(2500)
     ok(pg.locator(".ro-pick").count() == 12 and "You" in pg.locator(".ro-pick.on").inner_text(), "Rosters: a picker with every team, your team selected first")
