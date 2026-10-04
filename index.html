@@ -3357,7 +3357,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 <dialog class="signin fmt-dialog" id="fmt-dialog" aria-labelledby="fmt-title">
   <form id="fmt-form" method="dialog">
     <h2 id="fmt-title">League settings</h2>
-    <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. The SPAM order stays put unless a player's value changes enough in your format to pass someone.</p>
+    <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. At each position the SPAM order stays put unless a player's value changes enough to pass someone; across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value.</p>
     <div class="fmt-src" id="fmt-src" hidden></div>
     <div class="fmt-locked" id="fmt-locked" hidden></div>
     <div class="fmt-presets" id="fmt-presets" role="group" aria-label="Common formats"></div>
@@ -3886,7 +3886,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T10:30Z";
+  const BUILD_ID = "2026-10-05T11:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5961,9 +5961,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       let prev = Infinity;
       stickyOrder(g, p => raw.get(p.id), FA.margin, FA.maxPosMove).forEach((p, k) => {
         LG.adjPos.set(p.id, k + 1);
-        const v = p.custom ? raw.get(p.id) : Math.min(raw.get(p.id), prev);
+        // never above the player ahead of him at the position (published values included, Alan Oct 4)
+        const r = raw.get(p.id), v = prev === Infinity || r < prev ? r : Math.max(0, prev * (1 - VALUE_MODEL.minRankStep));
         LG.adj.set(p.id, Math.round(v));
-        if (!p.custom) prev = v;
+        prev = v;
       });
     }
     players.forEach(p => { if (!LG.adj.has(p.id)) LG.adj.set(p.id, Math.round(raw.get(p.id))); });
@@ -5973,11 +5974,34 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     EDIT_POS.forEach(pos => { qs[pos] = withRank.filter(p => p.pos === pos && LG.adjPos.has(p.id)).sort((a, b) => LG.adjPos.get(a.id) - LG.adjPos.get(b.id)); });
     const seq = withRank.map(p => (qs[p.pos] && LG.adjPos.has(p.id) ? qs[p.pos].shift() : p));
     const rest = ranked.filter(p => p.rank == null).sort((a, b) => LG.adj.get(b.id) - LG.adj.get(a.id));
-    // the tail (auto-added players) is ordered among itself, always after every player above it
+    // Across positions the overall order follows the adjusted value (Alan, Oct 4: a lower value is never ranked
+    // ahead of a higher one, as on the SPAM Board): each position keeps its own order (above), and the position
+    // queues are merged by value, ties going to the earlier board slot. In the base format the values already
+    // follow the board, so the order is unchanged. The tail (auto-added players) is merged the same way after
+    // every player above it.
     const all = seq.concat(rest), isAuto = p => !!p.tail;
-    stickyOrder(all.filter(p => !isAuto(p)), p => LG.adj.get(p.id), FA.margin, Infinity)
-      .concat(stickyOrder(all.filter(isAuto), p => LG.adj.get(p.id), FA.margin, Infinity))
-      .forEach((p, k) => LG.adjRank.set(p.id, k + 1));
+    const mergeByValue = list => {
+      const q = new Map(), out = [];
+      list.forEach((p, i) => { const k = p.pos; if (!q.has(k)) q.set(k, []); q.get(k).push({ p, i }); });
+      while (out.length < list.length) {
+        let best = null;
+        for (const arr of q.values()) {
+          const h = arr[0]; if (!h) continue;
+          if (!best || LG.adj.get(h.p.id) > LG.adj.get(best.p.id) || (LG.adj.get(h.p.id) === LG.adj.get(best.p.id) && h.i < best.i)) best = h;
+        }
+        out.push(q.get(best.p.pos).shift().p);
+      }
+      return out;
+    };
+    // the tail never shows more value than anyone ranked above it (rule 3), in league views too
+    let floorV = Infinity;
+    mergeByValue(all.filter(p => !isAuto(p))).concat(mergeByValue(all.filter(isAuto)))
+      .forEach((p, k) => {
+        LG.adjRank.set(p.id, k + 1);
+        const v = LG.adj.get(p.id);
+        if (isAuto(p) && v >= floorV && v > 0) LG.adj.set(p.id, Math.max(0, Math.min(v, Math.round(floorV * (1 - VALUE_MODEL.minRankStep)) - (floorV < 400 ? 1 : 0))));
+        floorV = Math.min(floorV, LG.adj.get(p.id));
+      });
   }
   // Adjusted values for any league object, without touching the active league layer (LG): runs the same
   // adjustValues and puts LG back. Used to split a value into its format steps and by SPM.formatCheck.

@@ -127,6 +127,12 @@ with sync_playwright() as p:
     pg.close()
     pg = page(False)
     ok(board(pg) == base0, "Base SPAM Board unchanged")
+    # 4. league-adjusted boards: a lower value is never ranked ahead of a higher one (Oct 4 Warren/Smith report)
+    for fmt in ["t12_qb1_rec1_tep0", "t10_qb1_rec0.5_tep0", "t12_qbsf_rec1_tep0.5", "t14_qb2_rec1_tep1"]:
+        pg.goto(f"http://127.0.0.1:{port}/?fmt={fmt}#rankings"); pg.wait_for_timeout(2500)
+        rows = pg.evaluate("""() => [...document.querySelectorAll('#rank-body tr.player')].map(tr => [tr.querySelector('.pl-name').textContent, Number(((tr.querySelector('.val .num, .val .num-btn') || {}).textContent || '0').replace(/\\D/g, ''))])""")
+        inv = [(rows[i - 1], rows[i]) for i in range(1, len(rows)) if rows[i][1] > rows[i - 1][1]]
+        ok(len(rows) > 200 and not inv, f"{fmt}: values never rise down the league-adjusted board ({len(inv)} inversions {inv[:2]})")
     ok(not errs, f"No page errors {errs}")
     br.close()
 
