@@ -4028,7 +4028,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T18:00Z";
+  const BUILD_ID = "2026-10-05T14:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7729,7 +7729,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Bidders: Sleeper lists each losing waiver claim as a "failed" waiver for the same player in the same run,
   // so a claim's bidder count is the teams that claimed that player in that run (shown only when 2 or more).
   const txOn = () => currentTab === "league" && (LT.sub === "tx" || LT.sub === "waivers");
-  const TX_VERSION = 2;   // bump when the stored transaction shape changes (2: waiver bids), so saved logs reload
+  const TX_VERSION = 3;   // bump when the stored transaction shape changes (2: waiver bids), so saved logs reload
   async function loadTrades(force) {
     const d = activeData();
     if (!d || slSource() !== "sleeper") return;
@@ -7756,18 +7756,22 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           picks: (t.draft_picks || []).map(p => ({ season: p.season, round: p.round, from: p.roster_id, owner: p.owner_id, prev: p.previous_owner_id })),
           faab: (t.waiver_budget || []).map(b => ({ sender: b.sender, receiver: b.receiver, amount: b.amount })) });
       }));
-      // every claim for the same player in the same waiver run: one per team (its winning claim, else its highest
-      // bid), highest bid first; the winner leads its tie because Sleeper already resolved it (priority isn't logged)
+      // every claim for the same player in the same week's waivers: one per team (its winning claim, else its highest
+      // bid); the winner first, then the rest by bid. Sleeper stamps losing claims at different times than the winning
+      // one (Oct 4: 2 of 4 bids were missing with a 30-minute window), so a losing claim joins the winning claim for
+      // that player that week nearest to it in time (normally there's only one)
+      const wins = tx.filter(t => t.type === "waiver");
+      const nearestWin = c => { let best = null; wins.forEach(t => { if (Object.keys(t.adds)[0] === c.sid && t.week === c.week && (!best || Math.abs(t.at - c.at) < Math.abs(best.at - c.at))) best = t; }); return best; };
       tx.forEach(t => {
         if (t.type !== "waiver") return;
         const sid = Object.keys(t.adds)[0], byTeam = new Map();
-        claims.filter(c => c.sid === sid && c.week === t.week && Math.abs(c.at - t.at) < 30 * 60e3).forEach((c, i) => {
+        claims.filter(c => c.sid === sid && c.week === t.week && (c.won ? Math.abs(c.at - t.at) < 30 * 60e3 && c.rid === t.rosters[0] : nearestWin(c) === t)).forEach((c, i) => {
           const have = byTeam.get(c.rid);
           if (!have || (c.won && !have.won) || (!have.won && (c.bid ?? -1) > (have.bid ?? -1))) byTeam.set(c.rid, { ...c, order: i });
         });
         if (byTeam.size < 2) return;
         t.bidders = byTeam.size;
-        t.bids = [...byTeam.values()].sort((a, b) => ((b.bid ?? -1) - (a.bid ?? -1)) || (b.won - a.won) || (a.order - b.order))
+        t.bids = [...byTeam.values()].sort((a, b) => (b.won - a.won) || ((b.bid ?? -1) - (a.bid ?? -1)) || (a.order - b.order))
           .map(c => ({ rid: c.rid, bid: c.bid, won: c.won, notes: c.notes }));
       });
       tx.sort((a, b) => b.at - a.at);
