@@ -13,6 +13,7 @@ on:
     - cron: "0 15 * * 5"    # Fri 11 AM ET: retry
     - cron: "30 8 * * 0"    # Sun 4:30 AM ET: after Saturday games (late season)
     - cron: "0 15 * * 0"    # Sun 11 AM ET: retry
+    - cron: "0 5 * * 1"     # Mon 1 AM ET (EDT; midnight once clocks fall back): Sunday games, incl. SNF
     - cron: "30 8 * * 1"    # Mon 4:30 AM ET: after Sunday's games
     - cron: "0 15 * * 1"    # Mon 11 AM ET: retry
     - cron: "30 8 * * 2"    # Tue 4:30 AM ET: after Monday Night Football

@@ -159,7 +159,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 |---|---|---|
 | push to `main` | deploy only | Pages |
 | **Tue 14:00 UTC** (weekly) | `project_players.py` → `merge_projections.py` → `build_sleeper_ids.py` → `build_stats.py 2026` → `build_depth_charts.py` → `stamp_date.py` → `snapshot_history.py` (headless browser) | `index.html` (proj columns, sleeper IDs, date), `data/sleeper_players.json`, `data/platform_ids.json`, `data/stats/2026.json`, `data/depth_charts.json`, `data/rank_history.json` |
-| **Fri 08:30 & 15:00, Sun 08:30 & 15:00, Mon 08:30 & 15:00, Tue 08:30, Thu 15:00 UTC**, plus **Wed/Thu/Fri 22:00 UTC** for injury/practice reports | **stats only**: `build_stats.py 2026` (stats, schedule lines, defense efficiency, injury report) + `build_depth_charts.py` | `data/stats/2026.json`, `data/depth_charts.json` |
+| **Fri 08:30 & 15:00, Sun 08:30 & 15:00, Mon 05:00 (1 AM ET, Alan, Oct 5: Sunday points sooner), 08:30 & 15:00, Tue 08:30, Thu 15:00 UTC**, plus **Wed/Thu/Fri 22:00 UTC** for injury/practice reports | **stats only**: `build_stats.py 2026` (stats, schedule lines, defense efficiency, injury report) + `build_depth_charts.py` | `data/stats/2026.json`, `data/depth_charts.json` |
 | manual "Run workflow" (`stats_only` true/false) or editor **Refresh stats** button | stats-only or the full weekly job | as above |
 
 - Stats come from nflverse's weekly player stats, which usually appear the night of the games and sometimes the next morning. That's why each game day has a retry.
