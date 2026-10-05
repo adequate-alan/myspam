@@ -2502,6 +2502,9 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .pb-close { font-size: 0.8rem; }
 .pb-ctx { margin: 8px 0 4px; font-size: 0.8rem; color: var(--ink-2); }
 .pb-ctx b { color: var(--cream); }
+.pb-jump { margin-left: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 0.78rem; font-weight: 600; color: var(--accent-primary); cursor: pointer; }
+.pb-jump:hover { text-decoration: underline; }
+.pr-list { overflow-anchor: none; }
 .pb-cols, .pb-row { display: grid; grid-template-columns: 30px minmax(170px, 1.4fr) minmax(120px, 0.9fr) minmax(140px, 1.2fr) 80px 78px; align-items: center; gap: 12px; }
 .pb-cols { padding: 8px 8px 4px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .pb-cols span:nth-child(5) { text-align: right; }
@@ -4200,7 +4203,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T05:00Z";
+  const BUILD_ID = "2026-10-06T06:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7798,7 +7801,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>`;
     }).join("");
     const selRow = mode && lb.find(r => String(r.team.rosterId) === String(LT.pb.rid)), n = ev.n;
-    const ctx = selRow ? `<p class="pb-ctx"><b>${esc(selRow.team.name)}</b> · ${label} ${ordinal(selRow.rank)} of ${n} · ${sign(selRow.diff)} vs league average${selRow.rank > 1 ? ` · ${fmt(lb[selRow.rank - 2].score - selRow.score)} behind #${selRow.rank - 1}` : ""}${selRow.rank < n ? ` · ${fmt(selRow.score - lb[n - 1].score)} ahead of #${n}` : ""}</p>` : "";
+    const ctx = selRow ? `<p class="pb-ctx"><b>${esc(selRow.team.name)}</b> · ${label} ${ordinal(selRow.rank)} of ${n} · ${sign(selRow.diff)} vs league average${selRow.rank > 1 ? ` · ${fmt(lb[selRow.rank - 2].score - selRow.score)} behind #${selRow.rank - 1}` : ""}${selRow.rank < n ? ` · ${fmt(selRow.score - lb[n - 1].score)} ahead of #${n}` : ""} <button type="button" class="pb-jump" data-pb-jump="${esc(String(selRow.team.rosterId))}">Jump to ${selRow.team.mine ? "my team" : "team"} ↓</button></p>` : "";
     const lens = `<div class="pb-lens"><div class="view-toggle pb-modes" role="group" aria-label="Rank teams by">
         <button type="button" class="vt-btn" data-pb-pos="OVERALL" aria-pressed="${!mode}">Overall</button>${PB_KEYS.map(([k, l]) => `<button type="button" class="vt-btn" data-pb-pos="${k}" aria-pressed="${mode === k}">${l}</button>`).join("")}</div>
         ${mode ? `<div class="view-toggle pb-dir" role="group" aria-label="Sort"><button type="button" class="vt-btn" data-pb-dir="desc" aria-pressed="${LT.pb.dir !== "asc"}">Best → Worst</button><button type="button" class="vt-btn" data-pb-dir="asc" aria-pressed="${LT.pb.dir === "asc"}">Worst → Best</button></div>` : ""}
@@ -7884,16 +7887,23 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     rows.forEach((r, i) => { r.rank = i + 1; });
     return rows;
   }
-  function openPosBoard(pos, rid) {   // switch the Power Rankings lens; keep the clicked team in view
-    if (pos === "OVERALL") { const keep = LT.pb && LT.pb.rid; LT.pb = null; renderLeague(); scrollToTeam(keep); return; }
+  // Switching the lens re-sorts the list in place (Alan, Oct 5): the page never scrolls or moves focus by itself;
+  // the selected team is only highlighted. "Jump to" is the one way to scroll to it, and only when clicked.
+  function keepScroll(fn) {
+    const x = window.scrollX, y = window.scrollY;
+    fn();
+    window.scrollTo(x, y);
+  }
+  function openPosBoard(pos, rid) {
+    if (pos === "OVERALL") { keepScroll(() => { LT.pb = null; renderLeague(); }); return; }
     LT.pb = { pos, rid: rid != null ? String(rid) : (LT.pb && LT.pb.rid) || (LG.myRosterId != null ? String(LG.myRosterId) : null), dir: (LT.pb && LT.pb.dir) || "desc" };
-    renderLeague(); scrollToTeam(LT.pb.rid);
+    keepScroll(renderLeague);
   }
   function scrollToTeam(rid) {
     const el = rid != null && $("league-body").querySelector(`.pr-item[data-rid="${String(rid).replace(/"/g, "")}"]`);
     if (!el) return;
-    const r = el.getBoundingClientRect(), head = $("tab-league").closest(".masthead").offsetHeight + 12;
-    if (r.top < head || r.bottom > window.innerHeight) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - window.innerHeight / 2 + r.height / 2) });
+    const r = el.getBoundingClientRect();
+    window.scrollTo({ top: Math.max(0, r.top + window.scrollY - window.innerHeight / 2 + r.height / 2), behavior: "smooth" });
   }
 
   /* Standings: record order next to SPAM power rank */
@@ -8810,7 +8820,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const pbp = e.target.closest("[data-pb-pos]");
     if (pbp) { openPosBoard(pbp.dataset.pbPos, LT.pb ? LT.pb.rid : null); return; }
     const pbd = e.target.closest("[data-pb-dir]");
-    if (pbd && LT.pb) { LT.pb.dir = pbd.dataset.pbDir; renderLeague(); return; }
+    if (pbd && LT.pb) { LT.pb.dir = pbd.dataset.pbDir; keepScroll(renderLeague); return; }
+    const pbj = e.target.closest("[data-pb-jump]");
+    if (pbj) { scrollToTeam(pbj.dataset.pbJump); return; }
 
     // anywhere on a team row opens/closes it (name, logo, manager, rank, score, blank space, the arrow);
     // real controls inside the row keep their own action
