@@ -4299,7 +4299,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T11:00Z";
+  const BUILD_ID = "2026-10-06T12:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4610,12 +4610,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (me) parts.push(sec("Your team", `<div class="rr-team">${teamFace(me.team, "sm")}<div><p class="rr-big">#${me.power} <span>of ${ev.n} · power rank</span></p><p class="rr-text">${esc(me.team.name)}</p></div></div>`));
     }
     // risers / fallers: overall rank now vs the latest history entry from an earlier day
+    // RAIL_SKIP (Alan, Oct 5): players whose Oct 5 moves only corrected a misranking; skipped while the comparison
+    // reaches back before that day, so their later moves count again
+    const RAIL_SKIP = { "9226": "2026-10-05", "12504": "2026-10-05" };   // De'Von Achane, Kaleb Johnson
     if (rankHistory && rankHistory.players) {
       const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }), moves = [];
       let since = "";
       players.forEach(p => {
         if (p.pos === "PICK" || p.rank == null || !p.sleeperId) return;
         const prev = historyOf(p.sleeperId).filter(x => x.date < today && x.rank != null).pop();
+        if (prev && RAIL_SKIP[p.sleeperId] && prev.date < RAIL_SKIP[p.sleeperId]) return;
         if (prev && prev.rank !== p.rank) { moves.push({ p, d: prev.rank - p.rank }); if (prev.date > since) since = prev.date; }
       });
       const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span><button class="rr-name rr-jump" type="button" data-jump="${m.p.id}" title="Show ${esc(m.p.name)} in the rankings">${esc(m.p.name)}</button><span class="rr-sub">#${m.p.rank}</span></li>`;
