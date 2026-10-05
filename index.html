@@ -3952,6 +3952,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Sleeper league layer (layer 2) and league-adjusted values (layer 3); filled in by the Sleeper section
   const LG = { active: false, fmtOn: false, mode: "league", ownerFilter: "all", adj: new Map(), adjRank: new Map(), adjPos: new Map(), factor: new Map(), ownerOf: new Map(), teams: [], myRosterId: null };
   let sl = null, slPlayers = null, comps = null;
+  /* Weekly projections (data/projections.json, refreshed by the Tuesday job) feed weekly points only. The value model
+     keeps the projection columns in RANKINGS_CSV, which change only when someone asks (Alan, Oct 5: nothing scheduled
+     changes rankings or values). */
+  let PROJ_WEEKLY = null;
+  const projPPGOf = p => (p ? (PROJ_WEEKLY && PROJ_WEEKLY[p.sleeperId] != null ? PROJ_WEEKLY[p.sleeperId] : p.projPPG) : null);
   /* League settings picked by hand (for anyone not connecting a league).
      null = the site's own format. A connected league's settings always win over these. */
   const FMT_DEFAULT = { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 };
@@ -4098,7 +4103,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T20:30Z";
+  const BUILD_ID = "2026-10-05T21:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6045,6 +6050,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const get = async url => { try { const r = await fetch(url); return r.ok ? r.json() : null; } catch (e) { return null; } };
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
     if (!comps) comps = await get("data/curve_components.json");
+    if (!PROJ_WEEKLY) PROJ_WEEKLY = ((await get("data/projections.json")) || {}).ppg || {};
   }
 
   /* League summaries */
@@ -8683,7 +8689,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      without touching any page. Season PPG is not a provider: it's a flagged fallback when no provider has him.
      Weekly projections never touch rankings, values, tiers or history. */
   const PROJ_PROVIDERS = [
-    { id: "spam", label: "SPAM", get: e => (e.p && e.p.projPPG != null ? { basePts: e.p.projPPG } : null) },
+    { id: "spam", label: "SPAM", get: e => { const v = projPPGOf(e.p); return v != null ? { basePts: v } : null; } },
     // Kickers and team defenses (Steven, Oct 4): SPAM doesn't rank or project them, so Matchups use Sleeper's own
     // weekly projection, scored with this league's K/DEF settings (sleeperPoints). See SLPROJ below.
     { id: "sleeper", label: "Sleeper (K, DEF)", get: (e, week) => (SLPROJ_POS.includes(e.pos) ? slProjFor(e.sid, week) : null) }
@@ -9551,7 +9557,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         ${cell("Bye week", byeWeek(info.team) ? "Week " + byeWeek(info.team) : "–", byeWeek(info.team) ? (currentWeek() > byeWeek(info.team) ? "Already had it" : currentWeek() === byeWeek(info.team) ? "This week" : "Still to come") : "")}
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
-      ${p && p.projPPG != null ? `<p class="pp-glance">SPAM projection: <b>${fp(p.projPPG)}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
+      ${projPPGOf(p) != null ? `<p class="pp-glance">SPAM projection: <b>${fp(projPPGOf(p))}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
       ${cur && cur.games.length ? `<h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><div class="chart-box" data-chart="0"></div>` : ""}
       </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
   }
