@@ -447,23 +447,21 @@ function modelValue(pos, posRank, projRank = null, games = 0) {
    Returns { scoreA, scoreB, rawA, rawB, note }.
 
    The trade is decided by raw player value (the numbers on the board).
-   When the teams get a different number of players, two small
-   tiebreakers apply, both as a percentage of the deal's size:
+   1-for-1 and even-count trades are pure raw value.
 
-   1. Consolidation bonus: the side getting the best player in the deal
-      gets CONSOLIDATION_RATE x how much better its best player is
-      (as a share), capped at CONSOLIDATION_MAX. Typical 2-for-1: 2-5%.
-   2. Roster spot: the side taking on extra players loses ROSTER_SPOT_PCT
-      per extra player (it has to cut someone), capped at ROSTER_SPOT_MAX.
-
-   1-for-1 and even-count trades are pure raw value. The two adjustments
-   together can never move a trade by more than about 7% of its size
-   (more in shallow leagues: both are divided by the league depth, see DEPTH_ADJUST).
+   Uneven trades (2-for-1, 3-for-1, 3-for-2 …), Alan Oct 5: the side getting
+   more players only has so many lineup spots, so its EXTRA players (the
+   lowest-valued ones beyond the other side's count) count for a share of
+   their value: (his value / the best player in the deal) ^ PACKAGE_POWER.
+   A 4,000 piece next to an 8,000 star counts about half; a piece close to
+   the star counts nearly in full; a 500 throw-in counts for almost nothing.
+   So three mid-tier players don't equal one elite player just because the
+   raw totals match. Shallow leagues raise the power (÷ league depth, see
+   DEPTH_ADJUST): stars matter more there, extra bodies less.
+   (Replaced a 5% best-player bonus + 2% roster-spot cost, which let three
+   RB13-RB17s beat Bijan Robinson by 32% in the Oct 5 mock-trade audit.)
    ===================================================================== */
-const CONSOLIDATION_RATE = 0.15;  // bonus % per 100% gap between the two best players
-const CONSOLIDATION_MAX = 0.05;   // consolidation bonus never exceeds 5% of the deal
-const ROSTER_SPOT_PCT = 0.01;     // 1% of the deal per extra player taken on
-const ROSTER_SPOT_MAX = 0.02;     // roster cost never exceeds 2% of the deal
+const PACKAGE_POWER = 1.0;
 
 /* Roster-needs adjustment (the trade calculator's position sliders).
    Each slider says how your team stands at that position, 1 to 5. Every player at that
@@ -498,7 +496,7 @@ const TEAM_FIT = {
    - values: the bench share of a player's value (benchWeight x depth); replacement levels already
      rise in shallow leagues, so only true starters hold value
    - lineup scores, power rankings and position rooms: bench depth counts benchWeight x depth
-   - trade model: consolidation bonus and the roster-spot cost are divided by depth
+   - trade model: the extra-player discount's power is divided by depth
      (getting the best player in a 2-for-1 matters more; extra bodies matter less)
    - team-specific value: the discount for a bench player is divided by depth
    Deeper leagues (14+ teams, more starters) get the reverse, capped at `max`. */
@@ -516,25 +514,22 @@ function tradeModel(sideA, sideB) {
 
   const deal = (rawA + rawB) / 2;
   const top = side => Math.max(0, ...side.map(p => p.value));
-  const tA = top(sideA), tB = top(sideB);
-  const share = Math.abs(tA - tB) / Math.max(tA, tB, 1);
+  const tA = top(sideA), tB = top(sideB), star = Math.max(tA, tB, 1);
   const d = LEAGUE_DEPTH > 0 ? LEAGUE_DEPTH : 1;   // shallow leagues: stars matter more, extra bodies less
-  const bonus = deal * Math.min(CONSOLIDATION_MAX / d, CONSOLIDATION_RATE / d * share);
-  const spot = deal * Math.min(ROSTER_SPOT_MAX / d, ROSTER_SPOT_PCT / d * Math.abs(extra));
+  const more = extra > 0 ? "A" : "B", n = Math.abs(extra);
+  const big = (extra > 0 ? sideA : sideB).map(p => Math.max(0, p.value)).sort((x, y) => y - x);
+  const extras = big.slice(big.length - n);
+  const spot = extras.reduce((sum, v) => sum + v * (1 - Math.pow(Math.min(1, v / star), PACKAGE_POWER / d)), 0);
 
   let scoreA = rawA, scoreB = rawB;
-  if (tA > tB) scoreA += bonus; else if (tB > tA) scoreB += bonus;
   if (extra > 0) scoreA -= spot; else scoreB -= spot;
 
   const swing = Math.round((scoreA - scoreB) - (rawA - rawB));
-  const more = extra > 0 ? "A" : "B", n = Math.abs(extra);
   const best = tA > tB ? "A" : tB > tA ? "B" : null;
   const note = swing === 0 ? "" :
-    `Waiver adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${swing > 0 ? "A" : "B"} `
-    + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal`
-    + (best ? `; Team ${best} gets the best player` : "")
-    + `; Team ${more} takes on ${n} extra player${n > 1 ? "s" : ""}).`;
-  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: best ? bonus : 0, spot } };
+    `Package adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${swing > 0 ? "A" : "B"} `
+    + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal; Team ${more}'s ${n} extra player${n > 1 ? "s count" : " counts"} for less next to the best player).`;
+  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: 0, spot } };
 }
 
 /* =====================================================================
@@ -652,6 +647,9 @@ const FORMAT_ADJUST = {
   avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 },  // players used for each position's average
   // Shallow formats can price a whole tier at waiver level (10-team 1QB: QB13+ ≈ 0). Two guards:
   tierKeep: 0.40,     // a tier keeps at least 40% of the last value above it (unless your base board's own drop there is steeper)
+  qb1Cushion: 0.5,    // 1QB leagues: QB replacement sits this share of the way from the last starting QB down to the waiver QB
+                      // (teams carry and stream QBs, so the 12th QB isn't true replacement). Alan Oct 5: QB5-QB12 in 12-team
+                      // 1QB were ~25% of their Superflex values; points over replacement put them nearer 35-45%.
   floor: 25,          // a tiny floor of 25, easing down 2% per position spot, never above the player's base value
   floorDecay: 0.98
 };
@@ -1107,6 +1105,12 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 .eb-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .eb-local { padding-left: 14px; border-left: 1px solid var(--editor-line); }
 .eb-local[hidden] { display: none; }
+/* typed value that bends players outside his tier (Alan, Oct 5) */
+.ed-warn { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: -4px 0 12px; padding: 9px 14px; font-size: 0.82rem; color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); border-left: 3px solid var(--gold); border-radius: var(--radius); background: color-mix(in srgb, var(--gold) 9%, var(--surface)); }
+.ed-warn[hidden] { display: none; }
+.ed-warn p { margin: 0; flex: 1 1 320px; line-height: 1.4; }
+.ed-warn .eb-group { flex: 0 0 auto; }
 #eb-count, #eb-local-text {
   font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; color: var(--ink-2);
   font-variant-numeric: tabular-nums; margin-right: 4px; white-space: nowrap;
@@ -3311,6 +3315,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <button class="btn link" id="eb-signout" type="button" hidden title="Remove your GitHub token from this browser">Sign out</button>
       </div>
     </div>
+    <div class="ed-warn" id="ed-warn" role="alert" hidden></div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
       <div class="league-controls" id="league-controls" hidden>
@@ -4103,7 +4108,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T21:00Z";
+  const BUILD_ID = "2026-10-05T22:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4599,9 +4604,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const out = [], a = r.adj;
     if (a && a.swing !== 0) {
       const to = a.swing > 0 ? "A" : "B";
-      out.push(`Waiver adjustment: ${Math.abs(a.swing).toLocaleString("en-US")} toward ${subj(to)} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal`
-        + (a.best ? `; ${subj(a.best)} ${verb(a.best, "get", "gets")} the best player` : "")
-        + `; ${subj(a.more)} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}`
+      out.push(`Package adjustment: ${Math.abs(a.swing).toLocaleString("en-US")} toward ${subj(to)} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal`
+        + `; ${subj(a.more)} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, who count for less next to the best player`
         + (a.depth && Math.abs(a.depth - 1) > 0.02 ? `; ×${(1 / a.depth).toFixed(2)} for ${depthWord(a.depth) ? "a " + depthWord(a.depth) + " league" : "league depth"}` : "") + `).`);
     } else if (r.note && !a) out.push(r.note);
     if (needSwing) out.push(`Need adjustment: ${Math.abs(needSwing).toLocaleString("en-US")} toward ${subj(needSwing > 0 ? "A" : "B")} (${needUsed.join(", ")}).`);
@@ -5346,7 +5350,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const cap = t => t.charAt(0).toUpperCase() + t.slice(1), a = res.adj, out = [];
     out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in SPAM Value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
     if (a && a.bonus) out.push(`${cap(subj(a.best))} ${verb(a.best, "land", "lands")} the best player in an uneven trade, worth a small bonus (+${fmt(a.bonus)}).`);
-    if (a && a.spot) out.push(`${cap(subj(a.more))} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, which costs a roster spot (−${fmt(a.spot)}).`);
+    if (a && a.spot) out.push(`${cap(subj(a.more))} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, who only fill${a.extra > 1 ? "" : "s"} lineup spots next to the best player in the deal, so ${a.extra > 1 ? "they count" : "he counts"} for less (−${fmt(a.spot)}).`);
     const ns = Math.round((res.needA || 0) - (res.needB || 0));
     if (ns) out.push(`Your roster needs move ${fmt(Math.abs(ns))} toward ${subj(ns > 0 ? "A" : "B")}.`);
     out.push(fair ? `After adjustments the two sides are within ${pct} of each other.` : `After adjustments, ${subj(ahead)} ${verb(ahead, "come", "comes")} out ${pct} ahead.`);
@@ -5355,14 +5359,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function renderBreakdown(res, names, pct, tier) {
     const a = res.adj || {}, row = (label, va, vb, info, cls = "") => `<tr class="${cls}"><th scope="row">${label}${info ? " " + infoIcon(info, "About " + label) : ""}</th><td>${va}</td><td>${vb}</td></tr>`;
     const sign = v => (Math.round(v) === 0 ? "–" : `${v > 0 ? "+" : "−"}${fmt(Math.abs(v))}`);
-    const bonusA = a.bonus && a.best === "A" ? a.bonus : 0, bonusB = a.bonus && a.best === "B" ? a.bonus : 0;
     const spotA = a.spot && a.more === "A" ? -a.spot : 0, spotB = a.spot && a.more === "B" ? -a.spot : 0;
     $("tc-breakdown-body").innerHTML = `<table class="bd-table">
         <thead><tr><th scope="col"></th><th scope="col">${esc(names.A)}</th><th scope="col">${esc(names.B)}</th></tr></thead>
         <tbody>
           ${row("Raw value", fmt(res.rawA), fmt(res.rawB), LG.fmtOn ? `League-adjusted SPAM values (${tcValuesName()}) for the players each side gets. See Format adjustment below.` : "Base SPAM values for the players each side gets.")}
-          ${row("Best-player bonus", sign(bonusA), sign(bonusB), "In an uneven trade (2-for-1 etc.), the side getting the best player gets up to 5% of the deal.")}
-          ${row("Waiver adjustment", sign(spotA), sign(spotB), "The side taking on more players has to cut someone: 1% of the deal per extra player, up to 2%.")}
+          ${row("Package adjustment", sign(spotA), sign(spotB), "In an uneven trade (2-for-1, 3-for-1 …), the side getting more players counts its extra players at a share of their value: their value divided by the best player's in the deal (a 4,000 piece next to an 8,000 star counts about half). Shallow leagues discount extras more.")}
           ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
           ${row("Adjusted value", fmt(res.a), fmt(res.b), "", "bd-total")}
           ${TC_UI.ctx ? row("Value to the team", fmt(TC_UI.ctx.A.fit.recv), fmt(TC_UI.ctx.B.fit.recv), "Roster-adjusted: what the players each side receives are worth to that roster (starters near full value, bench players discounted).") +
@@ -5636,10 +5638,43 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   function setValue(id, v) {
-    draft.rows[id][colOf(draft, "value")] = v == null ? "" : String(Math.round(v));
+    const before = new Map(players.map(p => [p.id, p.value])), iVal = colOf(draft, "value"), prevTyped = draft.rows[id][iVal];
+    draft.rows[id][iVal] = v == null ? "" : String(Math.round(v));
     makeManual(id);
     rebuild();
+    if (v != null) bendCheck(id, Math.round(v), before, prevTyped);
+    else hideBendWarn();
   }
+  /* A typed value is a fixed anchor: board order is kept by moving the players around it. When it is out of line
+     with his rank, that bends players outside his own tier (Oct 5 audit: Cousins at 3,624 on #81 lifted #54-#87 by
+     up to 31%). Warn when anyone outside his tier moves more than 5%, and offer the rank where the value fits. */
+  function bendCheck(id, typed, before, prevTyped) {
+    const me = byId.get(id); if (!me) return;
+    const bent = players.filter(p => p.id !== id && isPlayerRow(p) && before.get(p.id) > 0 && !(p.pos === me.pos && String(p.tier) === String(me.tier))
+      && Math.abs(p.value / before.get(p.id) - 1) > 0.05).map(p => ({ p, d: p.value / before.get(p.id) - 1 })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+    if (!bent.length) { hideBendWarn(); return; }
+    const others = overallOrder().filter(p => p.id !== id);
+    let k = others.findIndex(p => (before.get(p.id) ?? p.value) < typed); if (k < 0) k = others.length;
+    const fit = k + 1, ex = bent[0];
+    const box = $("ed-warn");
+    box.innerHTML = `<p><b>${esc(me.name)} at ${fmt(typed)}</b> moves ${bent.length} player${bent.length > 1 ? "s" : ""} outside his tier by more than 5% (${esc(ex.p.name)} ${ex.d > 0 ? "+" : "−"}${Math.round(Math.abs(ex.d) * 100)}%), because values always follow the rank order. That value fits around <b>#${fit}</b>${me.rank != null ? ` (he's #${me.rank})` : ""}.</p>
+      <div class="eb-group">${me.rank != null && fit !== me.rank ? `<button class="btn primary" type="button" data-bend-move="${fit}">Move him to #${fit}</button>` : ""}<button class="btn" type="button" data-bend-undo>Undo value</button><button class="btn link" type="button" data-bend-keep>Keep it</button></div>`;
+    box.dataset.id = id; box.dataset.prev = prevTyped == null ? "" : String(prevTyped); box.hidden = false;
+  }
+  function hideBendWarn() { const b = $("ed-warn"); if (b) { b.hidden = true; b.innerHTML = ""; } }
+  $("ed-warn").addEventListener("click", e => {
+    const box = $("ed-warn"), id = Number(box.dataset.id);
+    const mv = e.target.closest("[data-bend-move]");
+    if (mv) {   // move him to where his typed value fits, and keep that value
+      const iVal = colOf(draft, "value"), typed = draft.rows[id][iVal];
+      hideBendWarn(); moveOverall(id, Number(mv.dataset.bendMove));
+      if (draft.rows[id][iVal] !== typed) { draft.rows[id][iVal] = typed; rebuild(); }
+      const me = byId.get(id); toast(`${me.name} moved to #${me.rank}, keeping his value ${fmt(Number(typed))}.`);
+      return;
+    }
+    if (e.target.closest("[data-bend-undo]")) { hideBendWarn(); draft.rows[id][colOf(draft, "value")] = box.dataset.prev || ""; rebuild(); return; }
+    if (e.target.closest("[data-bend-keep]")) hideBendWarn();
+  });
 
   /* ---------- Tier editing (position tabs) ----------
      Tiers are data: each player's tier number plus tier_name, saved and published like ranks.
@@ -6154,6 +6189,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   function modelTable(curves, lu, bw = VALUE_MODEL.benchWeight) {
     const { repl, waiver } = replLevels(curves, lu);
+    if (!lu.SUPER_FLEX && lu.QB < 2) repl.QB -= (Number(FORMAT_ADJUST.qb1Cushion) || 0) * Math.max(0, repl.QB - waiver.QB);
     const raw = (p, ppg) => Math.max(0, ppg - repl[p]) + bw * Math.max(0, Math.min(ppg, repl[p]) - waiver[p]);
     const top = Math.max(...EDIT_POS.map(p => raw(p, curves[p][0])));
     const out = {};
@@ -8005,7 +8041,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const tot = shares.reduce((a, v) => a + v, 0);
     const meter = tot > 0 ? `<div class="th-meter">
         <div class="meter${P.length > 2 ? " three" : ""}">${shares.map((v, i) => `<div class="m${"abc"[i] || "c"}" style="width:${(100 * v / tot).toFixed(1)}%"></div>`).join("")}</div>
-        <div class="meter-labels">${P.map((s, i) => `<span class="ml-${"abc"[i] || "c"}">${esc(s.team.name)} · ${fmt(shares[i])}${Math.round(shares[i]) !== Math.round(s.total) ? ` <small title="Includes the calculator's best-player bonus and roster-spot adjustment">adjusted</small>` : ""}</span>`).join("")}</div>
+        <div class="meter-labels">${P.map((s, i) => `<span class="ml-${"abc"[i] || "c"}">${esc(s.team.name)} · ${fmt(shares[i])}${Math.round(shares[i]) !== Math.round(s.total) ? ` <small title="Includes the calculator's package adjustment for uneven trades">adjusted</small>` : ""}</span>`).join("")}</div>
       </div>` : "";
     const tradeDay = new Date(t.at).toDateString(), basisDay = r.basisTs ? whenDate(r.basisTs).toDateString() : "";
     const basisDate = r.basisTs ? whenDate(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";

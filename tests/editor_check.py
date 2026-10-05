@@ -25,10 +25,11 @@ with sync_playwright() as p:
     pg.route("https://api.github.com/**", lambda r: r.abort())
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app)/.*"), lambda r: r.abort())
     pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/#rankings"); pg.wait_for_timeout(4500)
-    # a player with a typed value, not at the top of his position: move him up one spot
-    target = pg.evaluate("""() => { const t = [...document.querySelectorAll('#rank-body tr.player')].find(tr => tr.querySelector('.val .num-btn, .val .num')
-        && /Nabers|Rashee Rice|Croskey|Vele/.test(tr.querySelector('.pl-name').textContent)); return t ? t.querySelector('.pl-name').textContent.trim() : null; }""")
-    ok(target is not None, f"Found a player with a published value: {target}")
+    # give a mid-board player a typed value that fits his spot (his own value + 1), then move him
+    r0 = pg.evaluate(ROWS)[55]; target = r0["name"]
+    pg.locator(f'#rank-body tr.player[data-id="{r0["id"]}"] .num-btn').click(); pg.wait_for_timeout(200)
+    pg.fill(".val-input", str(r0["v"] + 1)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(600)
+    ok(target is not None, f"Typed a value for {target}")
     before = {r["name"]: r["v"] for r in pg.evaluate(ROWS)}
     pg.locator("#rank-body tr.player", has_text=target).first.locator('.arrow[data-dir="-1"]').click(force=True); pg.wait_for_timeout(600)
     after_rows = pg.evaluate(ROWS); after = {r["name"]: r["v"] for r in after_rows}
@@ -44,6 +45,23 @@ with sync_playwright() as p:
     ok(v2[target] < before[target] and "recalculated" in pg.inner_text("#toast"), f"Moving {target} down 12 spots recalculates his value lower: {before[target]} → {v2[target]}")
     vals = [r["v"] for r in rows2]
     ok(all(vals[i] <= vals[i - 1] for i in range(1, len(vals))), "Board values still never rise down the ranks after the moves")
+    # typing a value far above his rank bends players outside his tier: warn and offer the rank where it fits
+    pg.reload(); pg.wait_for_timeout(4500)
+    rows3 = pg.evaluate(ROWS)
+    far = rows3[100]; hi = rows3[40]["v"]
+    pg.locator(f'#rank-body tr.player[data-id="{far["id"]}"] .num-btn').click(); pg.wait_for_timeout(200)
+    pg.fill(".val-input", str(hi)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(700)
+    warn = pg.inner_text("#ed-warn") if pg.locator("#ed-warn").is_visible() else ""
+    ok(far["name"] in warn and "fits around" in warn and pg.locator("[data-bend-move]").count() == 1, f"Typing {hi} for {far['name']} (#{101}) warns and offers a fitting rank: {warn[:140]!r}")
+    pg.click("[data-bend-move]"); pg.wait_for_timeout(700)
+    rows4 = pg.evaluate(ROWS); me = next(i for i, r in enumerate(rows4) if r["name"] == far["name"])
+    vals = [r["v"] for r in rows4]
+    ok(me < 60 and rows4[me]["v"] == hi and all(vals[i] <= vals[i - 1] for i in range(1, len(vals))), f"Move him there: now #{me + 1} keeping {rows4[me]['v']}, board still in order")
+    # a typed value that fits his spot gives no warning
+    near = rows4[120]
+    pg.locator(f'#rank-body tr.player[data-id="{near["id"]}"] .num-btn').click(); pg.wait_for_timeout(200)
+    pg.fill(".val-input", str(near["v"] + 1)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(600)
+    ok(not pg.locator("#ed-warn").is_visible(), "A typed value that fits his spot gives no warning")
     ok(not errs, f"No page errors {errs}")
     br.close()
 print("\n" + ("All editor checks passed." if not failures else f"{len(failures)} check(s) failed."))
