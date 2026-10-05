@@ -5,9 +5,9 @@ on:
     branches: [main]
   schedule:
     # Weekly full refresh: Tuesdays 14:00 UTC = 10 AM Eastern (9 AM once clocks fall back), after Monday Night Football.
-    # Weekly projections (data/projections.json, for weekly points only), Sleeper IDs, stats and the ranking-history
-    # snapshot. Never changes rankings, tiers or values (Alan, Oct 5): the value model's projection columns in
-    # RANKINGS_CSV only change on a manual run with "update_values" checked.
+    # Projections (RANKINGS_CSV proj columns + data/projections.json), Sleeper IDs, stats and the ranking-history
+    # snapshot. Never changes ranks or tiers. Projections stay current and count a flat 20% of model values
+    # (Alan, Oct 5), so values of players without a typed value can shift a little; typed values never move.
     - cron: "0 14 * * 2"
     # Stats-only refreshes after every NFL game day (game logs, totals, fantasy points). Two tries each,
     # because nflverse usually posts a day's stats overnight but sometimes later in the morning.
@@ -27,10 +27,6 @@ on:
     inputs:
       stats_only:
         description: "Only refresh player stats (game logs), not projections or ranking history"
-        type: boolean
-        default: false
-      update_values:
-        description: "Also update SPAM values from the new projections (changes the values of players without a typed value; ranks and tiers never change)"
         type: boolean
         default: false
 
@@ -77,10 +73,7 @@ jobs:
           pip install pandas numpy
           python project_players.py
           python merge_projections.py ../index.html --json ../data/projections.json
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.update_values }}" = "true" ]; then
-            python merge_projections.py ../index.html
-            python stamp_date.py ../index.html
-          fi
+          python merge_projections.py ../index.html
           python build_sleeper_ids.py ../index.html
           python build_stats.py 2026
           python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
