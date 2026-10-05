@@ -398,9 +398,8 @@ const VALUE_MODEL = {
   keepRankOrder: true, // values never break your positional order (see step 7)
   minRankStep: 0.0025, // on the board each player is worth at least 0.25% less than the one ranked ahead (no tied values); tighter only when squeezed between two published values
   projection: {
-    maxWeight: 0,       // the most a projection can ever count. 0 since Alan, Oct 5: projections have no effect on values
-                        // (values come from rank, tiers and the historical points-by-rank curve only); was 0.7
-    halfWeightGames: 4  // games played at which it counts half of maxWeight
+    maxWeight: 0.2,     // the most a projection can ever count. Alan, Oct 5: a flat 20% (was 0.7 ramping with games; briefly 0)
+    halfWeightGames: 0  // games played at which it counts half of maxWeight (0 = the full 20% as soon as he has played)
   },
   curves: {
     QB: [23.78, 22.56, 21.55, 20.77, 20.24, 19.74, 19.25, 18.75, 18.34, 18.01, 17.65, 17.27, 16.95, 16.64, 16.42, 16.13, 15.89, 15.63, 15.34, 15, 14.66, 14.27, 13.91, 13.38, 12.99, 12.64, 12.32, 11.89, 11.47, 11.19, 10.74, 10.26, 9.68, 8.99, 7.61, 5.55, 3.94, 3.11, 3.11, 3.11],
@@ -4112,7 +4111,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T00:30Z";
+  const BUILD_ID = "2026-10-06T01:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
