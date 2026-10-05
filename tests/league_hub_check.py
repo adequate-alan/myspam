@@ -249,15 +249,14 @@ with sync_playwright() as p:
     ok("HOW SPAM CALCULATED THIS" in pg.inner_text("#tc-breakdown summary").upper(), "Technical math sits in one collapsed 'How SPAM calculated this' section")
     pg.click("#clear-btn")
 
-    # My Team: compact header, takeaway line, Team context rail (no duplicate position-rank card), this week's column
+    # My Team (Oct 4 follow-up): clean roster page: compact header with Trade with, full-width roster, one weekly state per row,
+    # insights collapsed below the roster, no extra cards
     pg.click("#tab-myteam"); pg.wait_for_timeout(1200)
-    ok(pg.locator(".mt-summary .mt-pr").count() == 1 and pg.locator("[data-open-team]").count() == 1, "My Team: one compact header line, Full position breakdown beside the strength cards")
-    ok(pg.locator(".mt-take").count() == 1 and pg.locator(".nb-row").count() == 0, "A Needs / Strong at takeaway under the cards; the repeated Position ranks card is gone")
-    ctx = pg.inner_text(".mt-ctx").upper()
-    ok(all(k in ctx for k in ("TRADE CHIP", "WEAKEST STARTER", "MOST EXPENDABLE")), f"Team context rail: {' '.join(ctx.split())[:120]}")
-    ok(pg.locator("td.mt-wk").count() >= 9 and "WK " in pg.inner_text(".mt-table thead").upper(), "Roster rows show this week (projection, live or final) from the shared week outlook")
-    ok(pg.locator(".mt-side .rr-list li").count() <= 3, "Hot lately shows at most 3 players")
-
+    ok(pg.locator(".mt-summary .mt-pr").count() == 1 and pg.locator(".mt-head [data-trade-with]").count() == 1, "My Team: compact header with Trade with")
+    ok(pg.locator(".mt-take, .mt-side, .mt-ctx, .nb-row").count() == 0, "No takeaway block, sidebar cards or repeated position ranks")
+    ok(pg.locator("details.mt-insights:not([open])").count() == 1, "Team insights sit below the roster, collapsed")
+    wk = [t.upper() for t in pg.locator("td.mt-wk").all_inner_texts()]
+    ok(len(wk) >= 9 and "THIS WEEK" in pg.inner_text(".mt-table thead").upper() and not any("LIVE · LIVE PROJ" in t or "FINAL ·" in t for t in wk), f"One weekly state per row: {wk[:4]}")
     # Trade Finder goals: Slight edge / Best value ideas favor you within their range and are labelled as such (never "steal")
     pg.click("#tab-finder"); pg.wait_for_timeout(1200)
     pv = pg.evaluate("() => [...document.getElementById('tf-player').options].map(o => o.value)")[:6]
