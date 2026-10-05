@@ -249,6 +249,15 @@ with sync_playwright() as p:
     ok("HOW SPAM CALCULATED THIS" in pg.inner_text("#tc-breakdown summary").upper(), "Technical math sits in one collapsed 'How SPAM calculated this' section")
     pg.click("#clear-btn")
 
+    # My Team: compact header, takeaway line, Team context rail (no duplicate position-rank card), this week's column
+    pg.click("#tab-myteam"); pg.wait_for_timeout(1200)
+    ok(pg.locator(".mt-summary .mt-pr").count() == 1 and pg.locator("[data-open-team]").count() == 1, "My Team: one compact header line, Full position breakdown beside the strength cards")
+    ok(pg.locator(".mt-take").count() == 1 and pg.locator(".nb-row").count() == 0, "A Needs / Strong at takeaway under the cards; the repeated Position ranks card is gone")
+    ctx = pg.inner_text(".mt-ctx").upper()
+    ok(all(k in ctx for k in ("TRADE CHIP", "WEAKEST STARTER", "MOST EXPENDABLE")), f"Team context rail: {' '.join(ctx.split())[:120]}")
+    ok(pg.locator("td.mt-wk").count() >= 9 and "WK " in pg.inner_text(".mt-table thead").upper(), "Roster rows show this week (projection, live or final) from the shared week outlook")
+    ok(pg.locator(".mt-side .rr-list li").count() <= 3, "Hot lately shows at most 3 players")
+
     # Trade Finder goals: Slight edge / Best value ideas favor you within their range and are labelled as such (never "steal")
     pg.click("#tab-finder"); pg.wait_for_timeout(1200)
     pv = pg.evaluate("() => [...document.getElementById('tf-player').options].map(o => o.value)")[:6]

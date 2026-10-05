@@ -1972,7 +1972,37 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mt-card .rr-sub { display: block; margin-top: 6px; }
 .mt-card .trade-with { margin-top: 6px; }
 .mt-card .rr-list { flex-direction: column; gap: 6px; }
-@media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 260px; align-items: start; } .mt-side { margin-top: 38px; } }
+@media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 240px; align-items: start; } .mt-side { margin-top: 38px; } }
+/* My Team hierarchy pass (Alan, Oct 4): compact header, tighter rank-first cards, a takeaway line, denser roster with this week */
+.mt-head { margin-bottom: 14px; }
+.mt-summary .mt-pr b { font-size: 1.05rem; }
+.mt-summary .mt-pr i { margin-left: 3px; }
+.mt-meta { margin: 2px 0 0; font-size: 0.74rem; color: var(--muted); }
+.mt-sl { display: flex; align-items: baseline; gap: 12px; }
+.mt-pb { margin-left: auto; font-size: 0.72rem; letter-spacing: 0; text-transform: none; }
+.mt-strength .strength.rk-first { padding: 9px 12px 8px; }
+.mt-strength .st-rank { margin-top: 2px; font-size: 1.35rem; }
+.mt-strength .st-bar { margin: 5px 0 5px; height: 3px; }
+.mt-take { margin: 10px 0 6px; font-size: 0.95rem; color: var(--ink-2); }
+.mt-take b { font-weight: 750; }
+.mt-take b.need { color: var(--qb); } .mt-take b.strong { color: var(--rb); }
+.mt-dot { margin: 0 10px; color: var(--muted); }
+#panel-myteam .mt-table tbody tr.mt-row td { padding-block: 7px; }
+.mt-wk { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; width: 112px; }
+th.mt-wk { text-align: right; }
+.mt-wk b { font-size: 0.92rem; font-weight: 750; color: var(--ink); }
+.mt-wk.final b { color: var(--heading); }
+.mt-wk small { display: block; font-size: 0.64rem; color: var(--muted); }
+.mt-wk.off { color: var(--muted); font-size: 0.74rem; font-weight: 700; }
+.mt-wk.out { color: var(--st-out, var(--st-dnp)); font-size: 0.74rem; font-weight: 800; }
+.mt-live { color: var(--rb); font-weight: 700; }
+.tc-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tc-list li { display: flex; flex-direction: column; gap: 1px; font-size: 0.8rem; }
+.tc-l { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: var(--muted); }
+.tc-v { color: var(--ink); line-height: 1.35; }
+.mt-card .tc-v .rr-sub { display: inline; margin: 0; }
+@media (max-width: 640px) { #panel-myteam .mt-table .mt-l3, #panel-myteam .mt-table .rk { display: none; } .mt-wk { width: auto; } .mt-wk small { white-space: normal; } }
+.tc-v b.tough { color: var(--qb); } .tc-v b.good { color: var(--rb); } .tc-v b.neutral { color: var(--ink); }
 .mt-l3, .fa-l3 { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 .rf { display: flex; flex-direction: column; gap: 2px; }
 .rf-scores { display: inline-grid; grid-auto-flow: column; grid-auto-columns: minmax(34px, auto); column-gap: 10px; width: max-content; font-size: 0.84rem; color: var(--ink); }
@@ -4028,7 +4058,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T15:10Z";
+  const BUILD_ID = "2026-10-05T16:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7178,6 +7208,51 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const overallRank = p => (leagueView() ? LG.adjRank.get(p.id) : p.rank) ?? "–";
 
   /* My Team */
+  // This week for one roster row: the shared weekOutlook (same as Matchups / Waiver Wire / Rosters), with Sleeper's
+  // live points for your lineup when Matchups has loaded them
+  function mtWeek(e) {
+    const wk = currentWeek();
+    { const dd = activeData(); if (wk && dd && slSource() === "sleeper" && !LT.mxError[dd.league.league_id]) loadMatchups(wk); }   // cached 2 min; redraws My Team when it lands (not again after an error)
+    if (!wk || !e.team) return `<td class="mt-wk"><span class="muted">—</span></td>`;
+    const d = activeData(), data = d && typeof LT !== "undefined" ? LT.mx[mxKey(d.league.league_id, wk)] : null;
+    const m = data && data.list.find(x => x.roster_id === LG.myRosterId), v = m && m.players_points ? m.players_points[e.sid] : null;
+    const o = weekOutlook(e, wk, { pts: v != null ? Number(v) : undefined }), g = o.game || {};
+    const opp = g.oppTeam ? `${g.home ? "vs" : "@"} ${g.oppTeam}` : "";
+    const sub = t => `<small>${esc([t, opp].filter(Boolean).join(" · "))}</small>`;
+    if (o.kind === "bye") return `<td class="mt-wk off">BYE</td>`;
+    if (o.kind === "out") return `<td class="mt-wk out">OUT${sub("")}</td>`;
+    if (o.kind === "final") return o.dnp ? `<td class="mt-wk off">DNP${sub("Final")}</td>` : o.pending ? `<td class="mt-wk off">—${sub("Final")}</td>` : `<td class="mt-wk final"><b>${fp(o.pts)}</b>${sub("Final")}</td>`;
+    if (o.kind === "live" && v == null) return `<td class="mt-wk live"><b>${o.proj != null ? fp(o.proj) : "—"}</b><small><span class="mt-live">Live</span>${o.proj != null ? " · Proj" : ""}${opp ? " · " + esc(opp) : ""}</small></td>`;   // no live points loaded yet: don't show a fake 0
+    if (o.kind === "live") return `<td class="mt-wk live"><b>${fp(o.pts)}</b><small><span class="mt-live">Live</span>${o.proj != null ? ` · Live proj ${fp(o.est)}` : ""}</small></td>`;
+    if (o.missing) return `<td class="mt-wk off">—${sub(g.text || "")}</td>`;
+    return `<td class="mt-wk up" title="${esc(projTip(o))}"><b>${fp(o.proj)}</b>${sub("Proj")}</td>`;
+  }
+  // Right rail: actionable context the cards and table don't already show (Alan, Oct 4)
+  function teamContext(me, x, n, starterIds, benchIds, map) {
+    const pl = id => map.get(String(id));
+    const st = (starterIds || []).filter(id => id && id !== "0").map(pl).filter(Boolean);
+    const out = new Set([...(me.roster.reserve || []), ...(me.roster.taxi || [])].map(String));
+    const benchAll = (benchIds || []).filter(id => !out.has(String(id)));
+    const bench = benchAll.map(pl).filter(Boolean).sort((a, b) => dv(b) - dv(a));
+    const rows = [];
+    const row = (label, html) => rows.push(`<li><span class="tc-l">${label}</span><span class="tc-v">${html}</span></li>`);
+    const who = p => `${nameLink(p.sleeperId, p.name, "rr-name")} <span class="rr-sub">${esc(posLabel(p))}</span>`;
+    const [wp, wplace] = x.worst || [];
+    if (wp) row(wplace > n - Math.max(1, Math.floor(n / 3)) ? "Biggest need" : "Weakest position", `<b class="${gradeOf(wplace, n)}">${wp} · ${ordinal(wplace)}</b> <span class="rr-sub">of ${n}</span>`);
+    if (bench[0]) row("Best trade chip", `${who(bench[0])} <span class="rr-sub">· bench · ${fmt(dv(bench[0]))}</span>`);
+    const weak = st.slice().sort((a, b) => dv(a) - dv(b))[0];
+    if (weak) row("Weakest starter", who(weak));
+    const unranked = benchAll.find(id => !pl(id));
+    const exp = unranked ? rosterEntry(unranked, map) : bench[bench.length - 1];
+    if (exp) row("Most expendable", unranked ? `<span class="rr-name">${esc(exp.name)}</span> <span class="rr-sub">${esc(exp.pos || "")} · not on the SPAM Board</span>` : who(exp));
+    try {   // the best free agent who'd start for you (Waiver Wire's Fit, among the top available)
+      const K = leagueKit();
+      const fa = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && !LG.ownerOf.has(p.id)).sort((a, b) => dv(b) - dv(a)).slice(0, 25)
+        .map(p => ({ p, f: faFit(K, me, p) })).find(o => o.f && o.f.cls === "start");
+      if (fa) row("Waiver upgrade", `${who(fa.p)} <span class="rr-sub">· ${esc(fa.f.text)}</span>`);
+    } catch (err) {}
+    return rows.length ? `<section class="mt-card mt-ctx"><h3 class="rr-label">Team context</h3><ul class="tc-list">${rows.join("")}</ul></section>` : "";
+  }
   function renderMyTeam() {
     const box = $("myteam-body"), d = activeData();
     if (!d) { box.innerHTML = ""; return; }
@@ -7191,7 +7266,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const slots = d.league.roster_positions.filter(s => s !== "BN");
     const used = new Set([...r.starters, ...r.reserve, ...r.taxi].filter(x => x && x !== "0"));
     const row = (slot, sid) => {
-      if (!sid || sid === "0") return `<tr class="mt-row empty-slot"><td class="slot">${esc(slot)}</td><td colspan="5" class="muted">Empty</td></tr>`;
+      if (!sid || sid === "0") return `<tr class="mt-row empty-slot"><td class="slot">${esc(slot)}</td><td colspan="6" class="muted">Empty</td></tr>`;
       const e = rosterEntry(sid, map);
       const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? posLabel(e.p) : e.pos)}</span>` : "";
       return `<tr class="mt-row">
@@ -7199,10 +7274,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflTag(e.team)}</div></div></td>
         <td class="pos-col">${badge}</td>
         <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
+        ${mtWeek(e)}
         <td class="mt-l3">${recentForm(e.sid, e.pos, e.team)}</td>
         <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
     };
-    const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier mt-sec"><td colspan="6">${title}<span class="mt-sec-n">${(rowsHtml.match(/<tr class="mt-row(?! empty-slot)/g) || []).length}</span></td></tr>${rowsHtml}` : "";
+    const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier mt-sec"><td colspan="7">${title}<span class="mt-sec-n">${(rowsHtml.match(/<tr class="mt-row(?! empty-slot)/g) || []).length}</span></td></tr>${rowsHtml}` : "";
     // Sleeper's lineup; before one is set (all slots empty), SPAM's best lineup by value
     const ev = evaluateTeams(), mineEv = ev.list.find(x => x.team.mine);
     const noLineup = !(r.starters || []).some(x => x && x !== "0");
@@ -7224,30 +7300,28 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const n = ev.n, third = Math.max(1, Math.floor(n / 3));
     const needs = EDIT_POS.filter(pos => mineEv.place[pos] > n - third), strong = EDIT_POS.filter(pos => mineEv.place[pos] <= third);
     const hot = r.players.map(x => map.get(String(x))).filter(Boolean).map(p => ({ p, g: recentGames(p.sleeperId, p.pos, 3) })).filter(x => x.g.length)
-      .map(x => ({ ...x, a: avgPts(x.g) })).sort((a, b) => b.a - a.a).slice(0, 5);
+      .map(x => ({ ...x, a: avgPts(x.g) })).sort((a, b) => b.a - a.a).slice(0, 3);
     const others = LG.teams.filter(t => !t.mine);
+    const andList = a => (a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a[0] || "");
     box.innerHTML = `
       <div class="panel-head mt-head">
         <div class="mt-id">${teamFace(me, "lg")}<div>
           <h2 class="panel-title">${esc(me.name)}</h2>
-          <p class="mt-summary"><span>Power Rank <b>#${mineEv.power}</b> <i>of ${n}</i></span>${recordText(r.settings) ? `<span>Record <b>${esc(recordText(r.settings))}</b></span>` : ""}<span>Team Score <b>${fmt(mineEv.score)}</b></span></p>
-          <p class="panel-sub">${esc(me.manager)} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
+          <p class="mt-summary"><span class="mt-pr">Power rank <b>#${mineEv.power}</b><i>of ${n}</i></span>${recordText(r.settings) ? `<span>Record <b>${esc(recordText(r.settings))}</b></span>` : ""}<span>Team score <b>${fmt(mineEv.score)}</b></span></p>
+          <p class="mt-meta">${esc(me.manager)} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
         </div></div>
-        <button class="btn" type="button" data-open-team="${me.rosterId}">Position breakdown</button>
       </div>
-      <h3 class="section-label">Roster strength</h3>
+      <h3 class="section-label mt-sl">Roster strength<button class="btn link inline mt-pb" type="button" data-open-team="${me.rosterId}" title="Open your team in League → Power Rankings: every position's players, starters and depth vs the league">Full position breakdown →</button></h3>
       <div class="strength-grid mt-strength">${strength}</div>
+      ${needs.length || strong.length ? `<p class="mt-take">${needs.length ? `Needs <b class="need">${andList(needs)}</b>` : ""}${needs.length && strong.length ? `<span class="mt-dot">·</span>` : ""}${strong.length ? `Strong at <b class="strong">${andList(strong)}</b>` : ""}</p>` : ""}
       <div class="mt-dash"><div class="mt-main">
       <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are SPAM's best lineup</span>` : ""}</h3>
       <div class="table-scroll"><table class="mt-table">
-        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col">Rk</th><th scope="col" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="rk">Rk</th><th scope="col" class="mt-wk" title="This week in your league's scoring: his projection before kickoff, points + Live proj during his game, his points once it's final (same as Matchups and Waiver Wire)">${currentWeek() ? "Wk " + currentWeek() : "This week"}</th><th scope="col" class="mt-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
       <aside class="mt-side">
-        <section class="mt-card"><h3 class="rr-label">Position ranks <span class="rr-when">in the league</span></h3>
-          <div class="nb-row">${EDIT_POS.map(pos => { const pl = mineEv.place[pos], lo = Math.min(...EDIT_POS.map(q => mineEv.place[q])), hi = Math.max(...EDIT_POS.map(q => mineEv.place[q])), best = lo !== hi && pl === lo, worst = lo !== hi && pl === hi;
-            return `<span class="nb ${gradeOf(pl, n)}${best ? " best" : worst ? " worst" : ""}" title="${pos}: ${ordinal(pl)} of ${n}${best ? " (strongest)" : worst ? " (weakest)" : ""}"><span class="pos ${pos}">${pos}</span><b>${ordinal(pl)}</b></span>`; }).join("")}</div>
-          ${needs.length || strong.length ? `<p class="rr-text nb-text">${needs.length ? `Needs <b>${needs.join(", ")}</b>` : ""}${needs.length && strong.length ? " · " : ""}${strong.length ? `Strong at <b>${strong.join(", ")}</b>` : ""}</p>` : ""}</section>
+        ${teamContext(me, mineEv, n, starterIds, benchIds, map)}
         ${hot.length ? `<section class="mt-card"><h3 class="rr-label">Hot lately <span class="rr-when">last 3 games</span></h3><ul class="rr-list">${hot.map(x => `<li><span class="rr-mv up">${fp(x.a)}</span>${nameLink(x.p.sleeperId, x.p.name, "rr-name")}<span class="rr-sub">${esc(posLabel(x.p))}</span></li>`).join("")}</ul></section>` : ""}
         <section class="mt-card"><h3 class="rr-label">Trade with</h3>
           <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></section>
@@ -8071,6 +8145,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     catch (err) { LT.mxError[id] = err.message || "unknown error"; }
     finally { if (LT.mxLoading === key) LT.mxLoading = null; }
     if (currentTab === "league" && (LT.sub === "matchups" || LT.sub === "rosters")) renderLeague();
+    if (currentTab === "myteam") renderMyTeam();   // My Team's This week column uses Sleeper's live points
   }
   function ensureMatchups() {
     const d = activeData(); if (!d || slSource() !== "sleeper") return;
@@ -8740,7 +8815,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (g.kind === "final") {
       const pts = sleeperPts ?? weekPoints(e.sid, e.pos, week), d = statsCache[STATS_SEASONS[0]];
       if (pts != null) return { kind: "final", game: g, pts, est: pts, text: "Final" };
-      return d && d.through_week >= week ? { kind: "final", game: g, pts: 0, est: 0, dnp: true, text: "DNP" } : { kind: "final", game: g, pts: null, est: 0, pending: true, text: "Final · pts pending" };
+      // DNP only when the stats file was built after his game ended (through_week can already count a week from its Thursday game)
+      const after = d && Date.parse(d.updated) >= (g.kick || 0) + 3.5 * 3600e3;
+      return d && d.through_week >= week && after ? { kind: "final", game: g, pts: 0, est: 0, dnp: true, text: "DNP" } : { kind: "final", game: g, pts: null, est: 0, pending: true, text: "Final · pts pending" };
     }
     if (g.kind === "upcoming" && week === now && e.p) {
       const rep = injuryReport(e.team), inj = rep && rep.week === week ? injuryOf(e.team, e.sid) : null;
