@@ -53,7 +53,10 @@ COMPONENTS = {
     "rec_2pt": ["receiving_2pt_conversions"], "rec_fd": ["receiving_first_downs"],
     "fum_lost": ["sack_fumbles_lost", "rushing_fumbles_lost", "receiving_fumbles_lost"],
 }
-COLS = ["w", "tm", "opp"] + list(COMPONENTS) + ["tgt_share"]
+# usage per game (Alan, Oct 5; player Compare): offensive snap share, red-zone targets and carries (inside the 20),
+# goal-line carries (inside the 5), receiving air yards and air-yard share, QB scrambles (designed runs = carries - scrambles)
+USAGE = ["snap", "rz_tgt", "rz_rush", "gl_rush", "air_yd", "air_share", "scr"]
+COLS = ["w", "tm", "opp"] + list(COMPONENTS) + ["tgt_share"] + USAGE
 
 
 def team(t):
@@ -214,6 +217,37 @@ def shortened(season, stats, ids, pfr, pbp_src=PBP_URL, snap_src=SNAP_URL, inj_s
     return out
 
 
+def usage(season, pfr, pbp_src=PBP_URL, snap_src=SNAP_URL):
+    """{(gsis_id, week): {snap, rz_tgt, rz_rush, gl_rush, scr}} from snap counts and play-by-play (regular season)."""
+    out = {}
+    g2p = {}
+    try:
+        sn = pd.read_csv(snap_src.format(season), low_memory=False)
+        sn = sn[sn.game_type == "REG"]
+        p2g = {v: k for k, v in pfr.items()}
+        for r in sn.itertuples():
+            gid = p2g.get(r.pfr_player_id)
+            if gid and not pd.isna(r.offense_pct):
+                out.setdefault((gid, int(r.week)), {})["snap"] = round(float(r.offense_pct), 2)
+    except Exception as e:
+        print(f"  snap counts skipped: {e}")
+    p = pd.read_csv(pbp_src.format(season), low_memory=False,
+                    usecols=["season_type", "week", "rusher_player_id", "receiver_player_id", "yardline_100", "rush", "pass_attempt", "sack", "qb_scramble", "two_point_attempt"])
+    p = p[(p.season_type == "REG") & (p.two_point_attempt != 1)]
+    def add(pid, wk, key):
+        d = out.setdefault((pid, int(wk)), {}); d[key] = d.get(key, 0) + 1
+    rz = p[p.yardline_100 <= 20]
+    for r in rz[(rz.pass_attempt == 1) & (rz.sack != 1) & rz.receiver_player_id.notna()].itertuples():
+        add(r.receiver_player_id, r.week, "rz_tgt")
+    for r in rz[(rz.rush == 1) & rz.rusher_player_id.notna()].itertuples():
+        add(r.rusher_player_id, r.week, "rz_rush")
+        if r.yardline_100 <= 5:
+            add(r.rusher_player_id, r.week, "gl_rush")
+    for r in p[(p.qb_scramble == 1) & p.rusher_player_id.notna()].itertuples():
+        add(r.rusher_player_id, r.week, "scr")
+    return out
+
+
 def optional(label, fn, *args):
     try:
         return fn(*args)
@@ -222,11 +256,21 @@ def optional(label, fn, *args):
         return None
 
 
+def usage_row(r, use):
+    """The USAGE columns for one stats row (None where the source has nothing)."""
+    u = use.get((r.player_id, int(r.week)), {})
+    air, share = getattr(r, "receiving_air_yards", None), getattr(r, "air_yards_share", None)
+    return [u.get("snap"), u.get("rz_tgt", 0), u.get("rz_rush", 0), u.get("gl_rush", 0),
+            None if air is None or pd.isna(air) else int(round(float(air))),
+            None if share is None or pd.isna(share) else round(float(share), 3), u.get("scr", 0)]
+
+
 def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL, prev=None, pfr=None, snap_src=SNAP_URL):
     d = pd.read_csv(stats_src.format(season), low_memory=False)
     d = d[(d.season_type == "REG") & d.position.isin(POS)].copy()
     d["sid"] = d.player_id.map(ids)
     d = d[d.sid.notna()].sort_values(["sid", "week"])
+    use = optional("usage", usage, season, pfr or {}, pbp_src, snap_src) or {}
     players = {}
     for sid, rows in d.groupby("sid"):
         log = []
@@ -236,6 +280,7 @@ def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_
                 row.append(int(round(sum(0 if pd.isna(getattr(r, c)) else getattr(r, c) for c in cols))))
             ts = getattr(r, "target_share")
             row.append(None if pd.isna(ts) else round(float(ts), 3))
+            row += usage_row(r, use)
             log.append(row)
         last = rows.iloc[-1]
         players[sid] = {"n": last.player_display_name, "p": last.position, "g": log}

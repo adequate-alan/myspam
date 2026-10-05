@@ -60,6 +60,43 @@ with sync_playwright() as p:
         s = pg.evaluate(STATE)
         ok(not s["open"] and s["cur"] == [], f"{vw}px: Escape closes the drawer and clears the highlight")
         pg.close()
+    # Compare (Alan, Oct 5): temporary board Compare mode + position-aware table
+    pg = br.new_page(viewport={"width": 1440, "height": 1000}); pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app|api\.github\.com)/.*"), lambda r: r.abort())
+    pg.goto(URL); pg.wait_for_timeout(3500)
+    pg.click("[data-pos=RB]"); pg.wait_for_timeout(400)
+    ok(pg.locator("#rank-body .cmp-pick").count() == 0, "Compare: no pick controls during normal browsing")
+    pg.evaluate("document.querySelectorAll('#rank-body [data-player]')[0].click()"); pg.wait_for_timeout(1500)
+    a_name = pg.inner_text("#pm-name")
+    pg.evaluate("window.scrollTo(0, 400)"); pg.wait_for_timeout(200)
+    pg.click("[data-pm-compare]"); pg.wait_for_timeout(400)
+    ok(pg.is_visible("#cmp-banner") and a_name in pg.inner_text("#cmp-banner") and pg.locator("#rank-body .cmp-pick").count() > 5 and pg.evaluate("scrollY") == 400,
+       f"Compare: mode shows a banner for {a_name} and pick circles, scroll kept")
+    ok(pg.locator("#pm-pick").count() == 1, "Compare: the drawer's search is still there")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    ok(not pg.is_visible("#cmp-banner") and pg.evaluate("document.getElementById('player-modal').open") and pg.locator("#rank-body .cmp-pick").count() == 0,
+       "Compare: Escape leaves Compare mode first, the drawer stays open")
+    pg.click("[data-pm-compare]"); pg.wait_for_timeout(400)
+    b_name = pg.locator("#rank-body tr.cmp-row .pl-name").nth(2).inner_text()
+    pg.locator("#rank-body tr.cmp-row .pl-name").nth(2).click(); pg.wait_for_timeout(800)
+    secs = pg.evaluate("[...document.querySelectorAll('.cmp-sec-h')].map(r => r.textContent)")
+    labels = pg.evaluate("[...document.querySelectorAll('.cmp-table th')].map(r => r.textContent)")
+    ok(pg.inner_text("#pm-name") == a_name and b_name.split()[-1].upper() in pg.locator(".cmp-head").nth(1).inner_text().upper() and not pg.is_visible("#cmp-banner"),
+       f"Compare: clicking {b_name} on the board makes him Player B and opens Compare")
+    ok(secs[:2] == ["Value & Production", "Efficiency"] and "Target share" in labels and "Rush attempts / game" in labels and "Snap share" in labels and "Targets" not in labels,
+       f"Compare: RB vs RB uses RB usage rows ({secs})")
+    pg.click("[data-cmp-lens=usage]"); pg.wait_for_timeout(300)
+    ok(pg.evaluate("document.querySelector('.cmp-sec-h').textContent") == "Usage & Role", "Compare: the Usage lens leads with Usage & Role")
+    pg.click("[data-pm-swap]"); pg.wait_for_timeout(300)
+    ok(pg.inner_text("#pm-name") != a_name and pg.evaluate("document.querySelector('[data-cmp-lens][aria-pressed=true]').dataset.cmpLens") == "usage", "Compare: Swap reverses the players and keeps the lens")
+    pg.click("[data-pm-compare]"); pg.wait_for_timeout(300)
+    pg.fill("#pm-pick", "Puka"); pg.wait_for_timeout(400)
+    pg.click("[data-pm-pick]"); pg.wait_for_timeout(600)
+    labels = pg.evaluate("[...document.querySelectorAll('.cmp-table th')].map(r => r.textContent)")
+    ok("Opportunities / game" in labels and "Rush attempts / game" not in labels and "Different positions" in pg.inner_text(".cmp"),
+       "Compare: RB vs WR (picked by search) falls back to shared metrics")
+    ok(pg.locator(".cmp-table td.cmp-win").count() >= 1 and pg.locator(".cmp-sum p").count() >= 1, "Compare: subtle row leaders and a data-based summary")
+    pg.close()
     # Injury context (Alan, Oct 5): a game he left early with an injury keeps counting in PPG but is marked everywhere
     pg = br.new_page(viewport={"width": 1440, "height": 1000}); pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app|api\.github\.com)/.*"), lambda r: r.abort())
