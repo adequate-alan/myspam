@@ -743,11 +743,14 @@ const TRADE_VERDICTS = [
   --custom-panel: #3A1A26;
   --custom-border: #6A3045;
   /* positions (kept recognizable, tuned to read on the burgundy surface) */
-  --pos-qb: #E07C8A;
-  --pos-rb: #5DC09A;
-  --pos-wr: #7AA8EA;
-  --pos-te: #B48EE3;
-  --pos-pick: #A08D8F;
+  --pos-qb: #E8978A;   /* soft coral on a wine tint */
+  --pos-rb: #5CCB98;   /* emerald on a forest tint */
+  --pos-wr: #8DB3DE;   /* desaturated light blue on slate */
+  --pos-te: #C3A3E2;   /* lavender on plum */
+  --pos-flex: #DDB06A; /* muted amber */
+  --pos-sf: #E08FB0;   /* muted rose */
+  --pos-pick: #A08D8F; /* bench / IR / picks: neutral */
+  --badge-base: #151012;
   /* depth */
   --shadow-color: rgba(8, 3, 5, 0.85);
   --shadow-soft: rgba(8, 3, 5, 0.6);
@@ -802,11 +805,14 @@ const TRADE_VERDICTS = [
   --editor-border: #E6CBC4;
   --custom-panel: #F3DED8;
   --custom-border: #E7C3BB;
-  --pos-qb: #A7404F;
-  --pos-rb: #1F6F55;
-  --pos-wr: #3162A8;
-  --pos-te: #6F4AA8;
+  --pos-qb: #A4483E;
+  --pos-rb: #1D7150;
+  --pos-wr: #33608F;
+  --pos-te: #774A9C;
+  --pos-flex: #8F6417;
+  --pos-sf: #A1456E;
   --pos-pick: #8A7D76;
+  --badge-base: #FFFDF9;
   --shadow-color: rgba(90, 31, 50, 0.16);
   --shadow-soft: rgba(90, 31, 50, 0.10);
   --backdrop: rgba(74, 40, 36, 0.28);
@@ -848,6 +854,8 @@ const TRADE_VERDICTS = [
   --wr: var(--pos-wr);
   --te: var(--pos-te);
   --pick: var(--pos-pick);
+  --flex: var(--pos-flex);
+  --sf: var(--pos-sf);
   --accent: var(--accent-primary);
   --focus: var(--accent-primary);
   --side-a: var(--accent-primary);
@@ -1031,8 +1039,9 @@ tbody tr.tier:first-child td { border-top: 0; }
 .pos {
   display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 22px;
   font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums;
-  padding: 0 7px; border-radius: 4px;
-  color: var(--c); background: color-mix(in srgb, var(--c) 13%, transparent);
+  padding: 0 7px; border-radius: 5px;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--badge-base));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent);
 }
 .pos.QB { --c: var(--qb); } .pos.RB { --c: var(--rb); } .pos.WR { --c: var(--wr); } .pos.TE { --c: var(--te); } .pos.PICK { --c: var(--pick); }
 td.val { width: 42%; min-width: 230px; padding-left: 14px; }
@@ -1047,7 +1056,7 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 .rk-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .rk-main { min-width: 0; }
 /* summary: a status strip above the table up to large desktop, then a slim right rail */
-.rk-rail { order: -1; display: flex; flex-wrap: wrap; gap: 12px 32px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.rk-rail { order: -1; display: flex; flex-wrap: wrap; gap: 12px 32px; padding: 12px 16px; background: color-mix(in srgb, var(--surface) 45%, transparent); border: 1px solid color-mix(in srgb, var(--line-soft) 70%, transparent); border-radius: var(--radius); }
 .rk-rail[hidden] { display: none; }
 .rr-sec { min-width: 0; }
 .rr-label { margin: 0 0 4px; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
@@ -1072,9 +1081,9 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 @media (min-width: 1024px) {
   #panel-rankings td.val { width: 34%; }
   #panel-rankings .pos-col { width: 10%; }
-  #panel-rankings .valbar .track { flex: 1 1 auto; max-width: 340px; }
+  #panel-rankings .valbar .track { flex: 1 1 auto; max-width: 280px; }
   #panel-rankings .valbar .num { min-width: 64px; }
-  #panel-rankings tbody tr.player td { padding-block: 12px; }
+  #panel-rankings tbody tr.player td { padding-block: 10px; }
 }
 /* The column guide stays visible under the masthead while you scroll the board (--mast-h is set from JS).
    overflow-x: clip keeps the rounded box without making it a scroll container, so sticky works. */
@@ -1082,9 +1091,9 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 #panel-rankings thead th { position: sticky; top: var(--mast-h, 0px); z-index: 2; background: var(--surface); box-shadow: inset 0 -1px 0 var(--line-soft); }
 @media (max-width: 640px) { body.editing #panel-rankings .table-scroll { overflow-x: auto; } body.editing #panel-rankings thead th { position: static; } }
 .valbar { display: flex; align-items: center; gap: 12px; }
-.valbar .track { flex: 0 1 200px; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
-.valbar .fill { height: 100%; background: var(--c, var(--cream)); border-radius: 2px; opacity: 0.7; }
-.valbar .num { font-size: 0.9rem; font-weight: 560; min-width: 52px; text-align: right; color: var(--cream); font-variant-numeric: tabular-nums; }
+.valbar .track { flex: 0 1 180px; height: 2px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.valbar .fill { height: 100%; background: var(--c, var(--cream)); border-radius: 2px; opacity: 0.55; }
+.valbar .num { font-size: 0.92rem; font-weight: 640; min-width: 52px; text-align: right; color: var(--cream); font-variant-numeric: tabular-nums; }
 .num-empty { font-size: 0.82rem; color: var(--muted); font-style: italic; }
 .empty { padding: 40px 22px; text-align: center; color: var(--muted); }
 .count { font-size: 0.78rem; color: var(--muted); margin-top: 12px; }
@@ -1092,8 +1101,8 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 /* ---------- Editor toolbar ---------- */
 .editor-bar {
   display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
-  background: var(--editor-bg); border: 1px solid var(--editor-line); border-radius: var(--radius);
-  padding: 5px 8px 5px 14px; margin-bottom: 12px; font-size: 0.82rem;
+  background: color-mix(in srgb, var(--editor-bg) 40%, transparent); border: 1px solid color-mix(in srgb, var(--editor-line) 55%, transparent); border-radius: var(--radius);
+  padding: 4px 8px 4px 14px; margin-bottom: 12px; font-size: 0.82rem;
 }
 .eb-left { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: center; min-width: 0; flex: 1 1 260px; }
 .eb-left strong {
@@ -1722,8 +1731,14 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 .own-tag.mine { color: var(--mine-accent); font-weight: 750; }
 .own-tag.fa { color: color-mix(in srgb, var(--rb) 60%, var(--muted)); }
 .own-tag.inline { display: inline; margin-top: 0; }
-#rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.72; }   /* other owners stay secondary on the board; My team keeps full gold */
-.tier-tag { display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 6%, transparent); font-size: 0.6rem; font-weight: 750; letter-spacing: 0.04em; color: var(--ink-2); vertical-align: middle; cursor: default; }
+#rank-body .own-tag { font-size: 0.57rem; margin-top: 2px; }
+#rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.6; }
+#rank-body .own-tag.fa { opacity: 0.8; }
+#rank-body .pl-team { opacity: 0.85; }
+/* your players: a thin gold edge and a small gold dot, never a selected-looking row */
+#rank-body tr.player.mine td:first-child { box-shadow: inset 2px 0 0 var(--mine-accent); }
+#rank-body .own-tag.mine::before { content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 5px; border-radius: 50%; background: var(--mine-accent); vertical-align: 1px; }   /* other owners stay secondary on the board; My team keeps full gold */
+.tier-tag { display: inline-block; margin-left: 6px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--line-soft); background: none; font-size: 0.58rem; font-weight: 600; letter-spacing: 0.05em; color: var(--muted); vertical-align: middle; cursor: default; }
 .tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 40%, transparent); }
 .rr-jump { all: unset; cursor: pointer; }
 .rr-jump:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -4203,7 +4218,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T06:00Z";
+  const BUILD_ID = "2026-10-06T07:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4481,7 +4496,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       lastGroup = g;
       const editCol = !editing ? "" : `<td class="edit-col">${canReorder && numOf(p) != null ? `
           <button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>⠿</button><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${numOf(p) <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${numOf(p) >= lastNum ? " disabled" : ""}>▼</button>` : ""}</td>`;
-      out.push(`<tr class="player" data-id="${p.id}">${editCol}
+      const own = LG.active && LG.ownerOf.get(p.id);
+      out.push(`<tr class="player${own && own.mine ? " mine" : ""}" data-id="${p.id}">${editCol}
         <td class="rk">${rk(p)}</td>
         <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
@@ -8593,8 +8609,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // Slot colors: SPAM's position tokens; flex slots blend the positions they take
   const SLOT_COLOR = { QB: "var(--qb)", RB: "var(--rb)", WR: "var(--wr)", TE: "var(--te)",
-    FLEX: "color-mix(in srgb, var(--rb) 50%, var(--wr))", "W/R": "color-mix(in srgb, var(--rb) 50%, var(--wr))", "W/T": "color-mix(in srgb, var(--wr) 50%, var(--te))",
-    SF: "color-mix(in srgb, var(--qb) 60%, var(--te))" };
+    FLEX: "var(--flex)", "W/R": "color-mix(in srgb, var(--rb) 50%, var(--wr))", "W/T": "color-mix(in srgb, var(--wr) 50%, var(--te))",
+    SF: "var(--sf)" };
   const slotBadge = lab => `<span class="ro-sl" style="--c: ${SLOT_COLOR[lab] || "var(--pick)"}">${esc(lab)}</span>`;
   // The selected team's lineup for a week: Sleeper's recorded lineup for past/current weeks, else the current lineup
   // (SPAM's best lineup when none is set). IR and taxi are always the current roster's.

@@ -127,6 +127,12 @@ with sync_playwright() as p:
         pg.click("#tab-rankings"); pg.wait_for_timeout(500)
         return pg.evaluate("""() => Object.fromEntries([...document.querySelectorAll('#rank-body tr.player')].map(tr => [(tr.querySelector('.pos-col .pos') || {}).textContent, tr.querySelector('.val .num, .val .num-btn').textContent.replace(/\\D/g, '')]).filter(([k]) => k && k.startsWith('QB')).map(([k, v]) => [k, Number(v)]))""")
     sf = qb_values()
+    # Rankings polish (Alan, Oct 5): your players get a thin gold edge + dot, not a selected-looking row
+    mine_rows = pg.locator("#rank-body tr.player.mine")
+    ok(mine_rows.count() > 0 and mine_rows.first.locator(".own-tag.mine").count() == 1 and pg.locator("#rank-body tr.player:not(.mine) .own-tag.mine").count() == 0, f"My players are marked on the board ({mine_rows.count()})")
+    if SHOTS:
+        mine_rows.first.scroll_into_view_if_needed(); pg.wait_for_timeout(200)
+        pg.screenshot(path=f"{SHOTS}/rankings_league.png")
     ok(pg.locator("#fmt-override").is_hidden() and "custom" not in pg.inner_text("#lc-format").lower(), "Superflex league on its own settings: no custom-format notice")
     pg.evaluate("() => { const b = document.createElement('button'); b.dataset.openFmt = ''; document.body.append(b); b.click(); b.remove(); }"); pg.wait_for_timeout(300)
     pg.click("[data-fmt-src=custom]"); pg.click("button[data-fmt=qb][data-v='1']"); pg.click("#fmt-apply"); pg.wait_for_timeout(800)
