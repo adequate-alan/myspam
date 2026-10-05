@@ -1972,7 +1972,7 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mt-card .rr-sub { display: block; margin-top: 6px; }
 .mt-card .trade-with { margin-top: 6px; }
 .mt-card .rr-list { flex-direction: column; gap: 6px; }
-/* the roster takes the full width; secondary insights sit below it (Alan, Oct 4 follow-up) */
+@media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 240px; align-items: start; } .mt-side { margin-top: 38px; } }   /* roster + slim side rail (Alan, Oct 4) */
 .mt-head { align-items: flex-end; }
 .mt-tw { display: flex; flex-direction: column; gap: 4px; min-width: 220px; }
 .mt-tw .mt-trade { margin-top: 0; }
@@ -4070,7 +4070,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T16:40Z";
+  const BUILD_ID = "2026-10-05T17:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7263,7 +7263,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         .map(p => ({ p, f: faFit(K, me, p) })).find(o => o.f && o.f.cls === "start");
       if (fa) row("Waiver upgrade", `${who(fa.p)} <span class="rr-sub">· ${esc(fa.f.text)}</span>`);
     } catch (err) {}
-    return rows.length ? `<details class="mt-insights"><summary>Team insights</summary><ul class="tc-list">${rows.join("")}</ul></details>` : "";
+    return rows.length ? `<section class="mt-card mt-ctx"><h3 class="rr-label">Team insights</h3><ul class="tc-list">${rows.join("")}</ul></section>` : "";
   }
   function renderMyTeam() {
     const box = $("myteam-body"), d = activeData();
@@ -7321,8 +7321,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <p class="mt-summary"><span class="mt-pr">Power rank <b>#${mineEv.power}</b><i>of ${n}</i></span>${recordText(r.settings) ? `<span>Record <b>${esc(recordText(r.settings))}</b></span>` : ""}<span>Team score <b>${fmt(mineEv.score)}</b></span></p>
           <p class="mt-meta">${esc(me.manager)} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
         </div></div>
-        <label class="mt-tw"><span class="ctl-label">Trade with</span>
-          <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></label>
       </div>
       <h3 class="section-label mt-sl">Roster strength<button class="btn link inline mt-pb" type="button" data-open-team="${me.rosterId}" title="Open your team in League → Power Rankings: every position's players, starters and depth vs the league">Full position breakdown →</button></h3>
       <div class="strength-grid mt-strength">${strength}</div>
@@ -7333,10 +7331,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="rk">Rk</th><th scope="col" class="mt-wk" title="${currentWeek() ? "Week " + currentWeek() + ": " : ""}his projection before kickoff, points (+ Live proj) during his game, his points once it's final, in your league's scoring (same as Matchups and Waiver Wire). Hover a cell for the opponent.">This week</th><th scope="col" class="mt-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
-      <div class="mt-extra">
+      <aside class="mt-side">
         ${teamContext(me, mineEv, n, starterIds, benchIds, map)}
-        ${hot.length ? `<p class="mt-hot"><span class="ctl-label">Hot lately</span>${hot.map(x => `${nameLink(x.p.sleeperId, x.p.name, "rr-name")} <b>${fp(x.a)}</b>`).join(`<span class="mt-dot">·</span>`)}<span class="muted"> pts/game, last 3</span></p>` : ""}
-      </div></div>`;
+        ${hot.length ? `<section class="mt-card"><h3 class="rr-label">Hot lately <span class="rr-when">last 3 games</span></h3><ul class="rr-list">${hot.map(x => `<li><span class="rr-mv up">${fp(x.a)}</span>${nameLink(x.p.sleeperId, x.p.name, "rr-name")}<span class="rr-sub">${esc(posLabel(x.p))}</span></li>`).join("")}</ul></section>` : ""}
+        <section class="mt-card"><h3 class="rr-label">Trade with</h3>
+          <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></section>
+      </aside></div>`;
   }
   function tradeWith(rosterId) {
     if (!rosterId || LG.myRosterId == null) return;
