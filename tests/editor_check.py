@@ -25,26 +25,40 @@ with sync_playwright() as p:
     pg.route("https://api.github.com/**", lambda r: r.abort())
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app)/.*"), lambda r: r.abort())
     pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/#rankings"); pg.wait_for_timeout(4500)
-    # give a mid-board player a typed value that fits his spot (his own value + 1), then move him
-    r0 = pg.evaluate(ROWS)[55]; target = r0["name"]
-    pg.locator(f'#rank-body tr.player[data-id="{r0["id"]}"] .num-btn').click(); pg.wait_for_timeout(200)
-    pg.fill(".val-input", str(r0["v"] + 1)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(600)
-    ok(target is not None, f"Typed a value for {target}")
-    before = {r["name"]: r["v"] for r in pg.evaluate(ROWS)}
-    pg.locator("#rank-body tr.player", has_text=target).first.locator('.arrow[data-dir="-1"]').click(force=True); pg.wait_for_timeout(600)
-    after_rows = pg.evaluate(ROWS); after = {r["name"]: r["v"] for r in after_rows}
+    TIERED = """() => [...document.querySelectorAll('#rank-body tr')].reduce((o, tr) => { if (tr.dataset.tier && !tr.classList.contains('player')) o.t = tr.dataset.tier;
+      if (tr.classList.contains('player')) o.rows.push({ id: tr.dataset.id, name: tr.querySelector('.pl-name').textContent.trim(), tier: tr.dataset.tier || o.t,
+        v: Number(tr.querySelector('.val .num, .val .num-btn').textContent.replace(/\\D/g, '')) }); return o; }, { t: null, rows: [] }).rows"""
+    def overall():
+        pg.click("#pos-chips button:has-text('All')"); pg.wait_for_timeout(300)
+        return pg.evaluate(ROWS)
+    def ordered(rows): return all(rows[i]["v"] <= rows[i - 1]["v"] for i in range(1, len(rows)))
+    # 1. tier move in a position tab: the top WR of a lower tier moves up into the tier above
+    board0 = overall()
+    pg.click("#pos-chips button:has-text('WR')"); pg.wait_for_timeout(400)
+    wr = pg.evaluate(TIERED)
+    i = next(k for k in range(1, len(wr)) if wr[k]["tier"] != wr[k - 1]["tier"] and k > 8)
+    mover, above, below = wr[i], wr[i - 2], wr[i - 1]   # after the move he sits between these two (both in the upper tier)
+    pg.locator(f'#rank-body tr.player[data-id="{mover["id"]}"] .arrow[data-dir="-1"]').click(force=True); pg.wait_for_timeout(700)
+    wr2 = pg.evaluate(TIERED); me = next(r for r in wr2 if r["name"] == mover["name"]); k = wr2.index(me)
     toast = pg.inner_text("#toast") if pg.locator("#toast").is_visible() else ""
-    ok(after[target] >= before[target] and target in toast, f"Moving {target} up never lowers his typed value: {before[target]} → {after[target]} ({toast!r})")
-    vals = [r["v"] for r in after_rows]
-    inv = [(after_rows[i - 1]["name"], vals[i - 1], after_rows[i]["name"], vals[i]) for i in range(1, len(vals)) if vals[i] > vals[i - 1]]
-    ok(not inv, f"Board values still never rise down the ranks ({inv[:3]})")
-    # moved down several spots: the typed value no longer fits, so it's recalculated (lower, never higher)
+    ok(me["tier"] == below["tier"] and wr2[k - 1]["name"] == above["name"] and wr2[k + 1]["name"] == below["name"], f"{mover['name']} joins tier {below['tier']} between {above['name']} and {below['name']}")
+    ok(wr2[k + 1]["v"] <= me["v"] <= wr2[k - 1]["v"] and me["v"] > mover["v"], f"Revalued from the tier: {mover['v']} → {me['v']} (neighbours {wr2[k - 1]['v']} / {wr2[k + 1]['v']}); toast {toast!r}")
+    ok(pg.locator(f'#rank-body tr.player[data-id="{mover["id"]}"] .rv-tag').count() == 1 and pg.locator(f'#rank-body tr.player[data-id="{mover["id"]}"] .custom-pill').count() == 0, "Row says 'Revalued from tier', not CUSTOM")
+    board1 = overall(); r0 = next(i for i, r in enumerate(board0) if r["name"] == mover["name"]); r1 = next(i for i, r in enumerate(board1) if r["name"] == mover["name"])
+    jumped = [r["pos"] for r in board0[r1:r0] if r["pos"] != "WR"]
+    ok(r1 < r0 and ordered(board1), f"Re-ranked on the overall board by value: #{r0 + 1} → #{r1 + 1}, over {len(jumped)} non-WRs; values still follow rank")
+    # 2. a typed value is kept when he moves, with a "Recalculate from tier" option
+    r55 = board1[55]; target = r55["name"]
+    pg.locator(f'#rank-body tr.player[data-id="{r55["id"]}"] .num-btn').click(); pg.wait_for_timeout(200)
+    pg.fill(".val-input", str(r55["v"] + 1)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(600)
     for _ in range(12):
         pg.locator("#rank-body tr.player", has_text=target).first.locator('.arrow[data-dir="1"]').click(force=True); pg.wait_for_timeout(250)
-    rows2 = pg.evaluate(ROWS); v2 = {r["name"]: r["v"] for r in rows2}
-    ok(v2[target] < before[target] and "recalculated" in pg.inner_text("#toast"), f"Moving {target} down 12 spots recalculates his value lower: {before[target]} → {v2[target]}")
-    vals = [r["v"] for r in rows2]
-    ok(all(vals[i] <= vals[i - 1] for i in range(1, len(vals))), "Board values still never rise down the ranks after the moves")
+    v2 = {r["name"]: r["v"] for r in pg.evaluate(ROWS)}
+    note = pg.inner_text("#ed-warn") if pg.locator("#ed-warn").is_visible() else ""
+    ok(v2[target] == r55["v"] + 1 and "kept your typed value" in note and pg.locator("[data-bend-recalc]").count() == 1, f"Moving {target} keeps his typed value {v2[target]} and offers Recalculate from tier")
+    pg.click("[data-bend-recalc]"); pg.wait_for_timeout(600)
+    rows2 = pg.evaluate(ROWS); v3 = {r["name"]: r["v"] for r in rows2}
+    ok(v3[target] < v2[target] and ordered(rows2), f"Recalculate from tier: {v2[target]} → {v3[target]}, board in order")
     # typing a value far above his rank bends players outside his tier: warn and offer the rank where it fits
     pg.reload(); pg.wait_for_timeout(4500)
     rows3 = pg.evaluate(ROWS)

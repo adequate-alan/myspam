@@ -398,7 +398,8 @@ const VALUE_MODEL = {
   keepRankOrder: true, // values never break your positional order (see step 7)
   minRankStep: 0.0025, // on the board each player is worth at least 0.25% less than the one ranked ahead (no tied values); tighter only when squeezed between two published values
   projection: {
-    maxWeight: 0.7,     // the most a projection can ever count
+    maxWeight: 0,       // the most a projection can ever count. 0 since Alan, Oct 5: projections have no effect on values
+                        // (values come from rank, tiers and the historical points-by-rank curve only); was 0.7
     halfWeightGames: 4  // games played at which it counts half of maxWeight
   },
   curves: {
@@ -1110,6 +1111,7 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 .ed-warn { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: -4px 0 12px; padding: 9px 14px; font-size: 0.82rem; color: var(--ink);
   border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); border-left: 3px solid var(--gold); border-radius: var(--radius); background: color-mix(in srgb, var(--gold) 9%, var(--surface)); }
 .ed-warn[hidden] { display: none; }
+.rv-tag { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
 .ed-warn p { margin: 0; flex: 1 1 320px; line-height: 1.4; }
 .ed-warn .eb-group { flex: 0 0 auto; }
 #eb-count, #eb-local-text {
@@ -3955,6 +3957,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const hasPicks = players.some(p => p.pos === "PICK");
   const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
   let savedCsv = null, draft = null, localEdits = {};   // set up in the editor section below
+  const REVALUED = new Set();   // rows revalued by a move this editing session: a quiet "Revalued from tier" tag until saved or cancelled
   // Sleeper league layer (layer 2) and league-adjusted values (layer 3); filled in by the Sleeper section
   const LG = { active: false, fmtOn: false, mode: "league", ownerFilter: "all", adj: new Map(), adjRank: new Map(), adjPos: new Map(), factor: new Map(), ownerOf: new Map(), teams: [], myRosterId: null };
   let sl = null, slPlayers = null, comps = null;
@@ -4109,7 +4112,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T22:30Z";
+  const BUILD_ID = "2026-10-06T00:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4298,7 +4301,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <button class="num-btn" type="button" data-id="${p.id}" aria-label="Set a custom value for ${esc(p.name)}">${fmt(p.value)}</button>
       <span class="val-extra">${over
         ? `<span class="custom-pill" title="Typed in and not published yet">Custom</span><button class="auto-btn" type="button" data-id="${p.id}" title="${official ? "Back to the published value" : "Back to the model value"}">${official ? "Reset" : "Auto"}</button>`
-        : ""}</span></div>`;
+        : REVALUED.has(p.id) ? `<span class="rv-tag" title="Value recalculated from his new tier and neighbours (not a typed value)">Revalued from tier</span>` : ""}</span></div>`;
   }
 
   // ▲/▼ next to a rank when other settings moved the player off your board's spot
@@ -5550,7 +5553,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   // Write an overall order: rank 1..N, every position rank re-derived, mover's tier
-  function writeOrder(order, me, forceTier) {
+  function writeOrder(order, me, forceTier, opts) {
     const iRank = colOf(draft, "rank"), iPos = colOf(draft, "pos_rank"), iTier = colOf(draft, "tier");
     const oldPos = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
     const newPos = order.filter(p => p.pos === me.pos);
@@ -5568,31 +5571,26 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       draft.rows[p.id][iRank] = String(k + 1);
       draft.rows[p.id][iPos] = String(counts[p.pos]);
     });
-    /* A moved player's typed value follows him (Alan, Oct 5): moving him to a new spot or tier clears it, so his value
-       is recomputed from the model: points the new position rank has historically scored, blended with his own
-       projection (more as games pile up), pulled toward his new tiermates, and kept in board order. */
-    // Moving up never lowers his value and moving down never raises it: if the model lands on the wrong side of the
-    // typed value, he keeps the typed value as long as it still fits between his new neighbours.
-    const iVal = colOf(draft, "value"), had = draft.rows[me.id][iVal], oldRank = me.rank, newRank = Number(draft.rows[me.id][iRank]);
-    if (had !== "" && had != null && (tierChanged || newRank !== oldRank)) {
-      const typed = Number(had), up = newRank < oldRank;
-      draft.rows[me.id][iVal] = "";
-      makeManual(me.id);
-      rebuild();
-      const now = byId.get(me.id), m = now ? now.value : 0;
-      if (up ? typed > m : typed < m) {
-        const ord = overallOrder(), k = ord.findIndex(p => p.id === me.id), above = ord[k - 1], below = ord[k + 1];
-        if ((!above || above.value > typed) && (!below || below.value < typed)) {
-          draft.rows[me.id][iVal] = had; rebuild();
-          toast(`${me.name} keeps his value ${fmt(typed)}: it still fits his new spot.`);
-          return;
-        }
-      }
-      toast(`${me.name}: value ${fmt(typed)} → ${fmt(m)}, recalculated for ${tierChanged ? "his new tier" : "his new rank"}. Click the value to type one again.`);
-      return;
-    }
+    /* Typed values win (Alan, Oct 5): a typed value is never overwritten by a move. A notice offers "Recalculate
+       from tier" (back to the model value for his new spot) and says when keeping it bends players outside his tier. */
+    const iVal = colOf(draft, "value"), had = draft.rows[me.id][iVal], moved = tierChanged || Number(draft.rows[me.id][iRank]) !== me.rank;
+    const before = new Map(players.map(p => [p.id, p.value])), oldVal = me.value;
     makeManual(me.id);
     rebuild();
+    const now = byId.get(me.id);
+    if (!moved || !now || (opts && opts.quiet)) return;
+    if (had !== "" && had != null) { typedMoveNotice(me.id, Number(had), before); return; }
+    REVALUED.add(me.id); renderRankings();
+    if (opts && opts.revalue) toast(`${now.name} revalued from tier: ${fmt(oldVal)} → ${fmt(now.value)} · #${now.rank} overall, ${now.posRank}.`);
+  }
+  function typedMoveNotice(id, typed, before) {
+    const me = byId.get(id); if (!me) return;
+    const bent = players.filter(p => p.id !== id && isPlayerRow(p) && before.get(p.id) > 0 && !(p.pos === me.pos && String(p.tier) === String(me.tier))
+      && Math.abs(p.value / before.get(p.id) - 1) > 0.05).length;
+    const box = $("ed-warn");
+    box.innerHTML = `<p><b>${esc(me.name)}</b> moved to #${me.rank} (${esc(me.posRank)}) and kept your typed value <b>${fmt(typed)}</b>${bent ? `, which moves ${bent} player${bent > 1 ? "s" : ""} outside his tier by more than 5%` : ""}.</p>
+      <div class="eb-group"><button class="btn primary" type="button" data-bend-recalc>Recalculate from tier</button><button class="btn link" type="button" data-bend-keep>Keep it</button></div>`;
+    box.dataset.id = id; box.hidden = false;
   }
 
   /* Ranking source. Auto players were added under your rankings; the one you move or
@@ -5613,17 +5611,34 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const overallOrder = () => players.filter(p => isPlayerRow(p) && p.rank != null).sort((a, b) => a.rank - b.rank);
 
   // All view: move a player to overall rank targetRank
-  function moveOverall(id, targetRank) {
+  function moveOverall(id, targetRank, opts) {
     const me = byId.get(id);
     if (!me || me.rank == null) return;
     const order = overallOrder();
     const from = order.indexOf(me), to = Math.max(0, Math.min(order.length - 1, targetRank - 1));
     if (from === to) return;
     order.splice(from, 1); order.splice(to, 0, me);
-    writeOrder(order, me);
+    writeOrder(order, me, null, opts);
   }
 
-  // Position tab: reorder within the position; those players keep the same set of overall spots
+  /* Position tab: tier first, then your order inside the tier, then value, then the overall board (Alan, Oct 5).
+     Dropping a player into a tier (or moving him within one) is a statement about his value: it is re-estimated from
+     his new neighbours at the position (interpolated between the player above and below; at a tier edge, at least
+     tierMinDrop away from the next tier), and he is placed on the overall board, across all positions, where that
+     value fits. Nobody else changes overall rank or tier; players he jumped at his position drop one position rank.
+     His value stays auto (model) and lands between those neighbours; a typed value is kept (see writeOrder). Tag tiers
+     (Hurt …) aren't on the value ladder, so moves into them keep the position's overall spots as before. */
+  function tierTarget(above, below, tier) {
+    const drop = Number(VALUE_MODEL.tierMinDrop) || 0.05;
+    let a = above ? above.value : null, b = below ? below.value : null;
+    if (a != null && String(above.tier) !== String(tier)) a *= 1 - drop;    // the tier above stays a step ahead
+    if (b != null && String(below.tier) !== String(tier)) b /= 1 - drop;    // and he stays a step ahead of the tier below
+    if (a == null && b == null) return null;
+    if (a == null) a = b * 1.08;
+    if (b == null) b = a * 0.92;
+    if (b > a) { a = above ? above.value : a; b = below ? below.value : b; }    // a squeezed edge: plain neighbours
+    return Math.sqrt(Math.max(1, a) * Math.max(1, b));
+  }
   function movePlayer(id, targetNum, forceTier) {
     const me = byId.get(id);
     if (!me || me.posNum == null) return;
@@ -5631,11 +5646,23 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const from = group.indexOf(me), to = Math.max(0, Math.min(group.length - 1, targetNum - 1));
     if (from === to && (forceTier == null || String(forceTier) === String(me.tier))) return;
     const newGroup = group.filter(p => p !== me); newGroup.splice(to, 0, me);
-    const order = overallOrder();
-    const slots = order.map((p, k) => p.pos === me.pos ? k : -1).filter(k => k >= 0);
-    if (slots.length !== newGroup.length) return;
-    slots.forEach((k, n) => { order[k] = newGroup[n]; });
-    writeOrder(order, me, forceTier);
+    const tier = forceTier != null ? String(forceTier) : String(tierFor(me, newGroup, group));
+    const iVal = colOf(draft, "value"), typed = draft.rows[me.id][iVal];
+    const hasTyped = typed !== "" && typed != null;
+    const target = hasTyped ? Number(typed) : tierTarget(newGroup[to - 1], newGroup[to + 1], tier);
+    if (isTagTier(tier) || target == null || me.rank == null) {   // old behaviour: the position keeps its overall spots
+      const order = overallOrder();
+      const slots = order.map((p, k) => p.pos === me.pos ? k : -1).filter(k => k >= 0);
+      if (slots.length !== newGroup.length) return;
+      slots.forEach((k, n) => { order[k] = newGroup[n]; });
+      writeOrder(order, me, tier);
+      return;
+    }
+    const others = overallOrder().filter(p => p !== me), above = newGroup[to - 1], below = newGroup[to + 1];
+    const lo = above ? others.indexOf(above) + 1 : 0, hi = below ? others.indexOf(below) : others.length;
+    let k = lo; while (k < hi && others[k].value >= target) k++;
+    others.splice(k, 0, me);
+    writeOrder(others, me, tier, { revalue: !hasTyped });
   }
 
   function setValue(id, v) {
@@ -5668,12 +5695,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const mv = e.target.closest("[data-bend-move]");
     if (mv) {   // move him to where his typed value fits, and keep that value
       const iVal = colOf(draft, "value"), typed = draft.rows[id][iVal];
-      hideBendWarn(); moveOverall(id, Number(mv.dataset.bendMove));
+      hideBendWarn(); moveOverall(id, Number(mv.dataset.bendMove), { quiet: true });
       if (draft.rows[id][iVal] !== typed) { draft.rows[id][iVal] = typed; rebuild(); }
       const me = byId.get(id); toast(`${me.name} moved to #${me.rank}, keeping his value ${fmt(Number(typed))}.`);
       return;
     }
     if (e.target.closest("[data-bend-undo]")) { hideBendWarn(); draft.rows[id][colOf(draft, "value")] = box.dataset.prev || ""; rebuild(); return; }
+    if (e.target.closest("[data-bend-recalc]")) {   // drop the typed value: the model values him for his tier and spot
+      hideBendWarn(); const was = byId.get(id).value;
+      draft.rows[id][colOf(draft, "value")] = ""; rebuild(); REVALUED.add(id); renderRankings();
+      const me = byId.get(id); toast(`${me.name} recalculated from tier: ${fmt(was)} → ${fmt(me.value)}.`);
+      return;
+    }
     if (e.target.closest("[data-bend-keep]")) hideBendWarn();
   });
 
@@ -5914,6 +5947,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   localEdits = diffEdits(publishedCsv, draft);   // drop edits for players no longer on the board
 
   function saveLocal() {
+    REVALUED.clear();
     const edits = diffEdits(publishedCsv, draft);
     try {
       if (Object.keys(edits).length) localStorage.setItem(LOCAL_KEY, JSON.stringify(edits));
@@ -6014,6 +6048,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("eb-cancel").addEventListener("click", () => {
     for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k];
     TIER_DEL = TIER_REN = null;
+    REVALUED.clear(); hideBendWarn();
     draft = csvToTable(savedCsv); rebuild(); toast("Changes discarded.");
   });
   $("eb-publish").addEventListener("click", publishLive);
