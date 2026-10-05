@@ -2014,6 +2014,33 @@ th.mt-wk { text-align: right; }
 .tc-v { color: var(--ink); line-height: 1.35; }
 .mt-card .tc-v .rr-sub { display: inline; margin: 0; }
 @media (max-width: 640px) { #panel-myteam .mt-table .mt-l3, #panel-myteam .mt-table .rk { display: none; } .mt-wk { width: auto; } .mt-wk small { white-space: normal; } }
+/* My Team density pass (Alan, Oct 5): ~18% shorter rows, tighter section spacing, compact rail */
+#panel-myteam .mt-head { margin-bottom: 8px; }
+#panel-myteam .section-label { margin: 14px 0 6px; }
+#panel-myteam .mt-sl { margin-top: 4px; }
+#panel-myteam .mt-strength { gap: 8px; }
+#panel-myteam .mt-strength .strength.rk-first { padding: 7px 11px 6px; }
+#panel-myteam .mt-strength .st-bar { margin: 4px 0 4px; }
+#panel-myteam .mt-table tbody tr.mt-row td { padding-block: 4px; }
+#panel-myteam .mt-table tr.mt-sec td { padding-block: 5px; }
+#panel-myteam .mt-table .face { width: 30px; height: 30px; }
+#panel-myteam .mt-table .pl-cell { gap: 10px; }
+#panel-myteam .mt-wk { width: 92px; padding-right: 6px; }
+#panel-myteam td.mt-l3, #panel-myteam th.mt-l3 { padding-left: 8px; }
+#panel-myteam .rf-scores { column-gap: 7px; grid-auto-columns: minmax(30px, auto); }
+#panel-myteam .rf { gap: 0; line-height: 1.15; }
+#panel-myteam .rf-col { line-height: 1.12; }
+#panel-myteam .rf-sub { margin-top: 1px; line-height: 1.15; }
+#panel-myteam .mt-table td.mt-val { width: 96px; }
+#panel-myteam .mt-table td.slot { width: 58px; }
+.mt-side .mt-card { padding: 9px 12px; }
+.mt-side .tc-list { gap: 5px; }
+.mt-side .tc-list li { font-size: 0.76rem; line-height: 1.3; }
+.mt-tw-in { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line-soft); }
+.mt-tw-in .mt-trade { margin-top: 2px; }
+.mt-hotc .rr-list { gap: 2px; }
+.mt-hotc .rr-list li { font-size: 0.76rem; line-height: 1.3; }
+@media (min-width: 1280px) { .mt-dash { gap: 18px; } .mt-side { margin-top: 26px; } }
 .tc-v b.tough { color: var(--qb); } .tc-v b.good { color: var(--rb); } .tc-v b.neutral { color: var(--ink); }
 .mt-l3, .fa-l3 { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 .rf { display: flex; flex-direction: column; gap: 2px; }
@@ -4070,7 +4097,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T17:10Z";
+  const BUILD_ID = "2026-10-05T18:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7240,7 +7267,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return `<td class="mt-wk up"${tip}>${tag("Proj")} <b>${fp(o.proj)}</b></td>`;
   }
   // Right rail: actionable context the cards and table don't already show (Alan, Oct 4)
-  function teamContext(me, x, n, starterIds, benchIds, map) {
+  function teamContext(me, x, n, starterIds, benchIds, map, extra = "") {
     const pl = id => map.get(String(id));
     const st = (starterIds || []).filter(id => id && id !== "0").map(pl).filter(Boolean);
     const out = new Set([...(me.roster.reserve || []), ...(me.roster.taxi || [])].map(String));
@@ -7263,7 +7290,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         .map(p => ({ p, f: faFit(K, me, p) })).find(o => o.f && o.f.cls === "start");
       if (fa) row("Waiver upgrade", `${who(fa.p)} <span class="rr-sub">· ${esc(fa.f.text)}</span>`);
     } catch (err) {}
-    return rows.length ? `<section class="mt-card mt-ctx"><h3 class="rr-label">Team insights</h3><ul class="tc-list">${rows.join("")}</ul></section>` : "";
+    // Trade with sits at the bottom of this card (Alan, Oct 5: one card, not two)
+    return rows.length || extra ? `<section class="mt-card mt-ctx">${rows.length ? `<h3 class="rr-label">Team insights</h3><ul class="tc-list">${rows.join("")}</ul>` : ""}${extra}</section>` : "";
   }
   function renderMyTeam() {
     const box = $("myteam-body"), d = activeData();
@@ -7332,10 +7360,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
       <aside class="mt-side">
-        ${teamContext(me, mineEv, n, starterIds, benchIds, map)}
-        ${hot.length ? `<section class="mt-card"><h3 class="rr-label">Hot lately <span class="rr-when">last 3 games</span></h3><ul class="rr-list">${hot.map(x => `<li><span class="rr-mv up">${fp(x.a)}</span>${nameLink(x.p.sleeperId, x.p.name, "rr-name")}<span class="rr-sub">${esc(posLabel(x.p))}</span></li>`).join("")}</ul></section>` : ""}
-        <section class="mt-card"><h3 class="rr-label">Trade with</h3>
-          <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></section>
+        ${teamContext(me, mineEv, n, starterIds, benchIds, map, `<div class="mt-tw-in"><h3 class="rr-label">Trade with</h3>
+          <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></div>`)}
+        ${hot.length ? `<section class="mt-card mt-hotc"><h3 class="rr-label">Hot lately <span class="rr-when">last 3 games</span></h3><ul class="rr-list">${hot.map(x => `<li><span class="rr-mv up">${fp(x.a)}</span>${nameLink(x.p.sleeperId, x.p.name, "rr-name")}<span class="rr-sub">${esc(posLabel(x.p))}</span></li>`).join("")}</ul></section>` : ""}
       </aside></div>`;
   }
   function tradeWith(rosterId) {
