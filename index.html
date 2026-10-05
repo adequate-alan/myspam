@@ -396,6 +396,7 @@ const VALUE_MODEL = {
   tagTierFrom: 90,   // tiers 90+ are labels (e.g. Hurt), not part of the tier ladder
   autoDecay: 0.978,  // auto-added players (ranked under yours): each spot down is worth this share of the one above   // tiers this number and up are labels (e.g. Hurt), not part of the tier ladder
   keepRankOrder: true, // values never break your positional order (see step 7)
+  anchorFade: 25,     // below your last typed value, its pull on the model curve fades over this many ranks (calibrateToAnchors)
   minRankStep: 0.0025, // on the board each player is worth at least 0.25% less than the one ranked ahead (no tied values); tighter only when squeezed between two published values
   projection: {
     maxWeight: 0.2,     // the most a projection can ever count. Alan, Oct 5: a flat 20% (was 0.7 ramping with games; briefly 0)
@@ -3771,6 +3772,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     applyTiers(mv);
     if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrderBySource(mv);
     autoValues(players);
+    calibrateToAnchors(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));
     keepOverallOrder(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // the whole board, tail included
     players.forEach(p => { if (p.modelValued) p.value = Math.round(p.value); });
 
@@ -3867,6 +3869,40 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // no two players share a value. Your rank is the truth: a player valued above someone ranked ahead of him
   // meets the players above in the middle (the closest values that keep the order, pool-adjacent-violators).
   // Published (typed) values are fixed anchors: the model values between two of them stay between them.
+  /* Typed values set the board's level (Alan, Oct 5). Each typed value is compared with what the model would give his
+     slot (interpolated, by rank, between the nearest model-valued players above and below him); that ratio bends the
+     model curve smoothly: model players between two typed players take a ratio interpolated between theirs, players
+     above the first typed player take its ratio (#1 capped at 10,000), and below the last typed player the ratio fades
+     back to 1 over VALUE_MODEL.anchorFade ranks. So players right after Lamar sit just under him instead of 16% below,
+     with no cliffs; keepOverallOrder then keeps everything in rank order. */
+  function calibrateToAnchors(list) {
+    const L = list.slice().sort((a, b) => a.rank - b.rank), lg = Math.log;
+    const isA = p => !p.modelValued && p.value > 0, isM = p => p.modelValued && p.value > 0;
+    const anchors = [];
+    L.forEach((p, i) => {
+      if (!isA(p)) return;
+      let a = i - 1; while (a >= 0 && !isM(L[a])) a--;
+      let b = i + 1; while (b < L.length && !isM(L[b])) b++;
+      let est = null;
+      if (a >= 0 && b < L.length) est = Math.exp(lg(L[a].value) + (i - a) / (b - a) * (lg(L[b].value) - lg(L[a].value)));
+      else if (a >= 0) est = L[a].value; else if (b < L.length) est = L[b].value;
+      if (est > 0) anchors.push({ i, r: Math.max(0.5, Math.min(2, p.value / est)) });
+    });
+    if (!anchors.length) return;
+    const fade = Number(VALUE_MODEL.anchorFade) || 25;
+    let ai = 0;
+    L.forEach((p, k) => {
+      if (!p.modelValued) return;
+      while (ai < anchors.length && anchors[ai].i < k) ai++;
+      const below = anchors[ai], above = anchors[ai - 1];
+      let lr;
+      if (above && below) lr = lg(above.r) + (k - above.i) / (below.i - above.i) * (lg(below.r) - lg(above.r));
+      else if (below) lr = lg(below.r);
+      else lr = lg(above.r) * Math.exp(-(k - above.i) / fade);
+      p.value = p.value * Math.exp(lr);
+      if (k === 0) p.value = Math.min(p.value, 10000);
+    });
+  }
   function keepOverallOrder(list) {
     if (!(typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) || list.length < 2) return;
     list.sort((a, b) => a.rank - b.rank);
@@ -3945,9 +3981,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         p.value = v; prev = p;
       });
     }
-    // Rescale so the most valuable model-valued player is back at 10,000
-    const top = Math.max(0, ...list.map(p => p.value));
-    list.forEach(p => { p.value = Math.round(top > 0 ? p.value * 10000 / top : p.value); });
+    // No board-wide rescale here (Alan, Oct 5): rescaling so the top model player is back at 10,000 made the whole
+    // board's level depend on who shares RB tier 1 with him (Taylor and McCaffrey leaving it cut every value ~16%).
+    // The level now comes from the curve and your typed values (calibrateToAnchors); #1 is capped at 10,000 there.
+    list.forEach(p => { p.value = Math.round(p.value); });
   }
 
   let players = loadPlayers(RANKINGS_CSV);
@@ -4111,7 +4148,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T01:00Z";
+  const BUILD_ID = "2026-10-06T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
