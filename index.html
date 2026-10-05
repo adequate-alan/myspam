@@ -4299,7 +4299,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T10:00Z";
+  const BUILD_ID = "2026-10-06T11:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -10221,7 +10221,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function glanceLine(pos, t) {
     const parts = [];
     if (pos === "QB") parts.push(`${t.pass_cmp}/${t.pass_att}`, `${fmt(t.pass_yd)} pass yds`, `${t.pass_td} TD`, `${t.pass_int} INT`, `${fmt(t.rush_yd)} rush yds`, `${t.rush_td} rush TD`);
-    else if (pos === "RB") parts.push(`${t.rush_att} carries`, `${fmt(t.rush_yd)} rush yds`, `${t.rush_td} rush TD`, `${t.rec}/${t.rec_tgt} catches`, `${fmt(t.rec_yd)} rec yds`, `${t.rec_td} rec TD`);
+    else if (pos === "RB") parts.push(`${t.rush_att} carries`, `${fmt(t.rush_yd)} rush yds`, `${t.rush_td} rush TD`, `${t.rec}/${t.rec_tgt} catches`, `${fmt(t.rec_yd)} rec yds`, `${t.rec_td} rec TD`, t.tgtShare != null ? `${(100 * t.tgtShare).toFixed(1)}% target share` : "");
     else parts.push(`${t.rec}/${t.rec_tgt} catches`, `${fmt(t.rec_yd)} yds`, `${t.rec_td} TD`, t.tgtShare != null ? `${(100 * t.tgtShare).toFixed(1)}% target share` : "");
     return `<span class="pp-glance-label">${STATS_SEASONS[0]} so far</span> ${parts.filter(Boolean).map(esc).join(" · ")}`;
   }
@@ -10259,7 +10259,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     QB: [["Cmp", "pass_cmp"], ["Att", "pass_att"], ["Pass yds", "pass_yd"], ["Pass TD", "pass_td"], ["Int", "pass_int"],
          ["Rush", "rush_att"], ["Rush yds", "rush_yd"], ["Rush TD", "rush_td"]],
     RB: [["Car", "rush_att"], ["Rush yds", "rush_yd"], ["YPC", g => ratio(g.rush_yd, g.rush_att)], ["Rush TD", "rush_td"],
-         ["Tgt", "rec_tgt"], ["Rec", "rec"], ["Rec yds", "rec_yd"], ["Rec TD", "rec_td"]],
+         ["Tgt", "rec_tgt"], ["Tgt %", g => { const v = g.tgtShare !== undefined ? g.tgtShare : g.tgt_share; return v == null ? "–" : (100 * v).toFixed(1) + "%"; }],
+         ["Rec", "rec"], ["Rec yds", "rec_yd"], ["Rec TD", "rec_td"]],
     WR: [["Tgt", "rec_tgt"], ["Rec", "rec"], ["Rec yds", "rec_yd"], ["YPR", g => ratio(g.rec_yd, g.rec)], ["Rec TD", "rec_td"]],
   };
   LOG_COLS.TE = LOG_COLS.WR;
