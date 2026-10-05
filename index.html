@@ -2486,6 +2486,12 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .tx-sum.pb-link:hover, .tx-sum.pb-link:focus-visible { border-color: var(--c); background: color-mix(in srgb, var(--c) 7%, var(--surface)); outline: none; }
 .pr-pos-item.pb-link { border-radius: 6px; padding: 1px 4px; margin: -1px -4px; }
 .pr-pos-item.pb-link:hover, .pr-pos-item.pb-link:focus-visible { background: var(--surface-2); outline: none; }
+.pb-lens { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 8px; }
+.pr-item.sel > .pr-row { background: color-mix(in srgb, var(--gold) 12%, var(--surface)); box-shadow: inset 3px 0 0 var(--gold); }
+.pr-strength[style*="--pb"] .pr-bar span { background: var(--pb); }
+.pr-pos-item.pb-link.on { background: var(--surface-2); }
+.pr-vs { display: block; margin-top: 1px; font-size: 0.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pr-vs.up { color: var(--rb); } .pr-vs.down { color: var(--qb); }
 .pb-depth { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .tx-summary { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .pos-board { margin: 4px 0 18px; padding: 12px 14px 8px; background: var(--surface); border: 1px solid var(--line-soft); border-top: 3px solid var(--c); border-radius: var(--radius); }
@@ -4194,7 +4200,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T04:00Z";
+  const BUILD_ID = "2026-10-06T05:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7623,7 +7629,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const share = { QB: sf ? 1 : 0.5, RB: 2, WR: 2, TE: 1 }, tot = share.QB + share.RB + share.WR + share.TE;
     for (const pos of EDIT_POS) {
       const n = Math.max(1, Math.round(benchN * share[pos] / tot));
-      for (let i = 0; i < n; i++) w[pos].push(bw);
+      for (let i = 0; i < n; i++) w[pos].push(bw * Math.pow(0.6, i));   // depth: first backup partial weight, the next ones less (Alan, Oct 5)
       w[pos].sort((a, b) => b - a);
     }
     roomCache.set(key, w);
@@ -7755,32 +7761,58 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   /* Power Rankings: compact rows that expand into a roster board */
+  /* Power Rankings with a lens (Alan, Oct 5): Overall = strongest total roster; QB / RB / WR / TE / Depth re-sort the same
+     team list in place by that room (positionLeaderboard), showing as many players as the league starts there
+     (primaryCount: full-weight lineup spots, Superflex counting for QBs). Clicking any position rank switches the lens. */
+  const PB_KEYS = [["QB", "QB"], ["RB", "RB"], ["WR", "WR"], ["TE", "TE"], ["DEPTH", "Depth"]];
+  function primaryCount(d, key) {
+    if (key === "DEPTH") return 3;
+    const W = roomWeights(leagueSlots(d.league), lineupOf(d.league).bench);
+    return Math.max(1, (W[key] || []).filter(w => w >= 0.5).length);
+  }
   function powerHtml(ev, d) {
-    const topScore = Math.max(1, ...ev.list.map(x => x.score));
-    const rows = ev.list.map(x => {
-      const t = x.team, st = t.roster.settings || {}, rid = String(t.rosterId), open = LT.open.has(rid);
-      const stars = x.starters.slice().sort((a, b) => dv(b) - dv(a)).slice(0, 3);
-      return `<div class="pr-item${open ? " open" : ""}${t.mine ? " mine" : ""}" data-rid="${esc(rid)}">
+    const mode = LT.pb ? LT.pb.pos : null, label = mode === "DEPTH" ? "Depth" : mode;
+    const lb = mode ? positionLeaderboard(ev, mode) : null;
+    const order = mode ? (LT.pb.dir === "asc" ? lb.slice().reverse() : lb) : ev.list.map(x => ({ x, rank: x.power, score: x.score }));
+    const top = Math.max(1, ...order.map(r => r.score)), nPrim = mode ? primaryCount(d, mode) : 0;
+    const sign = v => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v))}`;
+    const posLink = (pos, place, rid, lab) => `<span class="pr-pos-item pb-link${mode === pos ? " on" : ""}" role="button" tabindex="0" data-pos-board="${pos}" data-pb-rid="${esc(rid)}" title="Rank every team by ${pos} room"><span class="pr-pos-label">${lab}</span><span class="pos ${pos}">${pos}</span><span class="pr-place">${ordinal(place)}</span></span>`;
+    const rows = order.map(r => {
+      const x = r.x, t = x.team, st = t.roster.settings || {}, rid = String(t.rosterId), open = LT.open.has(rid);
+      const sel = mode && String(LT.pb.rid) === rid;
+      const stars = mode ? r.players.slice(0, nPrim) : x.starters.slice().sort((a, b) => dv(b) - dv(a)).slice(0, 3);
+      const names = stars.map(p => esc(compactName(p.name))).join(" · ") || (mode === "DEPTH" ? "No ranked bench" : `No ranked ${mode}s`);
+      return `<div class="pr-item${open ? " open" : ""}${t.mine ? " mine" : ""}${sel ? " sel" : ""}" data-rid="${esc(rid)}">
         <div class="pr-row" role="button" tabindex="0" aria-expanded="${open}" aria-label="${esc(t.name)}: ${open ? "collapse" : "expand"} roster" data-toggle-team="${esc(rid)}">
-          <span class="pr-rank">${x.power}</span>
-          <span class="pr-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(t.name !== t.manager ? t.manager : "")}</span></span></span>
+          <span class="pr-rank">${r.rank}</span>
+          <span class="pr-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(t.name !== t.manager ? t.manager : "")}${mode ? `${t.name !== t.manager ? " · " : ""}Power #${x.power}` : ""}</span></span></span>
           <span class="pr-rec">${esc(recordText(st) || "–")}</span>
           <span class="pr-pf">${st.pf ? pts(st.pf) : "–"}<small>${st.pa ? pts(st.pa) : ""}</small></span>
-          <span class="pr-strength"><span class="pr-score">${fmt(x.score)}</span><span class="pr-bar"><span style="width:${(100 * x.score / topScore).toFixed(1)}%"></span></span></span>
-          <span class="pr-pos"><span class="pr-pos-item pb-link" role="button" tabindex="0" data-pos-board="${x.best[0]}" data-pb-rid="${esc(rid)}" title="Compare every team's ${x.best[0]} room"><span class="pr-pos-label">Best</span><span class="pos ${x.best[0]}">${x.best[0]}</span><span class="pr-place">${ordinal(x.best[1])}</span></span>
-            <span class="pr-pos-item pb-link" role="button" tabindex="0" data-pos-board="${x.worst[0]}" data-pb-rid="${esc(rid)}" title="Compare every team's ${x.worst[0]} room"><span class="pr-pos-label">Weakest</span><span class="pos ${x.worst[0]}">${x.worst[0]}</span><span class="pr-place">${ordinal(x.worst[1])}</span></span></span>
-          <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${stars.map(p => esc(compactName(p.name))).join(" · ")}</span></span>
+          <span class="pr-strength"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : ""}</span>
+          <span class="pr-pos">${posLink(x.best[0], x.best[1], rid, "Best")}
+            ${posLink(x.worst[0], x.worst[1], rid, "Weakest")}</span>
+          <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${names}</span></span>
           <span class="pr-caret" aria-hidden="true"></span>
         </div>
         ${open ? `<div class="pr-detail">${teamExpand(x, ev, d)}</div>` : ""}
       </div>`;
     }).join("");
+    const selRow = mode && lb.find(r => String(r.team.rosterId) === String(LT.pb.rid)), n = ev.n;
+    const ctx = selRow ? `<p class="pb-ctx"><b>${esc(selRow.team.name)}</b> · ${label} ${ordinal(selRow.rank)} of ${n} · ${sign(selRow.diff)} vs league average${selRow.rank > 1 ? ` · ${fmt(lb[selRow.rank - 2].score - selRow.score)} behind #${selRow.rank - 1}` : ""}${selRow.rank < n ? ` · ${fmt(selRow.score - lb[n - 1].score)} ahead of #${n}` : ""}</p>` : "";
+    const lens = `<div class="pb-lens"><div class="view-toggle pb-modes" role="group" aria-label="Rank teams by">
+        <button type="button" class="vt-btn" data-pb-pos="OVERALL" aria-pressed="${!mode}">Overall</button>${PB_KEYS.map(([k, l]) => `<button type="button" class="vt-btn" data-pb-pos="${k}" aria-pressed="${mode === k}">${l}</button>`).join("")}</div>
+        ${mode ? `<div class="view-toggle pb-dir" role="group" aria-label="Sort"><button type="button" class="vt-btn" data-pb-dir="desc" aria-pressed="${LT.pb.dir !== "asc"}">Best → Worst</button><button type="button" class="vt-btn" data-pb-dir="asc" aria-pressed="${LT.pb.dir === "asc"}">Worst → Best</button></div>` : ""}
+      </div>${ctx}`;
+    const note = mode
+      ? (mode === "DEPTH" ? "Teams ranked by bench depth: the best bench players counted in team score (injured reserve counts, taxi doesn't)."
+        : `Teams ranked by ${label} room: the ${nPrim === 1 ? "starting " + label : nPrim + " " + label + "s"} this league starts count in full, flex and superflex spots in part, and depth with less weight for each extra player.`)
+      : "Power rankings use each team's best starting lineup plus a share of bench depth for this league's format. Injured reserve counts as if healthy; taxi squads don't.";
     return `<div class="lg-toolbar">
-        <p class="method-note">Power rankings use each team's best starting lineup plus a share of bench depth for this league's format. Injured reserve counts as if healthy; taxi squads don't.</p>
+        <p class="method-note">${note}</p>
         <label class="lg-keep"><input type="checkbox" id="lg-keep"${LT.keep ? " checked" : ""}> Keep teams open to compare</label>
       </div>
-      ${LT.pb ? posBoardHtml(ev) : ""}
-      <div class="pr-head"><span>Rk</span><span>Team</span><span>Record</span><span>PF / PA</span><span>Team score</span><span>Positions</span><span>Top players</span><span></span></div>
+      ${lens}
+      <div class="pr-head"><span>Rk</span><span>Team</span><span>Record</span><span>PF / PA</span><span>${mode ? label + (mode === "DEPTH" ? " score" : " room") : "Team score"}</span><span>Positions</span><span>${mode ? (mode === "DEPTH" ? "Top bench" : "Top " + label + "s") : "Top players"}</span><span></span></div>
       <div class="pr-list">${rows}</div>`;
   }
   // The expanded team: position ranks (why it ranks where it does), then the roster board by position
@@ -7841,7 +7873,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ${extras ? `<div class="tx-extras">${extras}</div>` : ""}`;
   }
 
-  /* League-wide position leaderboard (Alan, Oct 5): every team's QB / RB / WR / TE room or bench depth, from the same
+  /* Position leaderboard data (Alan, Oct 5): every team's QB / RB / WR / TE room or bench depth, from the same
      evaluateTeams numbers as the power rankings (room = roomOf over healthy + IR players; depth = the best bench players
      counted in team score). Kept as plain data so Trade Finder can later pair "deep at X, weak at Y" teams. */
   function positionLeaderboard(ev, key) {
@@ -7852,50 +7884,16 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     rows.forEach((r, i) => { r.rank = i + 1; });
     return rows;
   }
-  const PB_KEYS = [["QB", "QB"], ["RB", "RB"], ["WR", "WR"], ["TE", "TE"], ["DEPTH", "Depth"]];
-  function posBoardHtml(ev) {
-    const P = LT.pb, key = P.pos, rows = positionLeaderboard(ev, key), n = rows.length, top = Math.max(1, rows[0] ? rows[0].score : 1);
-    const label = key === "DEPTH" ? "Depth" : key, color = key === "DEPTH" ? "var(--cream)" : `var(--${key.toLowerCase()})`;
-    const sel = rows.find(r => String(r.team.rosterId) === String(P.rid));
-    const ctx = sel ? `<p class="pb-ctx"><b>${esc(sel.team.name)}</b> · ${label} ${ordinal(sel.rank)} of ${n} · ${sel.diff >= 0 ? "+" : "−"}${fmt(Math.abs(sel.diff))} vs league average${sel.rank > 1 ? ` · ${fmt(rows[sel.rank - 2].score - sel.score)} behind #${sel.rank - 1}` : " · best in the league"}${sel.rank < n ? ` · ${fmt(sel.score - rows[n - 1].score)} ahead of #${n}` : " · last in the league"}</p>` : "";
-    const list = P.dir === "asc" ? rows.slice().reverse() : rows;
-    const sign = v => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v))}`;
-    const body = list.map(r => {
-      const t = r.team, rid = String(t.rosterId), open = P.open.has(rid), isSel = String(P.rid) === rid;
-      const names = r.players.slice(0, 2).map(p => esc(compactName(p.name))).join(" · ") || "–";
-      const detail = open ? `<div class="pb-players">${r.players.length ? r.players.map(p => `<div class="pb-pl">${face(p.sleeperId, p.name, "sm")}${nameLink(p.sleeperId, p.name, "pb-pl-name")}<span class="pb-pl-pos">${esc(posLabel(p))}</span>${r.x.irIds && r.x.irIds.has(p.id) ? `<span class="tx-role off" title="Injured reserve: counts toward team strength">IR</span>` : ""}<span class="pb-pl-val">${fmt(dv(p))}</span></div>`).join("") : `<p class="tx-empty">No ranked ${key === "DEPTH" ? "bench players" : key + "s"}</p>`}</div>` : "";
-      const act = !t.mine && LG.myRosterId != null ? `<button class="btn link inline pb-find" type="button" data-find-with="${t.rosterId}" title="Trade Finder against ${esc(t.name)}">Find trade</button>` : "";
-      return `<div class="pb-item${open ? " open" : ""}${isSel ? " sel" : ""}${t.mine ? " mine" : ""}" data-pb-row="${esc(rid)}">
-        <div class="pb-row" role="button" tabindex="0" aria-expanded="${open}" data-pb-toggle="${esc(rid)}">
-          <span class="pb-rk">${r.rank}</span>
-          <span class="pb-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(t.name !== t.manager ? t.manager : "")}</span></span></span>
-          <span class="pb-score"><b>${fmt(r.score)}</b><span class="pb-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span></span>
-          <span class="pb-top">${names}</span>
-          <span class="pb-diff ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)}</span>
-          <span class="pb-act">${act}</span>
-        </div>${detail}</div>`;
-    }).join("");
-    return `<section class="pos-board" id="pos-board" style="--c: ${color}" aria-label="${label} rankings across the league">
-      <div class="pb-head">
-        <h3 class="pb-title">${label} rankings <small>${key === "DEPTH" ? "bench depth counted in team score" : "every team's " + label + " room"}</small></h3>
-        <div class="chips pb-tabs" role="group" aria-label="Position">${PB_KEYS.map(([k, l]) => `<button class="chip-btn" type="button" data-pb-pos="${k}" aria-pressed="${k === key}">${l}</button>`).join("")}</div>
-        <div class="view-toggle pb-dir" role="group" aria-label="Sort"><button type="button" class="vt-btn" data-pb-dir="desc" aria-pressed="${P.dir !== "asc"}">Best → Worst</button><button type="button" class="vt-btn" data-pb-dir="asc" aria-pressed="${P.dir === "asc"}">Worst → Best</button></div>
-        <button class="btn link pb-close" type="button" data-pb-close>× Close</button>
-      </div>
-      ${ctx}
-      <div class="pb-cols"><span>Rk</span><span>Team</span><span>Score</span><span>Top players</span><span>Vs avg</span><span></span></div>
-      <div class="pb-list">${body}</div>
-    </section>`;
+  function openPosBoard(pos, rid) {   // switch the Power Rankings lens; keep the clicked team in view
+    if (pos === "OVERALL") { const keep = LT.pb && LT.pb.rid; LT.pb = null; renderLeague(); scrollToTeam(keep); return; }
+    LT.pb = { pos, rid: rid != null ? String(rid) : (LT.pb && LT.pb.rid) || (LG.myRosterId != null ? String(LG.myRosterId) : null), dir: (LT.pb && LT.pb.dir) || "desc" };
+    renderLeague(); scrollToTeam(LT.pb.rid);
   }
-  function openPosBoard(pos, rid) {
-    const back = window.scrollY;
-    LT.pb = { pos, rid: rid != null ? String(rid) : (LT.pb && LT.pb.rid) || (LG.myRosterId != null ? String(LG.myRosterId) : null), dir: (LT.pb && LT.pb.dir) || "desc", open: new Set(), back: LT.pb ? LT.pb.back : back };
-    renderLeague();
-    const el = document.getElementById("pos-board"); if (!el) return;
-    const sel = el.querySelector(".pb-item.sel");
-    const head = $("tab-league").closest(".masthead").offsetHeight + 12;
-    window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - head) });
-    if (sel && sel.getBoundingClientRect().bottom > window.innerHeight) sel.scrollIntoView({ block: "center" });
+  function scrollToTeam(rid) {
+    const el = rid != null && $("league-body").querySelector(`.pr-item[data-rid="${String(rid).replace(/"/g, "")}"]`);
+    if (!el) return;
+    const r = el.getBoundingClientRect(), head = $("tab-league").closest(".masthead").offsetHeight + 12;
+    if (r.top < head || r.bottom > window.innerHeight) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - window.innerHeight / 2 + r.height / 2) });
   }
 
   /* Standings: record order next to SPAM power rank */
@@ -8810,12 +8808,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const pbl = e.target.closest("[data-pos-board]");
     if (pbl) { openPosBoard(pbl.dataset.posBoard, pbl.dataset.pbRid); return; }
     const pbp = e.target.closest("[data-pb-pos]");
-    if (pbp && LT.pb) { openPosBoard(pbp.dataset.pbPos, LT.pb.rid); return; }
+    if (pbp) { openPosBoard(pbp.dataset.pbPos, LT.pb ? LT.pb.rid : null); return; }
     const pbd = e.target.closest("[data-pb-dir]");
     if (pbd && LT.pb) { LT.pb.dir = pbd.dataset.pbDir; renderLeague(); return; }
-    if (e.target.closest("[data-pb-close]")) { const back = LT.pb ? LT.pb.back : null; LT.pb = null; renderLeague(); if (back != null) window.scrollTo({ top: back }); return; }
-    const pbt = e.target.closest("[data-pb-toggle]");
-    if (pbt && !e.target.closest("button, a, [data-player]")) { const k = pbt.dataset.pbToggle; if (LT.pb.open.has(k)) LT.pb.open.delete(k); else LT.pb.open.add(k); renderLeague(); return; }
+
     // anywhere on a team row opens/closes it (name, logo, manager, rank, score, blank space, the arrow);
     // real controls inside the row keep their own action
     const row = e.target.closest("[data-toggle-team]");
@@ -8825,7 +8821,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (e.key !== "Enter" && e.key !== " ") return;
     const row = e.target.closest("[data-toggle-team]"), st = e.target.closest("[data-standing-team]"), ro = e.target.closest("[data-ro-open]");
     if (ro && e.target === ro) { e.preventDefault(); const k = ro.dataset.roOpen; if (LT.rOpen.has(k)) LT.rOpen.delete(k); else LT.rOpen.add(k); renderLeague(); return; }
-    const pbl = e.target.closest("[data-pos-board], [data-pb-toggle]");
+    const pbl = e.target.closest("[data-pos-board]");
     if (pbl && e.target === pbl) { e.preventDefault(); pbl.click(); return; }
     if (row && e.target === row) { e.preventDefault(); toggleTeam(row.dataset.toggleTeam, e.shiftKey); }
     else if (st && e.target === st) { e.preventDefault(); openTeam(st.dataset.standingTeam); }
