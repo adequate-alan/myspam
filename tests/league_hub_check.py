@@ -252,9 +252,9 @@ with sync_playwright() as p:
     # My Team (Oct 4 follow-up): clean roster page: compact header with Trade with, full-width roster, one weekly state per row,
     # insights collapsed below the roster, no extra cards
     pg.click("#tab-myteam"); pg.wait_for_timeout(1200)
-    ok(pg.locator(".mt-summary .mt-pr").count() == 1 and pg.locator(".mt-head [data-trade-with]").count() == 1, "My Team: compact header with Trade with")
-    ok(pg.locator(".mt-take, .mt-side, .mt-ctx, .nb-row").count() == 0, "No takeaway block, sidebar cards or repeated position ranks")
-    ok(pg.locator("details.mt-insights:not([open])").count() == 1, "Team insights sit below the roster, collapsed")
+    ok(pg.locator(".mt-summary .mt-pr").count() == 1 and pg.locator(".mt-side [data-trade-with]").count() == 1, "My Team: compact header; Trade with in the side rail")
+    ok(pg.locator(".mt-take, .nb-row").count() == 0, "No takeaway block or repeated position ranks")
+    ok("TEAM INSIGHTS" in pg.inner_text(".mt-side").upper() and "HOT LATELY" in pg.inner_text(".mt-side").upper(), "Side rail: Team insights, Hot lately, Trade with")
     wk = [t.upper() for t in pg.locator("td.mt-wk").all_inner_texts()]
     ok(len(wk) >= 9 and "THIS WEEK" in pg.inner_text(".mt-table thead").upper() and not any("LIVE · LIVE PROJ" in t or "FINAL ·" in t for t in wk), f"One weekly state per row: {wk[:4]}")
     # Trade Finder goals: Slight edge / Best value ideas favor you within their range and are labelled as such (never "steal")
