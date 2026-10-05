@@ -2840,7 +2840,16 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .cmp-table td { width: 40%; font-size: 0.95rem; font-weight: 650; color: var(--ink); }
 .cmp-table td:first-child { text-align: right; }
 .cmp-table th { width: 20%; text-align: center; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
-.cmp-table td.cmp-win { color: var(--gold-bright); background: color-mix(in srgb, var(--gold) 8%, transparent); }
+.cmp-table td.cmp-win { color: var(--heading); font-weight: 800; background: color-mix(in srgb, var(--gold) 6%, transparent); }
+.cmp-up { display: inline-block; margin: 0 6px; font-size: 0.6rem; color: var(--gold); vertical-align: 1px; }
+.cmp-table td small { font-size: 0.68rem; font-weight: 550; color: var(--muted); }
+.cmp-sec-h td { padding: 12px 16px 6px !important; text-align: left !important; font-size: 0.6rem !important; font-weight: 750 !important; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted) !important; background: var(--surface-2); width: auto !important; }
+.cmp-sec:not(.lead) td:not(.cmp-sec-h td), .cmp-sec:not(.lead) th { padding-block: 7px; }
+.cmp-sec:not(.lead) td { font-size: 0.86rem; font-weight: 600; }
+.cmp-sec.lead .cmp-sec-h td { color: var(--cream) !important; }
+.cmp-sum { margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--line-soft); border-left: 2px solid var(--gold); border-radius: var(--radius-sm); font-size: 0.82rem; line-height: 1.45; color: var(--ink-2); }
+.cmp-sum p { margin: 0; } .cmp-sum p + p { margin-top: 4px; } .cmp-sum b { color: var(--cream); }
+.cmp-lens { margin: 0 0 10px; }
 
 /* ---------- Player modal content ---------- */
 .empty-note { color: var(--muted); font-size: 0.9rem; padding: 20px 0; }
@@ -3008,6 +3017,18 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .chart .ref-label { fill: var(--cream); font-size: 10px; font-weight: 650; }
 .chart .line { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; }
 .chart .pt { fill: var(--gold); stroke: var(--surface); stroke-width: 2; }
+/* Board Compare mode: a temporary pick circle per row and a banner; nothing shows in normal browsing */
+.cmp-banner { position: fixed; z-index: 34; left: 24px; right: calc(clamp(440px, 36vw, 520px) + 24px); bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 auto; max-width: 620px; padding: 10px 16px; border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--line)); border-radius: 999px;
+  background: var(--surface-2); box-shadow: 0 16px 36px -18px var(--shadow-color); font-size: 0.84rem; color: var(--ink); }
+.cmp-banner[hidden] { display: none; }
+.cmp-banner b { color: var(--heading); }
+.cmp-pick { flex: none; width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--gold) 70%, var(--muted)); background: none; cursor: pointer; }
+.cmp-pick.a { display: inline-flex; align-items: center; justify-content: center; border-color: var(--gold); background: var(--gold); color: var(--accent-text, #1A1314); font-size: 0.6rem; font-weight: 800; cursor: default; }
+#rank-body tr.cmp-row { cursor: pointer; }
+#rank-body tr.cmp-row:hover td { background: color-mix(in srgb, var(--gold) 7%, transparent); }
+#rank-body tr.cmp-row:hover .cmp-pick { background: color-mix(in srgb, var(--gold) 45%, transparent); }
+#rank-body tr.cmp-a td { background: color-mix(in srgb, var(--gold) 5%, transparent); }
 /* Injury context: games he left early with an injury */
 .inj-star { color: color-mix(in srgb, var(--st-dnp) 75%, var(--muted)); font-weight: 800; margin-left: 1px; cursor: help; }
 .inj-note { display: block; margin-top: 2px; font-size: 0.68rem; color: var(--muted); white-space: normal; }
@@ -3496,6 +3517,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </label>
       </div>
     </div>
+    <div class="cmp-banner" id="cmp-banner" role="status" hidden></div>
     <div class="rk-layout">
       <div class="rk-main">
         <div class="table-scroll">
@@ -4154,6 +4176,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const hasPicks = players.some(p => p.pos === "PICK");
   const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
   let savedCsv = null, draft = null, localEdits = {};   // set up in the editor section below
+  const CMP = { on: false };   // board Compare mode (Alan, Oct 5): pick Player B straight from the rankings
   const REVALUED = new Set();   // rows revalued by a move this editing session: a quiet "Revalued from tier" tag until saved or cancelled
   // Sleeper league layer (layer 2) and league-adjusted values (layer 3); filled in by the Sleeper section
   const LG = { active: false, fmtOn: false, mode: "league", ownerFilter: "all", adj: new Map(), adjRank: new Map(), adjPos: new Map(), factor: new Map(), ownerOf: new Map(), teams: [], myRosterId: null };
@@ -4309,7 +4332,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T13:00Z";
+  const BUILD_ID = "2026-10-06T14:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4362,6 +4385,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     const was = currentTab;
     currentTab = name;
+    if (CMP.on && name !== "rankings") { CMP.on = false; const ban = $("cmp-banner"); if (ban) ban.hidden = true; document.body.classList.remove("cmp-mode"); }
     keepTabInView(document.querySelector(".tabs"));
     // with the SPAM Board view on, values differ between the Rankings board (base) and every
     // league view (adjusted), and views drawn in the background used the Rankings context: redraw on open
@@ -4588,9 +4612,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const editCol = !editing ? "" : `<td class="edit-col">${canReorder && numOf(p) != null ? `
           <button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>⠿</button><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${numOf(p) <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${numOf(p) >= lastNum ? " disabled" : ""}>▼</button>` : ""}</td>`;
       const own = LG.active && LG.ownerOf.get(p.id);
-      out.push(`<tr class="player${own && own.mine ? " mine" : ""}" data-id="${p.id}">${editCol}
+      const cmpA = CMP.on && p.sleeperId && String(p.sleeperId) === String(PP.sid);
+      out.push(`<tr class="player${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
         <td class="rk">${rk(p)}</td>
-        <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
+        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
@@ -9731,7 +9756,23 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
                    ["history", "Ranking History"], ["value", "Trade Value"], ["depth", "Depth Chart"], ["practice", "Practice Report"]];
   const modal = $("player-modal");
   const modalOpen = () => modal.open;
-  const DRAWER_MQ = matchMedia("(min-width: 761px)");   // desktop/tablet: side drawer; phones: full-screen sheet
+  const DRAWER_MQ = matchMedia("(min-width: 761px)");
+  // Board Compare mode: only with the desktop drawer over the Rankings board (phones use the drawer's search)
+  const canBoardPick = () => modalOpen() && modal.classList.contains("drawer") && currentTab === "rankings";
+  function setCompareMode(on) {
+    const info = on ? playerInfo(PP.sid) : null;
+    CMP.on = !!on && !!info && !!info.name; CMP.name = CMP.on ? info.name : "";
+    const ban = $("cmp-banner");
+    ban.innerHTML = CMP.on ? `<span>Choose a player to compare with <b>${esc(info.name)}</b>, or search in the panel</span><button class="btn" type="button" data-cmp-cancel>Cancel</button>` : "";
+    ban.hidden = !CMP.on;
+    document.body.classList.toggle("cmp-mode", CMP.on);
+    const x = window.scrollX, y = window.scrollY; renderRankings(); window.scrollTo(x, y);   // scroll position kept
+  }
+  function pickCompare(sid) {
+    if (!sid || String(sid) === String(PP.sid)) return;
+    PP.compare = String(sid); PP.picking = false; PP.pickQuery = ""; PP.tab = "compare";
+    setCompareMode(false); $("player-body").scrollTop = 0; renderPlayer();
+  }   // desktop/tablet: side drawer; phones: full-screen sheet
   const isDrawer = () => modal.classList.contains("drawer");
   function markCurrent() {   // the open player's row on the board gets a faint highlight
     document.querySelectorAll("#rank-body tr.pp-current").forEach(r => r.classList.remove("pp-current"));
@@ -9757,6 +9798,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (PP.tab === "compare") PP.tab = "overview";
     }
     if (PP.sid !== sid) $("player-body").scrollTop = 0;
+    if (CMP.on && PP.sid !== sid) setCompareMode(false);
     PP.sid = sid; PP.picking = false;
     renderPlayer(); markCurrent();
     await Promise.all([loadStatic(), ...STATS_SEASONS.map(loadSeason), loadHistory()]);
@@ -9766,6 +9808,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   modal.addEventListener("close", () => {
     document.documentElement.classList.remove("modal-open");
     PP.picking = false;
+    if (CMP.on) setCompareMode(false);
     markCurrent();
     const back = PP.opener;
     if (back && document.contains(back) && back.focus) back.focus({ preventScroll: true });
@@ -9775,7 +9818,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   modal.addEventListener("pointerdown", e => { downOnBackdrop = e.target === modal; });
   modal.addEventListener("click", e => { if (e.target === modal && downOnBackdrop) closePlayer(); downOnBackdrop = false; });
   // The drawer isn't modal, so Escape is ours to handle; crossing the phone breakpoint reopens it in the right form
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented && modalOpen() && isDrawer()) { e.preventDefault(); closePlayer(); } });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || e.defaultPrevented || !modalOpen() || !isDrawer()) return;
+    e.preventDefault();
+    if (CMP.on) { setCompareMode(false); PP.picking = false; renderPlayer(); return; }   // first Escape leaves Compare mode
+    closePlayer();
+  });
   DRAWER_MQ.addEventListener("change", () => {
     if (!modalOpen() || isDrawer() === DRAWER_MQ.matches) return;
     const sid = PP.sid, trail = PP.trail.slice(), tab = PP.tab, opener = PP.opener;
@@ -9785,6 +9833,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Every player name and photo opens the modal; capture phase so a row's own click (add to trade,
   // open team) doesn't also fire
   document.addEventListener("click", e => {
+    if (CMP.on) {
+      if (e.target.closest("[data-cmp-cancel]")) { e.preventDefault(); setCompareMode(false); PP.picking = false; renderPlayer(); return; }
+      const row = e.target.closest("#rank-body tr.cmp-row");
+      if (row && !e.target.closest(".edit-col, .val button, input")) {
+        const pick = row.querySelector("[data-cmp-pick]");
+        if (pick) { e.preventDefault(); e.stopPropagation(); pickCompare(pick.dataset.cmpPick); return; }
+      }
+    }
     const el = e.target.closest("[data-player]");
     if (!el || !el.dataset.player) return;
     e.preventDefault(); e.stopPropagation();
@@ -9872,6 +9928,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const q = PP.pickQuery.trim().toLowerCase();
     const list = q ? players.filter(x => x.pos !== "PICK" && x.sleeperId && x.sleeperId !== PP.sid && (x.name + " " + x.team).toLowerCase().includes(q)).sort((a, b) => dv(b) - dv(a)).slice(0, 6) : [];
     return `<div class="pm-pick">
+      ${CMP.on ? `<p class="pp-note pm-pick-hint">Search here, or pick a player on the rankings board.</p>` : ""}
       <input class="search" id="pm-pick" type="search" placeholder="Compare with… type a player" autocomplete="off" value="${esc(PP.pickQuery)}" aria-label="Player to compare">
       ${list.length ? `<ul class="pm-pick-list">${list.map(x => `<li><button type="button" data-pm-pick="${esc(x.sleeperId)}">${face(x.sleeperId, x.name, "xs", false)}<span class="pos ${esc(x.pos)}">${esc(posLabel(x))}</span><span class="r-name">${esc(x.name)}</span><span class="r-val">${fmt(dv(x))}</span></button></li>`).join("")}</ul>` : q ? `<p class="pp-note">No ranked player matches “${esc(PP.pickQuery)}”.</p>` : ""}
     </div>`;
@@ -10493,45 +10550,158 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   /* Compare two players side by side */
+  /* Compare (Alan, Oct 5): Value & Production first, then position-aware Usage & Role and Efficiency (shared
+     metrics when the positions differ), an Outlook section, subtle per-row leaders and a summary built only from
+     differences in this table. Everything is per game this season in the selected league's scoring; a game he left
+     early with an injury counts but is starred. Lenses (Fantasy / Usage / Value) reorder and emphasise the same
+     table. Swap only exchanges the two players (the lens stays). */
+  const CMP_LENSES = [["fantasy", "Fantasy"], ["usage", "Usage"], ["value", "Value"]];
+  function cmpSide(inf) {
+    const cur = seasonLog(STATS_SEASONS[0], inf.sid, inf.pos), games = cur ? cur.games : [];
+    const t = games.length ? totals(games) : null, g = games.length;
+    const sum = k => games.reduce((a, x) => a + (x[k] || 0), 0);
+    const avgOf = k => { const v = games.map(x => x[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    const pg = k => (g ? sum(k) / g : null), hasUse = games.some(x => x.snap !== undefined);
+    const opps = inf.pos === "QB" ? sum("pass_att") + sum("rush_att") : inf.pos === "RB" || inf.pos === "MIX" ? sum("rush_att") + sum("rec_tgt") : sum("rec_tgt") + sum("rush_att");
+    const rushPts = games.reduce((a, x) => a + gamePoints({ rush_att: x.rush_att, rush_yd: x.rush_yd, rush_td: x.rush_td, rush_2pt: x.rush_2pt, rush_fd: x.rush_fd }, inf.pos, scoringNow()), 0);
+    const ng = inf.team ? nflGameState(inf.team, currentWeek()) : null;
+    return { inf, t, g, games, sum, pg, avgOf, hasUse, opps, rushPts,
+      l3: avgPts(recentGames(inf.sid, inf.pos, 3)), l3s: recentGames(inf.sid, inf.pos, 3).filter(x => x.short).length,
+      implied: ng && ng.total != null && ng.spread != null ? ng.total / 2 - ng.spread / 2 : null, ng };
+  }
+  // [label, value(S), format(v), better: 1 higher / -1 lower / 0 neutral]
+  const pct1 = v => (100 * v).toFixed(1) + "%", d1 = v => v.toFixed(1), d2 = v => v.toFixed(2);
+  const per = (S, k) => S.pg(k), ratioOf = (a, b) => (b ? a / b : null);
+  function cmpSections(A, B) {
+    const pa = A.inf.pos, pb = B.inf.pos, same = pa === pb, P = same ? pa : "MIX", anyQB = pa === "QB" || pb === "QB";
+    const injStar = S => (S.t && S.t.short ? `<span class="inj-star" title="${esc(ppgNote(S.t))}">*</span>` : "");
+    const vp = [
+      ["Overall rank", S => (S.inf.p ? (leagueView() ? overallRank(S.inf.p) : S.inf.p.rank) : null), v => "#" + v, -1],
+      ["Position rank", S => (S.inf.p ? S.inf.p.posNum : null), (v, S) => esc(S.inf.p ? posLabel(S.inf.p) : S.inf.pos + v), same ? -1 : 0],
+      ["SPAM value", S => (S.inf.p ? dv(S.inf.p) : null), v => fmt(v), 1, "value"],
+      [`${STATS_SEASONS[0]} PPG`, S => (S.g ? S.t.ppg : null), (v, S) => fp(v) + injStar(S), 1, "ppg"],
+    ];
+    if ((A.t && A.t.distort) || (B.t && B.t.distort)) vp.push(["PPG in completed games", S => (S.t && S.t.fullG ? S.t.fullPpg : null), v => fp(v), 1]);
+    vp.push(["Last 3 PPG", S => S.l3, (v, S) => fp(v) + (S.l3s ? `<span class="inj-star" title="Includes ${shortCount(S.l3s)}">*</span>` : ""), 1, "l3"],
+      ["Games played", S => S.g || null, v => v, 0]);
+    const U = { RB: [
+        ["Touches / game", S => S.g ? (S.sum("rush_att") + S.sum("rec")) / S.g : null, d1, 1, "vol"],
+        ["Rush attempts / game", S => per(S, "rush_att"), d1, 1],
+        ["Targets / game", S => per(S, "rec_tgt"), d1, 1],
+        ["Target share", S => S.t && S.t.tgtShare, pct1, 1, "tshare"],
+        ["Snap share", S => S.avgOf("snap"), pct1, 1, "snap"],
+        ["Red-zone opportunities / game", S => S.hasUse && S.g ? (S.sum("rz_rush") + S.sum("rz_tgt")) / S.g : null, d1, 1, "rz"],
+        ["Goal-line carries / game", S => S.hasUse && S.g ? S.sum("gl_rush") / S.g : null, d1, 1]],
+      WR: [
+        ["Targets / game", S => per(S, "rec_tgt"), d1, 1, "vol"],
+        ["Target share", S => S.t && S.t.tgtShare, pct1, 1, "tshare"],
+        ["Receptions / game", S => per(S, "rec"), d1, 1],
+        ["Receiving yards / game", S => per(S, "rec_yd"), d1, 1],
+        ["Snap share", S => S.avgOf("snap"), pct1, 1, "snap"],
+        ["Air-yard share", S => S.avgOf("air_share"), pct1, 1],
+        ["Avg depth of target", S => S.hasUse ? ratioOf(S.sum("air_yd"), S.sum("rec_tgt")) : null, d1, 0],
+        ["Red-zone targets / game", S => S.hasUse && S.g ? S.sum("rz_tgt") / S.g : null, d1, 1, "rz"]],
+      QB: [
+        ["Pass attempts / game", S => per(S, "pass_att"), d1, 1, "vol"],
+        ["Passing yards / game", S => per(S, "pass_yd"), d1, 1],
+        ["Passing TD / game", S => per(S, "pass_td"), d2, 1],
+        ["Interceptions / game", S => per(S, "pass_int"), d2, -1],
+        ["Sacks / game", S => per(S, "pass_sack"), d1, -1],
+        ["Rush attempts / game", S => per(S, "rush_att"), d1, 1],
+        ["Designed runs / game", S => S.hasUse && S.g ? (S.sum("rush_att") - S.sum("scr")) / S.g : null, d1, 1],
+        ["Scrambles / game", S => S.hasUse && S.g ? S.sum("scr") / S.g : null, d1, 1],
+        ["Rushing yards / game", S => per(S, "rush_yd"), d1, 1, "rush"],
+        ["Rushing TD / game", S => per(S, "rush_td"), d2, 1],
+        ["Share of points from rushing", S => S.t && S.t.pts > 0 ? S.rushPts / S.t.pts : null, pct1, 0]],
+      MIX: [
+        ["Opportunities / game", S => S.g ? S.opps / S.g : null, d1, 1, "vol"],
+        ...(anyQB ? [] : [["Touches / game", S => S.g ? (S.sum("rush_att") + S.sum("rec")) / S.g : null, d1, 1],
+                          ["Target share", S => S.t && S.t.tgtShare, pct1, 1, "tshare"]]),
+        ["Snap share", S => S.avgOf("snap"), pct1, 1, "snap"],
+        ...(anyQB ? [] : [["Scrimmage yards / game", S => S.g ? (S.sum("rush_yd") + S.sum("rec_yd")) / S.g : null, d1, 1]]),
+        ["Total TD / game", S => S.g ? (S.sum("pass_td") + S.sum("rush_td") + S.sum("rec_td")) / S.g : null, d2, 1]] };
+    U.TE = U.WR;
+    const fpo = ["Fantasy points / opportunity", S => S.t && S.opps ? S.t.pts / S.opps : null, d2, 1, "eff"];
+    const E = { RB: [
+        ["Yards / carry", S => ratioOf(S.sum("rush_yd"), S.sum("rush_att")), d1, 1],
+        ["Yards / touch", S => ratioOf(S.sum("rush_yd") + S.sum("rec_yd"), S.sum("rush_att") + S.sum("rec")), d1, 1],
+        ["Catch rate", S => ratioOf(S.sum("rec"), S.sum("rec_tgt")), pct1, 1],
+        fpo, ["TD rate (per touch)", S => ratioOf(S.sum("rush_td") + S.sum("rec_td"), S.sum("rush_att") + S.sum("rec")), pct1, 1]],
+      WR: [
+        ["Yards / target", S => ratioOf(S.sum("rec_yd"), S.sum("rec_tgt")), d1, 1],
+        ["Yards / reception", S => ratioOf(S.sum("rec_yd"), S.sum("rec")), d1, 1],
+        ["Catch rate", S => ratioOf(S.sum("rec"), S.sum("rec_tgt")), pct1, 1],
+        fpo, ["TD rate (per target)", S => ratioOf(S.sum("rec_td"), S.sum("rec_tgt")), pct1, 1]],
+      QB: [
+        ["Completion %", S => ratioOf(S.sum("pass_cmp"), S.sum("pass_att")), pct1, 1],
+        ["Yards / attempt", S => ratioOf(S.sum("pass_yd"), S.sum("pass_att")), d1, 1],
+        ["TD rate", S => ratioOf(S.sum("pass_td"), S.sum("pass_att")), pct1, 1],
+        ["INT rate", S => ratioOf(S.sum("pass_int"), S.sum("pass_att")), pct1, -1],
+        ["Yards / carry", S => ratioOf(S.sum("rush_yd"), S.sum("rush_att")), d1, 1], fpo],
+      MIX: [fpo, ["Yards / touch", S => anyQB ? null : ratioOf(S.sum("rush_yd") + S.sum("rec_yd"), S.sum("rush_att") + S.sum("rec")), d1, 1]] };
+    E.TE = E.WR;
+    const out = [
+      ["vp", "Value & Production", vp],
+      ["usage", "Usage & Role", U[P] || U.MIX],
+      ["eff", "Efficiency", E[P] || E.MIX],
+      ["outlook", "Outlook", [
+        ["Age", S => ageFrom(playerInfo(S.inf.sid).birth), v => v, 0],
+        ["Tier", S => (S.inf.p && S.inf.p.tier ? tierLabel(S.inf.p.pos, S.inf.p.tier) : null), v => esc(v), 0],
+        ["Rest-of-season projection", S => projPPGOf(S.inf.p), v => fp(v) + "<small> PPG</small>", 1, "proj"],
+        ["Team implied total (next game)", S => S.implied, (v, S) => `${fp(v)}<small> ${esc(S.ng.opp || "")}</small>`, 1]]]];
+    return { P, sections: out };
+  }
+  function cmpLead(a, b, better) {
+    if (!better || a == null || b == null || typeof a !== "number" || typeof b !== "number") return "";
+    const m = Math.max(Math.abs(a), Math.abs(b));
+    if (!m || Math.abs(a - b) / m < 0.04) return "";   // negligible: neutral
+    return (better > 0 ? a > b : a < b) ? "a" : "b";
+  }
+  function cmpSummary(A, B, rows) {
+    // only differences in this table: a player "leads" a theme when his number is ≥12% better
+    const THEMES = { ppg: "scoring production", l3: "recent scoring", vol: "volume", tshare: "target share", snap: "snap share", rz: "red-zone role", eff: "efficiency per opportunity", rush: "rushing production", value: "SPAM value", proj: "rest-of-season projection" };
+    const lines = { a: [], b: [] };
+    rows.forEach(r => {
+      if (!r.theme || !THEMES[r.theme] || r.a == null || r.b == null || !r.better) return;
+      const m = Math.max(Math.abs(r.a), Math.abs(r.b)); if (!m || Math.abs(r.a - r.b) / m < 0.12) return;
+      const who = (r.better > 0 ? r.a > r.b : r.a < r.b) ? "a" : "b";
+      const unit = { ppg: " PPG", l3: " PPG", proj: " PPG", value: "", tshare: "", snap: "" }[r.theme] ?? " " + r.label.toLowerCase();
+      lines[who].push(`${THEMES[r.theme]} (${who === "a" ? r.fa : r.fb} vs ${who === "a" ? r.fb : r.fa}${unit.replace(/ PPG PPG$/, " PPG")})`);
+    });
+    const say = (S, list) => (list.length ? `<p><b>${esc(compactName(S.inf.name))}:</b> stronger ${list.slice(0, 3).join(", ").replace(/, ([^,]*)$/, " and $1")}</p>` : "");
+    const html = say(A, lines.a) + say(B, lines.b);
+    return html || `<p>Very close: no difference of 12% or more in production, volume, role or efficiency.</p>`;
+  }
   function ppCompare(info) {
     const other = playerInfo(PP.compare);
     if (!other.name) return `<p class="empty-note">Loading…</p>`;
-    const side = inf => {
-      const cur = seasonLog(STATS_SEASONS[0], inf.sid, inf.pos), prev = seasonLog(STATS_SEASONS[1], inf.sid, inf.pos);
-      const t = cur ? totals(cur.games) : null, pt = prev ? totals(prev.games) : null;
-      const own = ownerOfSid(inf.sid);
-      return { inf, t, pt, l3: avgPts(recentGames(inf.sid, inf.pos, 3)), l5: avgPts(recentGames(inf.sid, inf.pos, 5)), own };
-    };
-    const A = side(info), B = side(other);
-    // [label, value fn, display fn, higher is better?]
-    const rows = [
-      ["Overall rank", s => (s.inf.p ? (leagueView() ? overallRank(s.inf.p) : s.inf.p.rank) : null), v => "#" + v, false],
-      ["Position rank", s => (s.inf.p ? s.inf.p.posNum : null), (v, s) => s.inf.pos + v, null],
-      ["SPAM Value", s => (s.inf.p ? dv(s.inf.p) : null), v => fmt(v), true],
-      [`${STATS_SEASONS[0]} PPG`, s => (s.t && s.t.g ? s.t.ppg : null), v => fp(v), true],
-      [`${STATS_SEASONS[0]} points`, s => (s.t ? s.t.pts : null), v => fp(v), true],
-      ["Games", s => (s.t ? s.t.g : null), v => v, null],
-      ["Last 3 average", s => s.l3, v => fp(v), true],
-      ["Last 5 average", s => s.l5, v => fp(v), true],
-      [`${STATS_SEASONS[1]} PPG`, s => (s.pt && s.pt.g ? s.pt.ppg : null), v => fp(v), true],
-      ["Targets", s => (s.t ? s.t.rec_tgt : null), v => v, true],
-      ["Touches", s => (s.t ? s.t.touches : null), v => v, true],
-      ["Scrimmage yds", s => (s.t ? s.t.rush_yd + s.t.rec_yd : null), v => fmt(v), true],
-      ["Pass yds", s => (s.t && s.t.pass_att ? s.t.pass_yd : null), v => fmt(v), true],
-      ["Total TD", s => (s.t ? s.t.pass_td + s.t.rush_td + s.t.rec_td : null), v => v, true],
-    ];
-    if (LG.active) rows.push(["Owner", s => (s.own === "fa" ? "Free agent" : s.own ? (s.own.mine ? "My team" : "Owned by " + s.own.name) : "–"), v => esc(v), null]);
-    const body = rows.map(([label, f, show, hiBetter]) => {
-      const a = f(A), b = f(B);
-      if (a == null && b == null) return "";
-      const win = hiBetter == null || a == null || b == null || a === b ? "" : (hiBetter ? a > b : a < b) ? "a" : "b";
-      return `<tr><td class="${win === "a" ? "cmp-win" : ""}">${a == null ? "–" : show(a, A)}</td><th scope="row">${label}</th><td class="${win === "b" ? "cmp-win" : ""}">${b == null ? "–" : show(b, B)}</td></tr>`;
+    const A = cmpSide(info), B = cmpSide(other), { P, sections } = cmpSections(A, B);
+    const lens = PP.cmpLens || "fantasy";
+    const ORDER = { fantasy: ["vp", "eff", "usage", "outlook"], usage: ["usage", "eff", "vp", "outlook"], value: ["vp", "outlook", "usage", "eff"] }[lens];
+    const LEAD = { fantasy: ["vp", "eff"], usage: ["usage", "eff"], value: ["vp", "outlook"] }[lens];
+    const all = [];
+    const secHtml = sections.slice().sort((x, y) => ORDER.indexOf(x[0]) - ORDER.indexOf(y[0])).map(([key, title, rows]) => {
+      const body = rows.map(([label, f, show, better, theme]) => {
+        const a = f(A), b = f(B);
+        if (a == null && b == null) return "";
+        const win = cmpLead(a, b, better), fa = a == null ? "–" : show(a, A), fb = b == null ? "–" : show(b, B);
+        all.push({ theme, label, a, b, better, fa: String(fa).replace(/<[^>]+>.*$/, ""), fb: String(fb).replace(/<[^>]+>.*$/, "") });
+        const cellA = `<td class="${win === "a" ? "cmp-win" : ""}">${win === "a" ? `<span class="cmp-up" aria-label="leads">▲</span>` : ""}${fa}</td>`;
+        const cellB = `<td class="${win === "b" ? "cmp-win" : ""}">${fb}${win === "b" ? `<span class="cmp-up" aria-label="leads">▲</span>` : ""}</td>`;
+        return `<tr>${cellA}<th scope="row">${label}</th>${cellB}</tr>`;
+      }).join("");
+      return body ? `<tbody class="cmp-sec${LEAD.includes(key) ? " lead" : ""}"><tr class="cmp-sec-h"><td colspan="3">${title}</td></tr>${body}</tbody>` : "";
     }).join("");
-    const headCell = s => `<div class="cmp-head">${face(s.inf.sid, s.inf.name, "lg")}${nameLink(s.inf.sid, s.inf.name, "cmp-name")}<span class="cmp-meta">${s.inf.pos ? `<span class="pos ${esc(s.inf.pos)}">${esc(s.inf.p ? posLabel(s.inf.p) : s.inf.pos)}</span>` : ""} ${esc(s.inf.team || "")}</span></div>`;
+    const notes = [A, B].filter(S => S.t && S.t.short).map(S => `* ${esc(compactName(S.inf.name))}: includes ${shortCount(S.t.short)} (left early with an injury; still counted)`);
+    const mixed = P === "MIX" ? `<p class="pp-note">Different positions: Usage and Efficiency use metrics both share.</p>` : "";
+    const headCell = S => `<div class="cmp-head">${face(S.inf.sid, S.inf.name, "lg")}${nameLink(S.inf.sid, S.inf.name, "cmp-name")}<span class="cmp-meta">${S.inf.pos ? `<span class="pos ${esc(S.inf.pos)}">${esc(S.inf.p ? posLabel(S.inf.p) : S.inf.pos)}</span>` : ""} ${esc(S.inf.team || "")}</span></div>`;
     return `<div class="cmp">
-        <div class="cmp-top">${headCell(A)}<button class="btn" type="button" data-pm-swap title="Make ${esc(other.name)} the main player">⇄ Swap</button>${headCell(B)}</div>
-        <table class="cmp-table"><tbody>${body}</tbody></table>
-        <p class="pp-note">Gold marks the better number. ${esc(scoringLabel())}. <button class="footer-link" type="button" data-pm-uncompare>Stop comparing</button></p>
+        <div class="cmp-top">${headCell(A)}<button class="btn" type="button" data-pm-swap title="Swap the two players">⇄ Swap</button>${headCell(B)}</div>
+        <div class="cmp-sum">${cmpSummary(A, B, all)}</div>
+        <div class="view-toggle cmp-lens" role="group" aria-label="Compare lens">${CMP_LENSES.map(([k, l]) => `<button type="button" class="vt-btn" data-cmp-lens="${k}" aria-pressed="${lens === k}">${l}</button>`).join("")}</div>
+        <table class="cmp-table">${secHtml}</table>
+        ${mixed}
+        <p class="pp-note">${STATS_SEASONS[0]} per game · ${esc(scoringLabel())}. ▲ marks the leader where the gap is 4% or more.${notes.length ? "<br>" + notes.join("<br>") : ""} Route data (routes run, route participation, per-route rates) isn't in our free data sources, so it isn't shown. <button class="footer-link" type="button" data-pm-uncompare>Stop comparing</button></p>
       </div>`;
   }
 
@@ -10728,9 +10898,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       toast(`${info.name} added to "${getsLabel(side)}" in the trade calculator.`);
       renderPlayer(); return;
     }
-    if (t.closest("[data-pm-compare]")) { PP.picking = !PP.picking; PP.pickQuery = ""; renderPlayer(); return; }
+    if (t.closest("[data-pm-compare]")) {
+      PP.picking = !PP.picking; PP.pickQuery = "";
+      setCompareMode(PP.picking && canBoardPick());
+      renderPlayer(); return;
+    }
     const pick = t.closest("[data-pm-pick]");
-    if (pick) { PP.compare = pick.dataset.pmPick; PP.picking = false; PP.tab = "compare"; renderPlayer(); return; }
+    if (pick) { pickCompare(pick.dataset.pmPick); return; }
+    const lz = t.closest("[data-cmp-lens]"); if (lz) { PP.cmpLens = lz.dataset.cmpLens; renderPlayer(); return; }
     if (t.closest("[data-pm-swap]")) { const a = PP.sid; PP.sid = PP.compare; PP.compare = a; renderPlayer(); return; }
     if (t.closest("[data-pm-uncompare]")) { PP.compare = null; PP.tab = "overview"; renderPlayer(); return; }
     const ft = t.closest("[data-find-trades]"); if (ft && !ft.disabled) { closePlayer(); openFinder(ft.dataset.findTrades); return; }
