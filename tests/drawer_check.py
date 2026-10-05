@@ -42,6 +42,20 @@ with sync_playwright() as p:
         ok(s["open"] and s["name"] == second and first in s["back"] and s["y"] == 600 and s["cur"] == [second], f"{vw}px: clicking {second} on the board swaps the drawer in place (back to {first})")
         pg.mouse.move(100, 500); pg.mouse.wheel(0, 500); pg.wait_for_timeout(400)
         ok(pg.evaluate("scrollY") > 600 and pg.evaluate(STATE)["open"], f"{vw}px: the board still scrolls with the drawer open")
+        if vw == 1440:
+            # Weekly points chart (Alan, Oct 5): week + opponent labels, summary, avg line, BYE/OUT instead of 0.0,
+            # projected weeks drawn differently from finals
+            pg.click("[data-pp-tab=overview]"); pg.wait_for_timeout(600)
+            wk = pg.evaluate("""() => { const c = document.querySelector('#player-body .wk-chart'); if (!c) return null;
+              const tips = [...c.querySelectorAll('.hit')].map(h => h.dataset.tip);
+              return { tips, xs: [...c.querySelectorAll('.wk-x')].map(t => t.textContent), opp: c.querySelectorAll('.wk-opp').length,
+                sum: document.querySelector('#player-body .wk-sum').textContent, avg: !!c.querySelector('.ref-label') && c.querySelector('.ref-label').textContent,
+                fin: c.querySelectorAll('.wk-pt:not(.proj):not(.live)').length, proj: c.querySelectorAll('.wk-pt.proj').length,
+                marks: [...c.querySelectorAll('.wk-mark')].map(t => t.textContent) }; }""")
+            ok(wk and wk["xs"] and wk["xs"][0] == "W1" and wk["opp"] > 0 and len(wk["tips"]) == len(wk["xs"]), f"Weekly points: one column per week with W# and opponent ({wk and wk['xs']})")
+            ok(wk and all(k in wk["sum"] for k in ("Avg", "High", "Low")) and wk["avg"].startswith("Season avg"), f"Weekly points: summary '{wk and wk['sum']}' and season-average line")
+            ok(wk and wk["fin"] > 0 and all(("pts" in t) or ("Proj" in t) or ("Bye" in t) or ("OUT" in t) or ("pending" in t) or ("Live" in t) or ("No projection" in t) for t in wk["tips"]), "Weekly points: every week's tooltip says points, projection, Live, Bye or OUT")
+            ok(wk and not any(" 0.0 pts" in t and "OUT" in t for t in wk["tips"]) and all(m in ("BYE", "OUT", "—") for m in wk["marks"]), f"Weekly points: missed weeks show BYE/OUT, never 0.0 ({wk and wk['marks']})")
         pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
         s = pg.evaluate(STATE)
         ok(not s["open"] and s["cur"] == [], f"{vw}px: Escape closes the drawer and clears the highlight")

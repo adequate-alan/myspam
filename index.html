@@ -3008,6 +3008,32 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .chart .ref-label { fill: var(--cream); font-size: 10px; font-weight: 650; }
 .chart .line { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; }
 .chart .pt { fill: var(--gold); stroke: var(--surface); stroke-width: 2; }
+/* Weekly points chart (player Overview) */
+.wk-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; }
+.wk-sum { font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wk-sum b { color: var(--cream); font-weight: 700; }
+.wk-chart .wk-line { fill: none; stroke: var(--wc); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.85; }
+.wk-chart .wk-line.proj { stroke-dasharray: 4 4; opacity: 0.6; }
+.wk-chart .wk-pt { fill: var(--wc); stroke: var(--surface); stroke-width: 2; }
+.wk-chart .wk-pt.strong { stroke: color-mix(in srgb, var(--wc) 35%, var(--surface)); stroke-width: 3; }
+.wk-chart .wk-pt.poor { fill: color-mix(in srgb, var(--wc) 40%, var(--surface)); }
+.wk-chart .wk-pt.proj { fill: var(--surface); stroke: var(--wc); stroke-width: 1.5; opacity: 0.85; }
+.wk-chart .wk-pt.live { fill: var(--surface); stroke: var(--wc); stroke-width: 2.5; }
+.wk-chart .wk-val { fill: var(--cream); font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wk-chart .wk-mark { font-size: 9px; font-weight: 750; letter-spacing: 0.06em; fill: var(--muted); }
+.wk-chart .wk-mark.out { fill: color-mix(in srgb, var(--st-dnp) 80%, var(--muted)); }
+.wk-chart .wk-x { font-weight: 650; fill: var(--ink-2); }
+.wk-chart .wk-opp { font-size: 9px; }
+.wk-chart .ax.dim { opacity: 0.6; }
+.wk-chart .ref { opacity: 0.45; }
+.wk-chart .ref-label { fill: var(--muted); font-weight: 600; }
+.wk-chart .hit { cursor: pointer; }
+.wk-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 6px 0 0; font-size: 0.68rem; color: var(--muted); }
+.wk-k { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--wc, var(--muted)); margin-left: 8px; }
+.wk-k:first-child { margin-left: 0; }
+.wk-k.proj { border-top-style: dashed; }
+.wk-k.live { width: 8px; height: 8px; border: 2px solid var(--wc, var(--muted)); border-radius: 50%; }
+.wk-k.avg { border-top: 1px dashed var(--cream); opacity: 0.6; }
 .chart-tip {
   position: absolute; top: 0; z-index: 2; pointer-events: none; white-space: nowrap;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 5px 9px;
@@ -4273,7 +4299,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T09:00Z";
+  const BUILD_ID = "2026-10-06T10:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9876,7 +9902,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       trendSub = `${fp(b)} PPG lately vs ${fp(a)} earlier`;
     } else if (pt && pt.g) { trendSub = `${fp(pt.ppg)} PPG in ${STATS_SEASONS[1]}`; }
     const glance = t && t.g ? glanceLine(pos, t) : "";
-    if (cur && cur.games.length) PP.charts.push({ type: "bar", season: STATS_SEASONS[0], games: cur.games, pos, compact: true });
+    const wks = cur && cur.games.length ? weeklySeries(info, cur) : null;
+    if (wks) PP.charts.push({ type: "weeks", ...wks, pos });
     const r3 = avgPts(last3), r5 = avgPts(last5);
     // Rank, value, PPG and owner live in the header; the overview leads with this week, then the season
     const side = [lineupContext(info, own), info.team && wkNow ? nextWeeksLine(info, wkNow) : "", ng ? keyReportsLine(info, ng) : "", rankMoves(info)].filter(Boolean).join("");
@@ -9894,7 +9921,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
       ${projPPGOf(p) != null ? `<p class="pp-glance">SPAM projection: <b>${fp(projPPGOf(p))}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
-      ${cur && cur.games.length ? `<h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><div class="chart-box" data-chart="0"></div>` : ""}
+      ${wks ? `<div class="wk-head"><h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><span class="wk-sum">Avg <b>${fp(wks.avg)}</b> · High <b>${fp(wks.hi)}</b> · Low <b>${fp(wks.lo)}</b></span></div>
+        <div class="chart-box wk-box" data-chart="0"></div>
+        <p class="wk-key" style="--wc: var(--${String(pos).toLowerCase()}, var(--cream))"><span class="wk-k act"></span>Final${wks.weeks.some(w => w.kind === "proj") ? `<span class="wk-k proj"></span>Projected` : ""}${wks.weeks.some(w => w.kind === "live") ? `<span class="wk-k live"></span>Live` : ""}<span class="wk-k avg"></span>Season avg</p>` : ""}
       </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
   }
   // Last few committed ranking changes for this player (newest first)
@@ -10467,13 +10496,107 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>`;
   }
 
+  /* Weekly points (Alan, Oct 5): every week of this season so far plus the next three: final points, live points,
+     the shared weekly projection for games not started, and BYE / OUT (never 0.0) for weeks he didn't play.
+     Strong / poor weeks come from his finish at the position that week (league scoring): a top-5 finish is strong,
+     a finish outside the league's starters at his position (teams × slots, flex/superflex counted) is poor. */
+  function weeklySeries(info, cur) {
+    const season = STATS_SEASONS[0], sid = info.sid, pos = info.pos, now = currentWeek() || Infinity;
+    const byWeek = new Map(cur.games.map(g => [g.w, g]));
+    const team = info.team || cur.games[cur.games.length - 1].tm;
+    const sched = teamGames(season, team), lastSched = Math.max(0, ...sched.map(r => r[0]));
+    const lastPlayed = Math.max(...cur.games.map(g => g.w));
+    const end = Math.min(lastSched || lastPlayed, Math.max(lastPlayed, isFinite(now) ? now + 2 : lastPlayed));
+    const d = activeData(), lu = d ? lineupOf(d.league) : comps ? BASE_LINEUP() : { teams: 12, QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1, WRRB_FLEX: 0, REC_FLEX: 0, SUPER_FLEX: 1 };
+    const flexShare = { QB: lu.SUPER_FLEX, RB: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX, WR: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX + 0.8 * lu.REC_FLEX, TE: 0.1 * lu.FLEX + 0.2 * lu.REC_FLEX };
+    const startable = Math.round(lu.teams * ((lu[pos] || 0) + (flexShare[pos] || 0))) || lu.teams;
+    const fin = (weeklyFinish(season) || {})[sid] || {};
+    const finN = w => { const m = String(fin[w] || "").match(/\d+$/); return m ? Number(m[0]) : null; };
+    const weeks = [];
+    for (let w = 1; w <= end; w++) {
+      const g = byWeek.get(w);
+      if (g) {
+        const o = oppLabel(season, g);
+        const f = finN(w);
+        weeks.push({ w, kind: "final", pts: g.pts, opp: g.opp, where: o.opp.startsWith("@") ? "@" : "vs", res: o.res, fin: fin[w] || "", tone: f == null ? "" : f <= 5 ? "strong" : f > startable ? "poor" : "" });
+        continue;
+      }
+      const row = sched.find(r => r[0] === w);
+      if (!row) { weeks.push({ w, kind: "bye" }); continue; }
+      const base = { w, opp: row[1], where: row[2] ? "vs" : "@" };
+      const o = weekOutlook({ sid, pos, team, p: info.p }, w);
+      if (o.kind === "final") weeks.push({ ...base, kind: o.dnp ? "out" : "pending", res: o.game && o.game.result ? o.game.result.replace("-", "–") : "" });
+      else if (o.kind === "out") weeks.push({ ...base, kind: "out", note: "Ruled out" });
+      else if (o.kind === "live") weeks.push({ ...base, kind: "live", pts: o.pts, proj: o.proj });
+      else if (o.proj != null) weeks.push({ ...base, kind: "proj", proj: o.proj, when: o.game && o.game.date ? kickoffText(o.game.date, o.game.time) : "" });
+      else weeks.push({ ...base, kind: "none" });
+    }
+    const played = cur.games.map(g => g.pts);
+    return { weeks, avg: played.reduce((a, b) => a + b, 0) / played.length, hi: Math.max(...played), lo: Math.min(...played) };
+  }
+  function weeksChart(spec, W) {
+    const weeks = spec.weeks, H = 168, L = 30, R = 10, T = 16, B = 36;
+    const vals = weeks.flatMap(x => [x.kind === "final" || x.kind === "live" ? x.pts : null, x.proj]).filter(v => v != null);
+    const top = Math.max(1, ...vals, spec.avg) * 1.12, minV = Math.min(0, ...vals);
+    const step = niceStep(top - minV, 3), yMax = Math.ceil(top / step) * step, yMin = minV < 0 ? Math.floor(minV / step) * step : 0;
+    const y = v => T + (H - T - B) * (1 - (v - yMin) / (yMax - yMin));
+    const band = (W - L - R) / weeks.length, x = i => L + band * i + band / 2;
+    const color = `var(--${String(spec.pos).toLowerCase()}, var(--cream))`;
+    let s = `<svg class="chart wk-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weekly fantasy points: average ${fp(spec.avg)}, high ${fp(spec.hi)}, low ${fp(spec.lo)}" style="--wc:${color}">`;
+    for (let v = yMin; v <= yMax + 1e-9; v += step)
+      s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${Math.round(v)}</text>`;
+    // season average reference
+    s += `<line class="ref" x1="${L}" x2="${W - R}" y1="${y(spec.avg)}" y2="${y(spec.avg)}"/>`;
+    s += `<text class="ref-label" x="${W - R}" y="${y(spec.avg) - 5}" text-anchor="end">Season avg ${fp(spec.avg)}</text>`;
+    // lines: solid through consecutive played weeks, dashed from the last game into live/projected weeks; BYE/OUT break them
+    const val = wk => (wk.kind === "final" ? wk.pts : wk.kind === "live" ? (wk.pts ?? wk.proj) : wk.kind === "proj" ? wk.proj : null);
+    let solid = [], dash = [];
+    const flush = () => {
+      if (solid.length > 1) s += `<polyline class="wk-line" points="${solid.join(" ")}"/>`;
+      if (dash.length > 1) s += `<polyline class="wk-line proj" points="${dash.join(" ")}"/>`;
+      solid = []; dash = [];
+    };
+    weeks.forEach((wk, i) => {
+      const v = val(wk); if (v == null) { flush(); return; }
+      const pt = `${x(i)},${y(v)}`;
+      if (wk.kind === "final") { solid.push(pt); dash = [pt]; }
+      else { if (!dash.length && solid.length) dash = [solid[solid.length - 1]]; dash.push(pt); }
+    });
+    flush();
+    const hiW = weeks.find(w => w.kind === "final" && w.pts === spec.hi), loW = weeks.find(w => w.kind === "final" && w.pts === spec.lo && w !== hiW);
+    const showOpp = band >= 22;
+    weeks.forEach((wk, i) => {
+      const cx = x(i), v = val(wk), vs = wk.opp ? `${wk.where} ${wk.opp}` : "";
+      let tip = `Week ${wk.w}${vs ? " · " + vs : ""} · `;
+      if (wk.kind === "final") {
+        s += `<circle class="wk-pt ${wk.tone}" cx="${cx}" cy="${y(v)}" r="${wk.tone === "strong" ? 4.5 : 3.5}"/>`;
+        if (wk === hiW || wk === loW) s += `<text class="wk-val" x="${cx}" y="${wk === hiW ? y(v) - 9 : y(v) + 15}" text-anchor="middle">${fp(v)}</text>`;
+        tip += `${fp(wk.pts)} pts${wk.fin ? " (" + wk.fin + ")" : ""}${wk.res ? " · " + wk.res : ""}${wk.tone === "strong" ? " · strong week" : wk.tone === "poor" ? " · poor week" : ""}`;
+      } else if (wk.kind === "live") {
+        s += `<circle class="wk-pt live" cx="${cx}" cy="${y(v)}" r="4"/>`;
+        tip += `Live${wk.pts != null ? " · " + fp(wk.pts) + " pts so far" : ""}${wk.proj != null ? " · proj " + fp(wk.proj) : ""}`;
+      } else if (wk.kind === "proj") {
+        s += `<circle class="wk-pt proj" cx="${cx}" cy="${y(v)}" r="3.5"/>`;
+        tip += `Proj ${fp(wk.proj)}${wk.when ? " · " + wk.when : ""}`;
+      } else {
+        const lab = wk.kind === "bye" ? "BYE" : wk.kind === "out" ? "OUT" : "—";
+        s += `<text class="wk-mark ${wk.kind}" x="${cx}" y="${y(yMin) - 6}" text-anchor="middle">${lab}</text>`;
+        tip += wk.kind === "bye" ? "Bye week" : wk.kind === "out" ? `OUT · ${wk.note || "did not play"}${wk.res ? " · team " + wk.res : ""}` : wk.kind === "pending" ? "Final · points pending" : "No projection";
+      }
+      s += `<text class="ax wk-x${wk.kind === "proj" || wk.kind === "none" ? " dim" : ""}" x="${cx}" y="${H - 20}" text-anchor="middle">W${wk.w}</text>`;
+      if (showOpp && wk.opp) s += `<text class="ax wk-opp${wk.kind === "proj" || wk.kind === "none" ? " dim" : ""}" x="${cx}" y="${H - 8}" text-anchor="middle">${esc(wk.opp)}</text>`;
+      s += `<rect class="hit" x="${L + band * i}" y="${T - 6}" width="${band}" height="${H - T}" data-tip="${esc(tip)}"/>`;
+    });
+    return s + `</svg><div class="chart-tip" hidden></div>`;
+  }
+
   /* Charts (inline SVG, drawn at the container's real width) */
   function drawCharts() {
     document.querySelectorAll("#player-body .chart-box").forEach(el => {
       const spec = PP.charts[Number(el.dataset.chart)];
       if (!spec) return;
       const w = Math.max(240, el.clientWidth - 16);
-      el.innerHTML = spec.type === "line" ? lineChart(spec, w) : barChart(spec, w);
+      el.innerHTML = spec.type === "line" ? lineChart(spec, w) : spec.type === "weeks" ? weeksChart(spec, w) : barChart(spec, w);
     });
   }
   let resizeTimer = null;
