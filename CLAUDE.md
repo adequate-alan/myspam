@@ -158,13 +158,14 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 | Trigger | What runs | Writes |
 |---|---|---|
 | push to `main` | deploy only | Pages |
-| **Tue 14:00 UTC** (weekly) | `project_players.py` → `merge_projections.py` → `build_sleeper_ids.py` → `build_stats.py 2026` → `build_depth_charts.py` → `stamp_date.py` → `snapshot_history.py` (headless browser) | `index.html` (proj columns, sleeper IDs, date), `data/sleeper_players.json`, `data/platform_ids.json`, `data/stats/2026.json`, `data/depth_charts.json`, `data/rank_history.json` |
+| **Tue 14:00 UTC** (weekly) | `project_players.py` → `merge_projections.py --json` → `build_sleeper_ids.py` → `build_stats.py 2026` → `build_depth_charts.py` → `snapshot_history.py` (headless browser) | `data/projections.json` (weekly points projections only), `index.html` (Sleeper IDs for new players only), `data/sleeper_players.json`, `data/platform_ids.json`, `data/stats/2026.json`, `data/depth_charts.json`, `data/rank_history.json` |
+| manual "Run workflow" with **update_values** checked | also `merge_projections.py` into `RANKINGS_CSV` + `stamp_date.py` | `index.html` proj columns: values of players without a typed value move (ranks/tiers never) |
 | **Fri 08:30 & 15:00, Sun 08:30 & 15:00, Mon 05:00 (1 AM ET, Alan, Oct 5: Sunday points sooner), 08:30 & 15:00, Tue 08:30, Thu 15:00 UTC**, plus **Wed/Thu/Fri 22:00 UTC** for injury/practice reports | **stats only**: `build_stats.py 2026` (stats, schedule lines, defense efficiency, injury report) + `build_depth_charts.py` | `data/stats/2026.json`, `data/depth_charts.json` |
 | manual "Run workflow" (`stats_only` true/false) or editor **Refresh stats** button | stats-only or the full weekly job | as above |
 
 - Stats come from nflverse's weekly player stats, which usually appear the night of the games and sometimes the next morning. That's why each game day has a retry.
 - The stats file includes `updated` (UTC timestamp) and `through_week`; player pages show "Stats updated … · through Week N".
-- The weekly projection refresh changes `proj_*` columns, which feed the model's projection blend for *model-valued* players (not published fixed values). Rank order and tiers are never changed by it.
+- **Nothing scheduled changes rankings, tiers or values** (Alan, Oct 5: "don't have something change my rankings unless asked"). The weekly job writes fresh projections to `data/projections.json`, which only weekly points projections read (`PROJ_WEEKLY` / `projPPGOf`, falling back to the CSV's `proj_ppg`). The `proj_*` columns in `RANKINGS_CSV` feed the value model's projection blend for model-valued players, so they change only on a manual run with **update_values** checked (Actions → Build and deploy site → Run workflow). `stamp_date.py` runs only then too, so "Last updated" stays the day of a real ranking change.
 - Season rollover: add the new season to `STATS_SEASONS` and the workflow's `build_stats.py <year>` and git-add lines.
 
 ## 9. Sleeper and league data are separate from SPAM data
