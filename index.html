@@ -2763,9 +2763,26 @@ dialog.pm {
 @media (min-width: 1440px) { dialog.pm { width: min(1280px, calc(100vw - 96px)); height: min(960px, calc(100vh - 48px)); }
 }
 dialog.pm::backdrop { background: var(--backdrop); }
+/* Desktop/tablet: a right-side drawer beside the page (Alan, Oct 5; BDGE-style companion panel in SPAM's look).
+   Opened with show(), not showModal(): no backdrop, the page stays scrollable and clickable, and clicking another
+   player swaps the drawer in place. Phones keep the full-screen sheet. */
+dialog.pm.drawer {
+  position: fixed; inset: 0 0 0 auto; z-index: 35; margin: 0;
+  width: clamp(440px, 36vw, 520px); height: 100dvh; max-height: none;
+}
+dialog.pm.drawer[open] { animation: pm-slide 0.18s ease-out; }
+@keyframes pm-slide { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+dialog.pm.drawer .pm-panel {
+  border-radius: 0; border-width: 0 0 0 1px; overflow-y: auto; overscroll-behavior: contain;
+  box-shadow: -28px 0 60px -36px var(--shadow-color);
+}
+dialog.pm.drawer .pm-head { padding-top: 18px; }
+dialog.pm.drawer .pm-close { top: 14px; right: 14px; }
+#rank-body tr.player.pp-current td { background: color-mix(in srgb, var(--gold) 7%, transparent); }
 dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 @keyframes pm-in { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
 .pm-panel {
+  container: pm / inline-size;   /* the panel's own width drives its layout (wide modal vs narrow drawer/sheet) */
   height: 100%; display: flex; flex-direction: column; overflow: hidden;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 40px 90px -30px var(--shadow-color);
 }
@@ -2947,7 +2964,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pm-left { min-width: 0; }
 .pm-right { display: none; min-width: 0; }
 .ov-week-mobile { display: block; margin-bottom: 16px; }
-@media (min-width: 1100px) {
+@container pm (min-width: 1000px) {
   .pm-top { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; padding-right: 44px; }
   .pm-top .pm-stat { padding: 0 16px; }
   .pm-top .pm-stat:first-child { padding-left: 0; }
@@ -2968,12 +2985,12 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .ov-side-card .tw-line + .tw-line, .ov-side-card .tw-context + .tw-line { padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .ov-side-card .tw-nx { white-space: normal; }
 .ov-side-card .tw-nx b { color: var(--cream); }
-@media (min-width: 1100px) { .ov-cols { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; } .ov-cols .ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container pm (min-width: 1000px) { .ov-cols { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; } .ov-cols .ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .tw-none { margin: 0; color: var(--muted); font-size: 0.86rem; }
 .tw-context { margin: 10px 0 0; font-size: 0.84rem; color: var(--ink-2); }
 .tw-context b { color: var(--cream); }
 .tw-context .pl-name { font-size: inherit; font-weight: 650; }
-@media (max-width: 640px) { .tw-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container pm (max-width: 600px) { .tw-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .pp-glance { margin: 16px 0 0; color: var(--ink-2); font-size: 0.86rem; line-height: 1.5; }
 .pp-glance b { color: var(--cream); }
 .pp-glance-label { font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-right: 8px; }
@@ -3325,6 +3342,37 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .team-table tbody td:first-child, .team-table thead th:first-child { padding-left: 14px; }
   .strength-grid.five .st-note, .strength .st-note { white-space: normal; }
 }
+/* Narrow player panel (phone sheet or desktop drawer, Alan, Oct 5): same compact layout as phones */
+@container pm (max-width: 760px) {
+  .pm-head { padding: 16px 16px 0; }
+  .pm-body { padding: 16px 16px 24px; }
+  .pm-close { top: 12px; right: 12px; }
+  .pm-id { gap: 14px; padding-right: 44px; }
+  .pm-body { flex: none; overflow: visible; }
+  .pm-head .face.xl { width: 52px; height: 52px; }
+  .pm-name { font-size: 1.3rem; }
+  .pm-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 0; margin-top: 14px; }
+  .pm-stat { padding: 0 8px; }
+  .pm-stat:nth-child(4n+1) { padding-left: 0; border-left: 0; }
+  .pm-stat:nth-child(5) { grid-column: 1 / -1; flex-direction: row; align-items: baseline; gap: 8px; }
+  .pm-stat-val { font-size: 1.02rem; max-width: 100%; }
+  .pm-stat-sub { font-size: 0.6rem; }
+  .pm-actions { margin-top: 14px; gap: 6px; }
+  .pm-actions .btn { flex: 1 1 0; padding-inline: 8px; font-size: 0.76rem; white-space: nowrap; }
+  .pm-actions .btn:first-child { flex-basis: 100%; }
+  .pm-actions .pp-hint { flex-basis: 100%; margin-left: 0; }
+  .pm-head .pp-tabs { margin-inline: -16px; padding-inline: 16px; }
+  .ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ov-cell { padding: 10px 12px; }
+  .pp-three { grid-template-columns: 1fr; }
+  .cmp-table td, .cmp-table th { padding: 9px 8px; }
+  .cmp-table td { font-size: 0.86rem; }
+  .pp-tabs { gap: 20px; margin-inline: -18px; padding-inline: 18px; }
+  .pp-grid, .pp-grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pp-two { grid-template-columns: 1fr; }
+  .gl-table th, .gl-table td { padding: 9px 8px; font-size: 0.8rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
 }
@@ -4225,7 +4273,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T08:00Z";
+  const BUILD_ID = "2026-10-06T09:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4517,6 +4565,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
     updateEditorBar();
     queueRail();
+    if ($("player-modal").open) markCurrent();
   }
   // Rankings summary (rail on large desktops, strip above the table on laptops/tablets, hidden on phones):
   // last update, active format, your power rank (league only), biggest risers and fallers since the last snapshot day
@@ -9631,21 +9680,34 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
                    ["history", "Ranking History"], ["value", "Trade Value"], ["depth", "Depth Chart"], ["practice", "Practice Report"]];
   const modal = $("player-modal");
   const modalOpen = () => modal.open;
+  const DRAWER_MQ = matchMedia("(min-width: 761px)");   // desktop/tablet: side drawer; phones: full-screen sheet
+  const isDrawer = () => modal.classList.contains("drawer");
+  function markCurrent() {   // the open player's row on the board gets a faint highlight
+    document.querySelectorAll("#rank-body tr.pp-current").forEach(r => r.classList.remove("pp-current"));
+    if (!modalOpen() || !PP.sid) return;
+    const a = document.querySelector(`#rank-body [data-player="${String(PP.sid).replace(/"/g, "")}"]`);
+    const tr = a && a.closest("tr.player"); if (tr) tr.classList.add("pp-current");
+  }
 
   async function openPlayer(sid, opener) {
     sid = String(sid);
     if (!modalOpen()) {
       Object.assign(PP, { trail: [], compare: null, picking: false, opener: opener || document.activeElement });
       if (PP.sid !== sid) PP.tab = "overview";
-      document.documentElement.classList.add("modal-open");
-      if (modal.showModal) modal.showModal(); else modal.setAttribute("open", "");
+      if (DRAWER_MQ.matches) { modal.classList.add("drawer"); if (modal.show) modal.show(); else modal.setAttribute("open", ""); }
+      else {
+        modal.classList.remove("drawer");
+        document.documentElement.classList.add("modal-open");
+        if (modal.showModal) modal.showModal(); else modal.setAttribute("open", "");
+      }
     } else if (PP.sid && PP.sid !== sid) {
       PP.trail.push(PP.sid);
       if (PP.trail.length > 20) PP.trail.shift();
       if (PP.tab === "compare") PP.tab = "overview";
     }
+    if (PP.sid !== sid) $("player-body").scrollTop = 0;
     PP.sid = sid; PP.picking = false;
-    renderPlayer();
+    renderPlayer(); markCurrent();
     await Promise.all([loadStatic(), ...STATS_SEASONS.map(loadSeason), loadHistory()]);
     if (PP.sid === sid && modalOpen()) renderPlayer();
   }
@@ -9653,6 +9715,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   modal.addEventListener("close", () => {
     document.documentElement.classList.remove("modal-open");
     PP.picking = false;
+    markCurrent();
     const back = PP.opener;
     if (back && document.contains(back) && back.focus) back.focus({ preventScroll: true });
   });
@@ -9660,6 +9723,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   let downOnBackdrop = false;
   modal.addEventListener("pointerdown", e => { downOnBackdrop = e.target === modal; });
   modal.addEventListener("click", e => { if (e.target === modal && downOnBackdrop) closePlayer(); downOnBackdrop = false; });
+  // The drawer isn't modal, so Escape is ours to handle; crossing the phone breakpoint reopens it in the right form
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.defaultPrevented && modalOpen() && isDrawer()) { e.preventDefault(); closePlayer(); } });
+  DRAWER_MQ.addEventListener("change", () => {
+    if (!modalOpen() || isDrawer() === DRAWER_MQ.matches) return;
+    const sid = PP.sid, trail = PP.trail.slice(), tab = PP.tab, opener = PP.opener;
+    modal.close(); openPlayer(sid, opener); Object.assign(PP, { trail, tab }); renderPlayer();
+  });
 
   // Every player name and photo opens the modal; capture phase so a row's own click (add to trade,
   // open team) doesn't also fire

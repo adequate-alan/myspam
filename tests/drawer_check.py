@@ -1,0 +1,60 @@
+"""Player drawer check (Alan, Oct 5): on desktop/tablet a player opens in a right-side drawer beside the Rankings
+board (no backdrop, page stays scrollable and clickable, another player swaps in place, Escape closes, the board's
+scroll position never moves); on phones it stays a full-screen modal sheet.
+
+Run from the repo root:  python3 tests/drawer_check.py   (CHROMIUM=/path/to/chromium if needed)
+"""
+import functools, http.server, os, re, socketserver, sys, threading
+from playwright.sync_api import sync_playwright
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+class Quiet(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *a): pass
+h = functools.partial(Quiet, directory=ROOT)
+srv = socketserver.TCPServer(("127.0.0.1", 0), h); threading.Thread(target=srv.serve_forever, daemon=True).start()
+URL = f"http://127.0.0.1:{srv.server_address[1]}/#rankings"
+failures = []
+def ok(cond, msg):
+    print(("PASS " if cond else "FAIL ") + msg)
+    if not cond: failures.append(msg)
+
+STATE = """() => { const m = document.getElementById('player-modal'), r = m.getBoundingClientRect();
+  return { open: m.open, drawer: m.classList.contains('drawer'), modal: m.matches(':modal'), x: r.left, w: r.width, h: r.height,
+    y: scrollY, name: (document.getElementById('pm-name') || {}).textContent, back: (document.querySelector('.pm-back') || {}).textContent || '',
+    cur: [...document.querySelectorAll('#rank-body tr.pp-current .pl-name')].map(e => e.textContent), locked: document.documentElement.classList.contains('modal-open') }; }"""
+CLICK = "i => document.querySelectorAll('#rank-body [data-player]')[i].click()"
+NAME = "i => document.querySelectorAll('#rank-body [data-player]')[i].closest('tr').querySelector('.pl-name').textContent"
+with sync_playwright() as p:
+    kw = {"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}
+    br = p.chromium.launch(**kw); errs = []
+    for vw in (1440, 900):
+        pg = br.new_page(viewport={"width": vw, "height": 900}); pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app|api\.github\.com)/.*"), lambda r: r.abort())
+        pg.goto(URL); pg.wait_for_timeout(3500)
+        pg.evaluate("window.scrollTo(0, 600)"); pg.wait_for_timeout(200)
+        first = pg.evaluate(NAME, 20); pg.evaluate(CLICK, 20); pg.wait_for_timeout(1500)
+        s = pg.evaluate(STATE)
+        ok(s["open"] and s["drawer"] and not s["modal"] and not s["locked"], f"{vw}px: opens as a non-modal drawer, page not scroll-locked")
+        ok(440 <= s["w"] <= 520 and abs(s["x"] + s["w"] - vw) < 2 and s["h"] >= 899, f"{vw}px: drawer {s['w']:.0f}px wide, full height, on the right edge")
+        ok(s["y"] == 600 and s["name"] == first and s["cur"] == [first], f"{vw}px: board scroll kept (600 -> {s['y']}), {first} highlighted on the board")
+        second = pg.evaluate(NAME, 24); pg.evaluate(CLICK, 24); pg.wait_for_timeout(600)
+        s = pg.evaluate(STATE)
+        ok(s["open"] and s["name"] == second and first in s["back"] and s["y"] == 600 and s["cur"] == [second], f"{vw}px: clicking {second} on the board swaps the drawer in place (back to {first})")
+        pg.mouse.move(100, 500); pg.mouse.wheel(0, 500); pg.wait_for_timeout(400)
+        ok(pg.evaluate("scrollY") > 600 and pg.evaluate(STATE)["open"], f"{vw}px: the board still scrolls with the drawer open")
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+        s = pg.evaluate(STATE)
+        ok(not s["open"] and s["cur"] == [], f"{vw}px: Escape closes the drawer and clears the highlight")
+        pg.close()
+    pg = br.new_page(viewport={"width": 390, "height": 844}); pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app|api\.github\.com)/.*"), lambda r: r.abort())
+    pg.goto(URL); pg.wait_for_timeout(3500)
+    pg.evaluate(CLICK, 3); pg.wait_for_timeout(1200)
+    s = pg.evaluate(STATE)
+    ok(s["open"] and not s["drawer"] and s["modal"] and s["w"] == 390, "Phone: full-screen modal sheet")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    ok(not pg.evaluate(STATE)["open"], "Phone: Escape closes the sheet")
+    ok(not errs, f"No page errors {errs[:3]}")
+    br.close()
+print(f"{len(failures)} check(s) failed." if failures else "All drawer checks passed.")
+sys.exit(1 if failures else 0)
