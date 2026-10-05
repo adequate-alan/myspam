@@ -1972,7 +1972,22 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mt-card .rr-sub { display: block; margin-top: 6px; }
 .mt-card .trade-with { margin-top: 6px; }
 .mt-card .rr-list { flex-direction: column; gap: 6px; }
-@media (min-width: 1280px) { .mt-dash { grid-template-columns: minmax(0, 1fr) 240px; align-items: start; } .mt-side { margin-top: 38px; } }
+/* the roster takes the full width; secondary insights sit below it (Alan, Oct 4 follow-up) */
+.mt-head { align-items: flex-end; }
+.mt-tw { display: flex; flex-direction: column; gap: 4px; min-width: 220px; }
+.mt-tw .mt-trade { margin-top: 0; }
+.mt-extra { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 28px; margin-top: 12px; }
+.mt-insights { border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 7px 12px; min-width: 260px; }
+.mt-insights summary { cursor: pointer; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mt-insights[open] summary { margin-bottom: 8px; }
+.mt-insights .tc-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 22px; }
+.mt-hot { margin: 8px 0 0; font-size: 0.78rem; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+.mt-hot .ctl-label { margin-right: 8px; }
+.mt-hot b { color: var(--rb); font-weight: 700; font-variant-numeric: tabular-nums; }
+.mt-tag { font-size: 0.58rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.mt-wk.live .mt-tag { color: var(--rb); }
+#panel-myteam .rf-sub { font-size: 0.62rem; opacity: 0.7; }
+#panel-myteam .rf-wk { font-size: 0.56rem; opacity: 0.8; }
 /* My Team hierarchy pass (Alan, Oct 4): compact header, tighter rank-first cards, a takeaway line, denser roster with this week */
 .mt-head { margin-bottom: 14px; }
 .mt-summary .mt-pr b { font-size: 1.05rem; }
@@ -1983,9 +1998,6 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .mt-strength .strength.rk-first { padding: 9px 12px 8px; }
 .mt-strength .st-rank { margin-top: 2px; font-size: 1.35rem; }
 .mt-strength .st-bar { margin: 5px 0 5px; height: 3px; }
-.mt-take { margin: 10px 0 6px; font-size: 0.95rem; color: var(--ink-2); }
-.mt-take b { font-weight: 750; }
-.mt-take b.need { color: var(--qb); } .mt-take b.strong { color: var(--rb); }
 .mt-dot { margin: 0 10px; color: var(--muted); }
 #panel-myteam .mt-table tbody tr.mt-row td { padding-block: 7px; }
 .mt-wk { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; width: 112px; }
@@ -4058,7 +4070,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T16:00Z";
+  const BUILD_ID = "2026-10-05T16:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7217,15 +7229,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const d = activeData(), data = d && typeof LT !== "undefined" ? LT.mx[mxKey(d.league.league_id, wk)] : null;
     const m = data && data.list.find(x => x.roster_id === LG.myRosterId), v = m && m.players_points ? m.players_points[e.sid] : null;
     const o = weekOutlook(e, wk, { pts: v != null ? Number(v) : undefined }), g = o.game || {};
-    const opp = g.oppTeam ? `${g.home ? "vs" : "@"} ${g.oppTeam}` : "";
-    const sub = t => `<small>${esc([t, opp].filter(Boolean).join(" · "))}</small>`;
+    // one primary state per player (Alan, Oct 4): "30.9 LIVE", "10.4 FINAL", "Proj 16.6", OUT, BYE; live adds one small "Live proj" line
+    const tag = t => `<span class="mt-tag">${t}</span>`, tip = g.oppTeam ? ` title="${esc(`${g.home ? "vs" : "@"} ${g.oppTeam}${g.text ? " · " + g.text : ""}`)}"` : "";
     if (o.kind === "bye") return `<td class="mt-wk off">BYE</td>`;
-    if (o.kind === "out") return `<td class="mt-wk out">OUT${sub("")}</td>`;
-    if (o.kind === "final") return o.dnp ? `<td class="mt-wk off">DNP${sub("Final")}</td>` : o.pending ? `<td class="mt-wk off">—${sub("Final")}</td>` : `<td class="mt-wk final"><b>${fp(o.pts)}</b>${sub("Final")}</td>`;
-    if (o.kind === "live" && v == null) return `<td class="mt-wk live"><b>${o.proj != null ? fp(o.proj) : "—"}</b><small><span class="mt-live">Live</span>${o.proj != null ? " · Proj" : ""}${opp ? " · " + esc(opp) : ""}</small></td>`;   // no live points loaded yet: don't show a fake 0
-    if (o.kind === "live") return `<td class="mt-wk live"><b>${fp(o.pts)}</b><small><span class="mt-live">Live</span>${o.proj != null ? ` · Live proj ${fp(o.est)}` : ""}</small></td>`;
-    if (o.missing) return `<td class="mt-wk off">—${sub(g.text || "")}</td>`;
-    return `<td class="mt-wk up" title="${esc(projTip(o))}"><b>${fp(o.proj)}</b>${sub("Proj")}</td>`;
+    if (o.kind === "out") return `<td class="mt-wk out"${tip}>OUT</td>`;
+    if (o.kind === "final") return o.dnp ? `<td class="mt-wk off"${tip}>DNP</td>` : o.pending ? `<td class="mt-wk off"${tip}>— ${tag("Final")}</td>` : `<td class="mt-wk final"${tip}><b>${fp(o.pts)}</b> ${tag("Final")}</td>`;
+    if (o.kind === "live") return v == null ? `<td class="mt-wk live"${tip}>${tag("Live")}${o.proj != null ? `<small>Proj ${fp(o.proj)}</small>` : ""}</td>`
+      : `<td class="mt-wk live"${tip}><b>${fp(o.pts)}</b> ${tag("Live")}${o.proj != null ? `<small>Live proj ${fp(o.est)}</small>` : ""}</td>`;
+    if (o.missing) return `<td class="mt-wk off"${tip}>—</td>`;
+    return `<td class="mt-wk up"${tip}>${tag("Proj")} <b>${fp(o.proj)}</b></td>`;
   }
   // Right rail: actionable context the cards and table don't already show (Alan, Oct 4)
   function teamContext(me, x, n, starterIds, benchIds, map) {
@@ -7251,7 +7263,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         .map(p => ({ p, f: faFit(K, me, p) })).find(o => o.f && o.f.cls === "start");
       if (fa) row("Waiver upgrade", `${who(fa.p)} <span class="rr-sub">· ${esc(fa.f.text)}</span>`);
     } catch (err) {}
-    return rows.length ? `<section class="mt-card mt-ctx"><h3 class="rr-label">Team context</h3><ul class="tc-list">${rows.join("")}</ul></section>` : "";
+    return rows.length ? `<details class="mt-insights"><summary>Team insights</summary><ul class="tc-list">${rows.join("")}</ul></details>` : "";
   }
   function renderMyTeam() {
     const box = $("myteam-body"), d = activeData();
@@ -7302,7 +7314,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const hot = r.players.map(x => map.get(String(x))).filter(Boolean).map(p => ({ p, g: recentGames(p.sleeperId, p.pos, 3) })).filter(x => x.g.length)
       .map(x => ({ ...x, a: avgPts(x.g) })).sort((a, b) => b.a - a.a).slice(0, 3);
     const others = LG.teams.filter(t => !t.mine);
-    const andList = a => (a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a[0] || "");
     box.innerHTML = `
       <div class="panel-head mt-head">
         <div class="mt-id">${teamFace(me, "lg")}<div>
@@ -7310,22 +7321,22 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           <p class="mt-summary"><span class="mt-pr">Power rank <b>#${mineEv.power}</b><i>of ${n}</i></span>${recordText(r.settings) ? `<span>Record <b>${esc(recordText(r.settings))}</b></span>` : ""}<span>Team score <b>${fmt(mineEv.score)}</b></span></p>
           <p class="mt-meta">${esc(me.manager)} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
         </div></div>
+        <label class="mt-tw"><span class="ctl-label">Trade with</span>
+          <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></label>
       </div>
       <h3 class="section-label mt-sl">Roster strength<button class="btn link inline mt-pb" type="button" data-open-team="${me.rosterId}" title="Open your team in League → Power Rankings: every position's players, starters and depth vs the league">Full position breakdown →</button></h3>
       <div class="strength-grid mt-strength">${strength}</div>
-      ${needs.length || strong.length ? `<p class="mt-take">${needs.length ? `Needs <b class="need">${andList(needs)}</b>` : ""}${needs.length && strong.length ? `<span class="mt-dot">·</span>` : ""}${strong.length ? `Strong at <b class="strong">${andList(strong)}</b>` : ""}</p>` : ""}
+
       <div class="mt-dash"><div class="mt-main">
       <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are SPAM's best lineup</span>` : ""}</h3>
       <div class="table-scroll"><table class="mt-table">
-        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="rk">Rk</th><th scope="col" class="mt-wk" title="This week in your league's scoring: his projection before kickoff, points + Live proj during his game, his points once it's final (same as Matchups and Waiver Wire)">${currentWeek() ? "Wk " + currentWeek() : "This week"}</th><th scope="col" class="mt-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="rk">Rk</th><th scope="col" class="mt-wk" title="${currentWeek() ? "Week " + currentWeek() + ": " : ""}his projection before kickoff, points (+ Live proj) during his game, his points once it's final, in your league's scoring (same as Matchups and Waiver Wire). Hover a cell for the opponent.">This week</th><th scope="col" class="mt-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
-      <aside class="mt-side">
+      <div class="mt-extra">
         ${teamContext(me, mineEv, n, starterIds, benchIds, map)}
-        ${hot.length ? `<section class="mt-card"><h3 class="rr-label">Hot lately <span class="rr-when">last 3 games</span></h3><ul class="rr-list">${hot.map(x => `<li><span class="rr-mv up">${fp(x.a)}</span>${nameLink(x.p.sleeperId, x.p.name, "rr-name")}<span class="rr-sub">${esc(posLabel(x.p))}</span></li>`).join("")}</ul></section>` : ""}
-        <section class="mt-card"><h3 class="rr-label">Trade with</h3>
-          <select class="select mt-trade" data-trade-with aria-label="Open a trade with another team"><option value="">Pick a team…</option>${others.slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => `<option value="${t.rosterId}">${esc(t.name)}${t.name !== t.manager ? ` (${esc(t.manager)})` : ""}</option>`).join("")}</select></section>
-      </aside></div>`;
+        ${hot.length ? `<p class="mt-hot"><span class="ctl-label">Hot lately</span>${hot.map(x => `${nameLink(x.p.sleeperId, x.p.name, "rr-name")} <b>${fp(x.a)}</b>`).join(`<span class="mt-dot">·</span>`)}<span class="muted"> pts/game, last 3</span></p>` : ""}
+      </div></div>`;
   }
   function tradeWith(rosterId) {
     if (!rosterId || LG.myRosterId == null) return;
