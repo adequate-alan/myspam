@@ -4098,7 +4098,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T19:40Z";
+  const BUILD_ID = "2026-10-05T20:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5552,6 +5552,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       draft.rows[me.id][colOf(draft, "tier_name")] = tierNameOf(me.pos, newTier) || "";
       if (TIER_EMPTY[me.pos]) TIER_EMPTY[me.pos] = TIER_EMPTY[me.pos].filter(e => String(e.tier) !== newTier);
     }
+    const tierChanged = newTier !== String(me.tier);
     draft.rows[me.id][iTier] = newTier;
     const counts = {};
     order.forEach((p, k) => {
@@ -5559,6 +5560,29 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       draft.rows[p.id][iRank] = String(k + 1);
       draft.rows[p.id][iPos] = String(counts[p.pos]);
     });
+    /* A moved player's typed value follows him (Alan, Oct 5): moving him to a new spot or tier clears it, so his value
+       is recomputed from the model: points the new position rank has historically scored, blended with his own
+       projection (more as games pile up), pulled toward his new tiermates, and kept in board order. */
+    // Moving up never lowers his value and moving down never raises it: if the model lands on the wrong side of the
+    // typed value, he keeps the typed value as long as it still fits between his new neighbours.
+    const iVal = colOf(draft, "value"), had = draft.rows[me.id][iVal], oldRank = me.rank, newRank = Number(draft.rows[me.id][iRank]);
+    if (had !== "" && had != null && (tierChanged || newRank !== oldRank)) {
+      const typed = Number(had), up = newRank < oldRank;
+      draft.rows[me.id][iVal] = "";
+      makeManual(me.id);
+      rebuild();
+      const now = byId.get(me.id), m = now ? now.value : 0;
+      if (up ? typed > m : typed < m) {
+        const ord = overallOrder(), k = ord.findIndex(p => p.id === me.id), above = ord[k - 1], below = ord[k + 1];
+        if ((!above || above.value > typed) && (!below || below.value < typed)) {
+          draft.rows[me.id][iVal] = had; rebuild();
+          toast(`${me.name} keeps his value ${fmt(typed)}: it still fits his new spot.`);
+          return;
+        }
+      }
+      toast(`${me.name}: value ${fmt(typed)} → ${fmt(m)}, recalculated for ${tierChanged ? "his new tier" : "his new rank"}. Click the value to type one again.`);
+      return;
+    }
     makeManual(me.id);
     rebuild();
   }
