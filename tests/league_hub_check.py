@@ -130,6 +130,14 @@ with sync_playwright() as p:
     # Rankings polish (Alan, Oct 5): your players get a thin gold edge + dot, not a selected-looking row
     mine_rows = pg.locator("#rank-body tr.player.mine")
     ok(mine_rows.count() > 0 and mine_rows.first.locator(".own-tag.mine").count() == 1 and pg.locator("#rank-body tr.player:not(.mine) .own-tag.mine").count() == 0, f"My players are marked on the board ({mine_rows.count()})")
+    geo = pg.evaluate("""() => { const rows = [...document.querySelectorAll('#rank-body tr.player')].slice(0, 40);
+      const mid = e => { if (!e) return null; const r = e.getBoundingClientRect(); return r.height ? r.top + r.height / 2 : null; };
+      let off = 0; rows.forEach(r => { const ref = mid(r.querySelector('td.rk'));
+        [r.querySelector('.face'), r.querySelector('.pos-col .pos'), r.querySelector('.valbar .track'), r.querySelector('.valbar .num')].forEach(e => { const v = mid(e); if (v != null && Math.abs(v - ref) > 1.5) off++; }); });
+      const hs = rows.map(r => r.getBoundingClientRect().height);
+      const tall = rows.filter(r => r.getBoundingClientRect().height > Math.min(...hs) + 1).map(r => r.querySelector('td.rk').innerText.replace(/\\s+/g, ' '));
+      return { tall, face: rows[0].querySelector('.face').getBoundingClientRect().width, min: Math.min(...hs), max: Math.max(...hs), off }; }""")
+    ok(geo["face"] == 42 and geo["max"] <= 60 and geo["max"] - geo["min"] < 1 and geo["off"] == 0, f"Rankings headshots 42px, rows compact and even, rank/photo/badge/bar centered: {geo}")
     if SHOTS:
         mine_rows.first.scroll_into_view_if_needed(); pg.wait_for_timeout(200)
         pg.screenshot(path=f"{SHOTS}/rankings_league.png")

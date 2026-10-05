@@ -1083,7 +1083,7 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
   #panel-rankings .pos-col { width: 10%; }
   #panel-rankings .valbar .track { flex: 1 1 auto; max-width: 280px; }
   #panel-rankings .valbar .num { min-width: 64px; }
-  #panel-rankings tbody tr.player td { padding-block: 10px; }
+  #panel-rankings tbody tr.player td { padding-block: 6px; }
 }
 /* The column guide stays visible under the masthead while you scroll the board (--mast-h is set from JS).
    overflow-x: clip keeps the rounded box without making it a scroll container, so sticky works. */
@@ -1945,6 +1945,13 @@ dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
 .face.lg { width: 52px; height: 52px; } .face.lg .face-i { font-size: 0.92rem; }
 .face.team { border-radius: 8px; } .face.team.lg { border-radius: 12px; }
 .pl-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* Rankings board headshots (Alan, Oct 5): a stronger anchor at 42px (36px on tablets/phones), rows kept compact
+   by trimming the cell padding; the name stays the strongest element */
+#rank-body .pl-cell { gap: 10px; }
+@media (min-width: 561px) { #rank-body td.rk { white-space: nowrap; } }   /* "10 ▼3" stays on one line, so no row jumps */
+#rank-body .face { width: 42px; height: 42px; }
+#rank-body .face-i { font-size: 0.72rem; }
+@media (max-width: 1023px) { #rank-body .face { width: 36px; height: 36px; } #rank-body .face-i { font-size: 0.64rem; } #panel-rankings tbody tr.player td { padding-block: 8px; } }
 .pl-text { min-width: 0; }
 .tr-player .face, .results .face { margin-right: -2px; }
 
@@ -4218,7 +4225,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T07:00Z";
+  const BUILD_ID = "2026-10-06T08:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
