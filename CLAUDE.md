@@ -194,6 +194,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Editor** (top bar, temporary: open to everyone):
   - Drag or arrows to reorder.
   - Click a value to type it.
+  - **Moving a player re-values him** (Alan, Oct 5; `writeOrder`): a moved player's typed value is cleared when his rank or tier changes, so the model recomputes it from what his new position rank has historically scored (`VALUE_MODEL.curves`), blended with his own projection (`proj_ppg`, weighted up as games pile up), pulled toward his new tiermates (`applyTiers`) and kept in board order. Moving up never lowers his value and moving down never raises it: if the model lands on the wrong side, he keeps the typed value as long as it still fits between his new neighbours. A toast says what happened ("value 3,287 → 2,908, recalculated for his new tier"); click the value to type one again. Players who only shift because someone else moved keep their values. `tests/editor_check.py` covers it. (Oct 5: typed values left behind after moves had put Downs 3,549 at #76 and Cousins 3,899 at #81 above Nabers 3,160 at #59.)
   - In position tabs, hover a tier header to rename it, add a tier above or below, or delete it (asks whether players move to the tier above or below; never drops players).
   - Drag players onto tier headers or empty tiers.
   - Empty tiers last only until you save.
