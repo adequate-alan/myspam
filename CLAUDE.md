@@ -165,7 +165,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 
 - Stats come from nflverse's weekly player stats, which usually appear the night of the games and sometimes the next morning. That's why each game day has a retry.
 - The stats file includes `updated` (UTC timestamp) and `through_week`; player pages show "Stats updated … · through Week N".
-- **Projections have no effect on values** (Alan, Oct 5: `VALUE_MODEL.projection.maxWeight` = 0, was 0.7): model values come only from rank, tiers and the historical points-by-rank curve. Projections still feed weekly points projections.
+- **Projections count a flat 20% of model values** (Alan, Oct 5: `VALUE_MODEL.projection.maxWeight` = 0.2, `halfWeightGames` = 0; was 0.7 ramping with games, then briefly 0): a model value is 80% rank, tiers and the historical points-by-rank curve, 20% his projected position rank, from his first game on. Typed values ignore projections. Projections in `RANKINGS_CSV` only change on request (§8).
 - **Nothing scheduled changes rankings, tiers or values** (Alan, Oct 5: "don't have something change my rankings unless asked"). The weekly job writes fresh projections to `data/projections.json`, which only weekly points projections read (`PROJ_WEEKLY` / `projPPGOf`, falling back to the CSV's `proj_ppg`). The `proj_*` columns in `RANKINGS_CSV` feed the value model's projection blend for model-valued players, so they change only on a manual run with **update_values** checked (Actions → Build and deploy site → Run workflow). `stamp_date.py` runs only then too, so "Last updated" stays the day of a real ranking change.
 - Season rollover: add the new season to `STATS_SEASONS` and the workflow's `build_stats.py <year>` and git-add lines.
 
