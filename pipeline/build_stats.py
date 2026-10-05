@@ -18,12 +18,18 @@ Also, for the player pages' matchup context:
             practice status by day (Wed/Thu/Fri). nflverse keeps only the latest practice status, so
             each run records it under its own day (Eastern time: Wed, Thu, or Fri for Fri-Mon runs)
             and carries the days already recorded this week over from the previous file.
+  short     injury-shortened games (Alan, Oct 5): {sleeper_id: [[week, snap share, usual snap share, injury]]}.
+            A game counts only when his offensive snap share was at most 70% of his usual (median of his other
+            games this season, usual >= 35%) AND there is injury evidence: play-by-play says he "was injured
+            during the play" before the last ~8 minutes, or he shows up with a new injury (not on that week's
+            report) on the next week's report. A low-snap game without injury evidence is never flagged, and
+            neither is a game he played normally with an injury designation. Snap counts: nflverse (PFR).
 
 Sources: nflverse player stats (weekly) and nflverse schedules, matched to Sleeper
 IDs with the DynastyProcess player ID table.
 Run from the pipeline folder: python build_stats.py 2026 [2025 2024 ...]
 """
-import json, os, sys
+import json, os, re, sys
 from datetime import datetime, timezone
 import pandas as pd
 
@@ -32,6 +38,7 @@ GAMES_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/game
 IDS_URL = "https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv"
 PBP_URL = "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{}.csv.gz"
 INJ_URL = "https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_{}.csv"
+SNAP_URL = "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_{}.csv"
 POS = ["QB", "RB", "WR", "TE"]
 TEAM_FIX = {"LA": "LAR", "WSH": "WAS", "JAC": "JAX", "LVR": "LV", "OAK": "LV", "SD": "LAC", "STL": "LAR"}
 
@@ -58,6 +65,12 @@ def sleeper_map(src=IDS_URL):
     d = d[d.gsis_id.notna() & d.sleeper_id.notna()]
     d = d.sort_values("db_season", ascending=False).drop_duplicates("gsis_id")
     return dict(zip(d.gsis_id, d.sleeper_id.astype("int64").astype(str)))
+
+
+def pfr_map(src=IDS_URL):
+    d = pd.read_csv(src, low_memory=False, usecols=["gsis_id", "pfr_id"])
+    d = d[d.gsis_id.notna() & d.pfr_id.notna()].drop_duplicates("gsis_id")
+    return dict(zip(d.gsis_id, d.pfr_id))
 
 
 def num(x):
@@ -152,6 +165,55 @@ def injuries(season, ids, src=INJ_URL, prev=None, day=None):
     return {"week": wk, "cols": INJURY_COLS, "teams": dict(sorted(teams.items()))}
 
 
+NOT_INJURY = re.compile(r"not injury|illness|personal|rest", re.I)   # report reasons that aren't an in-game injury
+INJURED = re.compile(r"([A-Z]{2,3})-\d+-([A-Za-z'.\- ]+?) was injured during the play")
+
+
+def shortened(season, stats, ids, pfr, pbp_src=PBP_URL, snap_src=SNAP_URL, inj_src=INJ_URL):
+    """Injury-shortened games (see the module note): snap share well under his usual + injury evidence."""
+    sn = pd.read_csv(snap_src.format(season), low_memory=False)
+    sn = sn[sn.game_type == "REG"]
+    pct = {(r.pfr_player_id, int(r.week)): float(r.offense_pct) for r in sn.itertuples() if not pd.isna(r.offense_pct)}
+    p = pd.read_csv(pbp_src.format(season), low_memory=False, usecols=["season_type", "week", "desc", "game_seconds_remaining"])
+    p = p[p.season_type == "REG"]
+    hurt = {}   # (team, short name, week) -> minutes played in the game when it happened
+    for r in p.itertuples():
+        if not isinstance(r.desc, str) or "was injured" not in r.desc:
+            continue
+        for t, n in INJURED.findall(r.desc):
+            gone = 60 - (r.game_seconds_remaining if not pd.isna(r.game_seconds_remaining) else 0) / 60
+            hurt.setdefault((team(t), n.strip(), int(r.week)), gone)
+    try:
+        rep = pd.read_csv(inj_src.format(season), low_memory=False)
+        rep = rep[rep["season_type" if "season_type" in rep.columns else "game_type"] == "REG"]
+    except Exception:   # no injury report file: play-by-play evidence only
+        rep = pd.DataFrame(columns=["gsis_id", "week", "report_primary_injury", "practice_primary_injury"])
+    listed = {}
+    for r in rep.itertuples():
+        why = r.report_primary_injury if isinstance(r.report_primary_injury, str) else r.practice_primary_injury
+        if isinstance(why, str) and not NOT_INJURY.search(why):
+            listed[(r.gsis_id, int(r.week))] = why
+    out = {}
+    for pid, rows in stats.groupby("player_id"):
+        sid, code = ids.get(pid), pfr.get(pid)
+        if not sid or not isinstance(code, str):
+            continue
+        share = {int(w): pct.get((code, int(w))) for w in rows.week}
+        for r in rows.itertuples():
+            w, now = int(r.week), share.get(int(r.week))
+            others = sorted(v for k, v in share.items() if k != w and v is not None)
+            if now is None or len(others) < 2:
+                continue
+            usual = others[len(others) // 2]
+            if usual < 0.35 or now > 0.7 * usual:
+                continue
+            at = hurt.get((team(r.team), r.player_name, w))
+            new_inj = listed.get((pid, w + 1)) if (pid, w) not in listed else None
+            if (at is not None and at < 52) or new_inj:
+                out.setdefault(sid, []).append([w, round(now, 2), round(usual, 2), new_inj or ""])
+    return out
+
+
 def optional(label, fn, *args):
     try:
         return fn(*args)
@@ -160,7 +222,7 @@ def optional(label, fn, *args):
         return None
 
 
-def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL, prev=None):
+def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL, prev=None, pfr=None, snap_src=SNAP_URL):
     d = pd.read_csv(stats_src.format(season), low_memory=False)
     d = d[(d.season_type == "REG") & d.position.isin(POS)].copy()
     d["sid"] = d.player_id.map(ids)
@@ -187,6 +249,7 @@ def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_
         "schedule": schedule(games, season),
         "defense": optional("defense", defense, season, pbp_src),
         "injuries": optional("injuries", injuries, season, ids, inj_src, (prev or {}).get("injuries"), practice_day()),
+        "short": optional("injury-shortened games", shortened, season, d, ids, pfr or {}, pbp_src, snap_src, inj_src) or {},
     }
 
 
@@ -197,6 +260,7 @@ if __name__ == "__main__":
     os.makedirs(out_dir, exist_ok=True)
     stats_src = os.environ.get("STATS_SRC", STATS_URL)
     ids = sleeper_map(os.environ.get("IDS_SRC", IDS_URL))
+    pfr = pfr_map(os.environ.get("IDS_SRC", IDS_URL))
     games = pd.read_csv(os.environ.get("GAMES_SRC", GAMES_URL), low_memory=False)
     for s in seasons:
         path = os.path.join(out_dir, f"{s}.json")
@@ -205,7 +269,8 @@ if __name__ == "__main__":
                 prev = json.load(f)
         except (OSError, ValueError):
             prev = None
-        data = build(s, ids, games, stats_src, os.environ.get("PBP_SRC", PBP_URL), os.environ.get("INJ_SRC", INJ_URL), prev)
+        data = build(s, ids, games, stats_src, os.environ.get("PBP_SRC", PBP_URL), os.environ.get("INJ_SRC", INJ_URL), prev,
+                     pfr, os.environ.get("SNAP_SRC", SNAP_URL))
         with open(path, "w") as f:
             json.dump(data, f, separators=(",", ":"))
         print(f"{s}: {len(data['players'])} players through week {data['through_week']}, "

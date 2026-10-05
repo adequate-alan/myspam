@@ -2827,7 +2827,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .ov-cell { display: flex; flex-direction: column; gap: 3px; padding: 12px 16px; background: var(--surface); min-width: 0; }
 .ov-label { font-size: 0.58rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .ov-val { font-size: 1.15rem; font-weight: 750; color: var(--cream); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ov-sub { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-sub { font-size: 0.7rem; color: var(--muted); line-height: 1.35; }   /* wraps: injury context must never be cut off */
 .pp-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .tv-find { margin: 14px 0 0; justify-content: flex-start; }
 .cmp-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -3008,6 +3008,16 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .chart .ref-label { fill: var(--cream); font-size: 10px; font-weight: 650; }
 .chart .line { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; }
 .chart .pt { fill: var(--gold); stroke: var(--surface); stroke-width: 2; }
+/* Injury context: games he left early with an injury */
+.inj-star { color: color-mix(in srgb, var(--st-dnp) 75%, var(--muted)); font-weight: 800; margin-left: 1px; cursor: help; }
+.inj-note { display: block; margin-top: 2px; font-size: 0.68rem; color: var(--muted); white-space: normal; }
+.wk-sum .inj-note { text-align: right; }
+.inj-tag { display: inline-block; padding: 1px 5px; border-radius: 4px; font-size: 0.6rem; font-weight: 750; letter-spacing: 0.04em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--st-dnp) 80%, var(--ink)); border: 1px solid color-mix(in srgb, var(--st-dnp) 40%, transparent); cursor: help; }
+.chart .wk-inj circle { fill: var(--surface); stroke: color-mix(in srgb, var(--st-dnp) 75%, var(--muted)); stroke-width: 1.2; }
+.chart .wk-inj path { stroke: color-mix(in srgb, var(--st-dnp) 80%, var(--muted)); stroke-width: 1.6; stroke-linecap: round; }
+.chart .bar.short { opacity: 0.4; }
+.wk-k-inj { margin-left: 10px; font-weight: 800; color: color-mix(in srgb, var(--st-dnp) 80%, var(--muted)); }
 /* Weekly points chart (player Overview) */
 .wk-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; }
 .wk-sum { font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -4299,7 +4309,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T12:00Z";
+  const BUILD_ID = "2026-10-06T13:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -8787,7 +8797,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td class="ro-rk" title="${e.ranked ? `League-adjusted SPAM rank · ${esc(posLabel(e.p))}` : "Not on the SPAM Board"}">${e.ranked ? `${overallRank(e.p)}<small>${esc(posLabel(e.p))}</small>` : `<span class="muted">—</span>`}</td>
         <td class="ro-num">${sn ? sn.g : "—"}</td>
         <td class="ro-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
-        <td class="ro-num">${sn && sn.g ? fp(sn.ppg) : "—"}</td></tr>`;
+        <td class="ro-num">${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td></tr>`;
       if (!open) return main;
       const g = e.o && e.o.game, dx = g && g.kind === "upcoming" ? (D[e.pos] || {})[g.oppTeam] : null;
       const base = e.ranked && String(e.p.rank) !== String(overallRank(e.p)) ? `<span><i>SPAM Board</i><b>#${e.p.rank} · ${esc(e.p.pos + e.p.posNum)}</b></span>` : "";
@@ -8981,27 +8991,29 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const weeks = [];
     for (let w = last; w >= 1 && weeks.length < 3; w--) {
       const g = byW.get(w), r = rowW.get(w);
-      if (g) weeks.push({ w, pts: g.pts });
+      if (g) weeks.push({ w, pts: g.pts, short: g.short ? shortTip(g) : "" });
       else if (team && sched.length && !r) weeks.push({ w, tag: "BYE" });
       else if (r && r[4] != null) weeks.push({ w, tag: "OUT" });
     }
     if (!weeks.length) return { weeks, avg: null, base: null, played: [] };
     const played = weeks.filter(x => x.pts != null), avg = played.length ? played.reduce((a, x) => a + x.pts, 0) / played.length : null;
+    // the trend compares completed games only (an injury exit isn't cooling off); Avg stays the official average
+    const done = played.filter(x => !x.short), avgFull = done.length ? done.reduce((a, x) => a + x.pts, 0) / done.length : null;
     let base = null;
-    if (log && log.games.length > 3) base = totals(log.games).ppg;
-    else { const prev = sid && STATS_SEASONS[1] ? seasonLog(STATS_SEASONS[1], sid, pos) : null; if (prev && prev.games.length >= 4) base = totals(prev.games).ppg; }
-    return { weeks, avg, base, played };
+    if (log && log.games.length > 3) base = fullAvg(log.games) ?? totals(log.games).ppg;
+    else { const prev = sid && STATS_SEASONS[1] ? seasonLog(STATS_SEASONS[1], sid, pos) : null; if (prev && prev.games.length >= 4) base = fullAvg(prev.games) ?? totals(prev.games).ppg; }
+    return { weeks, avg, base, played, avgFull, done };
   }
-  function recentFormHtml({ weeks, avg, base, played }) {
+  function recentFormHtml({ weeks, avg, base, played, avgFull, done }) {
     if (!weeks.length) return `<span class="muted">–</span>`;
     let trend = "";
-    if (avg != null && base != null && played.length >= 2) {
-      const d = avg - base, big = Math.abs(d) >= 2 && Math.abs(d) >= 0.15 * Math.max(base, 1);
+    if (avgFull != null && base != null && (done || played).length >= 2) {
+      const d = avgFull - base, big = Math.abs(d) >= 2 && Math.abs(d) >= 0.15 * Math.max(base, 1);
       trend = !big ? `<span class="rf-trend steady" title="Within 15% of his usual ${fp(base)}">→ Steady</span>`
         : d > 0 ? `<span class="rf-trend hot" title="Up from his usual ${fp(base)}">▲ Hot</span>` : `<span class="rf-trend cool" title="Down from his usual ${fp(base)}">▼ Cooling</span>`;
     }
     // oldest to newest, left to right, each score with its week underneath
-    const cell = x => `<span class="rf-col">${x.tag ? `<b class="rf-tag ${x.tag.toLowerCase()}" title="Week ${x.w}: ${x.tag === "BYE" ? "bye week" : "didn't play"}">${x.tag}</b>` : `<span class="rf-v">${fp(x.pts)}</span>`}<span class="rf-wk">Wk ${x.w}</span></span>`;
+    const cell = x => `<span class="rf-col">${x.tag ? `<b class="rf-tag ${x.tag.toLowerCase()}" title="Week ${x.w}: ${x.tag === "BYE" ? "bye week" : "didn't play"}">${x.tag}</b>` : `<span class="rf-v"${x.short ? ` title="${esc(x.short)}"` : ""}>${fp(x.pts)}${x.short ? `<span class="inj-star">*</span>` : ""}</span>`}<span class="rf-wk">Wk ${x.w}</span></span>`;
     return `<span class="rf"><span class="rf-scores">${weeks.slice().reverse().map(cell).join("")}</span>${avg != null ? `<span class="rf-sub">Avg ${fp(avg)}${trend ? " · " + trend : ""}</span>` : ""}</span>`;
   }
 
@@ -9335,6 +9347,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   // Season production in the league's scoring: position finish by total points, points, points per game
   let seasonRankCache = { key: "", map: null };
+  const snShort = sn => (sn && sn.short ? `<span class="inj-star" title="Includes ${shortCount(sn.short)} (left early with an injury)">*</span>` : "");
   function seasonRanks() {
     const y = STATS_SEASONS[0], d = statsCache[y], sc = scoringNow();
     if (!d || !d.players) return new Map();
@@ -9344,7 +9357,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     Object.entries(d.players).forEach(([sid, pl]) => {
       if (!EDIT_POS.includes(pl.p)) return;
       let pts = 0; pl.g.forEach(a => { const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; }); pts += gamePoints(g, pl.p, sc); });
-      rows.push({ sid, pos: pl.p, pts, g: pl.g.length });
+      rows.push({ sid, pos: pl.p, pts, g: pl.g.length, short: d.short && d.short[sid] ? d.short[sid].length : 0 });
     });
     const map = new Map();
     EDIT_POS.forEach(pos => rows.filter(r => r.pos === pos).sort((a, b) => b.pts - a.pts).forEach((r, i) => map.set(r.sid, { ...r, rank: i + 1, ppg: r.g ? r.pts / r.g : null })));
@@ -9424,7 +9437,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <td class="fa-wk">${faMatch(p)}</td>
       <td class="fa-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${p.pos.toLowerCase()})">${p.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
       <td class="fa-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
-      <td class="fa-num">${sn && sn.g ? fp(sn.ppg) : "—"}</td>
+      <td class="fa-num">${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td>
       <td class="fa-fit">${f ? `<span class="fa-fit-t ${f.cls}">${esc(f.text)}</span>` : `<span class="muted">—</span>`}</td></tr>`;
     }).join("")
       : `<tr><td class="empty" colspan="10">No ranked players available${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
@@ -9562,10 +9575,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const data = statsCache[season], pl = data && data.players[sid];
     if (!pl) return null;
     const sc = scoringNow(), P = pos || pl.p;
+    const sh = data.short && data.short[sid], shW = sh ? new Map(sh.map(r => [r[0], r])) : null;
     const games = pl.g.map(a => {
       const g = { season };
       data.cols.forEach((c, i) => { g[c] = a[i]; });
       g.pts = gamePoints(g, P, sc);
+      if (shW && shW.has(g.w)) { const r = shW.get(g.w); g.short = { pct: r[1], usual: r[2], inj: r[3] || "" }; }   // left early with an injury
       return g;
     });
     return { season, name: pl.n, pos: pl.p, games, data };
@@ -9581,6 +9596,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     });
     t.pts = Math.round(t.pts * 100) / 100;
     t.ppg = t.g ? t.pts / t.g : null;
+    // Injury-shortened games stay in the official PPG; completed-game PPG is context, shown only when it matters
+    const full = games.filter(g => !g.short);
+    t.short = t.g - full.length;
+    t.fullG = full.length;
+    t.fullPpg = full.length ? full.reduce((a, g) => a + g.pts, 0) / full.length : null;
+    t.distort = !!t.short && t.fullG >= 2 && t.fullPpg - t.ppg >= Math.max(1.5, 0.08 * Math.abs(t.ppg));
     t.tgtShare = teamTgt > 0 ? shareTgt / teamTgt : null;
     t.touches = t.rush_att + t.rec;
     return t;
@@ -9822,7 +9843,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
           ${stat("Position", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
           ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
-          ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? `${curT.g} G · ${activeData() ? "league" : "site"} scoring` : "No games")}
+          ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? (curT.short ? `<span title="${esc(ppgNote(curT))}">${curT.g} G · ${curT.short} injury-shortened</span>` : `${curT.g} G · ${activeData() ? "league" : "site"} scoring`) : "No games")}
         </div>
         <div class="pm-actions">
           <button class="btn primary" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
@@ -9883,6 +9904,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       .sort((a, b) => b.season - a.season || b.w - a.w).slice(0, n);
   }
   const avgPts = games => (games.length ? games.reduce((a, g) => a + g.pts, 0) / games.length : null);
+  /* Injury context (Alan, Oct 5): a game he left early with an injury (data.short from build_stats.py: snap share
+     well under his usual plus injury evidence) counts in the official average but is always marked; trends use
+     completed games. OUT / BYE / DNP weeks are never games played. */
+  const fullAvg = games => { const f = games.filter(g => !g.short); return f.length ? avgPts(f) : null; };
+  const shortTip = g => (g && g.short ? `Left Week ${g.w} early — injury${g.short.inj ? ` (${g.short.inj})` : ""} · ${Math.round(100 * g.short.pct)}% of snaps (usually ${Math.round(100 * g.short.usual)}%)` : "");
+  const ptsStar = g => `${fp(g.pts)}${g.short ? `<span class="inj-star" title="${esc(shortTip(g))}">*</span>` : ""}`;
+  const shortCount = n => `${n} injury-shortened game${n === 1 ? "" : "s"}`;
+  const ppgNote = t => (t && t.short ? `Includes ${shortCount(t.short)}${t.distort ? ` · ${fp(t.fullPpg)} PPG in completed games` : ""}` : "");
   function rosterStatus(sid, own) {
     if (!own || own === "fa") return own === "fa" ? "Available" : "–";
     const r = own.roster, has = list => (list || []).map(String).includes(String(sid));
@@ -9896,19 +9925,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const last3 = recentGames(sid, pos, 3), last5 = recentGames(sid, pos, 5);
     const own = ownerOfSid(sid), ng = info.team ? nextGame(info.team) : null, wkNow = currentWeek();
     let trend = "–", trendSub = "";
+    // trends compare completed games (an injury exit isn't a dip in form); the shown PPG stays official
+    const tp = t && t.short && t.fullG ? t.fullPpg : t && t.ppg, ptp = pt && pt.short && pt.fullG ? pt.fullPpg : pt && pt.ppg;
+    const trendNote = (t && t.short) || (pt && pt.short) ? " · completed games" : "";
     if (t && t.g && pt && pt.g) {
-      const d = t.ppg - pt.ppg;
+      const d = tp - ptp;
       trend = Math.abs(d) < 1 ? "Steady" : d > 0 ? "Up" : "Down";
-      trendSub = `vs ${fp(pt.ppg)} PPG in ${STATS_SEASONS[1]} (${d >= 0 ? "+" : "−"}${fp(Math.abs(d))})`;
+      trendSub = `vs ${fp(ptp)} PPG in ${STATS_SEASONS[1]} (${d >= 0 ? "+" : "−"}${fp(Math.abs(d))})${trendNote}`;
     } else if (t && t.g >= 4) {
-      const half = Math.floor(t.g / 2), a = totals(cur.games.slice(0, half)).ppg, b = totals(cur.games.slice(half)).ppg;
-      trend = Math.abs(b - a) < 1 ? "Steady" : b > a ? "Up" : "Down";
-      trendSub = `${fp(b)} PPG lately vs ${fp(a)} earlier`;
+      const half = Math.floor(t.g / 2), a = fullAvg(cur.games.slice(0, half)), b = fullAvg(cur.games.slice(half));
+      if (a != null && b != null) {
+        trend = Math.abs(b - a) < 1 ? "Steady" : b > a ? "Up" : "Down";
+        trendSub = `${fp(b)} PPG lately vs ${fp(a)} earlier${trendNote}`;
+      }
     } else if (pt && pt.g) { trendSub = `${fp(pt.ppg)} PPG in ${STATS_SEASONS[1]}`; }
     const glance = t && t.g ? glanceLine(pos, t) : "";
     const wks = cur && cur.games.length ? weeklySeries(info, cur) : null;
     if (wks) PP.charts.push({ type: "weeks", ...wks, pos });
-    const r3 = avgPts(last3), r5 = avgPts(last5);
+    const r3 = avgPts(last3), r5 = avgPts(last5), s3 = last3.filter(g => g.short).length, s5 = last5.filter(g => g.short).length;
     // Rank, value, PPG and owner live in the header; the overview leads with this week, then the season
     const side = [lineupContext(info, own), info.team && wkNow ? nextWeeksLine(info, wkNow) : "", ng ? keyReportsLine(info, ng) : "", rankMoves(info)].filter(Boolean).join("");
     return `
@@ -9916,18 +9950,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="ov-cols"><div class="ov-main">
       <h3 class="section-label">${STATS_SEASONS[0]} season</h3>
       <div class="ov-grid">
-        ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"} · ${esc(activeData() ? "league scoring" : "site scoring")}` : "No games yet")}
+        ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"} · ${fp(t.ppg)} PPG${t.short ? `<span class="inj-note">${esc(ppgNote(t))}</span>` : ` · ${esc(activeData() ? "league scoring" : "site scoring")}`}` : "No games yet")}
         ${cell("Season trend", trend, esc(trendSub))}
-        ${cell("Last 3 average", r3 != null ? fp(r3) : "–", r3 != null && t && t.g ? `${r3 >= t.ppg ? "+" : "−"}${fp(Math.abs(r3 - t.ppg))} vs season` : "")}
-        ${cell("Last 5 average", r5 != null ? fp(r5) : "–", last5.some(g => g.season !== STATS_SEASONS[0]) ? `Includes ${STATS_SEASONS[1]} games` : "")}
-        ${cell("Recent production", last3.length ? last3.map(g => fp(g.pts)).join(" · ") : "–", last3.length ? "Last 3 games, newest first" : "")}
+        ${cell("Last 3 average", r3 != null ? fp(r3) : "–", [r3 != null && t && t.g ? `${r3 >= t.ppg ? "+" : "−"}${fp(Math.abs(r3 - t.ppg))} vs season` : "", s3 ? `includes ${shortCount(s3)}` : ""].filter(Boolean).join(" · "))}
+        ${cell("Last 5 average", r5 != null ? fp(r5) : "–", [last5.some(g => g.season !== STATS_SEASONS[0]) ? `Includes ${STATS_SEASONS[1]} games` : "", s5 ? `${last5.some(g => g.season !== STATS_SEASONS[0]) ? "" : "Includes "}${shortCount(s5)}` : ""].filter(Boolean).join(" · "))}
+        ${cell("Recent production", last3.length ? last3.map(ptsStar).join(" · ") : "–", last3.length ? (s3 ? last3.filter(g => g.short).map(g => `* left Week ${g.w} early with injury`).join(" · ") : "Last 3 games, newest first") : "")}
         ${cell("Bye week", byeWeek(info.team) ? "Week " + byeWeek(info.team) : "–", byeWeek(info.team) ? (currentWeek() > byeWeek(info.team) ? "Already had it" : currentWeek() === byeWeek(info.team) ? "This week" : "Still to come") : "")}
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
       ${projPPGOf(p) != null ? `<p class="pp-glance">SPAM projection: <b>${fp(projPPGOf(p))}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
-      ${wks ? `<div class="wk-head"><h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><span class="wk-sum">Avg <b>${fp(wks.avg)}</b> · High <b>${fp(wks.hi)}</b> · Low <b>${fp(wks.lo)}</b></span></div>
+      ${wks ? `<div class="wk-head"><h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><span class="wk-sum">Avg <b>${fp(wks.avg)}</b> · High <b>${fp(wks.hi)}</b> · Low <b>${fp(wks.lo)}</b>${wks.t.short ? `<span class="inj-note">${esc(ppgNote(wks.t))}</span>` : ""}</span></div>
         <div class="chart-box wk-box" data-chart="0"></div>
-        <p class="wk-key" style="--wc: var(--${String(pos).toLowerCase()}, var(--cream))"><span class="wk-k act"></span>Final${wks.weeks.some(w => w.kind === "proj") ? `<span class="wk-k proj"></span>Projected` : ""}${wks.weeks.some(w => w.kind === "live") ? `<span class="wk-k live"></span>Live` : ""}<span class="wk-k avg"></span>Season avg</p>` : ""}
+        <p class="wk-key" style="--wc: var(--${String(pos).toLowerCase()}, var(--cream))"><span class="wk-k act"></span>Final${wks.weeks.some(w => w.kind === "proj") ? `<span class="wk-k proj"></span>Projected` : ""}${wks.weeks.some(w => w.kind === "live") ? `<span class="wk-k live"></span>Live` : ""}<span class="wk-k avg"></span>Season avg${wks.t.short ? `<span class="wk-k-inj">+</span>Left early (injury)` : ""}</p>` : ""}
       </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
   }
   // Last few committed ranking changes for this player (newest first)
@@ -10290,8 +10324,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const g = byWeek.get(w), r = sched.find(x => x[0] === w);
       if (g) {
         const o = oppLabel(season, g), cls = g.pts >= hi ? " good" : g.pts < lo ? " weak" : "";
-        const res = o.res ? `<span class="gl-res ${o.res[0]}">${esc(o.res)}</span>` : "";
-        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(g.opp, "xs")}${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${fp(g.pts)}</td><td class="gl-fin">${esc(myFin[w] || "–")}</td>
+        const res = (o.res ? `<span class="gl-res ${o.res[0]}">${esc(o.res)}</span>` : "") + (g.short ? ` <span class="inj-tag" title="${esc(shortTip(g))}">Left early</span>` : "");
+        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(g.opp, "xs")}${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${ptsStar(g)}</td><td class="gl-fin">${esc(myFin[w] || "–")}</td>
           ${cols.map(c => `<td>${cellOf(g, c)}</td>`).join("")}</tr>`);
       } else if (!r) {
         rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp" colspan="${span - 1}">Bye week</td></tr>`);
@@ -10310,9 +10344,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="table-scroll"><table class="gl-table">
         <thead><tr><th scope="col">Wk</th><th scope="col">Opp</th><th scope="col">Result</th><th scope="col">FPts</th><th scope="col" title="Weekly finish at his position">Fin</th>${cols.map(c => `<th scope="col">${c[0]}</th>`).join("")}</tr></thead>
         <tbody>${rows.join("")}</tbody>
-        <tfoot><tr><td colspan="3">${t.g} G · ${fp(t.ppg)}/g</td><td class="gl-pts">${fp(t.pts)}</td><td></td>${totalCells}</tr></tfoot>
+        <tfoot><tr><td colspan="3">${t.g} G · ${fp(t.ppg)}/g${t.short ? ` · ${t.short} injury-shortened${t.distort ? ` · ${fp(t.fullPpg)}/g completed` : ""}` : ""}</td><td class="gl-pts">${fp(t.pts)}</td><td></td>${totalCells}</tr></tfoot>
       </table></div>
-      <p class="pp-note">${esc(scoringLabel())}. Fin = his finish at ${esc(pos)} that week. ${line ? `Gold rows: ${fp(hi)}+ points (1.75× the ${pos} starter line of ${fp(line)}). Dim rows: under ${fp(lo)}.` : ""}</p>`;
+      <p class="pp-note">${esc(scoringLabel())}. Fin = his finish at ${esc(pos)} that week.${t.short ? " * Left early with an injury (his snap share fell well under his usual and an injury was noted in play-by-play or on the next week's report); the game still counts in his average." : ""} ${line ? `Gold rows: ${fp(hi)}+ points (1.75× the ${pos} starter line of ${fp(line)}). Dim rows: under ${fp(lo)}.` : ""}</p>`;
   }
 
   /* Season stats */
@@ -10345,7 +10379,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <h3 class="section-label">${title}</h3>
       <div class="table-scroll"><table class="gl-table st-table">
         <thead><tr><th scope="col">Season</th>${lead ? `<th scope="col">Team</th><th scope="col">G</th><th scope="col">FPts</th><th scope="col">FPts/g</th>` : ""}${cols.map(c => `<th scope="col">${c[0]}</th>`).join("")}</tr></thead>
-        <tbody>${seasons.map(s => `<tr><td class="gl-wk">${s.y}</td>${lead ? `<td>${esc(s.team)}</td><td>${s.t.g}</td><td class="gl-pts">${fp(s.t.pts)}</td><td class="gl-pts">${fp(s.t.ppg)}</td>` : ""}${cols.map(c => `<td>${c[1](s.t)}</td>`).join("")}</tr>`).join("")}</tbody>
+        <tbody>${seasons.map(s => `<tr><td class="gl-wk">${s.y}</td>${lead ? `<td>${esc(s.team)}</td><td>${s.t.g}</td><td class="gl-pts">${fp(s.t.pts)}</td><td class="gl-pts">${fp(s.t.ppg)}${s.t.short ? `<span class="inj-star" title="${esc(ppgNote(s.t))}">*</span>` : ""}</td>` : ""}${cols.map(c => `<td>${c[1](s.t)}</td>`).join("")}</tr>`).join("")}</tbody>
       </table></div>`;
     return table("Season totals", P, true) + table("Usage and efficiency", E, false) +
       `<p class="pp-note">${esc(scoringLabel())}. Target share is his share of his team's targets in the games he played. Red-zone usage isn't in the current data source.</p>`;
@@ -10366,13 +10400,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     PP.charts.push({ type: "bar", season: multi ? null : games[0].season, games, pos: info.pos, avg: t.ppg, line, multi });
     return head + `
       <div class="pp-grid four">
-        ${tile("Average", fp(t.ppg), `${t.g} game${t.g === 1 ? "" : "s"}`)}
+        ${tile("Average", fp(t.ppg), `${t.g} game${t.g === 1 ? "" : "s"}${t.short ? ` · ${esc(ppgNote(t).replace(/^Includes /, ""))}` : ""}`)}
         ${tile("Best game", fp(best), esc(weekText(games.find(g => g.pts === best))))}
-        ${tile("Worst game", fp(worst), esc(weekText(games.find(g => g.pts === worst))))}
+        ${tile("Worst game", fp(worst) + (games.find(g => g.pts === worst).short ? "*" : ""), esc(weekText(games.find(g => g.pts === worst))) + (games.find(g => g.pts === worst).short ? " · left early (injury)" : ""))}
         ${tile("Starter weeks", startable != null ? `${startable} of ${t.g}` : "–", line ? `At or above the ${info.pos} starter line (${fp(line)})` : "")}
       </div>
       <div class="chart-box tall" data-chart="0"></div>
-      <p class="pp-note">${esc(scoringLabel())}. Dashed line: his average. Dotted line: the ${esc(info.pos)} starter line for ${activeData() ? "this league" : "the site's 12-team format"}.</p>`;
+      <p class="pp-note">${esc(scoringLabel())}.${t.short ? " Faded bars with + : games he left early with an injury (they count in the average)." : ""} Dashed line: his average. Dotted line: the ${esc(info.pos)} starter line for ${activeData() ? "this league" : "the site's 12-team format"}.</p>`;
   }
   const weekText = g => (g ? `${g.season} wk ${g.w} ${oppLabel(g.season, g).opp}` : "");
 
@@ -10523,7 +10557,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (g) {
         const o = oppLabel(season, g);
         const f = finN(w);
-        weeks.push({ w, kind: "final", pts: g.pts, opp: g.opp, where: o.opp.startsWith("@") ? "@" : "vs", res: o.res, fin: fin[w] || "", tone: f == null ? "" : f <= 5 ? "strong" : f > startable ? "poor" : "" });
+        weeks.push({ w, kind: "final", pts: g.pts, opp: g.opp, where: o.opp.startsWith("@") ? "@" : "vs", res: o.res, fin: fin[w] || "", short: g.short ? shortTip(g) : "",
+          tone: g.short ? "" : f == null ? "" : f <= 5 ? "strong" : f > startable ? "poor" : "" });
         continue;
       }
       const row = sched.find(r => r[0] === w);
@@ -10536,8 +10571,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       else if (o.proj != null) weeks.push({ ...base, kind: "proj", proj: o.proj, when: o.game && o.game.date ? kickoffText(o.game.date, o.game.time) : "" });
       else weeks.push({ ...base, kind: "none" });
     }
-    const played = cur.games.map(g => g.pts);
-    return { weeks, avg: played.reduce((a, b) => a + b, 0) / played.length, hi: Math.max(...played), lo: Math.min(...played) };
+    const played = cur.games.map(g => g.pts), t = totals(cur.games);
+    return { weeks, avg: played.reduce((a, b) => a + b, 0) / played.length, hi: Math.max(...played), lo: Math.min(...played), t };
   }
   function weeksChart(spec, W) {
     const weeks = spec.weeks, H = 168, L = 30, R = 10, T = 16, B = 36;
@@ -10575,8 +10610,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       let tip = `Week ${wk.w}${vs ? " · " + vs : ""} · `;
       if (wk.kind === "final") {
         s += `<circle class="wk-pt ${wk.tone}" cx="${cx}" cy="${y(v)}" r="${wk.tone === "strong" ? 4.5 : 3.5}"/>`;
-        if (wk === hiW || wk === loW) s += `<text class="wk-val" x="${cx}" y="${wk === hiW ? y(v) - 9 : y(v) + 15}" text-anchor="middle">${fp(v)}</text>`;
-        tip += `${fp(wk.pts)} pts${wk.fin ? " (" + wk.fin + ")" : ""}${wk.res ? " · " + wk.res : ""}${wk.tone === "strong" ? " · strong week" : wk.tone === "poor" ? " · poor week" : ""}`;
+        if (wk === hiW || wk === loW) s += `<text class="wk-val" x="${cx}" y="${wk === hiW ? y(v) - 9 : y(v) + 15}" text-anchor="middle">${fp(v)}${wk.short ? "*" : ""}</text>`;
+        if (wk.short) s += `<g class="wk-inj" transform="translate(${cx + 7},${y(v) - 9})"><circle r="5.5"/><path d="M-2.6 0H2.6M0 -2.6V2.6"/></g>`;
+        tip += `${fp(wk.pts)} pts${wk.fin ? " (" + wk.fin + ")" : ""}${wk.res ? " · " + wk.res : ""}${wk.short ? " · Left early — injury" + wk.short.replace(/^Left Week \d+ early — injury/, "") : wk.tone === "strong" ? " · strong week" : wk.tone === "poor" ? " · poor week" : ""}`;
       } else if (wk.kind === "live") {
         s += `<circle class="wk-pt live" cx="${cx}" cy="${y(v)}" r="4"/>`;
         tip += `Live${wk.pts != null ? " · " + fp(wk.pts) + " pts so far" : ""}${wk.proj != null ? " · proj " + fp(wk.proj) : ""}`;
@@ -10632,8 +10668,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const d = g.pts >= 0
         ? `M${cx - bw / 2},${y0} V${top + r} Q${cx - bw / 2},${top} ${cx - bw / 2 + r},${top} H${cx + bw / 2 - r} Q${cx + bw / 2},${top} ${cx + bw / 2},${top + r} V${y0} Z`
         : `M${cx - bw / 2},${y0} V${top + h} H${cx + bw / 2} V${y0} Z`;
-      const tip = `${g.season} · Week ${g.w} ${oppLabel(g.season, g).opp} · ${fp(g.pts)} pts`;
-      s += `<path class="bar" d="${d}" style="fill:${color}"/>`;
+      const tip = `${g.season} · Week ${g.w} ${oppLabel(g.season, g).opp} · ${fp(g.pts)} pts${g.short ? " · Left early — injury" + shortTip(g).replace(/^Left Week \d+ early — injury/, "") : ""}`;
+      s += `<path class="bar${g.short ? " short" : ""}" d="${d}" style="fill:${color}"/>`;
+      if (g.short) s += `<g class="wk-inj" transform="translate(${cx},${top - 9})"><circle r="5.5"/><path d="M-2.6 0H2.6M0 -2.6V2.6"/></g>`;
       s += `<rect class="hit" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}" data-tip="${esc(tip)}"/>`;
       if (i % showEvery === 0) s += `<text class="ax" x="${cx}" y="${H - 8}" text-anchor="middle">${spec.multi ? `${String(g.season).slice(2)}·${g.w}` : g.w}</text>`;
     });

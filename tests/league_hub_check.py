@@ -168,9 +168,10 @@ with sync_playwright() as p:
     ir_names = [name_of[x] for x in L1["rosters"][4]["reserve"]]
     row5 = pg.locator(".pr-item", has=pg.locator(".pr-name", has_text="Alpha League Team 5"))
     score_before = row5.locator(".pr-score").inner_text()
-    row5.locator(".pr-row").click(); pg.wait_for_timeout(400)
+    if "open" not in (row5.get_attribute("class") or ""):   # it may already be the row opened above
+        row5.locator(".pr-row").click(); pg.wait_for_timeout(400)
     ir_rows = row5.locator(".tx-col .tx-pl.ir")
-    ok(ir_rows.count() == 2 and all(n in " ".join(ir_rows.all_inner_texts()) for n in ir_names), f"IR players sit in their position columns: {ir_names}")
+    ok(ir_rows.count() == 2 and all(n in " ".join(ir_rows.all_inner_texts()) for n in ir_names), f"IR players sit in their position columns: {ir_names} (found {ir_rows.all_inner_texts()})")
     ok(all(t.strip() == "IR" for t in ir_rows.locator(".tx-role").all_inner_texts()), "IR players carry an IR tag, not a starter slot")
     ok("Injured reserve counts as if healthy" in pg.inner_text(".method-note"), "Power Rankings note says IR counts")
     # Position lens (Alan, Oct 5): a position rank re-sorts the Power Rankings list in place, selected team highlighted
