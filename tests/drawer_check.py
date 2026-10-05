@@ -60,6 +60,29 @@ with sync_playwright() as p:
         s = pg.evaluate(STATE)
         ok(not s["open"] and s["cur"] == [], f"{vw}px: Escape closes the drawer and clears the highlight")
         pg.close()
+    # Injury context (Alan, Oct 5): a game he left early with an injury keeps counting in PPG but is marked everywhere
+    pg = br.new_page(viewport={"width": 1440, "height": 1000}); pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app|api\.github\.com)/.*"), lambda r: r.abort())
+    pg.goto(URL); pg.wait_for_timeout(3500)
+    hit = pg.evaluate("""async () => { const d = await (await fetch('data/stats/2026.json')).json();
+      const board = new Set([...document.querySelectorAll('#rank-body .pl-name')].map(e => e.textContent.trim()));
+      for (const [sid, rows] of Object.entries(d.short || {})) { const pl = d.players[sid];
+        if (pl && board.has(pl.n) && pl.g.length >= 3) return { name: pl.n, week: rows[0][0], games: pl.g.length }; }
+      return null; }""")
+    if not hit:
+        ok(True, "Injury context: no injury-shortened game for a ranked player in this season's file yet (skipped)")
+    else:
+        pg.fill("#rank-search", hit["name"]); pg.wait_for_timeout(400)
+        pg.evaluate("document.querySelector('#rank-body [data-player]').click()"); pg.wait_for_timeout(1500)
+        head = pg.inner_text(".pm-stats"); cells = pg.inner_text(".ov-grid"); summ = pg.inner_text(".wk-sum")
+        tips = pg.evaluate("[...document.querySelectorAll('.wk-chart .hit')].map(h => h.dataset.tip)")
+        ok("injury-shortened" in head and "injury-shortened" in summ and f"{hit['games']} G" in head,
+           f"Injury context: {hit['name']} keeps {hit['games']} games in PPG and says one was injury-shortened")
+        ok(any(f"Week {hit['week']} " in t and "Left early" in t for t in tips) and pg.locator(".wk-chart .wk-inj").count() >= 1,
+           f"Injury context: Weekly Points marks Week {hit['week']} (marker + 'Left early — injury' tooltip)")
+        pg.click("[data-pp-tab=log]"); pg.wait_for_timeout(400)
+        ok(pg.locator(".gl-table .inj-tag").count() >= 1 and "injury-shortened" in pg.inner_text(".gl-table tfoot"), "Injury context: Game Log tags the game and the footer counts it")
+    pg.close()
     pg = br.new_page(viewport={"width": 390, "height": 844}); pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.app|api\.github\.com)/.*"), lambda r: r.abort())
     pg.goto(URL); pg.wait_for_timeout(3500)
