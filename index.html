@@ -2795,6 +2795,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pm-head.tm { box-shadow: inset 0 3px 0 var(--tc); }
 .pm-head.tm .face.xl { box-shadow: inset 0 0 0 1px var(--line), 0 0 0 3px var(--surface), 0 0 0 5px color-mix(in srgb, var(--tc) 70%, transparent); }
 .pp-meta .tlogo { margin-right: -4px; }
+.pm-scoring { margin: 6px 0 0; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.01em; }
 .tw-card { --ta: var(--ta-d, var(--line)); --tb: var(--tb-d, var(--line)); }
 :root[data-theme="light"] .tw-card { --ta: var(--ta-l, var(--line)); --tb: var(--tb-l, var(--line)); }
 .tw-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; background: linear-gradient(to right, var(--ta) 50%, var(--tb) 50%); opacity: 0.85; }
@@ -4097,7 +4098,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-05T18:30Z";
+  const BUILD_ID = "2026-10-05T19:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -8874,6 +8875,29 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return { kind: g.kind, game: g, proj: P.pts, est: P.pts, fallback: P.fallback, source: P.source, inputs: P.inputs, text: g.text };
   }
   // Self-test: projections follow the league's scoring (SPM.projectionCheck() in the console, tests/format_check.py)
+  // Scoring engine self-test (Alan, Oct 5): fixed stat lines scored under different league settings
+  function scoringCheck() {
+    const scOf = f => fmtLeague({ ...FMT_DEFAULT, ...f }).scoring_settings;
+    const out = [], check = (name, values, pass) => out.push({ check: name, values, pass: !!pass });
+    const r1 = v => Math.round(v * 10) / 10;
+    const te = { rec: 8, rec_yd: 80, rec_td: 1 };
+    const tp = [0, 0.5, 1].map(x => r1(calculateFantasyPoints(te, scOf({ rec: 1, tep: x }), "TE")));
+    check("TE 8 rec · 80 yds · 1 TD: Full PPR = 22.0, TE Premium + = 26.0, ++ = 30.0", tp, tp[0] === 22 && tp[1] === 26 && tp[2] === 30);
+    const wr = r1(calculateFantasyPoints(te, scOf({ rec: 1, tep: 0.5 }), "WR"));
+    check("TE premium never applies to a WR with the same line", [wr], wr === 22);
+    const ppr = [0, 0.5, 1].map(x => r1(calculateFantasyPoints(te, scOf({ rec: x, tep: 0 }), "WR")));
+    check("Standard → Half → Full PPR: 14.0 / 18.0 / 22.0", ppr, ppr[0] === 14 && ppr[1] === 18 && ppr[2] === 22);
+    const fum = { rush_att: 15, rush_yd: 70, fum_lost: 1 };
+    const fl = [-1, -2].map(x => r1(calculateFantasyPoints(fum, scOf({ fum: x }), "RB")));
+    check("Fumble lost −1 vs −2: 6.0 vs 5.0", fl, fl[0] === 6 && fl[1] === 5);
+    const qb = { pass_att: 30, pass_cmp: 20, pass_yd: 250, pass_td: 2, pass_int: 1 };
+    const pt = [4, 6].map(x => r1(calculateFantasyPoints(qb, scOf({ ptd: x }), "QB")));
+    check("4 vs 6 pt passing TDs: 16.0 vs 20.0", pt, pt[0] === 16 && pt[1] === 20);
+    const big = { rec: 6, rec_yd: 120 }, bsc = { ...scOf({ tep: 0 }), bonus_rec_yd_100: 3 };
+    const bb = [r1(calculateFantasyPoints(big, scOf({ tep: 0 }), "WR")), r1(calculateFantasyPoints(big, bsc, "WR"))];
+    check("100-yard receiving bonus (+3): 18.0 → 21.0", bb, bb[0] === 18 && bb[1] === 21);
+    return out;
+  }
   async function projectionCheck() {
     if (!comps) await loadStatic();
     await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason));
@@ -9120,7 +9144,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const DEFAULT_SCORING = { pass_yd: 0.04, pass_td: 4, pass_int: -2, pass_2pt: 2, rush_yd: 0.1, rush_td: 6, rush_2pt: 2,
                             rec: 1, rec_yd: 0.1, rec_td: 6, rec_2pt: 2, fum_lost: -2, bonus_rec_te: 0.5 };
   const scoringNow = () => { const d = activeData(); return d ? d.league.scoring_settings || {} : FMT ? fmtLeague(FMT).scoring_settings : (comps && comps.base_scoring) || DEFAULT_SCORING; };
-  const scoringLabel = () => (activeData() ? `${activeData().league.name} scoring` : FMT ? `Your scoring (${formatParts(fmtLeague(FMT)).slice(1).join(" · ")})` : "SPAM scoring (" + formatParts(fmtLeague(FMT_DEFAULT)).slice(1).join(" · ") + ")");
+  // The scoring rules behind every fantasy point shown, in words: "Full PPR · TE Premium + · 6pt Pass TD · Fumble −1"
+  function scoringParts(sc) {
+    const n = k => Number(sc[k] || 0), parts = [], rec = n("rec");
+    parts.push(rec === 1 ? "Full PPR" : rec === 0.5 ? "Half PPR" : rec === 0 ? "Standard" : `${rec} PPR`);
+    if (n("bonus_rec_te") > 0) parts.push(tepLabel(n("bonus_rec_te")));
+    ["rb", "wr"].forEach(x => { if (n("bonus_rec_" + x)) parts.push(`${x.toUpperCase()} +${n("bonus_rec_" + x)}/rec`); });
+    if (n("pass_td") !== 4) parts.push(`${n("pass_td")}pt Pass TD`);
+    if (n("pass_yd") && Math.abs(n("pass_yd") - 0.04) > 1e-9) parts.push(`${Math.round(1 / n("pass_yd"))} pass yds/pt`);
+    if (n("pass_int") !== -2) parts.push(`INT ${String(n("pass_int")).replace("-", "−")}`);
+    if (n("fum_lost") !== -2) parts.push(n("fum_lost") ? `Fumble ${String(n("fum_lost")).replace("-", "−")}` : "No fumble penalty");
+    if (n("rush_fd") > 0 || n("rec_fd") > 0) parts.push("PPFD");
+    if (THRESHOLDS.some(([k]) => n(k))) parts.push("Yardage bonuses");
+    return parts;
+  }
+  const scoringLabel = () => {
+    const d = activeData(), who = d ? `${d.league.name} scoring` : FMT ? "Your scoring" : "SPAM scoring";
+    return [who, ...scoringParts(scoringNow())].join(" · ");
+  };
   const STAT_KEYS = ["pass_cmp", "pass_att", "pass_yd", "pass_td", "pass_int", "pass_2pt", "pass_sack", "pass_fd",
                      "rush_att", "rush_yd", "rush_td", "rush_2pt", "rush_fd", "rec_tgt", "rec", "rec_yd", "rec_td", "rec_2pt", "rec_fd", "fum_lost"];
   const THRESHOLDS = [
@@ -9129,6 +9170,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     ["bonus_rec_yd_100", g => g.rec_yd >= 100], ["bonus_rec_yd_200", g => g.rec_yd >= 200],
     ["bonus_rush_rec_yd_100", g => g.rush_yd + g.rec_yd >= 100], ["bonus_rush_rec_yd_200", g => g.rush_yd + g.rec_yd >= 200],
     ["bonus_pass_cmp_25", g => g.pass_cmp >= 25], ["bonus_rush_att_20", g => g.rush_att >= 20]];
+  /* The one scoring engine: raw stat line + a league's scoring_settings → fantasy points. Every screen (player page,
+     Game Log, Stats, Fantasy Performance, recent form, season ranks, Waiver Wire, My Team, Rosters, projections from
+     raw stats) calls this; never store or reuse a points total computed under other scoring. */
+  const calculateFantasyPoints = (stats, sc, pos) => gamePoints(stats, pos, sc);
   function gamePoints(g, pos, sc) {
     let v = 0;
     for (const k of STAT_KEYS) { const w = Number(sc[k] || 0); if (w) v += w * (g[k] || 0); }
@@ -9374,6 +9419,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <h2 class="pm-name" id="pm-name">${esc(info.name)}</h2>
             <div class="pp-meta">${pos ? `<span class="pos ${esc(pos)}">${esc(pos)}</span>` : ""}${info.team ? teamLogo(info.team, "sm") : ""}<span>${esc(info.team && teamMeta(info.team) ? teamMeta(info.team).nick + " · " : "")}${meta.map(esc).join(" · ")}</span></div>
             ${LG.active ? `<div class="pm-owner">${ownPill(own)}</div>` : ""}
+            <p class="pm-scoring" title="Every fantasy point on this page is computed from his raw NFL stats with these scoring rules">${esc(scoringLabel())}</p>
           </div>
         </div>
         <div class="pm-stats">
@@ -10788,7 +10834,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     throw new Error("the history file kept changing");
   }
-  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck };   // helpers for the scheduled snapshot and tests
+  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints };   // helpers for the scheduled snapshot and tests
 
   // Start-up: restore a saved connection
   sl = readSl();

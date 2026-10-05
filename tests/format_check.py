@@ -88,6 +88,9 @@ with sync_playwright() as p:
     # weekly projections follow the league's scoring (one shared projection function)
     for c in pg.evaluate("() => SPM.projectionCheck()"):
         ok(c["pass"], f'Projection: {c["check"]}: {c["values"]}')
+    # one scoring engine: the same stat line under different league settings (Alan, Oct 5)
+    for c in pg.evaluate("() => SPM.scoringCheck()"):
+        ok(c["pass"], f'Scoring: {c["check"]}: {c["values"]}')
     pg.close()
 
     # 2. the calculator with a connected league that has no TE premium

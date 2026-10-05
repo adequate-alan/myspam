@@ -492,7 +492,32 @@ with sync_playwright() as p:
     ok("Big Tackle" in body and "Corner One" in body and "Leg Man" in body, "Full depth chart adds the line, defense and special teams")
     ok("Depth chart from Sleeper" in body, "Source line names Sleeper")
     if SHOTS: pg.locator("#player-modal").screenshot(path=f"{SHOTS}/depth_chart.png")
-    pg.keyboard.press("Escape")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    # Player modal fantasy points follow the selected league's scoring (Alan, Oct 5): one raw stat line, scored per league
+    stats26 = json.load(open(os.path.join(ROOT, "data", "stats", "2026.json")))
+    te_sid = next((r["sleeper_id"] for r in rows if r["pos"] == "TE" and r["sleeper_id"] and stats26["players"].get(r["sleeper_id"], {}).get("g")), None)
+    if te_sid:
+        g0 = dict(zip(stats26["cols"], stats26["players"][te_sid]["g"][0]))
+        def expect(sc): return round(sum(float(sc.get(k, 0)) * float(g0.get(k) or 0) for k in sc if k in g0) + float(sc.get("bonus_rec_te", 0)) * g0["rec"], 1)
+        def switch(lid):
+            pg.evaluate("() => { const b = document.createElement('button'); b.dataset.act = 'account'; document.getElementById('league-menu').append(b); b.click(); b.remove(); }"); pg.wait_for_timeout(400)
+            pg.fill("#sd-username", "tester"); pg.press("#sd-username", "Enter"); pg.wait_for_timeout(800)
+            pg.locator(f"#sd-leagues [data-league='{lid}']").click(); pg.wait_for_timeout(1500)
+        def log_pts():
+            pg.click("#tab-rankings"); pg.wait_for_timeout(400)
+            pg.evaluate(f"() => document.querySelector('[data-player=\"{te_sid}\"]').click()"); pg.wait_for_timeout(900)
+            label = pg.inner_text("#player-modal .pm-scoring")
+            pg.locator("#player-modal button", has_text="Game Log").first.click(); pg.wait_for_timeout(500)
+            pts = pg.evaluate(f"""() => {{ const r = [...document.querySelectorAll('#player-modal tbody tr')].find(tr => tr.cells[0] && tr.cells[0].textContent.trim() === '{g0["w"]}');
+                return r ? Number(r.querySelector('.gl-pts').textContent) : null; }}""")
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+            return pts, label
+        switch("L1"); p1, lab1 = log_pts()
+        switch("L2"); p2, lab2 = log_pts()
+        e1, e2 = expect(L1["league"]["scoring_settings"]), expect(L2["league"]["scoring_settings"])
+        ok(p1 == e1 and p2 == e2 and p1 != p2, f"Game Log points follow each league's scoring: {name_of[te_sid]} Wk {g0['w']} {p1} (Alpha, expected {e1}) vs {p2} (Beta, expected {e2})")
+        ok("Alpha League scoring" in lab1 and "TE Premium +" in lab1 and "Beta League scoring" in lab2 and "Half PPR" in lab2 and "TE Premium" not in lab2, f"Player modal names the scoring: '{lab1}' / '{lab2}'")
+        switch("L1")
     ok(not errs, f"No page errors {errs}")
     br.close()
 
