@@ -3065,32 +3065,36 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 #rank-body tr.cmp-a td { background: color-mix(in srgb, var(--gold) 5%, transparent); }
 /* Injury context: games he left early with an injury */
 /* Player Outlook (Alan, Oct 6) */
-.olk { margin: 2px 0 16px; padding: 12px 14px 10px; border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
-.olk.pos { border-left-color: color-mix(in srgb, var(--st-fp, #6fbf73) 70%, transparent); }
-.olk.neg { border-left-color: color-mix(in srgb, var(--st-dnp, #d96b5b) 70%, transparent); }
-.olk.mix { border-left-color: color-mix(in srgb, var(--gold) 70%, transparent); }
-.olk-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+/* Player Outlook: one vertical column in every width (never a grid); every text box can shrink and wrap */
+.olk { display: block; min-width: 0; max-width: 100%; margin: 2px 0 16px; padding: 11px 14px 10px; border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 70%, transparent); overflow-wrap: anywhere; }
+.olk > * { min-width: 0; max-width: 100%; }
+.olk.olk-up { border-left-color: color-mix(in srgb, var(--st-fp, #6fbf73) 60%, transparent); }
+.olk.olk-down { border-left-color: color-mix(in srgb, var(--st-dnp, #d96b5b) 60%, transparent); }
+.olk.olk-mix { border-left-color: color-mix(in srgb, var(--st-q, #e0a84f) 60%, transparent); }
+.olk.olk-flat { border-left-color: color-mix(in srgb, var(--gold) 45%, transparent); }
+.olk-head { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; margin-bottom: 5px; }
 .olk-head .section-label { margin: 0; }
-.olk-dir { font-size: 0.74rem; font-weight: 750; letter-spacing: 0.02em; }
-.olk-dir.pos { color: var(--st-fp, #6fbf73); } .olk-dir.neg { color: var(--st-dnp, #d96b5b); } .olk-dir.mix { color: var(--gold); } .olk-dir.flat { color: var(--muted); }
-.olk-conf { margin-left: auto; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); cursor: help; }
-.olk-text { font-size: 0.84rem; line-height: 1.5; margin: 0 0 8px; color: var(--ink); }
-.olk-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 6px; }
-.olk-ranks { font-size: 0.74rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.olk-ranks a { color: inherit; text-decoration: underline dotted; text-underline-offset: 2px; }
-.olk-tags { display: inline-flex; flex-wrap: wrap; gap: 5px; }
-.olk-tag { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
-.olk-tag.pos { color: var(--st-fp, #6fbf73); border-color: color-mix(in srgb, var(--st-fp, #6fbf73) 35%, transparent); }
-.olk-tag.neg { color: var(--st-dnp, #d96b5b); border-color: color-mix(in srgb, var(--st-dnp, #d96b5b) 35%, transparent); }
-.olk-rankwhy { font-size: 0.74rem; color: var(--muted); margin: 0 0 6px; }
+.olk-dir { font-size: 0.74rem; font-weight: 750; letter-spacing: 0.02em; min-width: 0; }
+.olk-dir.olk-up { color: color-mix(in srgb, var(--st-fp, #6fbf73) 85%, var(--ink)); } .olk-dir.olk-down { color: color-mix(in srgb, var(--st-dnp, #d96b5b) 85%, var(--ink)); }
+.olk-dir.olk-mix { color: var(--st-q, #e0a84f); } .olk-dir.olk-flat { color: var(--gold); }
+.olk-text { display: block; width: 100%; font-size: 0.84rem; line-height: 1.5; margin: 0 0 7px; color: var(--ink); }
+.olk-text.clamped { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 2px; }
+.olk-more { display: inline-block; margin: 0 0 7px; padding: 0; border: 0; background: none; font: inherit; font-size: 0.72rem; font-weight: 650; color: var(--accent-primary); cursor: pointer; }
+.olk-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; margin-bottom: 4px; }
+.olk-meta > * { min-width: 0; max-width: 100%; }
+.olk-rank { font-size: 0.74rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.olk-tag { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); white-space: normal; }
+.olk-tag.olk-up { color: var(--st-fp, #6fbf73); border-color: color-mix(in srgb, var(--st-fp, #6fbf73) 35%, transparent); }
+.olk-tag.olk-down { color: var(--st-dnp, #d96b5b); border-color: color-mix(in srgb, var(--st-dnp, #d96b5b) 35%, transparent); }
+.olk-conf { font-size: 0.68rem; color: var(--muted); cursor: help; }
+.olk-why { display: block; }
 .olk-why summary { cursor: pointer; font-size: 0.72rem; font-weight: 650; color: var(--accent-primary); margin: 2px 0 4px; }
 .olk-g h4 { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 8px 0 3px; }
 .olk-g ul { margin: 0; padding-left: 16px; font-size: 0.76rem; line-height: 1.45; }
 .olk-src { font-size: 0.62rem; color: var(--muted); margin: 6px 0 0; }
+.olk-src a { color: inherit; }
 .olk-src span[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 2px; }
 .olk-stale { color: var(--st-dnp, #d96b5b); }
-.aud { display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 3px; font-size: 0.56rem; font-weight: 750; letter-spacing: 0.04em; vertical-align: 1px; border: 1px solid currentColor; cursor: help; }
-.aud.up { color: var(--st-fp, #6fbf73); } .aud.down { color: var(--st-dnp, #d96b5b); } .aud.mkt { color: var(--gold); }
 .inj-ov { all: unset; cursor: pointer; margin-left: 6px; padding: 1px 6px; border: 1px dashed var(--line); border-radius: 4px; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
 .inj-ov:hover { color: var(--ink); border-color: var(--gold); }
 .inj-ov:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
@@ -4427,7 +4431,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-07T08:00Z";
+  const BUILD_ID = "2026-10-07T10:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4741,7 +4745,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       out.push(`<tr class="player${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
         <td class="rk">${rk(p)}</td>
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
-        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}${auditFlag(p)}</td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
@@ -10176,37 +10180,50 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Wording (rule-based, original): facts → valuation → market → what the league's format changes
   const pc = v => (v == null ? "–" : Math.round(100 * v) + "%");
   const POS_PL = { QB: "quarterbacks", RB: "running backs", WR: "receivers", TE: "tight ends" };
+  const TAG_PHRASE = { "Receiving Concern": "a light receiving role", "Committee Risk": "a shared backfield", "Snaps Falling": "a falling snap share",
+    "Role Uncertain": "an unsettled role", "Workload Falling": "a shrinking workload", "Targets Falling": "fewer targets", "Role Shrinking": "a shrinking role",
+    "High Volume": "his weekly volume", "Elite Target Share": "an elite target share", "Goal-Line Role": "his goal-line work", "Rushing Upside": "his rushing",
+    "Targets Rising": "a growing target share", "Workload Rising": "a growing workload", "Role Expanding": "a growing role" };
   function outlookText(o) {
-    const { info, E, R, M, V, C } = o, nm = compactName(info.name), out = [];
+    // ~50–80 words: 1. his role · 2. what changed · 3. does that support SPAM's ranking · 4. the main risk or upside.
+    // Exact ranks and gaps live in "Why this outlook?", not here.
+    const { info, E, R, V, C } = o, nm = compactName(info.name), out = [];
     if (!E.gp && !E.pt) return [];
+    const ok = v => v != null && isFinite(v);
+    // 1. role (only from numbers we actually have)
     if (!E.gp) out.push(`${nm} hasn't played this season${E.pt ? `; he averaged ${fp(E.pt.ppg)} PPG over ${E.pt.g} games last season` : ""}.`);
-    else {
-      if (E.pos === "RB") out.push(`${nm} is handling ${fp(E.touchPg)} touches a game${E.snap != null ? ` on ${pc(E.snap)} of the snaps` : ""}${E.glPg >= 0.5 ? `, with ${fp(E.glPg)} goal-line carries a game` : ""}.`);
-      else if (E.pos === "QB") out.push(`${nm} is averaging ${fp(E.passPg)} pass attempts${E.rushPg >= 3 ? ` and ${fp(E.rushPg)} rushes` : ""} a game.`);
-      else out.push(`${nm} is seeing ${fp(E.tgtPg)} targets a game${E.tshare != null ? ` (${pc(E.tshare)} target share${E.airShare != null ? `, ${pc(E.airShare)} of the air yards` : ""})` : ""}.`);
-      if (E.oppTrend != null && E.oppTrend >= 1.25) out.push(`His ${E.pos === "RB" ? "workload" : E.pos === "QB" ? "volume" : "target volume"} has grown over his last two full games.`);
-      else if (E.oppTrend != null && E.oppTrend <= 0.75) out.push(`His ${E.pos === "RB" ? "workload" : E.pos === "QB" ? "volume" : "target volume"} has dipped over his last two full games.`);
-      else if (E.snapTrend != null && E.snapTrend <= 0.85) out.push(`His snap share has slipped lately.`);
-      const sg = E.shortGames[E.shortGames.length - 1];
-      const rank = E.prodRank ? ` (${ordinal(E.prodRank)} among ${POS_PL[E.pos]} with 2+ games)` : "";
-      if (sg) out.push(`His ${fp(E.ppg)} PPG${rank} includes Week ${sg.w}, which he left ${sg.short.at != null && sg.short.at >= 29 && sg.short.at <= 31 ? "around halftime" : "early"} with an injury${E.fullPpg != null ? ` (${fp(E.fullPpg)} PPG in his completed games)` : ""}.`);
-      else out.push(`He's scoring ${fp(E.ppg)} PPG${rank.replace(/^ \((.*)\)$/, ", $1")}.`);
-    }
-    if (E.inj && E.inj.status) out.push(`He's listed ${E.inj.status}${E.inj.injury ? ` (${E.inj.injury.toLowerCase()})` : ""} this week.`);
+    else if (E.pos === "RB" && ok(E.touchPg)) out.push(`${nm} is handling ${fp(E.touchPg)} touches a game${ok(E.snap) ? ` on ${pc(E.snap)} of the snaps` : ""}.`);
+    else if (E.pos === "QB" && ok(E.passPg)) out.push(`${nm} is averaging ${fp(E.passPg)} pass attempts${E.rushPg >= 3 ? ` and ${fp(E.rushPg)} rushes` : ""} a game.`);
+    else if (E.pos !== "QB" && E.pos !== "RB" && ok(E.tgtPg)) out.push(`${nm} is seeing ${fp(E.tgtPg)} targets a game${ok(E.tshare) ? ` (${pc(E.tshare)} target share)` : ""}.`);
+    else out.push(`${nm} is scoring ${fp(E.ppg)} PPG; limited usage data is available.`);
+    // 2. what changed: injury first, then role trends
+    const sg = E.shortGames[E.shortGames.length - 1], st = E.inj && E.inj.status;
+    const left = sg ? `left Week ${sg.w} ${sg.short.at != null && sg.short.at >= 29 && sg.short.at <= 31 ? "around halftime" : "early"} with an injury` : "";
+    const listed = st ? `is listed ${st}${E.inj.injury ? ` (${E.inj.injury.toLowerCase()})` : ""} this week` : "";
+    const what = E.pos === "RB" ? "workload" : E.pos === "QB" ? "volume" : "target volume";
+    if (left || listed) out.push(`He ${[left, listed].filter(Boolean).join(" and ")}${left && E.fullPpg != null ? `; his ${fp(E.ppg)} PPG includes that game` : ""}.`);
+    else if (E.oppTrend != null && E.oppTrend >= 1.25) out.push(`His ${what} has grown over his last two full games.`);
+    else if (E.oppTrend != null && E.oppTrend <= 0.75) out.push(`His ${what} has dipped over his last two full games.`);
+    else if (E.snapTrend != null && E.snapTrend <= 0.85) out.push(`His snap share has slipped lately.`);
+    else if (E.gp >= 3) out.push(`His role has been steady.`);
+    // 3. SPAM's ranking: subtle, the exact discrepancy is in "Why this outlook?"
     if (V) {
-      const lbl = V.label, ev = E.evRank ? `${E.pos}${E.evRank}` : "";
+      const lbl = V.label;
       const reason = E.shortGames.length ? "his production when healthy" : E.pt && E.pt.g >= 8 ? "his track record" : "an expected step up in role";
       out.push({
-        Supported: `SPAM has him ${lbl}${V.tierName && !isTagTier(V.tier) ? ` (${V.tierName.replace(/^Tier \d+ · /, "")})` : ""}, and his usage and production back that up.`,
-        Aggressive: `SPAM has him ${lbl}, ahead of what he has shown so far (closer to ${ev} on production and usage); the ranking leans on ${reason}.`,
-        Conservative: `SPAM has him ${lbl}, but his role and production (closer to ${ev}) are running ahead of that ranking.`,
-        Uncertain: `SPAM has him ${lbl}; there isn't enough clean evidence yet to confirm or challenge that.`,
+        Supported: `That backs up SPAM's ${lbl} ranking.`,
+        Aggressive: `SPAM is higher on him than his production so far, leaning on ${reason}.`,
+        Conservative: `His usage and production are running ahead of SPAM's ${lbl} ranking.`,
+        Uncertain: `It's too early to confirm or challenge SPAM's ${lbl} ranking.`,
         Out: `SPAM has him in its Out for season tier.` }[C.cls] || "");
     }
-    if (M && C.market && C.market !== "near") out.push(`The market (FantasyCalc) has him ${M.pos}${M.posRank}, ${Math.abs(C.mGap)} spots ${C.mGap > 0 ? "below" : "above"} SPAM.`);
+    // 4. main risk or upside: the format note when the league changes the meaning, else his top tag
     const lg = outlookLeagueNote(E);
+    const neg = R.tags.find(t => t[1] === "neg" && t[0] !== "Injury Concern"), pos = R.tags.find(t => t[1] === "pos");
     if (lg) out.push(lg);
-    return out;
+    else if (neg && C.cls !== "Out") out.push(`The main risk is ${TAG_PHRASE[neg[0]] || neg[0].toLowerCase()}.`);
+    else if (pos && C.cls !== "Out") out.push(`The upside is ${TAG_PHRASE[pos[0]] || pos[0].toLowerCase()}.`);
+    return out.filter(Boolean);
   }
   // The same facts, read for the format in use (never changes the facts themselves)
   function outlookLeagueNote(E) {
@@ -10233,14 +10250,18 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return "";
   }
   const DIR_ICON = { "Strongly positive": "↑↑", Positive: "↑", Stable: "→", Mixed: "↕", Negative: "↓", "Strongly negative": "↓↓" };
-  const dirCls = d => (!d ? "" : /positive/i.test(d) ? "pos" : /negative/i.test(d) ? "neg" : d === "Mixed" ? "mix" : "flat");
-  // Overview card: compact, readable in ~10 seconds; the evidence sits behind "Why this outlook?"
+  const dirCls = d => (!d ? "" : /positive/i.test(d) ? "olk-up" : /negative/i.test(d) ? "olk-down" : d === "Mixed" ? "olk-mix" : "olk-flat");
+  // the card shows four directions; "Strongly …" keeps its double arrow
+  const dirName = d => String(d || "").replace(/^Strongly (\w)/, (_, c) => c.toUpperCase());
+  const OLK_CLAMP = 420;   // characters before "Read more"
+  // Overview card: a quick analyst note, always one vertical column (the drawer is ~440–520px wide);
+  // ranks, gaps and evidence sit behind "Why this outlook?"
   function outlookCard(info) {
     if (!EDIT_POS.includes(info.pos)) return "";
     loadMarket(); loadDepth();
     const o = outlookFor(info.sid);
     if (!o) return "";
-    const { E, R, M, V, C } = o, text = outlookText(o);
+    const { E, R, M, V } = o, text = outlookText(o);
     if (!text.length) return `<section class="olk"><div class="olk-head"><h3 class="section-label">Outlook</h3></div><p class="olk-text muted">Insufficient recent information for a confident outlook.</p></section>`;
     const d = statsCache[STATS_SEASONS[0]], age = statsAgeH();
     const rep = info.team ? injuryReport(info.team) : null;
@@ -10248,22 +10269,22 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (rep) src.push(["NFL injury report", `Week ${rep.week} report`, d && d.updated]);
     if (E.depth) src.push(["Sleeper depth chart", "Sleeper's player database (documented API)", DEPTH && DEPTH.updated]);
     if (M) src.push(["FantasyCalc", "Market values from completed trades · fantasycalc.com", M.updated]);
-    const external = src.length > 1;
-    const ranks = [V ? `SPAM ${esc(V.label)}` : "", M ? `<a href="https://www.fantasycalc.com" target="_blank" rel="noopener" title="FantasyCalc market value ${fmt(M.value)} (non-commercial use, credit FantasyCalc)">Market ${esc(M.pos)}${esc(String(M.posRank))}</a>` : ""].filter(Boolean).join(" · ");
-    const tags = R.tags.map(([t, k]) => `<span class="olk-tag ${k}">${esc(t)}</span>`).join("");
-    const why = outlookRankWhy(o);
-    const stale = age != null && age > 96;
+    const limited = E.gp < 2 || (E.pos !== "QB" && E.tgtPg == null && E.touchPg == null);
+    const tags = R.tags.slice(0, 3).map(([t, k]) => `<span class="olk-tag ${k === "pos" ? "olk-up" : k === "neg" ? "olk-down" : ""}">${esc(t)}</span>`).join("");
+    const stale = age != null && age > 96, body = text.join(" "), long = body.length > OLK_CLAMP;
     return `<section class="olk ${dirCls(R.dir)}" aria-label="Player outlook">
-      <div class="olk-head"><h3 class="section-label">${external ? "Outlook" : "SPAM Data Outlook"}</h3>
-        ${R.dir ? `<span class="olk-dir ${dirCls(R.dir)}">${DIR_ICON[R.dir] || ""} ${esc(R.dir)}</span>` : ""}
-        ${R.conf ? `<span class="olk-conf" title="Confidence from games played, how fresh the data is, whether his production and usage agree, and injury certainty">${R.conf} confidence</span>` : ""}</div>
-      <p class="olk-text">${text.map(esc).join(" ")}</p>
-      ${ranks || tags ? `<div class="olk-meta">${ranks ? `<span class="olk-ranks">${ranks}</span>` : ""}${tags ? `<span class="olk-tags">${tags}</span>` : ""}</div>` : ""}
-      ${why ? `<p class="olk-rankwhy">${esc(why)}</p>` : ""}
+      <div class="olk-head"><h3 class="section-label">Outlook</h3>${R.dir ? `<span class="olk-dir ${dirCls(R.dir)}">${DIR_ICON[R.dir] || ""} ${esc(dirName(R.dir))}</span>` : ""}</div>
+      <p class="olk-text${long ? " clamped" : ""}">${esc(body)}</p>${long ? `<button type="button" class="olk-more" data-olk-more>Read more</button>` : ""}
+      <div class="olk-meta">${V ? `<span class="olk-rank">SPAM ${esc(V.label)}</span>` : ""}${tags}${R.conf ? `<span class="olk-conf" title="Confidence from games played, how fresh the data is, whether his production and usage agree, and injury certainty">${R.conf} confidence</span>` : ""}${limited ? `<span class="olk-conf">Limited data available</span>` : ""}</div>
       <details class="olk-why"><summary>Why this outlook?</summary>${outlookWhy(o, rep)}</details>
-      <p class="olk-src">Sources: ${src.map(s => `<span title="${esc(s[1])}${s[2] ? " · " + esc(s[2]) : ""}">${esc(s[0])}</span>`).join(" · ")}${age != null ? ` · Updated ${agoText(age)}` : ""}${stale ? ` · <span class="olk-stale">data is stale</span>` : ""}</p>
+      <p class="olk-src">Sources: ${src.map(s => s[0] === "FantasyCalc" ? `<a href="https://www.fantasycalc.com" target="_blank" rel="noopener" title="${esc(s[1])} · non-commercial use">FantasyCalc</a>` : `<span title="${esc(s[1])}${s[2] ? " · " + esc(s[2]) : ""}">${esc(s[0])}</span>`).join(" · ")}${age != null ? ` · Updated ${agoText(age)}` : ""}${stale ? ` · <span class="olk-stale">data is stale</span>` : ""}</p>
     </section>`;
   }
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("[data-olk-more]"); if (!b) return;
+    const t = b.previousElementSibling, open = t.classList.toggle("clamped");
+    b.textContent = open ? "Read more" : "Show less";
+  });
   // The evidence, in separate groups: what we observed, what was reported, how SPAM values him, what the market says
   function outlookWhy(o, rep) {
     const { info, E, M, V, C } = o, li = [];
@@ -10274,7 +10295,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (E.pos !== "QB") { const s = seq(g => g.tgt_share, pc); if (s) obs.push(`Target share: ${s} (last ${last3.length} games)`); }
       const sn = seq(g => g.snap, pc); if (sn) obs.push(`Snap share: ${sn}`);
       const op = seq(OPP[E.pos], v => fp(v)); if (op) obs.push(`${E.pos === "QB" ? "Dropbacks + rushes" : E.pos === "RB" ? "Carries + targets" : "Targets"}: ${op}`);
-      if (E.prodRank) obs.push(`Production: ${fp(E.fullPpg ?? E.ppg)} PPG${E.fullPpg != null ? " in completed games" : ""}, ${E.pos}${E.prodRank} of ${E.n}`);
+      if (E.prodRank) obs.push(`Production: ${fp(E.fullPpg ?? E.ppg)} PPG${E.fullPpg != null ? " in completed games" : ""}, ${E.pos}${E.prodRank} of ${E.n} with 2+ games`);
       if (E.useRank) obs.push(`Usage: ${E.pos}${E.useRank} in ${E.pos === "QB" ? "attempts" : E.pos === "RB" ? "opportunities" : "targets"} per game`);
       E.shortGames.forEach(g => obs.push(shortTip(g)));
       if (E.rzPg != null && E.pos !== "QB") obs.push(`Red-zone opportunities: ${fp(E.rzPg)} a game${E.pos === "RB" && E.glPg != null ? ` · goal-line carries ${fp(E.glPg)}` : ""}`);
@@ -10290,24 +10311,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (V.move) val.push(`Ranking move: ${E.pos}${V.move.from} → ${E.pos}${V.move.to} since ${new Date(V.move.since + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
       if (C.cls) val.push(`Evidence vs ranking: ${{ Supported: "supports it", Aggressive: "SPAM is higher than the evidence", Conservative: "the evidence is stronger than the ranking", Uncertain: "not enough clean evidence yet", Out: "out for the season" }[C.cls]}${E.evRank && C.cls !== "Out" ? ` (evidence ≈ ${E.pos}${E.evRank})` : ""}`);
     }
+    const chk = [];
+    if (V && C.cls && C.cls !== "Out") {
+      chk.push(`SPAM ${V.label}`);
+      if (E.evRank) chk.push(`Production and usage profile: ≈ ${E.pos}${E.evRank}`);
+      if (M) chk.push(`Market: ${M.pos}${M.posRank}`);
+      if (E.pos !== "QB" && E.tshare != null) chk.push(`Target share: ${pc(E.tshare)}${E.airShare != null ? ` · air-yard share ${pc(E.airShare)}` : ""}`);
+      if (E.pos === "RB" && E.touchPg != null) chk.push(`Touches: ${fp(E.touchPg)} a game${E.glPg != null ? ` · goal-line carries ${fp(E.glPg)}` : ""}`);
+      const rw = outlookRankWhy(o); if (rw) chk.push(rw);
+    }
     const mk = M ? [`FantasyCalc: ${M.pos}${M.posRank} · #${M.overall} overall · value ${fmt(M.value)}${M.trend ? ` · 30-day trend ${M.trend > 0 ? "+" : ""}${fmt(M.trend)}` : ""}`] : [];
     const grp = (h, rows) => (rows.length ? `<div class="olk-g"><h4>${h}</h4><ul>${rows.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>` : "");
-    return grp("Observed", obs) + grp("Reports", reps) + grp("SPAM valuation", val) + grp("Market", mk)
+    return grp("Ranking check", chk) + grp("Observed", obs) + grp("Reports", reps) + grp("SPAM valuation", val) + grp("Market", mk)
       + `<p class="pp-note">The outlook's direction and tags come only from observed data and reports; SPAM's ranking is compared against them afterwards and never changes them. No analyst news is used: no supported source allows it.</p>`;
   }
   // Editor audit: does the evidence (or the market) disagree with the ranking? Shown to signed-in editors (or ?debug)
   // (a function declaration plus a var flag: the board's first render runs before this part of the script)
   var OLK_READY = true;
   function editorAudit() { return !!OLK_READY && (!!editor.token || /[?&]debug\b/.test(location.search)); }
-  function auditFlag(p) {
-    if (!editorAudit() || !p || !p.sleeperId || !EDIT_POS.includes(p.pos) || !statsCache[STATS_SEASONS[0]]) return "";
-    const o = outlookFor(p.sleeperId); if (!o) return "";
-    const { C, E, M } = o, f = [];
-    if (C.cls === "Conservative") f.push(`<span class="aud up" title="Outlook more bullish than SPAM rank: production and usage ≈ ${esc(E.pos)}${E.evRank}">Data ↑</span>`);
-    if (C.cls === "Aggressive") f.push(`<span class="aud down" title="Outlook more bearish than SPAM rank: production and usage ≈ ${esc(E.pos)}${E.evRank}">Data ↓</span>`);
-    if (C.market === "high" || C.market === "low") f.push(`<span class="aud mkt" title="SPAM ${C.market === "high" ? "much higher" : "much lower"} than the market (FantasyCalc ${esc(M.pos)}${M.posRank})">Mkt ${C.market === "high" ? "↓" : "↑"}</span>`);
-    return f.join("");
-  }
   function auditMatch(p, f) {
     if (!f || f === "all") return true;
     if (!p.sleeperId || !EDIT_POS.includes(p.pos)) return false;
