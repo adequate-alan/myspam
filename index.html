@@ -394,6 +394,7 @@ const VALUE_MODEL = {
   // ahead inside a tier, and at most tierMaxDrop across a tier boundary (Tier 1 -> Tier 2, the elite break, is exempt)
   rankMaxDrop: { QB: 0.12, RB: 0.12, WR: 0.12, TE: 0.15 },
   tierMaxDrop: { QB: 0.25, RB: 0.25, WR: 0.25, TE: 0.30 },
+  lateSmoothBelow: 1000,   // smoothPositionDrops (Oct 7): only depth values under this are smoothed after the order passes
   tierMinDrop: 0.05, // minimum drop from one tier to the next (5%)
   // the overall board: values never increase down your overall rank (see keepOverallOrder)
   topSpotSoften: { WR: 0.5 }, // move a position's #1 curve spot this share of the way toward #2
@@ -4050,6 +4051,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     calibrateToAnchors(players.filter(p => isPlayer(p) && p.rank != null && p.value != null), shadowOf);
     keepOverallOrder(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // the whole board, tail included
     keepTierGaps(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // a tier break stays a real gap
+    smoothPositionDrops(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // no pool-made cliffs down a position
     players.forEach(p => { if (p.modelValued) p.value = Math.round(p.value); });
 
     // Overall order: hand-set ranks first, then everyone else by value
@@ -4246,6 +4248,43 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (!tag(p)) last[p.pos] = p;
       prev = p;
     });
+  }
+
+  /* No pool-made cliffs down a position (Alan, Oct 7: "smooth out the very late tiers", Vele → Lemon −44%, Hockenson →
+     Waller −51%). The overall-order pass pools a stretch when a position's values sit above where you ranked them overall
+     (Goedert and Hockenson at #131–132 pulled Tyson and Vele up to ~680), so the next player at the position can sit far
+     below. Here, down each position, a model value more than rankMaxDrop (same tier) or tierMaxDrop (tier boundary)
+     above the next player at his position comes down to that cap, but never below anyone ranked under him (so a real
+     gap in your overall order, like Likely #79 → Andrews #108, stays). Repeats until nothing moves. Only lowers model
+     values under lateSmoothBelow (1,000: the depth tiers); typed values and Tier 1 → Tier 2 are left alone. */
+  function smoothPositionDrops(list) {
+    const m = VALUE_MODEL, inT = m.rankMaxDrop || {}, atT = m.tierMaxDrop || {}, step = Number(m.minRankStep) || 0;
+    const tag = p => p.tier === "" || p.tier == null || Number(p.tier) >= (Number(m.tagTierFrom) || Infinity);
+    const L = list.slice().sort((a, b) => a.rank - b.rank);
+    const byPos = {};
+    L.forEach((p, i) => { p._i = i; if (!tag(p)) (byPos[p.pos] = byPos[p.pos] || []).push(p); });
+    const tops = {};
+    for (const [pos, g] of Object.entries(byPos)) tops[pos] = Math.min(...g.map(p => Number(p.tier)));
+    const below = v => (v < 400 ? v + 1 : v / (1 - step));   // just above a value, by the board's own step
+    const lateBelow = Number(m.lateSmoothBelow) || 1000;
+    for (let round = 0; round < 30; round++) {
+      let moved = false;
+      for (const [pos, g] of Object.entries(byPos)) {
+        for (let k = g.length - 2; k >= 0; k--) {
+          const u = g[k], l = g[k + 1];
+          if (!u.modelValued || !(l.value > 0) || u.value >= lateBelow) continue;   // depth tiers only: starter-range values keep their gaps
+          const cross = String(u.tier) !== String(l.tier);
+          if (cross && Number(u.tier) === tops[pos]) continue;
+          const cap = cross ? atT[pos] : inT[pos];
+          if (!(cap > 0) || u.value <= l.value / (1 - cap)) continue;
+          let floor = l.value / (1 - cap);
+          for (let j = u._i + 1; j < l._i; j++) floor = Math.max(floor, below(L[j].value));
+          if (floor < u.value - 0.5) { u.value = floor; moved = true; }
+        }
+      }
+      if (!moved) break;
+    }
+    L.forEach(p => { delete p._i; });
   }
 
   // Tier adjustment for model values: pull each tier toward its average,
@@ -4474,7 +4513,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-07T21:00Z";
+  const BUILD_ID = "2026-10-07T23:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5975,8 +6014,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   /* Value-curve safeguards (Alan, Oct 7): warnings only, never changes the board. Flags big drops between neighbours at a
-     position (a "formula cliff" when they're close on the overall board, a "rank gap" when your overall order puts 8+
-     spots between them), tier boundaries with almost no value gap, one-player tiers below Tier 1, very large tiers,
+     position (a "rank gap" when both sit level with their own overall neighbours, so the drop is spread over the players you
+     ranked between them; a "formula cliff" when one of them sits on a big step on the overall board), tier boundaries with almost no value gap, one-player tiers below Tier 1, very large tiers,
      tiers with a very wide value spread, and any model value that rises down the overall or position order.
      Thresholds are per position (deep positions are flatter). SPM.valueCheck() returns the list; tests/value_curve_check.py runs it. */
   var VCHECK = {   // var + the guard below: the editor bar's first render runs before this part of the script
@@ -5998,7 +6037,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         const a = L[i - 1], b = L[i], d = a.value > 0 ? (a.value - b.value) / a.value : 0;
         if (b.value > a.value && b.modelValued) out.push({ kind: "order", text: `${pos}${b.posNum} ${b.name} is worth more than ${pos}${a.posNum} ${a.name}` });
         if (a.value >= VCHECK.floor && d > VCHECK.drop[pos]) {
-          const gap = b.rank - a.rank, per = 1 - Math.pow(1 - d, 1 / Math.max(1, gap)), rankGap = gap >= 8 && per < 0.045;
+          // a rank gap when both players sit level with their own overall neighbours (the drop is spread over the players
+          // you ranked between them); a formula cliff when one of them sits on a big step on the overall board
+          const gap = b.rank - a.rank, stepAt = q => { const pv = ranked.find(x => x.rank === q.rank - 1); return pv && pv.value > 0 ? (pv.value - q.value) / pv.value : 0; };
+          const nxt = ranked.find(x => x.rank === a.rank + 1);
+          const rankGap = gap >= 4 && (nxt ? stepAt(nxt) : 0) <= 0.15 && stepAt(b) <= 0.15;
           out.push({ kind: rankGap ? "rank" : "cliff", text: `${pos}${a.posNum} → ${pos}${b.posNum} value drop = ${(100 * d).toFixed(1)}% over ${gap} overall spot${gap === 1 ? "" : "s"} (${a.name} ${fmt(a.value)} → ${b.name} ${fmt(b.value)}${String(a.tier) !== String(b.tier) ? ", tier boundary" : ", same tier"})${rankGap ? ": your overall order puts them far apart" : ""}` });
         }
       }
