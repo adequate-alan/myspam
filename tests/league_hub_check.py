@@ -228,7 +228,7 @@ with sync_playwright() as p:
 
     pg.click("[data-lsub=standings]"); pg.wait_for_timeout(400)
     st = pg.inner_text(".st-table thead")
-    ok("SPAM POWER RANK" in st.upper() and "MANAGER" in st.upper() and "DIFFERENCE" in st.upper(), "Standings show manager, SPAM Power Rank and the difference")
+    ok("AM POWER RANK" in st.upper() and "MANAGER" in st.upper() and "DIFFERENCE" in st.upper(), "Standings show manager, AM Power Rank and the difference")
     ok(pg.locator(".st-table tbody tr.st-row").count() == 12, "Standings list all teams")
     # Sleeper divisions: grouped under their names, ranked inside each division (wins, then PF)
     pg.wait_for_timeout(1500)
@@ -260,7 +260,7 @@ with sync_playwright() as p:
     pg.click("[data-lsub=matchups]"); pg.wait_for_timeout(1500)
     ok(pg.locator(".mx-card").count() == 6, f"Week 4 shows 6 matchups ({pg.locator('.mx-card').count()})")
     card = pg.locator(".mx-card").first
-    ok(card.locator(".mx-pr").count() == 2 and card.locator(".mx-score").count() == 2, "Each side: SPAM PR badge and a big score")
+    ok(card.locator(".mx-pr").count() == 2 and card.locator(".mx-score").count() == 2, "Each side: AM PR badge and a big score")
     projs = card.locator(".mx-proj").all_inner_texts()
     ok(len(projs) == 2 and all(re.search(r"^LIVE PROJ\s+\d+\.\d", t.upper().strip()) for t in projs), f"Live proj under each score before kickoff: {projs}")
     ok(all(t.upper().strip().startswith("LIVE PROJ") for t in pg.locator(".mx-proj").all_inner_texts()) and "APPROX" not in pg.inner_text("#league-body").upper(), "One label everywhere: Live proj")
@@ -277,7 +277,7 @@ with sync_playwright() as p:
             partial_cards += 1
     ok(full_cards >= 1, f"Fully projected matchups show the bar ({full_cards} full, {partial_cards} partial)")
     ok("WIN PROBABILITY" not in pg.inner_text("#league-body").upper() and "TOP PLAYERS" not in pg.inner_text("#league-body").upper(), "No win probability label and no top-players clutter")
-    ok("PROJECTIONS: SPAM" in pg.inner_text(".mx-source").upper(), "Data source line: Scores Sleeper · Projections SPAM")
+    ok("PROJECTIONS: AM" in pg.inner_text(".mx-source").upper(), "Data source line: Scores Sleeper · Projections AM")
     card.locator(".mx-show").click(); pg.wait_for_timeout(400)
     ok(pg.locator(".mx-card.open .mx-lineup").count() == 2, "Show lineups expands both starting lineups side by side")
     ok(pg.locator(".mx-card.open .mx-table tr").count() >= 16, "Lineups list every starter")
@@ -309,7 +309,7 @@ with sync_playwright() as p:
             c0 = pg.locator(".roster li").count(); pg.locator("#balance-list button").first.click(); pg.wait_for_timeout(400)
             c1 = pg.locator(".roster li").count(); pg.click("#bal-undo"); pg.wait_for_timeout(400)
             ok(c1 > c0 and pg.locator(".roster li").count() == c0, "A balance suggestion adds itself to the trade, and Undo takes it back")
-    ok("HOW SPAM CALCULATED THIS" in pg.inner_text("#tc-breakdown summary").upper(), "Technical math sits in one collapsed 'How SPAM calculated this' section")
+    ok("HOW AM CALCULATED THIS" in pg.inner_text("#tc-breakdown summary").upper(), "Technical math sits in one collapsed 'How AM calculated this' section")
     pg.click("#clear-btn")
 
     # My Team (Oct 4 follow-up): clean roster page: compact header with Trade with, full-width roster, one weekly state per row,
@@ -359,18 +359,18 @@ with sync_playwright() as p:
     pg.click("[data-lsub=rosters]"); pg.wait_for_timeout(2500)
     ok(pg.locator(".ro-pick").count() == 12 and "You" in pg.locator(".ro-pick.on").inner_text(), "Rosters: a picker with every team, your team selected first")
     hd = pg.inner_text(".ro-head").upper()
-    ok(all(k in hd for k in ("SPAM PR", "RECORD", "PF", "PA", "FAAB")) and "$60" in hd, f"Team header: SPAM PR, record, PF, PA and FAAB left ($100 − $40): {hd[:160]}")
+    ok(all(k in hd for k in ("AM PR", "RECORD", "PF", "PA", "FAAB")) and "$60" in hd, f"Team header: AM PR, record, PF, PA and FAAB left ($100 − $40): {hd[:160]}")
     th = [t.strip().upper() for t in pg.locator(".ro-table thead th").all_inner_texts()]
-    ok(th == ["SLOT", "PLAYER", "WK 4", "SZN RK", "SPAM RK", "GP", "FPTS", "PPG"], f"Roster columns: {th}")
+    ok(th == ["SLOT", "PLAYER", "WK 4", "SZN RK", "AM RK", "GP", "FPTS", "PPG"], f"Roster columns: {th}")
     secs = [t.split("\n")[0].upper() for t in pg.locator(".ro-sec .ro-sec-t").all_inner_texts()]
     ok(secs[:2] == ["STARTERS9", "BENCH4"] or (secs[0].startswith("STARTERS") and secs[1].startswith("BENCH")), f"Starters and Bench sections: {secs}")
     slots = [t.strip() for t in pg.locator(".ro-row:not(.bn):not(.inactive) .ro-sl").all_inner_texts()]
-    ok(slots == ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SF"], f"Starter slots in league order with SPAM slot colors: {slots}")
+    ok(slots == ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SF"], f"Starter slots in league order with AM slot colors: {slots}")
     ok(pg.locator(".ro-row:not(.bn) td.ro-wk").count() >= 9 and pg.locator(".ro-row .ro-g").count() >= 9, "Each starter shows his week and the matchup under his name")
     ok(pg.locator(".ro-sw").count() == 14 and "3 played" in pg.inner_text(".ro-sched .rail-title"), f"Season schedule lists every regular-season week (playoffs start week 15) with 3 played ({pg.locator('.ro-sw').count()})")
     ok(pg.locator(".ro-res.w, .ro-res.l, .ro-res.t").count() == 3, "Played weeks show W/L")
     pg.locator(".ro-row:not(.bn)").first.click(); pg.wait_for_timeout(300)
-    ok("SPAM VALUE" in pg.inner_text(".ro-detail").upper(), "A player row expands to show his SPAM value")
+    ok("AM VALUE" in pg.inner_text(".ro-detail").upper(), "A player row expands to show his AM value")
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_rosters.png", full_page=True)
     pg.click("[data-ro-week='3']"); pg.wait_for_timeout(1200)
     ok(pg.locator(".ro-wk.final").count() >= 9 and "WK 3" in pg.inner_text(".ro-table thead").upper(), "Week 3: Sleeper's recorded lineup with final points")
@@ -428,7 +428,7 @@ with sync_playwright() as p:
     ok(pg.locator(".mv-row.free_agent .mv-p.drop").count() == 0 and pg.locator(".mv-row.drop .mv-p.add").count() == 0, "Only what exists is shown: no empty adds or drops")
     ok("$12" in pg.inner_text(".mv-row.waiver") and pg.locator(".mv-row.waiver .mv-faab-amt.big").count() == 1, "Waiver claim shows the FAAB bid, emphasized when it's big")
     ok(pg.locator(".mv-row.waiver .mv-p.drop").count() == 1, "Waiver claim shows the drop")
-    ok(pg.locator(".th-tag.pre").count() == 1, "An old trade is labeled Pre-SPAM")
+    ok(pg.locator(".th-tag.pre").count() == 1, "An old trade is labeled Pre-AM")
     pg.click("[data-tx-type=trade]"); pg.wait_for_timeout(300)
     ok(items() == 1 and pg.locator("[data-th-analyze]").count() == 1, "Trades filter shows the trade with Analyze trade")
     pg.click("[data-tx-type=moves]"); pg.wait_for_timeout(300)
@@ -451,11 +451,11 @@ with sync_playwright() as p:
     ok(pg.locator(".fa-avail.waivers").count() >= 1, "A recently dropped player shows as on waivers")
     head = [h.strip().upper() for h in pg.locator("#fa-head th").all_inner_texts()]
     ok(head == ["RK", "PLAYER", "POS", "WK 4", "RECENT FORM", "MATCHUP", "SZN RK", "FPTS", "PPG", "FIT"], f"Waiver Wire columns: {head}")
-    ok(pg.locator("#fa-body .val, #fa-body .valbar").count() == 0, "No SPAM value column or value bar on Waiver Wire")
+    ok(pg.locator("#fa-body .val, #fa-body .valbar").count() == 0, "No AM value column or value bar on Waiver Wire")
     projs = [t.strip().split("\n")[0] for t in pg.locator("#fa-body td.fa-proj").all_inner_texts()]
     ok(all(re.fullmatch(r"\d+\.\d|—|Bye|Out|DNP", t) for t in projs) and "0.0" not in projs[:5] and sum(bool(re.fullmatch(r"\d+\.\d", t)) for t in projs) > 10, f"Weekly projections shown (— when missing, never a fake zero): {projs[:8]}")
     ranks = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
-    ok(ranks == sorted(ranks), "Sorted by SPAM rank by default")
+    ok(ranks == sorted(ranks), "Sorted by AM rank by default")
     fw = pg.evaluate("() => document.getElementById('fa-wrap').getBoundingClientRect().width")
     ok(fw <= 1180, f"Waiver table stays compact on desktop ({fw:.0f}px)")
     for opt in ["proj", "form", "ppg", "matchup", "posrank"]:
@@ -505,7 +505,7 @@ with sync_playwright() as p:
     pg.reload(); pg.wait_for_timeout(2000)
     ok(json.loads(pg.evaluate("() => localStorage.getItem('spm_sleeper')"))["activeId"] == "L2", "The selected league persists across refreshes")
     after = pg.evaluate("() => SPM.rankingSnapshot ? JSON.stringify(SPM.rankingSnapshot()) : ''")
-    ok(after == base_board, "Base SPAM Board unchanged by any league data")
+    ok(after == base_board, "Base AM Board unchanged by any league data")
     # live matchups: the browser clock at Sunday 2:30 PM ET of week 4 (1:00 PM games in progress)
     saved = pg.evaluate("() => localStorage.getItem('spm_sleeper')")
     pg2 = br.new_page(viewport={"width": 1440, "height": 1000})

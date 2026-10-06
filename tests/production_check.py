@@ -11,7 +11,7 @@ expected number in Python straight from data/stats/<season>.json with the same r
 Checks: Full vs Half PPR, TE premium none vs +, 4 vs 6 pt passing TD, fumble -1 vs -2, a yardage bonus, All vs
 one position, minimum games (default for the week and overrides), bye/inactive handling, injury-shortened games
 (starred, still counted), Last 3 with fewer than 3 games, sort direction, persistence, the player drawer, and
-that going back to SPAM Rank restores the board exactly (ranks, values and header).
+that going back to AM Rank restores the board exactly (ranks, values and header).
 """
 import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
@@ -132,7 +132,7 @@ with sync_playwright() as p:
     def pos(pg, f):
         pg.click(f"#pos-chips [data-pos={f}]"); pg.wait_for_timeout(300)
 
-    # 1. the normal board, then Season PPG through the UI: the default minimum for this week, then back to SPAM Rank
+    # 1. the normal board, then Season PPG through the UI: the default minimum for this week, then back to AM Rank
     pg = page("FULL")
     spam0, head0 = pg.evaluate(READ), pg.inner_text("#rk-head-row")
     set_sort(pg, "ppg")
@@ -144,8 +144,8 @@ with sync_playwright() as p:
     ok((f"{hidden} under {DEFAULT_MIN} games hidden" in pg.inner_text("#rank-count")) == (hidden > 0), "Count line says how many are under the minimum: " + pg.inner_text("#rank-count"))
     ok("League FULL scoring" in pg.inner_text("#rank-count"), "Count line names the league's scoring")
     ok(pg.inner_text("#rk-head").upper() == "PPG RK" and "SEASON PPG" in pg.inner_text("#rk-head-row").upper(), "Header: PPG Rk and a Season PPG column")
-    ok(all(r["spam"].startswith("SPAM #") for r in got), "Every row keeps its SPAM rank as secondary context")
-    ok(all(r["val"] for r in got) and not pg.query_selector("#rank-body tr.prod .valbar"), "SPAM value stays as a small number, no value bar")
+    ok(all(r["spam"].startswith("AM #") for r in got), "Every row keeps its AM rank as secondary context")
+    ok(all(r["val"] for r in got) and not pg.query_selector("#rank-body tr.prod .valbar"), "AM value stays as a small number, no value bar")
     widths = pg.evaluate("() => [...document.querySelectorAll('#rank-body .prodbar .fill')].slice(0, 2).map(f => parseFloat(f.style.width))")
     ok(widths and widths[0] == 100, f"PPG bar scaled to the best in the set: {widths}")
     # one position
@@ -185,15 +185,15 @@ with sync_playwright() as p:
     hdr = pg.inner_text("#player-modal")
     ok(f"{g0[n0]['v']:.1f}" in hdr and f"{g0[n0]['sub'].split()[0]} G" in hdr, f"Drawer shows the same PPG and games for {n0}: {g0[n0]['v']} · {g0[n0]['sub']}")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
-    # SPAM Board view: same production order, SPAM rank = the base board's overall rank
+    # AM Board view: same production order, AM rank = the base board's overall rank
     pg.click("[data-view=base]"); pg.wait_for_timeout(400); sb = pg.evaluate(READ)
     ok([(r["name"], r["v"]) for r in sorted(sb, key=lambda r: r["name"])] == [(r["name"], r["v"]) for r in sorted(g0.values(), key=lambda r: r["name"])]
-       and all(sb[i]["v"] <= sb[i - 1]["v"] for i in range(1, len(sb))) and all(r["spam"] == f"SPAM #{board[name_sid[r['name']]]['rank']}" for r in sb),
-       "SPAM Board view: same production numbers and order (exact ties follow the board's rank), SPAM rank is the board's overall rank")
+       and all(sb[i]["v"] <= sb[i - 1]["v"] for i in range(1, len(sb))) and all(r["spam"] == f"AM #{board[name_sid[r['name']]]['rank']}" for r in sb),
+       "AM Board view: same production numbers and order (exact ties follow the board's rank), AM rank is the board's overall rank")
     pg.click("[data-view=league]"); pg.wait_for_timeout(400)
-    # back to SPAM Rank: the board exactly as before
+    # back to AM Rank: the board exactly as before
     set_sort(pg, "spam")
-    ok(pg.evaluate(READ) == spam0 and pg.inner_text("#rk-head-row") == head0, "SPAM Rank restores the board exactly (ranks, values, header)")
+    ok(pg.evaluate(READ) == spam0 and pg.inner_text("#rk-head-row") == head0, "AM Rank restores the board exactly (ranks, values, header)")
     pg.close()
 
     # 2. scoring variants: each league's own scoring reaches the ranking
