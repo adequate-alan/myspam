@@ -7,7 +7,7 @@ Writes data/market/redraft.json:
   (isDynasty=false, numQbs 1|2, numTeams 10|12, ppr=1). Four calls per run, a few runs a day at most
   (their docs ask for no more than hourly refreshes of /values/current).
 - Non-commercial use only without FantasyCalc's written permission; every screen that shows these numbers
-  credits FantasyCalc with a link (see index.html MARKET).
+  must credit FantasyCalc with a link (nothing on the site reads the file at the moment).
 - Values come from real completed trades. They never change SPAM ranks, tiers, values or history.
 - If every call fails the previous file is kept (exit 0), so a market outage never blocks the stats refresh.
 
