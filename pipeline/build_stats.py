@@ -18,12 +18,16 @@ Also, for the player pages' matchup context:
             practice status by day (Wed/Thu/Fri). nflverse keeps only the latest practice status, so
             each run records it under its own day (Eastern time: Wed, Thu, or Fri for Fri-Mon runs)
             and carries the days already recorded this week over from the previous file.
-  short     injury-shortened games (Alan, Oct 5): {sleeper_id: [[week, snap share, usual snap share, injury]]}.
-            A game counts only when his offensive snap share was at most 70% of his usual (median of his other
-            games this season, usual >= 35%) AND there is injury evidence: play-by-play says he "was injured
-            during the play" before the last ~8 minutes, or he shows up with a new injury (not on that week's
-            report) on the next week's report. A low-snap game without injury evidence is never flagged, and
-            neither is a game he played normally with an injury designation. Snap counts: nflverse (PFR).
+  short     injury-shortened games (Alan, Oct 5; Oct 6 fix): {sleeper_id: [[week, snap share, usual snap share or
+            null, injury, game minute he left or null]]}. A game counts only with injury evidence (play-by-play says
+            he "was injured during the play" before the last ~8 minutes, or a new injury, not on that week's report,
+            shows up on the next week's) AND proof it cost him the game: his offensive snap share at most 70% of his
+            usual (median of his other games this season, usual >= 35%; with fewer than two other games, his games
+            last season too), or, for a QB, he took the team's first dropbacks and a teammate took every dropback
+            after his last one (5+, his last before the final ~8 minutes). A low-snap game without injury evidence is
+            never flagged, nor a game he played normally with an injury designation, nor a few missed late snaps.
+            (Oct 6: Jayden Daniels, Week 2 2026, hurt at halftime, was missed because he had only one other game.)
+            Snap counts: nflverse (PFR). Manual corrections live in data/injury_overrides.json (front end).
 
 Sources: nflverse player stats (weekly) and nflverse schedules, matched to Sleeper
 IDs with the DynastyProcess player ID table.
@@ -173,19 +177,46 @@ INJURED = re.compile(r"([A-Z]{2,3})-\d+-([A-Za-z'.\- ]+?) was injured during the
 
 
 def shortened(season, stats, ids, pfr, pbp_src=PBP_URL, snap_src=SNAP_URL, inj_src=INJ_URL):
-    """Injury-shortened games (see the module note): snap share well under his usual + injury evidence."""
+    """Injury-shortened games (see the module note): he started or played his usual role, got hurt, and didn't finish.
+    Needs injury evidence (an in-game "was injured" before the last ~8 minutes, or a new injury on the next week's
+    report) AND proof the injury cost him the game: his snap share at most 70% of his usual (median of his other games
+    this season; with fewer than two, his games last season too), or, for a QB, he took the team's first dropbacks and
+    a teammate took every dropback after his last one (5+). Rows: [week, snap share, usual snap share or None,
+    injury, game minute he left or None]."""
     sn = pd.read_csv(snap_src.format(season), low_memory=False)
     sn = sn[sn.game_type == "REG"]
     pct = {(r.pfr_player_id, int(r.week)): float(r.offense_pct) for r in sn.itertuples() if not pd.isna(r.offense_pct)}
-    p = pd.read_csv(pbp_src.format(season), low_memory=False, usecols=["season_type", "week", "desc", "game_seconds_remaining"])
+    try:   # last season's snap shares: the usual role for a player with few games this season
+        ps = pd.read_csv(snap_src.format(season - 1), low_memory=False)
+        ps = ps[(ps.game_type == "REG") & ps.offense_pct.notna() & (ps.offense_snaps > 0)]
+        prev_share = ps.groupby("pfr_player_id").offense_pct.apply(lambda x: sorted(float(v) for v in x)).to_dict()
+    except Exception:
+        prev_share = {}
+    p = pd.read_csv(pbp_src.format(season), low_memory=False,
+                    usecols=["season_type", "week", "desc", "game_seconds_remaining", "posteam", "qb_dropback", "passer_player_id", "rusher_player_id"])
     p = p[p.season_type == "REG"]
-    hurt = {}   # (team, short name, week) -> minutes played in the game when it happened
+    hurt = {}   # (team, short name, week) -> game minute when it happened
     for r in p.itertuples():
         if not isinstance(r.desc, str) or "was injured" not in r.desc:
             continue
         for t, n in INJURED.findall(r.desc):
             gone = 60 - (r.game_seconds_remaining if not pd.isna(r.game_seconds_remaining) else 0) / 60
             hurt.setdefault((team(t), n.strip(), int(r.week)), gone)
+    # each team's dropbacks in order: (game minute, QB) -> who started, and whether a teammate finished the game
+    drops = {}
+    db = p[(p.qb_dropback == 1)]
+    for r in db.itertuples():
+        qb = r.passer_player_id if isinstance(r.passer_player_id, str) else r.rusher_player_id
+        if isinstance(qb, str) and isinstance(r.posteam, str):
+            drops.setdefault((team(r.posteam), int(r.week)), []).append((60 - (r.game_seconds_remaining or 0) / 60, qb))
+    def qb_ceded(pid, tm, w):
+        seq = sorted(drops.get((tm, w), []))
+        mine = [m for m, q in seq if q == pid]
+        if len(mine) < 3 or not seq or seq[0][1] != pid:
+            return None
+        last = max(mine)
+        after = [q for m, q in seq if m > last]
+        return last if last < 52 and len(after) >= 5 and all(q != pid for q in after) else None
     try:
         rep = pd.read_csv(inj_src.format(season), low_memory=False)
         rep = rep[rep["season_type" if "season_type" in rep.columns else "game_type"] == "REG"]
@@ -204,16 +235,20 @@ def shortened(season, stats, ids, pfr, pbp_src=PBP_URL, snap_src=SNAP_URL, inj_s
         share = {int(w): pct.get((code, int(w))) for w in rows.week}
         for r in rows.itertuples():
             w, now = int(r.week), share.get(int(r.week))
-            others = sorted(v for k, v in share.items() if k != w and v is not None)
-            if now is None or len(others) < 2:
-                continue
-            usual = others[len(others) // 2]
-            if usual < 0.35 or now > 0.7 * usual:
-                continue
             at = hurt.get((team(r.team), r.player_name, w))
             new_inj = listed.get((pid, w + 1)) if (pid, w) not in listed else None
-            if (at is not None and at < 52) or new_inj:
-                out.setdefault(sid, []).append([w, round(now, 2), round(usual, 2), new_inj or ""])
+            if not ((at is not None and at < 52) or new_inj):
+                continue   # no injury evidence: never flagged
+            others = sorted(v for k, v in share.items() if k != w and v is not None)
+            if len(others) < 2:
+                others = sorted(others + prev_share.get(code, []))
+            usual = others[len(others) // 2] if len(others) >= 2 else None
+            reduced = now is not None and usual is not None and usual >= 0.35 and now <= 0.7 * usual
+            left = qb_ceded(pid, team(r.team), w) if r.position == "QB" else None
+            if reduced or left is not None:
+                minute = at if at is not None and at < 52 else left
+                out.setdefault(sid, []).append([w, None if now is None else round(now, 2), None if usual is None else round(usual, 2),
+                                                new_inj or listed.get((pid, w + 1)) or "", None if minute is None else round(minute, 1)])
     return out
 
 
