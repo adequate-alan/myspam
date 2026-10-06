@@ -143,7 +143,7 @@ Inside `index.html` (search for these names):
 
 **Code changes**: commit to `main` and push. The `push` trigger in `site.yml` deploys the repo root to GitHub Pages in ~1 minute. **Bump `BUILD_ID`** (top of the main script) in every code change so open browsers get the "new version" prompt. Rankings publishes from the editor don't need it.
 
-Both owners push straight to `main` (see the workflow note at the top). Before pushing a code change, `git pull --rebase` first: the editor and the scheduled jobs commit to `main` too (`Rankings edit by @…`, `Ranking history: N changes`, `Player stats refresh`, `Weekly projections and stats refresh`).
+Code changes go straight to `main` (see the workflow note at the top). Before pushing a code change, `git pull --rebase` first: the editor and the scheduled jobs commit to `main` too (`Rankings edit by @…`, `Ranking history: N changes`, `Player stats refresh`, `Weekly projections and stats refresh`).
 
 ## 7. How to change rankings safely
 
