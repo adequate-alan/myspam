@@ -214,6 +214,50 @@ with sync_playwright() as p:
             if b in exp: ok(abs(exp[b][0] - base[b][0]) > 0.5, f"Brock Bowers: {base[b][0]:.1f} Full PPR vs {exp[b][0]:.1f} with TE Premium +")
         pg.close()
 
+    # 2b. the drawer's production ranks (Alan, Oct 8): FPTS rank = position rank by total points, PPG rank = by points per
+    # game among players with the week's minimum games (NR below it), both over every player in the stats file at his
+    # position, in the selected league's scoring; injury-shortened games starred; AM rank shown first
+    def prod_ranks(sc):
+        rows = {}
+        for sid, pl in S["players"].items():
+            if pl["p"] not in ("QB", "RB", "WR", "TE"): continue
+            g = [game_pts(a, pl["p"], sc) for a in pl["g"] if played(a)]
+            if g: rows[sid] = (pl["p"], sum(g), len(g), len({x[0] for x in (S.get("short") or {}).get(sid, [])} & {a[0] for a in pl["g"] if played(a)}))
+        mn = max(1, DEFAULT_MIN); out = {}
+        for sid, (ps, pts, gp, sh) in rows.items():
+            same = [r for r in rows.values() if r[0] == ps]
+            fr = 1 + sum(1 for r in same if r[1] > pts + 1e-9)
+            pr = 1 + sum(1 for r in same if r[2] >= mn and r[1] / r[2] > pts / gp + 1e-9) if gp >= mn else None
+            out[sid] = (ps, fr, pr, gp, sh)
+        return out
+    def drawer_ranks(pg, sid):
+        pg.evaluate(f"() => document.querySelector('#rank-body [data-player=\"{sid}\"]').click()"); pg.wait_for_timeout(700)
+        r = pg.evaluate("""() => { const q = c => { const e = document.querySelector('.pm-prodrk .pr-item.' + c + ' b'); return e ? e.textContent.trim() : null; };
+          const d = document.querySelector('.pm-prodrk .pr-diff'), n = document.querySelector('.pm-prodrk .pr-note');
+          const first = document.querySelector('.pm-prodrk .pr-item');
+          return { am: q('am'), fp: q('fp'), ppg: q('ppg'), diff: d ? d.textContent : '', note: n ? n.textContent : '', firstAm: !!first && first.classList.contains('am') }; }""")
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(250)
+        return r
+    picks = []
+    for want in ("TE", "WR", "RB", "QB"):
+        picks += [sid for sid, r in board.items() if r["pos"] == want and sid in S["players"]][:3]
+    shorts = [sid for sid in board if sid in S["players"] and (S.get("short") or {}).get(sid)]
+    picks += shorts[:2]
+    for lid in ("FULL", "TEP"):
+        pg = page(lid); exp = prod_ranks(SCORING[lid]); bad = []
+        for sid in picks:
+            e, got = exp.get(sid), drawer_ranks(pg, sid)
+            if not e: bad.append((board[sid]["player"], "no games", got)) if got["fp"] not in ("—", None) else None; continue
+            ps, fr, pr, gp, sh = e
+            want_ppg = f"{ps}{pr}{'*' if sh else ''}" if pr else f"NR · {gp} GP"
+            if got["fp"] != f"{ps}{fr}" or got["ppg"] != want_ppg or not got["firstAm"] or (sh and pr and "injury-shortened" not in got["note"]):
+                bad.append((board[sid]["player"], got, (f"{ps}{fr}", want_ppg)))
+        ok(not bad, f"{lid}: drawer FPTS and PPG ranks match the league-scored stats for {len(picks)} players, AM rank first {bad[:2]}")
+        if lid == "TEP": tep_fp = {sid: exp[sid][1] for sid in picks if sid in exp and exp[sid][0] == "TE"}
+        else: full_fp = {sid: exp[sid][1] for sid in picks if sid in exp and exp[sid][0] == "TE"}
+        pg.close()
+    ok(True, f"TE FPTS ranks Full PPR vs TE premium: {[(board[s]['player'], full_fp.get(s), tep_fp.get(s)) for s in tep_fp][:3]}")
+
     # 3. persistence: RB · Season PPG · 3+ games survives a reload
     pg = page("FULL", {"sort": "ppg", "min": 3, "dir": "desc", "pos": "RB"})
     pg.reload(); pg.wait_for_selector("#rank-body tr.prod"); pg.wait_for_timeout(800)
