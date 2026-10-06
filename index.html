@@ -4387,7 +4387,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-07T01:00Z";
+  const BUILD_ID = "2026-10-07T03:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6730,6 +6730,28 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         g.forEach(p => { if (p.tail && !p.custom) raw.set(p.id, Math.min(p.value * r * (LG.factor.get(p.id) || 1), cap)); });
       }
       smoothTiers(raw);
+      // Superflex / 2QB, leagues over sfStarterTeams (Alan, Oct 6): pricing a tier as a block can push the last weekly
+      // starting QBs toward waiver level when most of their tier sits below replacement here (10-team SF: QB19-20 at
+      // ~7% of QB1, 2023-25 finishes say 13-16%). While a QB is still a weekly starter (rank <= teams x QB slots) he
+      // keeps at least what his own rank is worth in this format, priced rank by rank (board value x the format's
+      // model at his rank / the base model there). Runs after the tier guards; only raises, never above his board
+      // value or the QB ahead of him, so the base format and deeper leagues are unchanged.
+      {
+        const lu = lineupOf(vl);
+        if ((lu.SUPER_FLEX > 0 || lu.QB >= 2) && lu.teams > (Number(FA.sfStarterTeams) || 0)) {
+          const S = Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0)));
+          let prev = Infinity;
+          players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum).forEach(p => {
+            if (p.posNum <= S && !p.custom && raw.has(p.id)) {
+              const i = Math.min(p.posNum, base.QB.length) - 1, b0 = base.QB[i], l0 = lg.QB[i];
+              const own = l0 >= b0 ? p.value : b0 > 0 ? p.value * l0 / b0 : 0;
+              const target = Math.min(own, prev * (1 - VALUE_MODEL.minRankStep));
+              if (target > raw.get(p.id)) raw.set(p.id, target);
+            }
+            prev = raw.get(p.id) ?? prev;
+          });
+        }
+      }
     } else players.forEach(p => raw.set(p.id, p.value));
     // each position: your order, unless the adjusted value passes the player above by more than the margin
     for (const pos of EDIT_POS) {
