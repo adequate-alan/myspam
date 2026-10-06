@@ -4022,12 +4022,32 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     });
     // Auto-added players go through the same curve and tiers as yours (their tiers continue
     // under yours), but never move one of your values: see keepRankOrderBySource and autoValues
+    // Typed values are measured against what the board would show (Alan, Oct 7): a shadow run of the same passes with
+    // every typed player model-valued and no anchors gives each typed player's model value as displayed (after tiers,
+    // the overall order and tier gaps). calibrateToAnchors compares the typed value with that, so typing the value a
+    // player already shows changes nothing (it used to compare with a pre-order estimate and could move neighbours 10%+).
+    const shadowOf = new Map();
+    {
+      const typed = new Set(players.filter(p => isPlayer(p) && !p.modelValued && p.value > 0 && p.posNum != null && p.rank != null).map(p => p.id));
+      if (typed.size && typeof modelValue === "function") {
+        const S = players.filter(p => isPlayer(p) && p.value != null).map(p => ({ ...p }));
+        S.forEach(q => { if (typed.has(q.id)) { q.value = modelValue(q.pos, q.posNum, q.projRank, q.games); q.rawValue = q.value; q.modelValued = true; } });
+        const smv = S.filter(q => q.modelValued), keep = typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder;
+        if (keep) keepRankOrderBySource(smv);
+        applyTiers(smv);
+        if (keep) keepRankOrderBySource(smv);
+        autoValues(S);
+        const R = S.filter(q => q.rank != null && q.value != null);
+        keepOverallOrder(R); keepTierGaps(R);
+        S.forEach(q => { if (typed.has(q.id)) shadowOf.set(q.id, q.value); });
+      }
+    }
     const mv = players.filter(p => p.modelValued);
     if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrderBySource(mv);
     applyTiers(mv);
     if (typeof VALUE_MODEL === "object" && VALUE_MODEL.keepRankOrder) keepRankOrderBySource(mv);
     autoValues(players);
-    calibrateToAnchors(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));
+    calibrateToAnchors(players.filter(p => isPlayer(p) && p.rank != null && p.value != null), shadowOf);
     keepOverallOrder(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // the whole board, tail included
     keepTierGaps(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // a tier break stays a real gap
     players.forEach(p => { if (p.modelValued) p.value = Math.round(p.value); });
@@ -4131,7 +4151,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      above the first typed player take its ratio (#1 capped at 10,000), and below the last typed player the ratio fades
      back to 1 over VALUE_MODEL.anchorFade ranks. So players right after Lamar sit just under him instead of 16% below,
      with no cliffs; keepOverallOrder then keeps everything in rank order. */
-  function calibrateToAnchors(list) {
+  function calibrateToAnchors(list, shadowOf = null) {
     const L = list.slice().sort((a, b) => a.rank - b.rank), lg = Math.log;
     const isA = p => !p.modelValued && p.value > 0, isM = p => p.modelValued && p.value > 0;
     const anchors = [];
@@ -4139,8 +4159,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (!isA(p)) return;
       let a = i - 1; while (a >= 0 && !isM(L[a])) a--;
       let b = i + 1; while (b < L.length && !isM(L[b])) b++;
-      let est = null;
-      if (a >= 0 && b < L.length) est = Math.exp(lg(L[a].value) + (i - a) / (b - a) * (lg(L[b].value) - lg(L[a].value)));
+      let est = shadowOf && shadowOf.get(p.id) > 0 ? shadowOf.get(p.id) : null;   // what the board shows him at as a model player
+      if (est != null) {}
+      else if (a >= 0 && b < L.length) est = Math.exp(lg(L[a].value) + (i - a) / (b - a) * (lg(L[b].value) - lg(L[a].value)));
       else if (a >= 0) est = L[a].value; else if (b < L.length) est = L[b].value;
       if (est > 0) anchors.push({ i, r: Math.max(0.5, Math.min(2, p.value / est)) });
     });
@@ -4155,8 +4176,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (above && below) {
         // between two typed values: blend their pulls by position, each fading with distance like the tail below the
         // last one (Oct 7: typing Pollard's own value at #121 used to stretch Chase's #9 pull over #10–#120, up to 12%)
-        const t = (k - above.i) / (below.i - above.i);
-        lr = lg(above.r) * (1 - t) * Math.exp(-(k - above.i) / fade) + lg(below.r) * t * Math.exp(-(below.i - k) / fade);
+        // weighted by each pull's fade, scaled by the stronger one: close anchors blend, a far one barely counts
+        const wa = Math.exp(-(k - above.i) / fade), wb = Math.exp(-(below.i - k) / fade);
+        lr = (lg(above.r) * wa + lg(below.r) * wb) / (wa + wb) * Math.max(wa, wb);
       }
       else if (below) lr = lg(below.r);
       else lr = lg(above.r) * Math.exp(-(k - above.i) / fade);
@@ -4452,7 +4474,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-07T18:00Z";
+  const BUILD_ID = "2026-10-07T21:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
