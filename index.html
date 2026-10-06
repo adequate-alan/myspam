@@ -29,8 +29,8 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="AM Fantasy Rankings">
 <meta name="twitter:description" content="AM Rankings, AM Values and a trade calculator for redraft fantasy football.">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg?v=am1" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest?v=am1">
 <style>
   /* base reset (the claude.ai host used to add this) */
   html { -webkit-text-size-adjust: 100%; }
@@ -4513,7 +4513,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T03:00Z";
+  const BUILD_ID = "2026-10-08T04:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
