@@ -4018,6 +4018,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     autoValues(players);
     calibrateToAnchors(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));
     keepOverallOrder(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // the whole board, tail included
+    keepTierGaps(players.filter(p => isPlayer(p) && p.rank != null && p.value != null));   // a tier break stays a real gap
     players.forEach(p => { if (p.modelValued) p.value = Math.round(p.value); });
 
     // Overall order: hand-set ranks first, then everyone else by value
@@ -4184,6 +4185,28 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       close(p.value); hi = p.value;   // a published value: fixed
     });
     close(0);
+  }
+
+  /* Tier gaps survive the overall order (Alan, Oct 7). keepOverallOrder pools a stretch of the board when your
+     cross-position order disagrees with the position values, which can erase a tier break (Puka 7,800 typed at #16 had
+     Olave at #17 pooled 1.6% under him, with Mahomes' higher QB value pulling both up). So the first player of a new tier
+     sits at least tierMinDrop (5%) below the previous player at his position, and anyone ranked below him who'd now be
+     worth more comes down just enough to keep the order. Only lowers model values; typed values never move. */
+  function keepTierGaps(list) {
+    const g = Number(VALUE_MODEL.tierMinDrop) || 0, step = Number(VALUE_MODEL.minRankStep) || 0;
+    if (!g) return;
+    const tag = p => p.tier === "" || p.tier == null || Number(p.tier) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+    const last = {};
+    let prev = null;
+    list.slice().sort((a, b) => a.rank - b.rank).forEach(p => {
+      if (p.modelValued) {
+        if (prev && prev.value > 0) p.value = Math.min(p.value, prev.value * (1 - step));
+        const q = last[p.pos];
+        if (!tag(p) && q && String(q.tier) !== String(p.tier) && q.value > 0) p.value = Math.min(p.value, q.value * (1 - g));
+      }
+      if (!tag(p)) last[p.pos] = p;
+      prev = p;
+    });
   }
 
   // Tier adjustment for model values: pull each tier toward its average,
@@ -4393,7 +4416,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-07T12:00Z";
+  const BUILD_ID = "2026-10-07T15:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
