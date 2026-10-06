@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B0B0C" id="theme-color">
+<meta name="theme-color" content="#08090B" id="theme-color">
 <meta http-equiv="Cache-Control" content="no-cache">
 <script>
   /* Theme before first paint: saved choice (spm_theme), else the device setting, else dark */
@@ -12,7 +12,7 @@
     try { t = localStorage.getItem("spm_theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", t);
-    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0B0B0C";
+    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
   })();
 </script>
 <meta name="description" content="AM fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
@@ -29,7 +29,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="AM Fantasy Rankings">
 <meta name="twitter:description" content="AM Rankings, AM Values and a trade calculator for redraft fantasy football.">
-<link rel="icon" href="favicon.svg?v=am1" type="image/svg+xml">
+<link rel="icon" href="favicon.svg?v=am2" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest?v=am1">
 <style>
   /* base reset (the claude.ai host used to add this) */
@@ -702,135 +702,135 @@ const TRADE_VERDICTS = [
    aliases of these tokens, so every rule follows the active theme. */
 :root, :root[data-theme="dark"] {
   /* surfaces */
-  --page-bg: #0B0B0C;            /* near-black warm page */
-  --nav-bg: #0B0B0C;             /* header */
-  --surface-bg: #111214;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
-  --surface-raised: #1D1F22;     /* modals, dropdowns, menus, elevated sections */
-  --table-head: #17181B;
-  --row-hover: #1D1F22;
-  --tier-row: #17181B;           /* tier divider rows inside tables */
-  --control-bg: #17181B;         /* inputs, selects, buttons */
-  --track: #232427;              /* value bars, slider tracks */
+  --page-bg: #08090B;            /* near-black warm page */
+  --nav-bg: #08090B;             /* header */
+  --surface-bg: #101216;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
+  --surface-raised: #1B2230;     /* modals, dropdowns, menus, elevated sections */
+  --table-head: #151A23;
+  --row-hover: #151A23;
+  --tier-row: #13171F;           /* tier divider rows inside tables */
+  --control-bg: #151A23;         /* inputs, selects, buttons */
+  --track: #222733;              /* value bars, slider tracks */
   /* text */
-  --text-primary: #F4F1E9;
-  --text-strong: #F4F1E9;        /* names, numbers, emphasis */
-  --text-secondary: #AAA39A;
-  --text-muted: #77736D;
-  --text-rank: #E4E0D7;
-  --heading: #F4F1E9;            /* page and dialog titles */
+  --text-primary: #F6F7F9;
+  --text-strong: #F6F7F9;        /* names, numbers, emphasis */
+  --text-secondary: #A7ABB3;
+  --text-muted: #737984;
+  --text-rank: #E3E5EA;
+  --heading: #F6F7F9;            /* page and dialog titles */
   /* lines */
-  --border: #292A2D;
-  --border-soft: #202124;
-  --border-strong: #36383C;
+  --border: #282D37;
+  --border-soft: #1E232C;
+  --border-strong: #363C49;
   /* brand + accents */
-  --brand: #F4F1E9;
-  --brand-accent: #C7A83D;
-  --accent-primary: #C7A83D;     /* CTAs, active tabs, selected states */
-  --accent-hover: #D5B94D;
-  --accent-text: #111214;        /* text on the accent */
-  --accent-secondary: #C9595A;   /* muted rose */
-  --accent-secondary-text: #E8A3A3;
-  --burgundy-1: #2A2D33;
-  --burgundy-2-t: #3A3D44;
-  --coral: #C7A83D;
-  --peach: #C7A83D;
+  --brand: #F6F7F9;
+  --brand-accent: #E4002B;
+  --accent-primary: #E4002B;     /* CTAs, active tabs, selected states */
+  --accent-hover: #F01B43;
+  --accent-text: #FFFFFF;        /* text on the accent */
+  --accent-secondary: #E0806F;   /* muted rose */
+  --accent-secondary-text: #EBA195;
+  --burgundy-1: #14264A;
+  --burgundy-2-t: #192F59;
+  --coral: #E4002B;
+  --peach: #192F59;
   /* interaction */
-  --hover-bg: #1D1F22;
+  --hover-bg: #1B2230;
   --active-bg: color-mix(in srgb, var(--accent-primary) 14%, transparent);
   --btn-bg: var(--control-bg);
-  --btn-text: #F4F1E9;
-  --btn-hover-bg: #1D1F22;
+  --btn-text: #F6F7F9;
+  --btn-hover-bg: #1B2230;
   --danger-bg: #6B1F1F;
   --danger-hover: #842828;
   --danger-text: #F2C4C4;
-  --selection-bg: #94791E;
-  --selection-text: #F4F1E9;
+  --selection-bg: #192F59;
+  --selection-text: #F6F7F9;
   /* editor */
-  --editor-panel: #15140F;
-  --editor-border: #3A3320;
-  --custom-panel: #1B1810;
-  --custom-border: #57492A;
+  --editor-panel: #111827;
+  --editor-border: #22304A;
+  --custom-panel: #132038;
+  --custom-border: #2A4373;
   /* positions (kept recognizable, tuned to read on the burgundy surface) */
-  --pos-qb: #C96F62;   /* soft coral on a wine tint */
-  --pos-rb: #3E9B76;   /* emerald on a forest tint */
-  --pos-wr: #668DB8;   /* desaturated light blue on slate */
-  --pos-te: #9274AE;   /* lavender on plum */
+  --pos-qb: #C96A61;   /* soft coral on a wine tint */
+  --pos-rb: #3F9873;   /* emerald on a forest tint */
+  --pos-wr: #6588B3;   /* desaturated light blue on slate */
+  --pos-te: #8B70A8;   /* lavender on plum */
   --pos-flex: #B18A45; /* muted amber */
   --pos-sf: #A86678;   /* muted rose */
   --pos-pick: #8A919E; /* bench / IR / picks: neutral */
-  --badge-base: #111214;
+  --badge-base: #101216;
   /* depth */
   --shadow-color: rgba(0, 0, 0, 0.85);
   --shadow-soft: rgba(0, 0, 0, 0.6);
   --backdrop: rgba(0, 0, 0, 0.75);
-  --hero-tint: #17181B;
+  --hero-tint: #151A23;
   --theme-scheme: dark;
-  --tier-line: #292A2D;
-  --tier-text: #E4E0D7;
-  --disabled-bg: #17181B;
-  --disabled-text: #5F5B55;
-  --disabled-border: #292A2D;
+  --tier-line: #282D37;
+  --tier-text: #E3E5EA;
+  --disabled-bg: #151A23;
+  --disabled-text: #5C616B;
+  --disabled-border: #282D37;
 }
 :root[data-theme="light"] {
-  --page-bg: #F6F3EC;            /* warm cream */
-  --nav-bg: #F6F3EC;
-  --surface-bg: #FCFAF6;         /* cards and tables: a clear step darker than the page (never white) */
-  --surface-raised: #FCFAF6;     /* modals, dropdowns */
-  --table-head: #F0ECE3;
-  --row-hover: #E9E3D8;
-  --tier-row: #F0ECE3;
-  --control-bg: #FCFAF6;
-  --track: #E6E0D5;
-  --text-primary: #171717;
-  --text-strong: #171717;
-  --text-secondary: #6F695F;
-  --text-muted: #989086;
-  --text-rank: #2B2824;
-  --heading: #171717;
-  --border: #DED7CA;
-  --border-soft: #E8E2D7;
-  --border-strong: #CEC5B6;
-  --brand: #171717;
-  --brand-accent: #B99A2E;
-  --accent-primary: #B99A2E;     /* burgundy: buttons, active states, emphasis */
-  --accent-hover: #94791E;
-  --accent-text: #171717;
-  --accent-secondary: #A33A3A;   /* coral, used sparingly */
-  --accent-secondary-text: #9B2C2C;
-  --burgundy-1: #DDD5C8;
-  --burgundy-2-t: #C9BFAF;
-  --coral: #B99A2E;
-  --peach: #B99A2E;
-  --hover-bg: #E9E3D8;
-  --btn-text: #171717;
-  --btn-hover-bg: #E9E3D8;
+  --page-bg: #F7F7F8;            /* warm cream */
+  --nav-bg: #F7F7F8;
+  --surface-bg: #FFFFFF;         /* cards and tables: a clear step darker than the page (never white) */
+  --surface-raised: #FFFFFF;     /* modals, dropdowns */
+  --table-head: #F1F2F4;
+  --row-hover: #E9EAED;
+  --tier-row: #F1F2F4;
+  --control-bg: #FFFFFF;
+  --track: #E2E4E8;
+  --text-primary: #101114;
+  --text-strong: #101114;
+  --text-secondary: #62656C;
+  --text-muted: #9699A1;
+  --text-rank: #25272C;
+  --heading: #101114;
+  --border: #DEE0E4;
+  --border-soft: #E8E9EC;
+  --border-strong: #CBCED4;
+  --brand: #101114;
+  --brand-accent: #E4002B;
+  --accent-primary: #E4002B;     /* burgundy: buttons, active states, emphasis */
+  --accent-hover: #C70027;
+  --accent-text: #FFFFFF;
+  --accent-secondary: #A63A2E;   /* coral, used sparingly */
+  --accent-secondary-text: #A63A2E;
+  --burgundy-1: #14264A;
+  --burgundy-2-t: #0E1C38;
+  --coral: #E4002B;
+  --peach: #14264A;
+  --hover-bg: #E9EAED;
+  --btn-text: #101114;
+  --btn-hover-bg: #E9EAED;
   --danger-bg: #F6DEDE;
   --danger-hover: #EFCACA;
   --danger-text: #9B2C2C;
-  --selection-bg: #F1E8C7;
-  --selection-text: #171717;
-  --editor-panel: #FAF6E9;
-  --editor-border: #E8DCAA;
-  --custom-panel: #F1E8C7;
-  --custom-border: #DCCB8E;
-  --pos-qb: #A9554A;
-  --pos-rb: #287558;
-  --pos-wr: #4A6F99;
-  --pos-te: #765A93;
+  --selection-bg: #D5DCEA;
+  --selection-text: #101114;
+  --editor-panel: #F1F3F7;
+  --editor-border: #D5DAE3;
+  --custom-panel: #EBEFF6;
+  --custom-border: #B8C3D8;
+  --pos-qb: #A8524A;
+  --pos-rb: #2A7556;
+  --pos-wr: #45678F;
+  --pos-te: #6E5590;
   --pos-flex: #8C6A2E;
   --pos-sf: #8A4D5E;
   --pos-pick: #6E7480;
-  --badge-base: #FCFAF6;
+  --badge-base: #FFFFFF;
   --shadow-color: rgba(60, 48, 30, 0.14);
   --shadow-soft: rgba(60, 48, 30, 0.08);
   --backdrop: rgba(40, 32, 20, 0.28);
-  --hero-tint: #F0ECE3;
+  --hero-tint: #F1F2F4;
   --theme-scheme: light;
-  --tier-line: #DED7CA;
-  --tier-text: #3A352D;
-  --disabled-bg: #F0ECE3;
-  --disabled-text: #989086;
-  --disabled-border: #DED7CA;
+  --tier-line: #DEE0E4;
+  --tier-text: #25272C;
+  --disabled-bg: #F1F2F4;
+  --disabled-text: #9699A1;
+  --disabled-border: #DEE0E4;
 }
 /* Aliases used throughout the stylesheet (they follow the tokens above) */
 :root {
@@ -920,7 +920,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 850; font-stretch: 112%; font-size: 1.75rem; line-height: 1; letter-spacing: -0.035em;
   margin: 0; color: var(--brand);
 }
-.brand-name::after {   /* the brand's period: gold in dark mode, coral in light mode (part of the AM. wordmark) */
+.brand-name::after {   /* the brand's period: T1 red in both themes (part of the AM. wordmark) */
   content: ""; display: inline-block; width: 0.2em; height: 0.2em; margin-left: 0.07em; background: var(--brand-accent);
   vertical-align: baseline; border-radius: 1px;
 }
@@ -1604,8 +1604,8 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 #panel-finder .tf-foot { padding-top: 2px; justify-content: space-between; gap: 16px; }
 
 /* Power Rankings row polish: whole-row hover, your-team accent, quieter method note */
-:root, :root[data-theme="dark"] { --mine-accent: #C7A83D; }
-:root[data-theme="light"] { --mine-accent: #94791E; }
+:root, :root[data-theme="dark"] { --mine-accent: #E4002B; }
+:root[data-theme="light"] { --mine-accent: #E4002B; }
 #league-body .pr-row:hover { background: var(--row-hover); }
 #league-body .pr-row:hover .pr-name, #league-body .pr-row:hover .pr-score { color: var(--heading); }
 #league-body .pr-row:hover .pr-score { color: var(--text-strong); }
@@ -3485,42 +3485,54 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   *, *::before, *::after { transition: none !important; }
 }
 
-/* ---------- Gen.G editorial (Alan, Oct 8): warm ivory + near-black + muted championship gold; position colors are
-   functional accents only. Gold = brand, selected state, primary action, your team. Borders are felt more than seen. ---------- */
+/* ---------- T1-inspired red / navy / black (Alan, Oct 8): neutrals ~70-75%, navy ~15-20% (structure, modes, links,
+   focus, league context), red ~5-10% (primary actions, active nav, logo dot, your team, selected row). Warnings are
+   amber, never brand red; negatives use a softer brick red so they never read as a brand accent. ---------- */
 :root, :root[data-theme="dark"] {
-  --gold-tint: rgba(199, 168, 61, 0.12); --focus-line: var(--border-strong); --rail-bg: #0E0F11; --rail-line: #222326;
-  --nav-idle: #AAA39A; --nav-on: #F4F1E9; --nav-line: #C7A83D;
-  --eb-bg: rgba(199, 168, 61, 0.055); --eb-line: rgba(199, 168, 61, 0.18); --eb-ink: #AAA39A; --eb-strong: #D9D3C7;
-  --vt-bg: #17181B; --vt-ink: #AAA39A; --vt-line: #292A2D; --vt-on: #C7A83D; --vt-on-ink: #111214; --vt-on-line: #94791E;
-  --badge-a: 0.13; --badge-b: 0.42; --row-sel: rgba(199, 168, 61, 0.07);
+  --navy: #14264A; --navy-hi: #192F59; --navy-tint: rgba(33, 62, 112, 0.18); --navy-ink: #8FA6D6; --red-tint: rgba(228, 0, 43, 0.12);
+  --focus-line: #3A5B99; --rail-bg: #101621; --rail-line: #1C2433;
+  --nav-idle: #A7ABB3; --nav-on: #F6F7F9; --nav-line: #E4002B;
+  --eb-bg: rgba(33, 62, 112, 0.14); --eb-line: rgba(58, 91, 153, 0.35); --eb-ink: #A7ABB3; --eb-strong: #D5D8DE; --eb-dot: #6F86B5;
+  --vt-bg: #151A23; --vt-ink: #A7ABB3; --vt-line: #282D37; --vt-on: #192F59; --vt-on-ink: #FFFFFF; --vt-on-line: #2A4373;
+  --warn: #E0A030; --warn-tint: rgba(224, 160, 48, 0.10);
+  --badge-a: 0.13; --badge-b: 0.42; --row-sel: rgba(228, 0, 43, 0.07);
 }
 :root[data-theme="light"] {
-  --gold-tint: #F1E8C7; --rail-bg: #F0ECE3; --rail-line: #E2DBCE;
-  --nav-idle: #6F695F; --nav-on: #171717; --nav-line: #B99A2E;
-  --eb-bg: #FAF6E9; --eb-line: #E8DCAA; --eb-ink: #6F695F; --eb-strong: #4A4232;
-  --vt-bg: #F0ECE3; --vt-ink: #6F695F; --vt-line: #DED7CA; --vt-on: #B99A2E; --vt-on-ink: #171717; --vt-on-line: #94791E;
-  --badge-a: 0.09; --badge-b: 0.35; --row-sel: rgba(185, 154, 46, 0.055);
+  --navy: #14264A; --navy-hi: #0E1C38; --navy-tint: rgba(20, 38, 74, 0.07); --navy-ink: #14264A; --red-tint: rgba(228, 0, 43, 0.07);
+  --focus-line: #14264A; --rail-bg: #F4F6F9; --rail-line: #E3E7ED;
+  --nav-idle: #62656C; --nav-on: #101114; --nav-line: #E4002B;
+  --eb-bg: #F1F3F7; --eb-line: #D5DAE3; --eb-ink: #62656C; --eb-strong: #14264A; --eb-dot: #14264A;
+  --vt-bg: #F1F2F4; --vt-ink: #62656C; --vt-line: #DEE0E4; --vt-on: #14264A; --vt-on-ink: #FFFFFF; --vt-on-line: #0E1C38;
+  --warn: #B7791F; --warn-tint: rgba(183, 121, 31, 0.08);
+  --badge-a: 0.09; --badge-b: 0.35; --row-sel: rgba(228, 0, 43, 0.045);
 }
+/* focus and hover borders: navy, never red */
 .search:focus, .select:focus, .import-dialog textarea:focus, dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { border-color: var(--focus-line); }
 .info:hover, .info:focus-visible, .tw-btn:hover, .league-option:hover:not(:disabled), .pm-close:hover, .inj-ov:hover,
 .tr-send:hover:not(:disabled), .roster-toggle.main:hover, .pr-item.open .pr-caret { border-color: var(--focus-line); }
-/* nav */
+/* nav: quiet inactive tabs, active tab with the red underline */
 .tab, .chip-btn { color: var(--nav-idle); }
 .tab:hover, .chip-btn:hover { color: var(--nav-on); }
 .tab[aria-selected="true"], .chip-btn[aria-pressed="true"] { color: var(--nav-on); }
 .tab[aria-selected="true"]::after, .chip-btn[aria-pressed="true"]::after { background: var(--nav-line); }
-/* editor bar: a quiet utility strip; its dot is gold (red is for real errors) */
+/* editor bar: a quiet navy utility strip */
 .editor-bar { background: var(--eb-bg); border-color: var(--eb-line); color: var(--eb-ink); }
 .editor-bar .eb-left strong { color: var(--eb-strong); }
-.eb-left strong::before { background: var(--gold); }
-/* AM Board / League-adjusted toggle */
+.eb-left strong::before { background: var(--eb-dot); }
+/* warnings are amber, not brand red */
+.ed-warn { border-color: color-mix(in srgb, var(--warn) 45%, transparent); border-left-color: var(--warn); background: var(--warn-tint); }
+/* AM Board / League-adjusted toggle: a mode, so navy, not red */
 .view-toggle { background: var(--vt-bg); border-color: var(--vt-line); }
 .vt-btn { color: var(--vt-ink); }
 .vt-btn:hover { color: var(--ink); }
 .vt-btn[aria-pressed="true"] { background: var(--vt-on); color: var(--vt-on-ink); box-shadow: inset 0 0 0 1px var(--vt-on-line); }
-/* right rail: a secondary surface */
+/* right rail: a secondary surface with a navy undertone */
 .rk-rail { background: var(--rail-bg); border-color: var(--rail-line); }
 .rk-rail .rail-title, .rk-rail h3, .rk-rail .section-label { color: var(--muted); }
+/* league context is navy */
+.fc-label { color: var(--muted); }
+.league-chip.custom .fc-label, .fmt-chip.custom .fc-label { color: var(--warn); }   /* a custom format over a league stays flagged (§9) */
+.fmt-note [data-open-fmt] { color: var(--navy-ink); }
 /* position badges: faint tint, the text and border carry the color */
 .pos { background: color-mix(in srgb, var(--c) calc(var(--badge-a) * 100%), transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) calc(var(--badge-b) * 100%), transparent); }
 /* the board: names and values lead, bars shorter and lighter, meta quieter */
@@ -3530,12 +3542,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 #panel-rankings .valbar .track { max-width: 230px; }
 .valbar .fill { opacity: 0.42; }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.5; }
-.owner-filter > span, .ctl-label, .fmt-note, .fmt-note b, .eb-vc, .fc-label { color: var(--muted); }
-.league-chip.custom .fc-label, .fmt-chip.custom .fc-label { color: var(--gold); }   /* a custom format over a league stays flagged in gold (§9) */
-.fmt-note [data-open-fmt] { color: var(--gold); }
-/* selected player: faint gold wash plus the thin gold edge */
+.owner-filter > span, .ctl-label, .fmt-note, .fmt-note b, .eb-vc { color: var(--muted); }
+/* selected player: faint red wash plus a thin red edge */
 #rank-body tr.player.pp-current td { background: var(--row-sel); }
 #rank-body tr.player.pp-current td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
+/* button hierarchy: primary red (.btn.primary), secondary navy (.btn.secondary), tertiary neutral (.btn) */
+.btn.secondary { background: var(--navy); border-color: var(--navy); color: #FFFFFF; }
+.btn.secondary:hover:not(:disabled) { background: var(--navy-hi); border-color: var(--navy-hi); }
+.theme-toggle { color: var(--ink-2); }
+.theme-toggle:hover { color: var(--ink); }
 </style>
 </head>
 <body>
@@ -4565,7 +4580,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T08:00Z";
+  const BUILD_ID = "2026-10-08T10:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4595,7 +4610,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (animate) { root.classList.add("theme-anim"); clearTimeout(setTheme.timer); setTheme.timer = setTimeout(() => root.classList.remove("theme-anim"), 320); }
     root.setAttribute("data-theme", t);
     try { localStorage.setItem("spm_theme", t); } catch (e) {}
-    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0B0B0C";
+    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
     const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
     btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
     btn.setAttribute("aria-pressed", String(t === "light"));
@@ -10475,7 +10490,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </div>
         <div class="pm-actions">
           <button class="btn primary" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
-          <button class="btn" type="button" data-find-trades="${esc(sid)}"${findHint ? ` disabled title="${esc(findHint)}"` : ""}>Find trades</button>
+          <button class="btn secondary" type="button" data-find-trades="${esc(sid)}"${findHint ? ` disabled title="${esc(findHint)}"` : ""}>Find trades</button>
           <button class="btn" type="button" data-pm-compare aria-pressed="${PP.picking}">${PP.compare ? "Compare: change" : "Compare player"}</button>
           ${findHint ? `<span class="pp-hint">${esc(findHint)}</span>` : ""}
         </div>
