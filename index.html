@@ -3064,6 +3064,33 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 #rank-body tr.cmp-row:hover .cmp-pick { background: color-mix(in srgb, var(--gold) 45%, transparent); }
 #rank-body tr.cmp-a td { background: color-mix(in srgb, var(--gold) 5%, transparent); }
 /* Injury context: games he left early with an injury */
+/* Player Outlook (Alan, Oct 6) */
+.olk { margin: 2px 0 16px; padding: 12px 14px 10px; border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.olk.pos { border-left-color: color-mix(in srgb, var(--st-fp, #6fbf73) 70%, transparent); }
+.olk.neg { border-left-color: color-mix(in srgb, var(--st-dnp, #d96b5b) 70%, transparent); }
+.olk.mix { border-left-color: color-mix(in srgb, var(--gold) 70%, transparent); }
+.olk-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.olk-head .section-label { margin: 0; }
+.olk-dir { font-size: 0.74rem; font-weight: 750; letter-spacing: 0.02em; }
+.olk-dir.pos { color: var(--st-fp, #6fbf73); } .olk-dir.neg { color: var(--st-dnp, #d96b5b); } .olk-dir.mix { color: var(--gold); } .olk-dir.flat { color: var(--muted); }
+.olk-conf { margin-left: auto; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); cursor: help; }
+.olk-text { font-size: 0.84rem; line-height: 1.5; margin: 0 0 8px; color: var(--ink); }
+.olk-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 6px; }
+.olk-ranks { font-size: 0.74rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.olk-ranks a { color: inherit; text-decoration: underline dotted; text-underline-offset: 2px; }
+.olk-tags { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+.olk-tag { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.olk-tag.pos { color: var(--st-fp, #6fbf73); border-color: color-mix(in srgb, var(--st-fp, #6fbf73) 35%, transparent); }
+.olk-tag.neg { color: var(--st-dnp, #d96b5b); border-color: color-mix(in srgb, var(--st-dnp, #d96b5b) 35%, transparent); }
+.olk-rankwhy { font-size: 0.74rem; color: var(--muted); margin: 0 0 6px; }
+.olk-why summary { cursor: pointer; font-size: 0.72rem; font-weight: 650; color: var(--accent-primary); margin: 2px 0 4px; }
+.olk-g h4 { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 8px 0 3px; }
+.olk-g ul { margin: 0; padding-left: 16px; font-size: 0.76rem; line-height: 1.45; }
+.olk-src { font-size: 0.62rem; color: var(--muted); margin: 6px 0 0; }
+.olk-src span[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 2px; }
+.olk-stale { color: var(--st-dnp, #d96b5b); }
+.aud { display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 3px; font-size: 0.56rem; font-weight: 750; letter-spacing: 0.04em; vertical-align: 1px; border: 1px solid currentColor; cursor: help; }
+.aud.up { color: var(--st-fp, #6fbf73); } .aud.down { color: var(--st-dnp, #d96b5b); } .aud.mkt { color: var(--gold); }
 .inj-ov { all: unset; cursor: pointer; margin-left: 6px; padding: 1px 6px; border: 1px dashed var(--line); border-radius: 4px; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
 .inj-ov:hover { color: var(--ink); border-color: var(--gold); }
 .inj-ov:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
@@ -3568,6 +3595,17 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </span>
       </div>
       <div class="ctl-right">
+        <label class="owner-filter" id="rk-audit-wrap" hidden title="Editor audit: compare each ranking with the Player Outlook's evidence and the market"><span>Audit</span>
+          <select class="select" id="rk-audit" aria-label="Audit rankings against the outlook">
+            <option value="all">All players</option>
+            <option value="agree">Outlook agrees with ranking</option>
+            <option value="bull">Outlook more bullish than ranking</option>
+            <option value="bear">Outlook more bearish than ranking</option>
+            <option value="mkthigh">SPAM much higher than market</option>
+            <option value="mktlow">SPAM much lower than market</option>
+            <option value="role">Major recent role change</option>
+          </select>
+        </label>
         <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
         <label class="owner-filter" id="owner-filter-wrap"><span>Show</span>
           <select class="select" id="owner-filter" aria-label="Filter by owner"></select>
@@ -4389,7 +4427,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-07T05:00Z";
+  const BUILD_ID = "2026-10-07T08:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4483,6 +4521,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      scoring (Season PPG, Last 3 / Last 5 PPG, Season Points). A viewing mode only: it never touches ranks, tiers,
      values, publishing or history; SPAM Rank restores the normal board. RK.min null = the default for this week. */
   const RK = { sort: "spam", min: null, dir: "desc" };
+  const AUDIT = { f: "all" };   // editor audit filter (Player Outlook vs ranking), signed-in editors only
   const RK_HEAD = $("rk-head-row").innerHTML;
   const PROD_MODES = { ppg: { label: "Season PPG", short: "PPG", unit: "PPG" }, l3: { label: "Last 3 PPG", short: "L3", unit: "PPG", n: 3 },
     l5: { label: "Last 5 PPG", short: "L5", unit: "PPG", n: 5 }, pts: { label: "Season Points", short: "Pts", unit: "pts" } };
@@ -4495,6 +4534,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const b = $("rk-dir"); b.textContent = RK.dir === "desc" ? "High → Low" : "Low → High";
     b.title = RK.dir === "desc" ? "Highest first · click for lowest first" : "Lowest first · click for highest first";
   }
+  $("rk-audit").addEventListener("change", e => { AUDIT.f = e.target.value; loadMarket(); loadDepth(); renderRankings(); });
   $("rk-sort").addEventListener("change", e => { RK.sort = e.target.value; syncRkControls(); saveRk(); renderRankings(); });
   $("rk-min").addEventListener("change", e => { RK.min = Number(e.target.value); saveRk(); renderRankings(); });
   $("rk-dir").addEventListener("click", () => { RK.dir = RK.dir === "desc" ? "asc" : "desc"; syncRkControls(); saveRk(); renderRankings(); });
@@ -4652,6 +4692,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const filtered = LG.active && LG.ownerFilter !== "all";
     if (filtered) list = list.filter(ownerMatch);
     if (query) list = list.filter(p => (p.name + " " + p.team).toLowerCase().includes(query));
+    const audit = $("rk-audit-wrap"); audit.hidden = !editorAudit();
+    if (editorAudit() && !statsCache[STATS_SEASONS[0]] && statsCache[STATS_SEASONS[0]] !== null) Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason)).then(() => { loadMarket(); loadDepth(); renderRankings(); });
+    if (editorAudit() && AUDIT.f !== "all") { if (!statsCache[STATS_SEASONS[0]]) loadSeason(STATS_SEASONS[0]).then(renderRankings); else list = list.filter(p => auditMatch(p, AUDIT.f)); }
     $("rk-head").textContent = posFilter === "ALL" && hasOverall() ? "Rk" : posFilter === "PICK" ? "" : "Rank";
     $("edit-head").hidden = !editing;
     document.body.classList.toggle("editing", editing);
@@ -4698,7 +4741,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       out.push(`<tr class="player${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
         <td class="rk">${rk(p)}</td>
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
-        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}${auditFlag(p)}</td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
@@ -6478,7 +6521,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     let token = null;
     try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
     if (!token) return;
-    try { await verifyToken(token); updateEditorBar(); }
+    try { await verifyToken(token); updateEditorBar(); renderRankings(); }
     catch (err) { editor.token = null; if (err.status === 401) { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} } }
   })();
 
@@ -9965,6 +10008,315 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     loadSeason(STATS_SEASONS[0]).then(() => { syncRkControls(); renderRankings(); });
   })();
+  /* ---------- Player Outlook (Alan, Oct 6) ----------
+     "What does the data say about this player right now, what does the market think, and how does SPAM value him?"
+     Built in layers that never mix:
+       1. facts      (outlookEvidence) his games, usage and trends this season, injury-shortened games, this week's injury
+                     report, the Sleeper depth chart, SPAM's usage-based projection. Reads NO SPAM rank, tier or value.
+       2. market     (marketFor) FantasyCalc, when data/market/redraft.json exists (pipeline/build_market.py).
+       3. valuation  (outlookValuation) SPAM rank, position rank, tier, value (league-adjusted in a league view), recent moves.
+       4. reading    direction, tags and confidence come from (1) only; the consistency check (Supported / Aggressive /
+                     Conservative / Uncertain) compares (1) and (2) with (3) and only changes the valuation wording.
+     So a ranking never makes the outlook bullish, and nothing here ever writes back into rankings or values.
+     No analyst/news text: no supported, licensed source exists (Oct 6 research, CLAUDE.md §11). Wording is rule-based. */
+  const MARKET = { data: null, loading: false };
+  function loadMarket() {
+    if (MARKET.data || MARKET.loading) return;
+    MARKET.loading = true;
+    fetch("data/market/redraft.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
+      .then(d => { MARKET.data = d && d.formats ? d : { formats: {} }; OLK_CACHE.clear(); if (modalOpen()) renderPlayer(); renderRankings(); });
+  }
+  // nearest FantasyCalc format to the values in use: 1QB/superflex, 10 or 12 teams (no league: the SPAM Board's 12-team SF)
+  function marketKey() {
+    const vl = leagueView() || LG.active ? valueLeague() : null, lu = vl ? lineupOf(vl) : null;
+    if (!lu) return "q2_t12";
+    return `q${lu.SUPER_FLEX > 0 || lu.QB >= 2 ? 2 : 1}_t${lu.teams <= 11 ? 10 : 12}`;
+  }
+  function marketFor(sid) {
+    const d = MARKET.data, f = d && d.formats && d.formats[marketKey()], r = f && f[String(sid)];
+    return r ? { value: r[0], overall: r[1], pos: r[2], posRank: r[3], trend: r[4], updated: d.updated } : null;
+  }
+  const OPP = { QB: g => (g.pass_att || 0) + (g.rush_att || 0), RB: g => (g.rush_att || 0) + (g.rec_tgt || 0), WR: g => g.rec_tgt || 0, TE: g => g.rec_tgt || 0 };
+  // Position tables from the season's games (league scoring): production rank (PPG, completed games when an injury exit
+  // distorts it) and usage rank (opportunities per game), players with 2+ games. Independent of SPAM's rankings.
+  let OLK_T = { key: "", tables: null };
+  function outlookTables() {
+    const y = STATS_SEASONS[0], d = statsCache[y];
+    if (!d || !d.players) return null;
+    const key = y + "|" + d.updated + "|" + INJ_OV_VER + "|" + JSON.stringify(scoringNow());
+    if (OLK_T.key === key) return OLK_T.tables;
+    const rows = { QB: [], RB: [], WR: [], TE: [] };
+    Object.keys(d.players).forEach(sid => {
+      const pos = d.players[sid].p; if (!rows[pos]) return;
+      const log = seasonLog(y, sid, pos); if (!log || log.games.length < 2) return;
+      const t = totals(log.games);
+      rows[pos].push({ sid, ppg: t.distort ? t.fullPpg : t.ppg, opp: OPP[pos](t) / t.g });
+    });
+    const tables = {};
+    for (const [pos, r] of Object.entries(rows)) {
+      const prod = new Map(), use = new Map();
+      [...r].sort((a, b) => b.ppg - a.ppg).forEach((x, i) => prod.set(x.sid, i + 1));
+      [...r].sort((a, b) => b.opp - a.opp).forEach((x, i) => use.set(x.sid, i + 1));
+      tables[pos] = { n: r.length, prod, use };
+    }
+    OLK_T = { key, tables };
+    return tables;
+  }
+  // his slot on the Sleeper depth chart (1 = starter), when the file is loaded
+  function depthSlot(sid, pos, team) {
+    const ch = DEPTH && DEPTH.teams && DEPTH.teams[team]; if (!ch) return null;
+    const slots = pos === "WR" ? ["LWR", "RWR", "SWR", "WR"] : [pos];
+    let best = null;
+    slots.forEach(k => (ch[k] || []).forEach((r, i) => { if (String(r[0]) === String(sid) && (!best || i + 1 < best.order)) best = { slot: k, order: i + 1 }; }));
+    return best;
+  }
+  const avgOf = (gs, f) => { const v = gs.map(f).filter(x => x != null && isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  // 1. Facts. Nothing in here may read p.rank, p.posNum, p.tier, p.value or any league-adjusted rank/value.
+  function outlookEvidence(sid, pos, team, projPpg) {
+    const y = STATS_SEASONS[0], cur = seasonLog(y, sid, pos), prev = seasonLog(STATS_SEASONS[1], sid, pos);
+    const games = cur ? cur.games : [], t = games.length ? totals(games) : null, pt = prev && prev.games.length ? totals(prev.games) : null;
+    const T = outlookTables(), tb = T && T[pos];
+    const full = games.filter(g => !g.short), recent = full.slice(-2), early = full.slice(0, -2);
+    const trend = f => { const a = avgOf(early, f), b = avgOf(recent, f); return early.length >= 2 && recent.length === 2 && a > 0 && b != null ? b / a : null; };
+    const sum = k => games.reduce((a, g) => a + (g[k] || 0), 0), per = k => (t ? sum(k) / t.g : null);
+    const prodRank = tb ? tb.prod.get(String(sid)) || null : null, useRank = tb ? tb.use.get(String(sid)) || null : null;
+    const E = { sid: String(sid), pos, team, gp: t ? t.g : 0, t, pt, games, n: tb ? tb.n : 0,
+      ppg: t ? t.ppg : null, fullPpg: t && t.distort ? t.fullPpg : null, shortGames: games.filter(g => g.short),
+      l3: games.length ? avgOf(games.slice(-3), g => g.pts) : null,
+      oppPg: t ? OPP[pos](t) / t.g : null, tgtPg: per("rec_tgt"), touchPg: t ? (t.rush_att + t.rec) / t.g : null,
+      rushPg: per("rush_att"), passPg: per("pass_att"), rzPg: t ? (sum("rz_tgt") + sum("rz_rush")) / t.g : null, glPg: per("gl_rush"),
+      snap: avgOf(games, g => g.snap), tshare: t ? t.tgtShare : null, airShare: avgOf(games, g => g.air_share),
+      oppTrend: trend(OPP[pos]), snapTrend: trend(g => g.snap), tsTrend: pos === "QB" ? null : trend(g => g.tgt_share),
+      // where the evidence puts him at his position: production first; for QBs volume says little about value
+      prodRank, useRank, evRank: prodRank && useRank ? Math.round((pos === "QB" ? 0.85 : 0.6) * prodRank + (pos === "QB" ? 0.15 : 0.4) * useRank) : prodRank,
+      inj: team ? injuryOf(team, sid) : null, depth: team ? depthSlot(sid, pos, team) : null, proj: projPpg };
+    return E;
+  }
+  const OUT_STATUS = s => /^(out|ir|injured reserve|pup|suspended)/i.test(s || "");
+  // 4a. Direction, tags and confidence: from the facts only
+  function outlookRead(E) {
+    let up = 0, down = 0;
+    const st = E.inj && E.inj.status;
+    // a usage swing only counts in full when his snaps or target share moved the same way (one game script isn't a role change)
+    const backs = dirn => [E.snapTrend, E.tsTrend].some(x => x != null && (dirn > 0 ? x >= 1.08 : x <= 0.92));
+    if (E.oppTrend != null) {
+      if (E.oppTrend >= 1.25) up += backs(1) ? 2 : 1; else if (E.oppTrend <= 0.75) down += backs(-1) ? 2 : 1;
+    }
+    if (E.snapTrend != null) { if (E.snapTrend >= 1.15) up += 1; else if (E.snapTrend <= 0.85) down += 1; }
+    if (OUT_STATUS(st)) down += 3; else if (st === "Doubtful") down += 2; else if (st === "Questionable") down += 1;
+    const recentExit = E.games.slice(-2).some(g => g.short);
+    if (recentExit && !st) down += 1;
+    if (E.depth && E.depth.order >= (E.pos === "QB" || E.pos === "TE" ? 2 : 3)) down += 1;
+    const s = up - down;
+    const dir = !E.gp && !E.pt ? null : up >= 2 && down >= 2 ? "Mixed" : s >= 4 ? "Strongly positive" : s >= 2 ? "Positive" : s <= -4 ? "Strongly negative" : s <= -2 ? "Negative" : "Stable";
+    const sc = scoringNow(), ppr = Number(sc.rec || 0) >= 0.5;
+    const HV = { QB: 8, RB: 10, WR: 12, TE: 6 }[E.pos] || 10;
+    const cand = [];
+    if (st || recentExit) cand.push(["Injury Concern", "neg"]);
+    if (E.oppTrend >= 1.25) cand.push([E.pos === "QB" ? "Role Expanding" : E.pos === "RB" ? "Workload Rising" : "Targets Rising", "pos"]);
+    else if (E.oppTrend != null && E.oppTrend <= 0.75) cand.push([E.pos === "RB" ? "Workload Falling" : E.pos === "QB" ? "Role Shrinking" : "Targets Falling", "neg"]);
+    if (E.gp >= 2 && E.useRank && E.useRank <= HV) cand.push(["High Volume", "pos"]);
+    if (E.gp >= 2 && E.tshare != null && E.tshare >= ({ WR: 0.26, TE: 0.22, RB: 0.14 }[E.pos] || 9)) cand.push(["Elite Target Share", "pos"]);
+    if (E.pos === "RB" && E.gp >= 2 && (E.glPg >= 0.75 || E.rzPg >= 3)) cand.push(["Goal-Line Role", "pos"]);
+    if (E.pos === "QB" && E.gp >= 2 && E.rushPg >= 6) cand.push(["Rushing Upside", "pos"]);
+    if (E.pos === "RB" && ppr && E.gp >= 3 && (E.tshare == null || E.tshare < 0.07)) cand.push(["Receiving Concern", "neg"]);
+    if (E.pos === "RB" && E.gp >= 2 && E.snap != null && E.snap < 0.5 && E.touchPg < 13) cand.push(["Committee Risk", "neg"]);
+    if (E.snapTrend != null && E.snapTrend <= 0.85 && !(E.oppTrend != null && E.oppTrend <= 0.75)) cand.push(["Snaps Falling", "neg"]);
+    if (E.gp < 2 || (E.depth && E.depth.order >= (E.pos === "QB" || E.pos === "TE" ? 2 : 3))) cand.push(["Role Uncertain", "neg"]);
+    const tags = cand.slice(0, 4);
+    // confidence: games, data age, production and usage agreeing, injury certainty
+    const age = statsAgeH();
+    let c = (E.gp >= 4 ? 2 : E.gp >= 2 ? 1 : 0) + (age != null && age < 72 ? 1 : 0);
+    if (E.prodRank && E.useRank && Math.abs(E.prodRank - E.useRank) <= Math.max(6, 0.4 * (E.prodRank + E.useRank) / 2)) c++;
+    if (!st && !recentExit) c++;
+    const conf = !E.gp && !E.pt ? null : c >= 5 ? "High" : c >= 3 ? "Moderate" : "Low";
+    return { dir, tags, conf };
+  }
+  function statsAgeH() {
+    const d = statsCache[STATS_SEASONS[0]], u = d && d.updated && Date.parse(d.updated.replace(/Z?$/, "Z"));
+    return u ? (Date.now() - u) / 3.6e6 : null;
+  }
+  const agoText = h => (h == null ? "" : h < 1 ? `${Math.max(1, Math.round(h * 60))}m ago` : h < 24 ? `${Math.round(h)}h ago` : h < 48 ? "yesterday" : `${Math.round(h / 24)} days ago`);
+  // 3. Valuation: SPAM's opinion, added after the facts
+  function outlookValuation(p) {
+    if (!p) return null;
+    const lv = leagueView(), posNum = lv ? LG.adjPos.get(p.id) ?? p.posNum : p.posNum;
+    const h = historyOf(p.sleeperId).filter(x => x.posRank != null);
+    const cutoff = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    const old = h.filter(x => x.date <= cutoff).pop() || h[0];
+    const posNumOf = s => { const m = String(s || "").match(/\d+/); return m ? Number(m[0]) : null; };
+    const was = old ? posNumOf(old.posRank) : null;
+    return { posNum, label: posLabel(p), overall: lv ? LG.adjRank.get(p.id) ?? p.rank : p.rank, value: dv(p), lv,
+      tier: p.tier, tierName: p.tier !== "" && p.tier != null ? tierLabel(p.pos, p.tier) : "", out: String(p.tier) === String(OUT_TIER),
+      move: was != null && posNum != null && was !== p.posNum ? { from: was, to: p.posNum, since: old.date } : null, auto: p.source === "auto" };
+  }
+  // 4b. Does the evidence support SPAM's valuation? (only shapes the valuation wording and the editor flags)
+  function outlookConsistency(E, V, M) {
+    if (!V || V.posNum == null) return { cls: null };
+    const band = Math.max(3, Math.round(0.35 * V.posNum));
+    const mGap = M && M.posRank != null && M.pos === E.pos ? M.posRank - V.posNum : null;   // + = SPAM higher than market
+    const market = mGap == null ? null : mGap > band ? "high" : -mGap > band ? "low" : "near";
+    if (V.out) return { cls: "Out", band, mGap, market };
+    const shaky = E.gp < 3 || !E.evRank || OUT_STATUS(E.inj && E.inj.status) || (E.shortGames.length && E.gp < 4)
+      || (E.pos !== "QB" && E.prodRank && E.useRank && Math.abs(E.prodRank - E.useRank) > Math.max(12, Math.min(E.prodRank, E.useRank)));
+    const cls = shaky ? "Uncertain" : E.evRank - V.posNum > band ? "Aggressive" : V.posNum - E.evRank > band ? "Conservative" : "Supported";
+    return { cls, band, mGap, market };
+  }
+  const OLK_CACHE = new Map();
+  function outlookFor(sid) {
+    const info = playerInfo(sid); if (!info.name || !EDIT_POS.includes(info.pos)) return null;
+    const p = info.p, key = [sid, leagueView(), marketKey(), JSON.stringify(scoringNow()), (statsCache[STATS_SEASONS[0]] || {}).updated, INJ_OV_VER, DEPTH ? 1 : 0, p ? [p.rank, p.posNum, p.tier, p.value].join(",") : ""].join("|");
+    const hit = OLK_CACHE.get(sid); if (hit && hit.key === key) return hit.o;
+    const E = outlookEvidence(sid, info.pos, info.team, p ? projPPGOf(p) : null), R = outlookRead(E);
+    const M = marketFor(sid), V = outlookValuation(p), C = outlookConsistency(E, V, M);
+    const o = { info, E, R, M, V, C };
+    OLK_CACHE.set(sid, { key, o });
+    return o;
+  }
+  // Wording (rule-based, original): facts → valuation → market → what the league's format changes
+  const pc = v => (v == null ? "–" : Math.round(100 * v) + "%");
+  const POS_PL = { QB: "quarterbacks", RB: "running backs", WR: "receivers", TE: "tight ends" };
+  function outlookText(o) {
+    const { info, E, R, M, V, C } = o, nm = compactName(info.name), out = [];
+    if (!E.gp && !E.pt) return [];
+    if (!E.gp) out.push(`${nm} hasn't played this season${E.pt ? `; he averaged ${fp(E.pt.ppg)} PPG over ${E.pt.g} games last season` : ""}.`);
+    else {
+      if (E.pos === "RB") out.push(`${nm} is handling ${fp(E.touchPg)} touches a game${E.snap != null ? ` on ${pc(E.snap)} of the snaps` : ""}${E.glPg >= 0.5 ? `, with ${fp(E.glPg)} goal-line carries a game` : ""}.`);
+      else if (E.pos === "QB") out.push(`${nm} is averaging ${fp(E.passPg)} pass attempts${E.rushPg >= 3 ? ` and ${fp(E.rushPg)} rushes` : ""} a game.`);
+      else out.push(`${nm} is seeing ${fp(E.tgtPg)} targets a game${E.tshare != null ? ` (${pc(E.tshare)} target share${E.airShare != null ? `, ${pc(E.airShare)} of the air yards` : ""})` : ""}.`);
+      if (E.oppTrend != null && E.oppTrend >= 1.25) out.push(`His ${E.pos === "RB" ? "workload" : E.pos === "QB" ? "volume" : "target volume"} has grown over his last two full games.`);
+      else if (E.oppTrend != null && E.oppTrend <= 0.75) out.push(`His ${E.pos === "RB" ? "workload" : E.pos === "QB" ? "volume" : "target volume"} has dipped over his last two full games.`);
+      else if (E.snapTrend != null && E.snapTrend <= 0.85) out.push(`His snap share has slipped lately.`);
+      const sg = E.shortGames[E.shortGames.length - 1];
+      const rank = E.prodRank ? ` (${ordinal(E.prodRank)} among ${POS_PL[E.pos]} with 2+ games)` : "";
+      if (sg) out.push(`His ${fp(E.ppg)} PPG${rank} includes Week ${sg.w}, which he left ${sg.short.at != null && sg.short.at >= 29 && sg.short.at <= 31 ? "around halftime" : "early"} with an injury${E.fullPpg != null ? ` (${fp(E.fullPpg)} PPG in his completed games)` : ""}.`);
+      else out.push(`He's scoring ${fp(E.ppg)} PPG${rank.replace(/^ \((.*)\)$/, ", $1")}.`);
+    }
+    if (E.inj && E.inj.status) out.push(`He's listed ${E.inj.status}${E.inj.injury ? ` (${E.inj.injury.toLowerCase()})` : ""} this week.`);
+    if (V) {
+      const lbl = V.label, ev = E.evRank ? `${E.pos}${E.evRank}` : "";
+      const reason = E.shortGames.length ? "his production when healthy" : E.pt && E.pt.g >= 8 ? "his track record" : "an expected step up in role";
+      out.push({
+        Supported: `SPAM has him ${lbl}${V.tierName && !isTagTier(V.tier) ? ` (${V.tierName.replace(/^Tier \d+ · /, "")})` : ""}, and his usage and production back that up.`,
+        Aggressive: `SPAM has him ${lbl}, ahead of what he has shown so far (closer to ${ev} on production and usage); the ranking leans on ${reason}.`,
+        Conservative: `SPAM has him ${lbl}, but his role and production (closer to ${ev}) are running ahead of that ranking.`,
+        Uncertain: `SPAM has him ${lbl}; there isn't enough clean evidence yet to confirm or challenge that.`,
+        Out: `SPAM has him in its Out for season tier.` }[C.cls] || "");
+    }
+    if (M && C.market && C.market !== "near") out.push(`The market (FantasyCalc) has him ${M.pos}${M.posRank}, ${Math.abs(C.mGap)} spots ${C.mGap > 0 ? "below" : "above"} SPAM.`);
+    const lg = outlookLeagueNote(E);
+    if (lg) out.push(lg);
+    return out;
+  }
+  // The same facts, read for the format in use (never changes the facts themselves)
+  function outlookLeagueNote(E) {
+    if (!E.gp) return "";
+    const sc = scoringNow(), vl = valueLeague(), lu = vl ? lineupOf(vl) : { teams: 12, SUPER_FLEX: 1, QB: 1 };
+    const sf = lu.SUPER_FLEX > 0 || lu.QB >= 2, rec = Number(sc.rec || 0), tep = Number(sc.bonus_rec_te || 0);
+    if (E.pos === "RB" && rec >= 0.5 && E.tshare != null && E.tshare < 0.08 && E.gp >= 3) return `In ${rec >= 1 ? "full" : "half"} PPR his light receiving role caps his floor.`;
+    if (E.pos === "RB" && rec >= 0.5 && E.tshare >= 0.14) return `His receiving work counts extra in ${rec >= 1 ? "full" : "half"} PPR.`;
+    if (E.pos === "TE" && tep > 0 && E.tgtPg >= 6) return `TE premium makes his target volume worth more.`;
+    if (E.pos === "QB" && sf && E.rushPg >= 5) return `In superflex his rushing gives him a valuable weekly floor.`;
+    if (E.pos === "QB" && !sf && E.prodRank > 12) return `In 1QB leagues a QB outside the top 12 is mostly a bye-week fill-in.`;
+    if (lu.teams <= 10 && E.evRank > lu.teams * ({ RB: 2.5, WR: 3.5, TE: 1, QB: sf ? 2 : 1 }[E.pos] || 3)) return `In a ${lu.teams}-team league, depth like this is easy to replace.`;
+    return "";
+  }
+  // "Why SPAM ranks him here": from the evidence; says so when the evidence doesn't back the ranking
+  function outlookRankWhy(o) {
+    const { E, R, C, V } = o; if (!V || !C.cls) return "";
+    const good = R.tags.filter(t => t[1] === "pos").map(t => t[0].toLowerCase());
+    if (E.prodRank && E.prodRank <= ({ QB: 12, RB: 12, WR: 18, TE: 6 }[E.pos] || 12)) good.unshift(`${ordinal(E.prodRank)} in ${E.pos} scoring`);
+    const bad = R.tags.filter(t => t[1] === "neg").map(t => t[0].toLowerCase());
+    if (C.cls === "Supported" && good.length) return `Backed by: ${good.slice(0, 3).join(", ")}.`;
+    if (C.cls === "Conservative") return `The data points higher${good.length ? `: ${good.slice(0, 3).join(", ")}` : ""}.`;
+    if (C.cls === "Aggressive") return `Not yet backed by the data${bad.length ? `: ${bad.slice(0, 3).join(", ")}` : `: production and usage rank him around ${E.pos}${E.evRank}`}.`;
+    return "";
+  }
+  const DIR_ICON = { "Strongly positive": "↑↑", Positive: "↑", Stable: "→", Mixed: "↕", Negative: "↓", "Strongly negative": "↓↓" };
+  const dirCls = d => (!d ? "" : /positive/i.test(d) ? "pos" : /negative/i.test(d) ? "neg" : d === "Mixed" ? "mix" : "flat");
+  // Overview card: compact, readable in ~10 seconds; the evidence sits behind "Why this outlook?"
+  function outlookCard(info) {
+    if (!EDIT_POS.includes(info.pos)) return "";
+    loadMarket(); loadDepth();
+    const o = outlookFor(info.sid);
+    if (!o) return "";
+    const { E, R, M, V, C } = o, text = outlookText(o);
+    if (!text.length) return `<section class="olk"><div class="olk-head"><h3 class="section-label">Outlook</h3></div><p class="olk-text muted">Insufficient recent information for a confident outlook.</p></section>`;
+    const d = statsCache[STATS_SEASONS[0]], age = statsAgeH();
+    const rep = info.team ? injuryReport(info.team) : null;
+    const src = [["SPAM stats", "nflverse game stats, snap counts and play-by-play", d && d.updated]];
+    if (rep) src.push(["NFL injury report", `Week ${rep.week} report`, d && d.updated]);
+    if (E.depth) src.push(["Sleeper depth chart", "Sleeper's player database (documented API)", DEPTH && DEPTH.updated]);
+    if (M) src.push(["FantasyCalc", "Market values from completed trades · fantasycalc.com", M.updated]);
+    const external = src.length > 1;
+    const ranks = [V ? `SPAM ${esc(V.label)}` : "", M ? `<a href="https://www.fantasycalc.com" target="_blank" rel="noopener" title="FantasyCalc market value ${fmt(M.value)} (non-commercial use, credit FantasyCalc)">Market ${esc(M.pos)}${esc(String(M.posRank))}</a>` : ""].filter(Boolean).join(" · ");
+    const tags = R.tags.map(([t, k]) => `<span class="olk-tag ${k}">${esc(t)}</span>`).join("");
+    const why = outlookRankWhy(o);
+    const stale = age != null && age > 96;
+    return `<section class="olk ${dirCls(R.dir)}" aria-label="Player outlook">
+      <div class="olk-head"><h3 class="section-label">${external ? "Outlook" : "SPAM Data Outlook"}</h3>
+        ${R.dir ? `<span class="olk-dir ${dirCls(R.dir)}">${DIR_ICON[R.dir] || ""} ${esc(R.dir)}</span>` : ""}
+        ${R.conf ? `<span class="olk-conf" title="Confidence from games played, how fresh the data is, whether his production and usage agree, and injury certainty">${R.conf} confidence</span>` : ""}</div>
+      <p class="olk-text">${text.map(esc).join(" ")}</p>
+      ${ranks || tags ? `<div class="olk-meta">${ranks ? `<span class="olk-ranks">${ranks}</span>` : ""}${tags ? `<span class="olk-tags">${tags}</span>` : ""}</div>` : ""}
+      ${why ? `<p class="olk-rankwhy">${esc(why)}</p>` : ""}
+      <details class="olk-why"><summary>Why this outlook?</summary>${outlookWhy(o, rep)}</details>
+      <p class="olk-src">Sources: ${src.map(s => `<span title="${esc(s[1])}${s[2] ? " · " + esc(s[2]) : ""}">${esc(s[0])}</span>`).join(" · ")}${age != null ? ` · Updated ${agoText(age)}` : ""}${stale ? ` · <span class="olk-stale">data is stale</span>` : ""}</p>
+    </section>`;
+  }
+  // The evidence, in separate groups: what we observed, what was reported, how SPAM values him, what the market says
+  function outlookWhy(o, rep) {
+    const { info, E, M, V, C } = o, li = [];
+    const last3 = E.games.slice(-3);
+    const seq = (f, show) => last3.length >= 2 && last3.every(g => f(g) != null) ? last3.map(g => show(f(g))).join(" → ") : "";
+    const obs = [];
+    if (E.gp) {
+      if (E.pos !== "QB") { const s = seq(g => g.tgt_share, pc); if (s) obs.push(`Target share: ${s} (last ${last3.length} games)`); }
+      const sn = seq(g => g.snap, pc); if (sn) obs.push(`Snap share: ${sn}`);
+      const op = seq(OPP[E.pos], v => fp(v)); if (op) obs.push(`${E.pos === "QB" ? "Dropbacks + rushes" : E.pos === "RB" ? "Carries + targets" : "Targets"}: ${op}`);
+      if (E.prodRank) obs.push(`Production: ${fp(E.fullPpg ?? E.ppg)} PPG${E.fullPpg != null ? " in completed games" : ""}, ${E.pos}${E.prodRank} of ${E.n}`);
+      if (E.useRank) obs.push(`Usage: ${E.pos}${E.useRank} in ${E.pos === "QB" ? "attempts" : E.pos === "RB" ? "opportunities" : "targets"} per game`);
+      E.shortGames.forEach(g => obs.push(shortTip(g)));
+      if (E.rzPg != null && E.pos !== "QB") obs.push(`Red-zone opportunities: ${fp(E.rzPg)} a game${E.pos === "RB" && E.glPg != null ? ` · goal-line carries ${fp(E.glPg)}` : ""}`);
+    } else if (E.pt) obs.push(`No games this season; ${fp(E.pt.ppg)} PPG over ${E.pt.g} games last season`);
+    if (E.proj != null) obs.push(`SPAM projection (usage model): ${fp(E.proj)} PPG rest of season, site scoring`);
+    const reps = [];
+    if (E.inj) reps.push(`Injury report (Week ${rep ? rep.week : "?"}): ${[E.inj.status, E.inj.injury, PRACTICE_TEXT[E.inj.practice]].filter(Boolean).join(" · ")}`);
+    else if (rep) reps.push(`Not on his team's Week ${rep.week} injury report`);
+    if (E.depth) reps.push(`Sleeper depth chart: ${ordinal(E.depth.order)} at ${E.depth.slot}`);
+    const val = [];
+    if (V) {
+      val.push(`SPAM ${V.lv ? "league-adjusted " : ""}rank: #${V.overall} overall · ${V.label}${V.tierName ? " · " + V.tierName : ""} · value ${fmt(V.value)}`);
+      if (V.move) val.push(`Ranking move: ${E.pos}${V.move.from} → ${E.pos}${V.move.to} since ${new Date(V.move.since + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
+      if (C.cls) val.push(`Evidence vs ranking: ${{ Supported: "supports it", Aggressive: "SPAM is higher than the evidence", Conservative: "the evidence is stronger than the ranking", Uncertain: "not enough clean evidence yet", Out: "out for the season" }[C.cls]}${E.evRank && C.cls !== "Out" ? ` (evidence ≈ ${E.pos}${E.evRank})` : ""}`);
+    }
+    const mk = M ? [`FantasyCalc: ${M.pos}${M.posRank} · #${M.overall} overall · value ${fmt(M.value)}${M.trend ? ` · 30-day trend ${M.trend > 0 ? "+" : ""}${fmt(M.trend)}` : ""}`] : [];
+    const grp = (h, rows) => (rows.length ? `<div class="olk-g"><h4>${h}</h4><ul>${rows.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>` : "");
+    return grp("Observed", obs) + grp("Reports", reps) + grp("SPAM valuation", val) + grp("Market", mk)
+      + `<p class="pp-note">The outlook's direction and tags come only from observed data and reports; SPAM's ranking is compared against them afterwards and never changes them. No analyst news is used: no supported source allows it.</p>`;
+  }
+  // Editor audit: does the evidence (or the market) disagree with the ranking? Shown to signed-in editors (or ?debug)
+  // (a function declaration plus a var flag: the board's first render runs before this part of the script)
+  var OLK_READY = true;
+  function editorAudit() { return !!OLK_READY && (!!editor.token || /[?&]debug\b/.test(location.search)); }
+  function auditFlag(p) {
+    if (!editorAudit() || !p || !p.sleeperId || !EDIT_POS.includes(p.pos) || !statsCache[STATS_SEASONS[0]]) return "";
+    const o = outlookFor(p.sleeperId); if (!o) return "";
+    const { C, E, M } = o, f = [];
+    if (C.cls === "Conservative") f.push(`<span class="aud up" title="Outlook more bullish than SPAM rank: production and usage ≈ ${esc(E.pos)}${E.evRank}">Data ↑</span>`);
+    if (C.cls === "Aggressive") f.push(`<span class="aud down" title="Outlook more bearish than SPAM rank: production and usage ≈ ${esc(E.pos)}${E.evRank}">Data ↓</span>`);
+    if (C.market === "high" || C.market === "low") f.push(`<span class="aud mkt" title="SPAM ${C.market === "high" ? "much higher" : "much lower"} than the market (FantasyCalc ${esc(M.pos)}${M.posRank})">Mkt ${C.market === "high" ? "↓" : "↑"}</span>`);
+    return f.join("");
+  }
+  function auditMatch(p, f) {
+    if (!f || f === "all") return true;
+    if (!p.sleeperId || !EDIT_POS.includes(p.pos)) return false;
+    const o = outlookFor(p.sleeperId); if (!o) return false;
+    const { C, E } = o;
+    return f === "agree" ? C.cls === "Supported" : f === "bull" ? C.cls === "Conservative" : f === "bear" ? C.cls === "Aggressive"
+      : f === "mkthigh" ? C.market === "high" : f === "mktlow" ? C.market === "low"
+      : f === "role" ? (E.oppTrend != null && (E.oppTrend >= 1.25 || E.oppTrend <= 0.75)) || (E.snapTrend != null && (E.snapTrend >= 1.15 || E.snapTrend <= 0.85)) : true;
+  }
   const ratio = (a, b, d = 1) => (b > 0 ? (a / b).toFixed(d) : "–");
   const pct = (a, b) => (b > 0 ? (100 * a / b).toFixed(1) + "%" : "–");
   const fp = v => (v == null || !isFinite(v) ? "–" : (Math.round(v * 10) / 10).toFixed(1));
@@ -10347,6 +10699,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return `
       <div class="ov-week-mobile">${thisWeekCard(info, true)}</div>
       <div class="ov-cols"><div class="ov-main">
+      ${outlookCard(info)}
+      ${wks ? `<div class="wk-head"><h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><span class="wk-sum">Avg <b>${fp(wks.avg)}</b> · High <b>${fp(wks.hi)}</b> · Low <b>${fp(wks.lo)}</b>${wks.t.short ? `<span class="inj-note">${esc(ppgNote(wks.t))}</span>` : ""}</span></div>
+        <div class="chart-box wk-box" data-chart="0"></div>
+        <p class="wk-key" style="--wc: var(--${String(pos).toLowerCase()}, var(--cream))"><span class="wk-k act"></span>Final${wks.weeks.some(w => w.kind === "proj") ? `<span class="wk-k proj"></span>Projected` : ""}${wks.weeks.some(w => w.kind === "live") ? `<span class="wk-k live"></span>Live` : ""}<span class="wk-k avg"></span>Season avg${wks.t.short ? `<span class="wk-k-inj">+</span>Left early (injury)` : ""}</p>` : ""}
       <h3 class="section-label">${STATS_SEASONS[0]} season</h3>
       <div class="ov-grid">
         ${cell(`${STATS_SEASONS[0]} points`, t ? fp(t.pts) : "–", t ? `${t.g} game${t.g === 1 ? "" : "s"} · ${fp(t.ppg)} PPG${t.short ? `<span class="inj-note">${esc(ppgNote(t))}</span>` : ` · ${esc(activeData() ? "league scoring" : "site scoring")}`}` : "No games yet")}
@@ -10358,9 +10714,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
       ${projPPGOf(p) != null ? `<p class="pp-glance">SPAM projection: <b>${fp(projPPGOf(p))}</b> PPG rest of season (site scoring), from usage, results and team outlook.</p>` : ""}
-      ${wks ? `<div class="wk-head"><h3 class="section-label">${STATS_SEASONS[0]} weekly points</h3><span class="wk-sum">Avg <b>${fp(wks.avg)}</b> · High <b>${fp(wks.hi)}</b> · Low <b>${fp(wks.lo)}</b>${wks.t.short ? `<span class="inj-note">${esc(ppgNote(wks.t))}</span>` : ""}</span></div>
-        <div class="chart-box wk-box" data-chart="0"></div>
-        <p class="wk-key" style="--wc: var(--${String(pos).toLowerCase()}, var(--cream))"><span class="wk-k act"></span>Final${wks.weeks.some(w => w.kind === "proj") ? `<span class="wk-k proj"></span>Projected` : ""}${wks.weeks.some(w => w.kind === "live") ? `<span class="wk-k live"></span>Live` : ""}<span class="wk-k avg"></span>Season avg${wks.t.short ? `<span class="wk-k-inj">+</span>Left early (injury)` : ""}</p>` : ""}
       </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
   }
   // Last few committed ranking changes for this player (newest first)
@@ -10557,7 +10910,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (DEPTH) return;
     DEPTH = "loading";
     fetch("data/depth_charts.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : {})).catch(() => ({}))
-      .then(j => { DEPTH = j && j.teams ? j : {}; if (modalOpen() && PP.tab === "depth") renderPlayer(); });
+      .then(j => { DEPTH = j && j.teams ? j : {}; if (modalOpen() && (PP.tab === "depth" || PP.tab === "overview")) renderPlayer(); });
   }
   const DC_ROWS = [
     ["Offense", [["QB", "QB"], ["RB", "RB"], ["FB", "FB"], ["LWR", "WR · outside left"], ["RWR", "WR · outside right"], ["SWR", "WR · slot"], ["WR", "WR"], ["TE", "TE"]]],
@@ -10988,6 +11341,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ["usage", "Usage & Role", U[P] || U.MIX],
       ["eff", "Efficiency", E[P] || E.MIX],
       ["outlook", "Outlook", [
+        ["SPAM outlook", S => { const o = outlookFor(S.inf.sid); return o && o.R.dir ? o.R.dir : null; }, v => `${DIR_ICON[v] || ""} ${esc(v)}`, 0],
+        ["Main edge", S => { const o = outlookFor(S.inf.sid), t = o && o.R.tags.find(x => x[1] === "pos"); return t ? t[0] : null; }, v => esc(v), 0],
+        ["Main concern", S => { const o = outlookFor(S.inf.sid), t = o && o.R.tags.find(x => x[1] === "neg"); return t ? t[0] : null; }, v => esc(v), 0],
         ["Age", S => ageFrom(playerInfo(S.inf.sid).birth), v => v, 0],
         ["Tier", S => (S.inf.p && S.inf.p.tier ? tierLabel(S.inf.p.pos, S.inf.p.tier) : null), v => esc(v), 0],
         ["Rest-of-season projection", S => projPPGOf(S.inf.p), v => fp(v) + "<small> PPG</small>", 1, "proj"],
@@ -11883,7 +12239,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     throw new Error("the history file kept changing");
   }
-  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints };   // helpers for the scheduled snapshot and tests
+  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints,
+    outlook: sid => { const o = outlookFor(String(sid)); return o && { facts: { gp: o.E.gp, ppg: o.E.ppg, prodRank: o.E.prodRank, useRank: o.E.useRank, evRank: o.E.evRank, oppTrend: o.E.oppTrend },
+      dir: o.R.dir, tags: o.R.tags.map(t => t[0]), conf: o.R.conf, cls: o.C.cls, market: o.C.market, text: outlookText(o) }; } };   // helpers for the scheduled snapshot and tests
 
   // Start-up: restore a saved connection
   sl = readSl();
