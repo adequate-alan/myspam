@@ -1,14 +1,14 @@
 # SPAM Fantasy Rankings
 
-Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-premium, superflex redraft league. Rankings by Steven ([stevenp36](https://github.com/stevenp36)) and Alan; player values come from a model that blends those rankings with this season's usage and betting-market team outlooks.
+Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-premium, superflex redraft league. Rankings by Alan ([adequate-alan](https://github.com/adequate-alan)), starting from the board he built with Steven ([stevenp36](https://github.com/stevenp36)); player values come from a model that blends those rankings with this season's usage and betting-market team outlooks.
 
-**Live site:** https://spamfantasy.github.io/ (rankings: https://spamfantasy.github.io/#rankings)
+**Live site:** https://adequate-alan.github.io/myspam/ (rankings: https://adequate-alan.github.io/myspam/#rankings)
 
 **Working on the code (people or AI assistants):** start with [`CLAUDE.md`](CLAUDE.md), the project handoff: product rules, data flow, publishing, scheduled jobs and what must never be overwritten.
 
 ### Hosting and moving to a custom domain
-The site is one static `index.html` served by GitHub Pages from the `main` branch of `spamfantasy/spamfantasy.github.io` (moved from `stevenp36/spam` on Oct 4, 2026). Every asset, data file, script and link is a relative path (`data/…`, `favicon.svg`, `manifest.webmanifest`, `#rankings`), so the site works unchanged at the root of `spamfantasy.github.io`, under a path, or at the root of any domain. The public address appears in only two places, the `canonical` link and `og:url` in the page head. To move to a custom domain later:
-1. Buy the domain and point DNS at GitHub Pages (a `CNAME` record for `www` to `spamfantasy.github.io`, and/or `A` records for the apex as listed in GitHub's Pages docs).
+The site is one static `index.html` served by GitHub Pages from the `main` branch of `adequate-alan/myspam` (copied from `spamfantasy/spamfantasy.github.io` on Oct 8, 2026). Every asset, data file, script and link is a relative path (`data/…`, `favicon.svg`, `manifest.webmanifest`, `#rankings`), so the site works unchanged at `adequate-alan.github.io/myspam/`, at the root of a user site, or at the root of any domain. The public address appears in only two places, the `canonical` link and `og:url` in the page head. To move to a custom domain later:
+1. Buy the domain and point DNS at GitHub Pages (a `CNAME` record for `www` to `adequate-alan.github.io`, and/or `A` records for the apex as listed in GitHub's Pages docs).
 2. In the repo: Settings → Pages → Custom domain, enter it (GitHub adds a `CNAME` file to the repo), then tick **Enforce HTTPS** once it's offered.
 3. Update the `canonical` and `og:url` lines to the new address.
 Browser-saved data (league connection, theme, editor token and unpublished edits) is stored per web address, so visitors and editors start fresh on a new domain: publish any browser edits before switching.

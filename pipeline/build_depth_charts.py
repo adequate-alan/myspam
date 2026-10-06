@@ -22,7 +22,7 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join("..", "data", "depth_ch
 def fetch(url, tries=3):
     for k in range(tries):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "SPAM fantasy depth charts (github.com/spamfantasy)"})
+            req = urllib.request.Request(url, headers={"User-Agent": "SPAM fantasy depth charts (github.com/adequate-alan/myspam)"})
             with urllib.request.urlopen(req, timeout=90) as r:
                 return json.load(r)
         except Exception as e:  # network hiccup: retry, then give up without touching the old file

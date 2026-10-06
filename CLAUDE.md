@@ -2,23 +2,23 @@
 
 Read this file first. It's the context an AI assistant (or a new developer) needs to keep building SPAM without undoing decisions that were already made. `README.md` has the feature-by-feature reference; this file has the **why**, the **rules**, and the **workflow**.
 
-Owners: **Steven** (GitHub `stevenp36`) and **Alan** (GitHub `adequate-alan`), both collaborators on the repo, which belongs to the shared **`spamfantasy`** GitHub account (a personal account both can sign in to; only it can change repo settings, Pages, collaborators or transfers). Both edit the rankings; both may work on the code from their own Claude accounts. Keep this file current: when you make a product decision, add it here in the same commit.
+Owner: **Alan** (GitHub `adequate-alan`). This repo (`adequate-alan/myspam`) is Alan's own copy of SPAM, split off on Oct 8, 2026 from the shared `spamfantasy/spamfantasy.github.io` that Alan built with Steven (GitHub `stevenp36`); the two sites no longer share code, rankings or settings. Notes below marked "(Steven, …)" record decisions from the shared period and still apply here. Keep this file current: when you make a product decision, add it here in the same commit.
 
-**Git workflow (agreed Oct 3, 2026):** Steven (`stevenp36`) and Alan (`adequate-alan`) **both push straight to `main`**; there's no branch/PR step. Every push to `main` redeploys the live site, so: `git pull --rebase` right before you start and again right before you push, keep commits small and focused, test locally first, and never force-push. If a rebase conflicts in `index.html`, resolve it by keeping both people's changes; never resolve a `RANKINGS_CSV` conflict by taking one side wholesale (that can drop the other person's published ranking edits). Commit as yourself (git `user.name`/`user.email` set to your own GitHub account) so the history shows who changed what. **For Alan**, every session sets this automatically before committing: `git config user.name adequate-alan` and `git config user.email 54249725+adequate-alan@users.noreply.github.com` (GitHub noreply address; "Keep my email addresses private" is on, so use this, not a personal email). The `alan-dev` branch was only an access test and can be deleted.
+**Git workflow:** push straight to `main` (no branch/PR step). Every push redeploys the live site, so `git pull --rebase` before you start and before you push (the editor and the scheduled jobs commit to `main` too), keep commits small, test locally first, never force-push. Never resolve a `RANKINGS_CSV` conflict by taking one side wholesale (it can drop published ranking edits). Commit as Alan: `git config user.name adequate-alan` and `git config user.email 54249725+adequate-alan@users.noreply.github.com` (GitHub noreply address; "Keep my email addresses private" is on).
 
 ---
 
 ## 1. What SPAM is
 
 - **SPAM** is the product: fantasy football rankings, values and trade tools. Brand mark is the one-word wordmark **`SPAM.`** (the period is part of the logo: burgundy word + warm accent dot in light mode, cream word in dark mode). The old name was SPMetrics. Never bring that name back in the UI, metadata or copy.
-- Live site: **https://spamfantasy.github.io/** (rankings at `#rankings`). Repo: **`spamfantasy/spamfantasy.github.io`** (Oct 4, 2026: transferred from `stevenp36/spam` to the `spamfantasy` account and renamed so Pages serves it at the root; before that it was `spmetrics-fantasy`). GitHub redirects the old git URL, but **Pages URLs don't redirect**: `stevenp36.github.io/spam/` no longer serves the site. Never create a new `stevenp36/spam` repo (it would break GitHub's git redirect); a redirect page for the old URL would go in a `stevenp36/stevenp36.github.io` repo at `spam/index.html`. Browser-saved data (`spm_*`: leagues, edits, tokens, theme) is per web address, so everyone starts fresh on the new URL.
+- Live site: **https://adequate-alan.github.io/myspam/** (rankings at `#rankings`). Repo: **`adequate-alan/myspam`** (Oct 8, 2026: copied from `spamfantasy/spamfantasy.github.io`, history kept). The shared site at `spamfantasy.github.io` is separate and isn't this project's to change. Browser-saved data (`spm_*`: leagues, edits, tokens, theme) is per web address, so visitors start fresh here.
 - Base format: **12-team, Full PPR, Superflex, TE premium (+0.5), redraft.** That's what the SPAM Board means.
-- The **SPAM Board** (Steven & Alan's manual rankings, tiers and published values) is the **core source of truth**. Everything else (league-adjusted values, trade verdicts, power rankings, Trade Finder) is *derived* from it.
+- The **SPAM Board** (Alan's manual rankings, tiers and published values; it started from the board Steven and Alan built together) is the **core source of truth**. Everything else (league-adjusted values, trade verdicts, power rankings, Trade Finder) is *derived* from it.
 
 ## 2. Product rules that must not be undone
 
 1. **The base SPAM Board is never overwritten by derived calculations.** League-adjusted values, custom formats, Sleeper data, stats refreshes and projections are separate layers computed in the browser. They must never write back into `RANKINGS_CSV` or change rank/tier/value for anyone.
-2. **Manual rankings are locked.** Players with `source=manual` keep the order, tiers and values Steven/Alan set. Automatic processes (projections, Auto players, the weekly job) must never reorder them or push them down.
+2. **Manual rankings are locked.** Players with `source=manual` keep the order, tiers and values Alan set. Automatic processes (projections, Auto players, the weekly job) must never reorder them or push them down.
 3. **Auto players sit underneath.** `source=auto` players (70 added Oct 2, 2026) are ranked below every manual player (overall #184+), valued with a gentle tail that never exceeds anyone ranked above them. Moving, re-tiering or re-valuing an Auto player in the editor and saving makes him Manual. Players who only shift because someone else moved stay Auto.
 4. **Typed values set the board's level** (Alan, Oct 5; `calibrateToAnchors`): each typed value is compared with the model value of his slot, and that ratio bends the model curve smoothly (interpolated between typed players by rank; above the first, its ratio with #1 capped at 10,000; below the last, it fades to 1 over `VALUE_MODEL.anchorFade` = 25 ranks), so players next to a typed value sit just around it instead of a cliff (Oct 5: Chase was 16% under Lamar's 7,786). `applyTiers` no longer rescales the board so the top model player is 10,000 (that made every value depend on who shared RB tier 1 with Gibbs). A far-off typed value lifts or lowers its whole stretch, so keep them in line (the editor warns).
 5. **Values follow the overall rank (decided by Alan, Oct 3, 2026).** On the SPAM Board no player is ever valued above someone ranked ahead of him. `keepOverallOrder` enforces it over the whole board (Auto tail included) by adjusting values, never ranks. **No two players share a value** (Alan, Oct 4; 94 players were tied, e.g. six at 2,263 and nine at 1,021 around Croskey-Merritt's published value): each model value is at least `VALUE_MODEL.minRankStep` (0.25%) below the one ranked ahead, found as the closest fit to the tier values (pool-adjacent-violators on log(value + 200) − i·log(1 − step), so a tied run spreads both ways instead of sinking); values under 400 at the bottom step by whole points; only players at 0 can tie. Published values are fixed anchors: the model values between two of them stay strictly between them, with a smaller step if the stretch is too crowded. (This replaced the 2% `overallMaxShift` cap and then a pooled 0.5% step that still left ties.)
@@ -29,7 +29,7 @@ Owners: **Steven** (GitHub `stevenp36`) and **Alan** (GitHub `adequate-alan`), b
 9. **Historical honesty in Trade History.** A trade is "Historical SPAM values" only if every player had a SPAM value on or before the trade date. Trades before SPAM existed are labeled **Pre-SPAM trade** and judged as a retrospective with today's values. Never present today's values as what a player was worth back then.
 10. **Stats never change rankings.** Stats refreshes update game logs and fantasy points only.
 11. **Design consistency.** Use the theme tokens; no default browser controls (selects, checkboxes, dialogs). No Patreon button or styling. Labels are sentence-case in copy, uppercase with letter spacing for small labels.
-12. **The website is the master source of truth for rankings** (from Alan). Don't sync the Excel file unless Alan or Steven asks.
+12. **The website is the master source of truth for rankings** (from Alan). Don't sync the Excel file unless Alan asks.
 13. **Keep the layers separate** (from Alan). Don't overwrite manual rankings or published values, don't let stats or projection updates change rankings, and keep league calculations derived from the base board.
 14. **Stay in scope** (from Alan). Don't change unrelated parts of the site when doing a specific feature. Preserve the SPAM branding and design system.
 15. **Don't rename the `spm_` localStorage keys** (from Alan). Renaming them would wipe visitors' saved leagues, edits and tokens.
@@ -40,7 +40,7 @@ Owners: **Steven** (GitHub `stevenp36`) and **Alan** (GitHub `adequate-alan`), b
 It's a static site: **one HTML file** plus JSON data. No build step, no framework, no npm.
 
 ```bash
-git clone https://github.com/spamfantasy/spamfantasy.github.io.git && cd spamfantasy.github.io
+git clone https://github.com/adequate-alan/myspam.git && cd myspam
 python3 -m http.server 8000          # then open http://localhost:8000/
 ```
 
@@ -138,8 +138,7 @@ Inside `index.html` (search for these names):
 ## 6. Publishing (rankings) and deploying (code)
 
 **Rankings edits** (no code): in the site's editor (currently open to every visitor, temporarily), make changes → **Save changes**. If that browser has a GitHub token, Save publishes immediately; otherwise click **Publish to live site** once and paste a token:
-- **Steven and Alan** (collaborators on a repo owned by the `spamfantasy` personal account): fine-grained tokens can't reach repos owned by another personal account, so each uses a **classic** token with the **`repo`** scope (`public_repo` is enough for publishing; `repo` is needed to start the stats workflow). Old fine-grained tokens for `stevenp36/spam` stopped working with the transfer.
-- Signed in as **`spamfantasy`** (the owner), a *fine-grained* token for this repo with **Contents: Read and write** (+ **Actions: Read and write** for Refresh stats) also works.
+- Alan (repo owner): a *fine-grained* token for `adequate-alan/myspam` with **Contents: Read and write** (+ **Actions: Read and write** for the Refresh stats button), or a classic token with the `repo` scope. Tokens made for the shared `spamfantasy` repo don't work here (and shouldn't: this copy must never publish there; `SITE.repo` points here).
 - Tokens live only in that browser's `localStorage` (`spm_editor_token`). **Never put a token in the code or the repo.**
 
 **Code changes**: commit to `main` and push. The `push` trigger in `site.yml` deploys the repo root to GitHub Pages in ~1 minute. **Bump `BUILD_ID`** (top of the main script) in every code change so open browsers get the "new version" prompt. Rankings publishes from the editor don't need it.
@@ -156,7 +155,6 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
   - Leave `proj_*` and `sleeper_id` alone (pipeline-owned).
 - After resolving any `RANKINGS_CSV` merge or rebase conflict, check that ranks still run 1–N with no duplicates or gaps and that every Auto player is below every Manual player. Verify by parsing the CSV, not by eye.
 - After a model change, verify manual players' values are unchanged (or changed only as intended) in the base format and a few `?fmt=` formats.
-- Don't put the draft rankings of one person into the board without saying so: the board is Steven & Alan's combined ranking.
 - Ranking History records committed changes (Save/Publish), one entry per changed player, plus scheduled snapshots. Same-day separate publishes are separate entries; unchanged players get no duplicate. Tier changes are included.
 
 ## 8. Scheduled jobs and data updates (`.github/workflows/site.yml`)
@@ -306,7 +304,7 @@ Both owners push straight to `main` (see the workflow note at the top). Before p
 - **Known issues, not yet fixed (found in an Oct 3 code review):**
   - The README is stale: it says stats refresh weekly only (game-day runs exist), and its token section only mentions fine-grained tokens.
   - The scheduled workflow runs `git push` without pulling first. If someone publishes during the Tuesday job, the job's push is rejected and that run's deploy fails.
-  - `mergeInto` merges rank columns per row. If Steven and Alan publish overlapping rank moves from stale pages, the board could end up with duplicate ranks. The 409 retry only catches a changed file.
+  - `mergeInto` merges rank columns per row. If two browsers publish overlapping rank moves from stale pages, the board could end up with duplicate ranks. The 409 retry only catches a changed file.
   - The weekly projection refresh changes values for all model-valued players (all but the 4 with published values). Ranks and tiers stay fixed. This is by design.
   - The `trade-boost-preview` and `alan-dev` branches are already merged or were only tests. Either can be deleted.
 

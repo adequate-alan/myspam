@@ -25,7 +25,7 @@ def fetch(q, t, src=None):
     if src:   # tests: a local JSON file per format
         with open(src.format(q=q, t=t)) as f:
             return json.load(f)
-    req = urllib.request.Request(URL.format(q=q, t=t), headers={"User-Agent": "SPAM fantasy rankings (spamfantasy.github.io)"})
+    req = urllib.request.Request(URL.format(q=q, t=t), headers={"User-Agent": "SPAM fantasy rankings (adequate-alan.github.io/myspam)"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.load(r)
 
