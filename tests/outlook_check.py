@@ -12,8 +12,10 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/outlook_check.
    synthetic file (never real data) "Market WRn" appears with a FantasyCalc link and source.
 5. League interpretation: a TE premium note appears only with TE premium; the facts sentence is the same.
 6. Failure states: a ranked player with no games in either season gets "Insufficient recent information".
-7. Editor audit: hidden for visitors; with ?debug the Audit filter and "Data ↑/↓" flags appear, and "Outlook more bearish
-   than ranking" lists only players the evidence ranks well below SPAM.
+7. Editor audit: hidden for visitors; with ?debug the Audit filter appears (no flags on board rows, Alan, Oct 7), and
+   "Outlook more bearish than ranking" lists only players the evidence ranks well below SPAM.
+9. Layout: at the drawer's minimum width every card is one vertical column (no narrow text columns, nothing past the card
+   edge), at most 3 tags, short text, ranking detail only inside "Why this outlook?".
 8. Compare shows concise outlook rows. No page errors.
 """
 import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
@@ -102,9 +104,10 @@ with sync_playwright() as p:
     ok("Updated" in txt and "SPAM stats" in txt and "FantasyCalc" not in txt and "Market" not in txt, "Sources + freshness; no market claims without market data")
     card.locator("summary").click(); pg.wait_for_timeout(200)
     heads = card.locator(".olk-g h4").all_inner_texts()
-    ok(heads[:1] == ["OBSERVED"] or heads[:1] == ["Observed"], f"Why this outlook? groups: {heads}")
+    ok([h.lower() for h in heads[:2]] == ["ranking check", "observed"], f"Why this outlook? groups: {heads}")
     ok(any(h.lower() == "spam valuation" for h in heads), "SPAM valuation is its own group")
-    ok(len(card.locator(".olk-tag").all()) <= 4, "At most 4 tags")
+    ok(len(card.locator(".olk-tag").all()) <= 3, "At most 3 tags on the card")
+    ok(any(h.lower() == "ranking check" for h in heads), "Ranking detail sits in Why this outlook? (Ranking check)")
     pg.close()
 
     # 3. injury context
@@ -116,9 +119,10 @@ with sync_playwright() as p:
 
     # 4. market
     pg = page(market=True); pg.wait_for_timeout(800)
+    pg.locator("#player-modal .olk summary").click(); pg.wait_for_timeout(200)
     txt = pg.locator("#player-modal .olk").inner_text()
-    ok(re.search(r"Market WR\d+", txt) and "FantasyCalc" in txt and pg.locator("#player-modal .olk a[href*='fantasycalc']").count() >= 1,
-       "With market data: Market WRn, FantasyCalc source and link")
+    ok(re.search(r"Market: WR\d+", txt) and "FantasyCalc" in txt and pg.locator("#player-modal .olk a[href*='fantasycalc']").count() >= 1,
+       "With market data: Market WRn in Why this outlook?, FantasyCalc source and link")
     mo = olk(pg, CHASE)
     ok(mo["market"] in ("high", "low", "near"), f"Market comparison kept separate from the evidence check ({mo['market']})")
     pg.close()
@@ -145,7 +149,7 @@ with sync_playwright() as p:
 
     # 7. editor audit
     pg = page("?debug=1"); pg.keyboard.press("Escape"); pg.wait_for_timeout(1500)
-    ok(pg.locator("#rk-audit-wrap").is_visible() and pg.locator("#rank-body .aud").count() > 0, f"?debug: Audit filter and {pg.locator('#rank-body .aud').count()} flags")
+    ok(pg.locator("#rk-audit-wrap").is_visible() and pg.locator("#rank-body .aud").count() == 0, "?debug: Audit filter, no flags on the board rows")
     pg.evaluate("() => { const s = document.getElementById('rk-audit'); s.value = 'bear'; s.dispatchEvent(new Event('change')); }"); pg.wait_for_timeout(500)
     sids = pg.evaluate("() => [...document.querySelectorAll('#rank-body tr.player')].map(tr => tr.querySelector('[data-player]').dataset.player)")
     clss = {pg.evaluate(f"() => SPM.outlook('{s}').cls") for s in sids}
@@ -158,6 +162,26 @@ with sync_playwright() as p:
     pg.fill("#pm-pick", "Bijan"); pg.wait_for_timeout(300)
     pg.locator("[data-pm-pick]").first.click(); pg.wait_for_timeout(800)
     ok("spam outlook" in pg.locator("#player-modal").inner_text().lower(), "Compare shows the outlook rows")
+    pg.close()
+    # 9. layout at the drawer's minimum width, every ranked player
+    pg = br.new_page(viewport={"width": 800, "height": 1000})
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com))/.*"), lambda r: r.abort())
+    pg.goto(f"http://127.0.0.1:{port}/#rankings"); pg.wait_for_selector("#rank-body tr.player")
+    pg.evaluate("Promise.all([2026, 2025].map(y => fetch('data/stats/' + y + '.json')))")
+    sids = pg.evaluate("() => [...new Set([...document.querySelectorAll('#rank-body tr.player [data-player]')].map(e => e.dataset.player))]")
+    bad, n, longest = [], 0, 0
+    for i, s in enumerate(sids):
+        pg.evaluate(f"document.querySelector('#rank-body [data-player=\"{s}\"]').click()"); pg.wait_for_timeout(1500 if i == 0 else 200)
+        r = pg.evaluate("""() => { const c = document.querySelector('#player-modal .olk'); if (!c) return null;
+          const cw = c.clientWidth, R = c.getBoundingClientRect().right, t = c.querySelector('.olk-text');
+          return { w: cw, narrow: [...c.children].filter(k => !k.matches('.olk-more') && k.getBoundingClientRect().width < cw * 0.8).length,
+            over: [...c.querySelectorAll('*')].filter(e => e.getBoundingClientRect().right > R + 1).length, h: c.offsetHeight,
+            words: t ? t.textContent.split(/\s+/).length : 0, tags: c.querySelectorAll('.olk-tag').length,
+            ranks: /production|market/i.test(t ? t.textContent : '') && /\b(WR|RB|QB|TE)\d+.*\b(WR|RB|QB|TE)\d+/.test(t ? t.textContent : '') }; }""")
+        if not r: continue
+        n += 1; longest = max(longest, r["words"])
+        if r["narrow"] or r["over"] or r["h"] > 320 or r["words"] > 85 or r["tags"] > 3 or r["ranks"]: bad.append((s, r))
+    ok(n > 200 and not bad, f"{n} cards at the 440px drawer: one column, nothing overflows, ≤320px tall, ≤3 tags, ≤85 words (longest {longest}) {bad[:3]}")
     pg.close()
     ok(not errs, f"No page errors {errs[:3]}")
 
