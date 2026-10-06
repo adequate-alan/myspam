@@ -10,7 +10,7 @@ Owner: **Alan** (GitHub `adequate-alan`). This repo (`adequate-alan/myspam`) is 
 
 ## 1. What SPAM is
 
-- **SPAM** is the product: fantasy football rankings, values and trade tools. Brand mark is the one-word wordmark **`SPAM.`** (the period is part of the logo: burgundy word + warm accent dot in light mode, cream word in dark mode). The old name was SPMetrics. Never bring that name back in the UI, metadata or copy.
+- **AM** is the product (renamed from SPAM on Oct 8, 2026, Alan): fantasy football rankings, values and trade tools. Brand mark is the one-word wordmark **`AM.`** (the period is part of the logo: the word plus a gold accent dot). Every visible "SPAM" became "AM" (AM Board, AM value, AM PR, Pre-AM trade…); code names (`spamRk`, `preSpam`, the `spam` sort key) and the `spm_` localStorage keys stay as they are (§2.15). Older names SPAM and SPMetrics never come back in the UI. Elsewhere in this file "SPAM" means AM: the notes are kept as written.
 - Live site: **https://adequate-alan.github.io/myspam/** (rankings at `#rankings`). Repo: **`adequate-alan/myspam`** (Oct 8, 2026: copied from `spamfantasy/spamfantasy.github.io`, history kept). The shared site at `spamfantasy.github.io` is separate and isn't this project's to change. Browser-saved data (`spm_*`: leagues, edits, tokens, theme) is per web address, so visitors start fresh here.
 - Base format: **12-team, Full PPR, Superflex, TE premium (+0.5), redraft.** That's what the SPAM Board means.
 - The **SPAM Board** (Alan's manual rankings, tiers and published values; it started from the board Steven and Alan built together) is the **core source of truth**. Everything else (league-adjusted values, trade verdicts, power rankings, Trade Finder) is *derived* from it.
@@ -276,9 +276,10 @@ Code changes go straight to `main` (see the workflow note at the top). Before pu
   - Always uses league-adjusted values.
   - **Trade goal** (Alan, Oct 4): Fair / balanced (default: the classic search within Max value difference, either way) · Slight edge for me (3–10% adjusted edge for the starting team) · Best value for me (8–15%) · Any (within max(gap, 15%)). The edge goals never just sort by the biggest gap: every idea must pass `plausibleForThem` (the other team gets a new starter, a better position rank or a better lineup; its starting lineup drops ≤4.5% / ≤3%; its best player only goes out for a real starter back; a starter out never for bench pieces only; its roster-adjusted value ≥ −10% / ≥ −8%) and is ranked by both teams' roster-adjusted value. Labels: "Slight edge to you + good fit for both / makes sense for them", "Good value for you + still makes sense for them"; never "steal". Max value difference and Fair only are disabled while an edge goal is on.
 - **Main nav:** Rankings · My Team · League · Trade Finder · Trade Calculator. The Waiver Wire table lives in `#fa-wrap` inside the League panel (shown when `LT.sub === "waivers"`); its rows have no owner line (they're all available), just the availability line.
-- **Themes:**
-  - Light: cream `#F7F2EB`, burgundy `#5A1F32`, coral `#D96B5B`, peach `#F0B18A`, ink `#2E2A28`.
-  - Dark: near-black `#1A1314`, burgundy surfaces, cream `#F3EDE4`, gold `#F4B979`.
+- **Themes (Gen.G-style gold, black and white; Alan, Oct 8):**
+  - Dark (default): black `#000000` page, charcoal `#171717` cards, `#2B2B2B` borders, white text, secondary text `#BDBDBD`, primary gold `#AA8A00` (buttons, active tabs, selection), light gold `#D6B94C` (hover, tier names, your team), dark gold `#7A6400` (editor and selected surfaces).
+  - Light: white page, light gray `#F2F2F2` cards, `#D9D9D9` borders, black text, dark gold `#7A6400` for actions (contrast on white).
+  - Negative/destructive states (fallers, "them" verdicts, danger buttons) stay a muted red, so up and down never share a color. Position badge colors are unchanged.
   - All colors come from tokens at the top of the CSS.
   - Archivo typography.
   - Custom dropdowns, checkboxes and radios; no native controls.

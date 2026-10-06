@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1A1314" id="theme-color">
+<meta name="theme-color" content="#000000" id="theme-color">
 <meta http-equiv="Cache-Control" content="no-cache">
 <script>
   /* Theme before first paint: saved choice (spm_theme), else the device setting, else dark */
@@ -12,23 +12,23 @@
     try { t = localStorage.getItem("spm_theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", t);
-    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F7F2EB" : "#1A1314";
+    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#FFFFFF" : "#000000";
   })();
 </script>
-<meta name="description" content="SPAM fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
-<meta name="application-name" content="SPAM">
-<meta name="apple-mobile-web-app-title" content="SPAM">
+<meta name="description" content="AM fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
+<meta name="application-name" content="AM">
+<meta name="apple-mobile-web-app-title" content="AM">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="SPAM">
-<meta property="og:title" content="SPAM Fantasy Rankings">
-<meta property="og:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football. Connect Sleeper, ESPN or Yahoo, or pick your league settings.">
+<meta property="og:site_name" content="AM">
+<meta property="og:title" content="AM Fantasy Rankings">
+<meta property="og:description" content="AM Rankings, AM Values and a trade calculator for redraft fantasy football. Connect Sleeper, ESPN or Yahoo, or pick your league settings.">
 <!-- The site's public address lives only here (canonical + og:url); every asset and link below is relative,
      so moving to a custom domain later only means a CNAME file and these two lines. -->
 <link rel="canonical" href="https://adequate-alan.github.io/myspam/">
 <meta property="og:url" content="https://adequate-alan.github.io/myspam/">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="SPAM Fantasy Rankings">
-<meta name="twitter:description" content="SPAM Rankings, SPAM Values and a trade calculator for redraft fantasy football.">
+<meta name="twitter:title" content="AM Fantasy Rankings">
+<meta name="twitter:description" content="AM Rankings, AM Values and a trade calculator for redraft fantasy football.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
@@ -38,7 +38,7 @@
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>SPAM Fantasy Rankings</title>
+<title>AM Fantasy Rankings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Inter:wght@400..800&display=swap">
@@ -48,10 +48,10 @@
    SITE SETTINGS
    ===================================================================== */
 const SITE = {
-  name: "SPAM",
+  name: "AM",
   tagline: "Fantasy Football Rankings",
   updated: "Oct 1, 2026",
-  author: "SPAM",
+  author: "AM",
   repo: "adequate-alan/myspam", // editors need write access to this GitHub repo
   sampleData: false,          // set to true to show the work-in-progress banner
   sampleNote: ""
@@ -475,7 +475,7 @@ const PACKAGE_POWER = 1.0;
    position in the trade (on either side) counts as NEED_MULTIPLIERS[level - 1] x his value,
    so a position you need helps whichever side receives it, and a position you're set at
    counts for less. Level 3 (average) changes nothing. Applied after the waiver adjustment. */
-/* Team-specific value (league mode). A player's SPAM Value never changes, but what he is worth
+/* Team-specific value (league mode). A player's AM Value never changes, but what he is worth
    TO A ROSTER depends on whether he'd start there. Incoming players are multiplied by the factor
    for their role in the new lineup; outgoing players by what losing them costs. Capped 0.60-1.10. */
 const TEAM_FIT = {
@@ -693,8 +693,8 @@ const TRADE_VERDICTS = [
 </script>
 
 <style>
-/* Layout: sports-desk ranking board — tight masthead with bold wide wordmark, open board on warm charcoal,
-   compact burgundy editor toolbar; gold = action/selection, burgundy = editing/destructive, position colors on badges and bars only */
+/* Layout: sports-desk ranking board — tight masthead with bold wide wordmark, open board on black/charcoal
+   (Gen.G-style gold, black and white, Alan Oct 8); gold = action/selection, muted red = negative/destructive, position colors on badges and bars only */
 /* ---------- Theme tokens ----------
    One set of tokens drives every page, table, card, dialog, dropdown, chart and the editor.
    Dark is the default; [data-theme="light"] on <html> swaps the values (header toggle, saved in
@@ -702,54 +702,54 @@ const TRADE_VERDICTS = [
    aliases of these tokens, so every rule follows the active theme. */
 :root, :root[data-theme="dark"] {
   /* surfaces */
-  --page-bg: #1B1615;            /* near-black warm page */
-  --nav-bg: #1E1918;             /* header */
-  --surface-bg: #211D1C;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
-  --surface-raised: #2A141D;     /* modals, dropdowns, menus, elevated sections */
-  --table-head: #2A2524;
-  --row-hover: #2E1E24;
-  --tier-row: #2A1820;           /* tier divider rows inside tables */
-  --control-bg: #1E1919;         /* inputs, selects, buttons */
-  --track: #352D2D;              /* value bars, slider tracks */
+  --page-bg: #000000;            /* near-black warm page */
+  --nav-bg: #0A0A0A;             /* header */
+  --surface-bg: #171717;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
+  --surface-raised: #1F1F1F;     /* modals, dropdowns, menus, elevated sections */
+  --table-head: #202020;
+  --row-hover: #242014;
+  --tier-row: #1C1A12;           /* tier divider rows inside tables */
+  --control-bg: #121212;         /* inputs, selects, buttons */
+  --track: #2B2B2B;              /* value bars, slider tracks */
   /* text */
-  --text-primary: #F3EDE4;
-  --text-strong: #F3EDE4;        /* names, numbers, emphasis */
-  --text-secondary: #CDBFB7;
-  --text-muted: #AE9C98;
-  --text-rank: #E2D5CC;
-  --heading: #F3EDE4;            /* page and dialog titles */
+  --text-primary: #FFFFFF;
+  --text-strong: #FFFFFF;        /* names, numbers, emphasis */
+  --text-secondary: #BDBDBD;
+  --text-muted: #9A9A9A;
+  --text-rank: #D9D9D9;
+  --heading: #FFFFFF;            /* page and dialog titles */
   /* lines */
-  --border: #3A3030;
-  --border-soft: #2C2525;
-  --border-strong: #5C4A4C;
+  --border: #2B2B2B;
+  --border-soft: #212121;
+  --border-strong: #4A4A4A;
   /* brand + accents */
-  --brand: #F3EDE4;
-  --brand-accent: #F4B979;
-  --accent-primary: #F4B979;     /* CTAs, active tabs, selected states */
-  --accent-hover: #F8CA96;
-  --accent-text: #1A1314;        /* text on the accent */
-  --accent-secondary: #C66F7E;   /* muted rose */
-  --accent-secondary-text: #EDBAC3;
-  --burgundy-1: #7A2E43;
-  --burgundy-2-t: #8E3851;
-  --coral: #E07B61;
-  --peach: #F4B979;
+  --brand: #FFFFFF;
+  --brand-accent: #AA8A00;
+  --accent-primary: #AA8A00;     /* CTAs, active tabs, selected states */
+  --accent-hover: #D6B94C;
+  --accent-text: #000000;        /* text on the accent */
+  --accent-secondary: #C9595A;   /* muted rose */
+  --accent-secondary-text: #E8A3A3;
+  --burgundy-1: #7A6400;
+  --burgundy-2-t: #AA8A00;
+  --coral: #D6B94C;
+  --peach: #D6B94C;
   /* interaction */
-  --hover-bg: #331C25;
+  --hover-bg: #262212;
   --active-bg: color-mix(in srgb, var(--accent-primary) 14%, transparent);
   --btn-bg: var(--control-bg);
-  --btn-text: #F3EDE4;
-  --btn-hover-bg: #331C25;
-  --danger-bg: #7A2E43;
-  --danger-hover: #8E3851;
-  --danger-text: #F4CBD2;
-  --selection-bg: #7A2E43;
-  --selection-text: #F3EDE4;
+  --btn-text: #FFFFFF;
+  --btn-hover-bg: #262212;
+  --danger-bg: #6B1F1F;
+  --danger-hover: #842828;
+  --danger-text: #F2C4C4;
+  --selection-bg: #7A6400;
+  --selection-text: #FFFFFF;
   /* editor */
-  --editor-panel: #2E1520;
-  --editor-border: #5A2A3B;
-  --custom-panel: #3A1A26;
-  --custom-border: #6A3045;
+  --editor-panel: #1A170C;
+  --editor-border: #4A3E0A;
+  --custom-panel: #211C0A;
+  --custom-border: #6B5A12;
   /* positions (kept recognizable, tuned to read on the burgundy surface) */
   --pos-qb: #E8978A;   /* soft coral on a wine tint */
   --pos-rb: #5CCB98;   /* emerald on a forest tint */
@@ -758,61 +758,61 @@ const TRADE_VERDICTS = [
   --pos-flex: #DDB06A; /* muted amber */
   --pos-sf: #E08FB0;   /* muted rose */
   --pos-pick: #A08D8F; /* bench / IR / picks: neutral */
-  --badge-base: #151012;
+  --badge-base: #0D0D0D;
   /* depth */
-  --shadow-color: rgba(8, 3, 5, 0.85);
-  --shadow-soft: rgba(8, 3, 5, 0.6);
-  --backdrop: rgba(12, 6, 8, 0.72);
-  --hero-tint: color-mix(in srgb, #7A2E43 28%, #221C1C);
+  --shadow-color: rgba(0, 0, 0, 0.85);
+  --shadow-soft: rgba(0, 0, 0, 0.6);
+  --backdrop: rgba(0, 0, 0, 0.75);
+  --hero-tint: color-mix(in srgb, #AA8A00 16%, #171717);
   --theme-scheme: dark;
-  --tier-line: #56303D;
-  --tier-text: #F4B979;
-  --disabled-bg: #2A2524;
-  --disabled-text: #968884;
-  --disabled-border: #3A3231;
+  --tier-line: #3A3214;
+  --tier-text: #D6B94C;
+  --disabled-bg: #1C1C1C;
+  --disabled-text: #7A7A7A;
+  --disabled-border: #2B2B2B;
 }
 :root[data-theme="light"] {
-  --page-bg: #F7F2EB;            /* warm cream */
-  --nav-bg: #F7F2EB;
-  --surface-bg: #EDE3D6;         /* cards and tables: a clear step darker than the page (never white) */
-  --surface-raised: #F6F0E8;     /* modals, dropdowns */
-  --table-head: #E4D8CA;
-  --row-hover: #EBDDD5;
-  --tier-row: #EEE3D8;
-  --control-bg: #FAF6F0;
-  --track: #E2D6CA;
-  --text-primary: #2E2A28;
-  --text-strong: #2E2A28;
-  --text-secondary: #5E544F;
-  --text-muted: #6A5D55;
-  --text-rank: #4A403C;
-  --heading: #5A1F32;
-  --border: #DED2C6;
-  --border-soft: #E6DCD1;
-  --border-strong: #C6B4A6;
-  --brand: #5A1F32;
-  --brand-accent: #D96B5B;
-  --accent-primary: #5A1F32;     /* burgundy: buttons, active states, emphasis */
-  --accent-hover: #7A3A4A;
-  --accent-text: #F7F2EB;
-  --accent-secondary: #A33F2E;   /* coral, used sparingly */
-  --accent-secondary-text: #A33F2E;
-  --burgundy-1: #5A1F32;
-  --burgundy-2-t: #7A3A4A;
-  --coral: #D96B5B;
-  --peach: #F0B18A;
-  --hover-bg: #E8DCCF;
-  --btn-text: #2E2A28;
-  --btn-hover-bg: #EDE3D8;
-  --danger-bg: #F5E0DA;
-  --danger-hover: #EFCFC6;
-  --danger-text: #A33F2E;
-  --selection-bg: #F0B18A;
-  --selection-text: #2E2A28;
-  --editor-panel: #F1E2DC;
-  --editor-border: #E6CBC4;
-  --custom-panel: #F3DED8;
-  --custom-border: #E7C3BB;
+  --page-bg: #FFFFFF;            /* warm cream */
+  --nav-bg: #FFFFFF;
+  --surface-bg: #F2F2F2;         /* cards and tables: a clear step darker than the page (never white) */
+  --surface-raised: #FFFFFF;     /* modals, dropdowns */
+  --table-head: #E6E6E6;
+  --row-hover: #F5F0DC;
+  --tier-row: #F3EEDA;
+  --control-bg: #FFFFFF;
+  --track: #D9D9D9;
+  --text-primary: #000000;
+  --text-strong: #000000;
+  --text-secondary: #3D3D3D;
+  --text-muted: #5E5E5E;
+  --text-rank: #2B2B2B;
+  --heading: #000000;
+  --border: #D9D9D9;
+  --border-soft: #E6E6E6;
+  --border-strong: #BDBDBD;
+  --brand: #000000;
+  --brand-accent: #AA8A00;
+  --accent-primary: #7A6400;     /* burgundy: buttons, active states, emphasis */
+  --accent-hover: #AA8A00;
+  --accent-text: #FFFFFF;
+  --accent-secondary: #A33A3A;   /* coral, used sparingly */
+  --accent-secondary-text: #9B2C2C;
+  --burgundy-1: #171717;
+  --burgundy-2-t: #2B2B2B;
+  --coral: #AA8A00;
+  --peach: #D6B94C;
+  --hover-bg: #EFEADA;
+  --btn-text: #000000;
+  --btn-hover-bg: #EFEADA;
+  --danger-bg: #F6DEDE;
+  --danger-hover: #EFCACA;
+  --danger-text: #9B2C2C;
+  --selection-bg: #D6B94C;
+  --selection-text: #000000;
+  --editor-panel: #F7F2DF;
+  --editor-border: #E3D59E;
+  --custom-panel: #F5EDCF;
+  --custom-border: #D6C27A;
   --pos-qb: #A4483E;
   --pos-rb: #1D7150;
   --pos-wr: #33608F;
@@ -820,17 +820,17 @@ const TRADE_VERDICTS = [
   --pos-flex: #8F6417;
   --pos-sf: #A1456E;
   --pos-pick: #8A7D76;
-  --badge-base: #FFFDF9;
-  --shadow-color: rgba(90, 31, 50, 0.16);
-  --shadow-soft: rgba(90, 31, 50, 0.10);
-  --backdrop: rgba(74, 40, 36, 0.28);
-  --hero-tint: #EEDDD6;
+  --badge-base: #FFFFFF;
+  --shadow-color: rgba(0, 0, 0, 0.14);
+  --shadow-soft: rgba(0, 0, 0, 0.08);
+  --backdrop: rgba(0, 0, 0, 0.3);
+  --hero-tint: #F5F0DC;
   --theme-scheme: light;
-  --tier-line: #D3C2B3;
-  --tier-text: #5A1F32;
-  --disabled-bg: #EBE3D9;
-  --disabled-text: #776A62;
-  --disabled-border: #DCD0C4;
+  --tier-line: #D9CD9A;
+  --tier-text: #7A6400;
+  --disabled-bg: #EBEBEB;
+  --disabled-text: #6E6E6E;
+  --disabled-border: #D9D9D9;
 }
 /* Aliases used throughout the stylesheet (they follow the tokens above) */
 :root {
@@ -920,7 +920,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 850; font-stretch: 112%; font-size: 1.75rem; line-height: 1; letter-spacing: -0.035em;
   margin: 0; color: var(--brand);
 }
-.brand-name::after {   /* the brand's period: gold in dark mode, coral in light mode (part of the SPAM. wordmark) */
+.brand-name::after {   /* the brand's period: gold in dark mode, coral in light mode (part of the AM. wordmark) */
   content: ""; display: inline-block; width: 0.2em; height: 0.2em; margin-left: 0.07em; background: var(--brand-accent);
   vertical-align: baseline; border-radius: 1px;
 }
@@ -1034,7 +1034,7 @@ td.val.val-2 .num-2 { font-size: 0.8rem; font-weight: 600; color: var(--muted); 
 #panel-rankings thead th.prod-col { padding-left: 14px; }
 #panel-rankings thead th.val-2 { text-align: right; padding-right: 20px; }
 @media (max-width: 900px) { .rk-sort { flex-wrap: wrap; } }
-@media (max-width: 760px) {   /* phones: the production number stays on screen; bar and SPAM value step aside */
+@media (max-width: 760px) {   /* phones: the production number stays on screen; bar and AM value step aside */
   td.prod-col { min-width: 0; width: auto; padding-left: 8px !important; }
   #panel-rankings thead th.prod-col { padding-left: 8px; }
   .prodbar { grid-template-columns: auto; } .prodbar .track { display: none; } .prodbar .psub { grid-column: 1; }
@@ -1604,8 +1604,8 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 #panel-finder .tf-foot { padding-top: 2px; justify-content: space-between; gap: 16px; }
 
 /* Power Rankings row polish: whole-row hover, your-team accent, quieter method note */
-:root, :root[data-theme="dark"] { --mine-accent: #F4B979; }
-:root[data-theme="light"] { --mine-accent: #C58A3D; }
+:root, :root[data-theme="dark"] { --mine-accent: #D6B94C; }
+:root[data-theme="light"] { --mine-accent: #7A6400; }
 #league-body .pr-row:hover { background: var(--row-hover); }
 #league-body .pr-row:hover .pr-name, #league-body .pr-row:hover .pr-score { color: var(--heading); }
 #league-body .pr-row:hover .pr-score { color: var(--text-strong); }
@@ -1674,7 +1674,7 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: default;
 input[type="checkbox"]:disabled:checked { background-color: var(--disabled-border); }
 :root[data-theme="light"] input[type="checkbox"]:not(:checked), :root[data-theme="light"] input[type="radio"]:not(:checked) { border-color: color-mix(in srgb, var(--burgundy-1) 28%, var(--border-strong)); }
 
-/* ---------- Dropdowns: every <select> becomes a themed SPAM dropdown (see SpamSelect) ---------- */
+/* ---------- Dropdowns: every <select> becomes a themed AM dropdown (see SpamSelect) ---------- */
 .dd-native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; border: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 .dd-btn { display: inline-flex; align-items: center; max-width: 100%; text-align: left; white-space: nowrap; font-family: inherit; }
 .dd-btn .dd-label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -1723,7 +1723,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 :root[data-theme="light"] .dd-opt.active { background: color-mix(in srgb, var(--table-head) 85%, var(--burgundy-1) 4%); }
 :root[data-theme="light"] .dd-opt[aria-selected="true"] { background: color-mix(in srgb, var(--peach) 30%, transparent); color: var(--heading); }
 :root[data-theme="light"] .dd-opt[aria-selected="true"].active { background: color-mix(in srgb, var(--peach) 42%, transparent); }
-:root[data-theme="light"] .dd-menu { box-shadow: 0 18px 36px -18px rgba(90, 31, 50, 0.35), 0 2px 6px -3px rgba(90, 31, 50, 0.18); }
+:root[data-theme="light"] .dd-menu { box-shadow: 0 18px 36px -18px rgba(0, 0, 0, 0.18), 0 2px 6px -3px rgba(0, 0, 0, 0.10); }
 /* the league switcher menu uses the same surface */
 .league-menu { background: var(--surface-raised); border-color: var(--border-strong); }
 
@@ -1732,7 +1732,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
   display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; justify-content: space-between;
   margin: -6px 0 14px;
 }
-/* SPAM Board / League-adjusted: a clear segmented switch (it changes every value on the board) */
+/* AM Board / League-adjusted: a clear segmented switch (it changes every value on the board) */
 .view-toggle { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
 .vt-btn { all: unset; box-sizing: border-box; height: 28px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: 5px; cursor: pointer;
   font-size: 0.74rem; font-weight: 650; color: var(--muted); white-space: nowrap; transition: background 0.15s, color 0.15s; }
@@ -2807,7 +2807,7 @@ dialog.pm {
 @media (min-width: 1440px) { dialog.pm { width: min(1280px, calc(100vw - 96px)); height: min(960px, calc(100vh - 48px)); }
 }
 dialog.pm::backdrop { background: var(--backdrop); }
-/* Desktop/tablet: a right-side drawer beside the page (Alan, Oct 5; BDGE-style companion panel in SPAM's look).
+/* Desktop/tablet: a right-side drawer beside the page (Alan, Oct 5; BDGE-style companion panel in AM's look).
    Opened with show(), not showModal(): no backdrop, the page stays scrollable and clickable, and clicking another
    player swaps the drawer in place. Phones keep the full-screen sheet. */
 dialog.pm.drawer {
@@ -2940,7 +2940,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .rk-l:empty { display: none; }
 .rk-bar { width: 44px; height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
 .rk-bar span { display: block; height: 100%; background: color-mix(in srgb, var(--rk) 70%, transparent); border-radius: 2px; }
-/* Team identity: logos and restrained team-colour accents (the SPAM theme stays the base) */
+/* Team identity: logos and restrained team-colour accents (the AM theme stays the base) */
 .tm { --tc: var(--tc-d, var(--line)); }
 :root[data-theme="light"] .tm { --tc: var(--tc-l, var(--line)); }
 .tlogo { width: 22px; height: 22px; object-fit: contain; flex: none; vertical-align: middle; }
@@ -3072,7 +3072,7 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .cmp-banner[hidden] { display: none; }
 .cmp-banner b { color: var(--heading); }
 .cmp-pick { flex: none; width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--gold) 70%, var(--muted)); background: none; cursor: pointer; }
-.cmp-pick.a { display: inline-flex; align-items: center; justify-content: center; border-color: var(--gold); background: var(--gold); color: var(--accent-text, #1A1314); font-size: 0.6rem; font-weight: 800; cursor: default; }
+.cmp-pick.a { display: inline-flex; align-items: center; justify-content: center; border-color: var(--gold); background: var(--gold); color: var(--accent-text, #000000); font-size: 0.6rem; font-weight: 800; cursor: default; }
 #rank-body tr.cmp-row { cursor: pointer; }
 #rank-body tr.cmp-row:hover td { background: color-mix(in srgb, var(--gold) 7%, transparent); }
 #rank-body tr.cmp-row:hover .cmp-pick { background: color-mix(in srgb, var(--gold) 45%, transparent); }
@@ -3558,7 +3558,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
       <div class="league-controls" id="league-controls" hidden>
         <div class="view-toggle" role="group" aria-label="Rankings view">
-          <button class="vt-btn" type="button" data-view="base" aria-pressed="false" title="SPAM Board: the base rankings and values (12-team Superflex, Full PPR, TE premium +)">SPAM Board</button>
+          <button class="vt-btn" type="button" data-view="base" aria-pressed="false" title="AM Board: the base rankings and values (12-team Superflex, Full PPR, TE premium +)">AM Board</button>
           <button class="vt-btn" type="button" data-view="league" aria-pressed="true" id="view-adj" title="League-adjusted: values re-priced for your league's size, lineup and scoring; the order follows those values">League-adjusted</button>
         </div>
         <span class="fmt-note" id="fmt-note"></span>
@@ -3566,7 +3566,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="rk-sort" id="rk-sort-wrap" role="group" aria-label="Sort the board">
         <label class="owner-filter rk-sort-lab"><span>Sort</span>
           <select class="select" id="rk-sort" aria-label="Sort">
-            <option value="spam">SPAM Rank</option>
+            <option value="spam">AM Rank</option>
             <option value="ppg">Season PPG</option>
             <option value="l3">Last 3 PPG</option>
             <option value="l5">Last 5 PPG</option>
@@ -3619,10 +3619,10 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="chips" id="fa-chips" role="group" aria-label="Filter available players by position"></div>
       <input class="search" id="fa-search" type="search" placeholder="Search available players" aria-label="Search available players">
       <select class="select" id="fa-sort" aria-label="Sort available players">
-        <option value="rank">Sort: SPAM rank</option><option value="proj">Sort: weekly projection</option><option value="form">Sort: recent form</option>
+        <option value="rank">Sort: AM rank</option><option value="proj">Sort: weekly projection</option><option value="form">Sort: recent form</option>
         <option value="ppg">Sort: season PPG</option><option value="matchup">Sort: matchup</option><option value="posrank">Sort: position rank</option><option value="trend">Sort: trending adds</option>
       </select>
-      <label class="lg-keep fa-fitlbl" title="Nudges players who'd start for you up the list. SPAM rank still leads."><input type="checkbox" id="fa-fitsort"> My team fit</label>
+      <label class="lg-keep fa-fitlbl" title="Nudges players who'd start for you up the list. AM rank still leads."><input type="checkbox" id="fa-fitsort"> My team fit</label>
     </div>
     <div class="table-scroll">
       <table class="fa-table">
@@ -3770,7 +3770,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
             <div class="tc-analysis" id="tc-analysis" hidden></div>
           </div>
         </details>
-        <details id="tc-breakdown"><summary>How SPAM calculated this</summary><div class="tc-more-body"><div id="tc-breakdown-body"></div>
+        <details id="tc-breakdown"><summary>How AM calculated this</summary><div class="tc-more-body"><div id="tc-breakdown-body"></div>
             <div class="needs">
               <div class="needs-head">
                 <span class="ctl-label">Your roster needs</span>
@@ -3808,7 +3808,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 <dialog class="signin sleeper-dialog" id="sleeper-dialog" aria-labelledby="sd-title">
   <div id="sd-step-user">
     <h2 id="sd-title">Connect Sleeper</h2>
-    <p>Enter your Sleeper username to import your leagues. SPAM only reads public league data from Sleeper, so no password is needed.</p>
+    <p>Enter your Sleeper username to import your leagues. AM only reads public league data from Sleeper, so no password is needed.</p>
     <form id="sd-user-form">
       <label for="sd-username">Sleeper username</label>
       <input id="sd-username" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your_username">
@@ -3833,14 +3833,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 <dialog class="signin fmt-dialog" id="fmt-dialog" aria-labelledby="fmt-title">
   <form id="fmt-form" method="dialog">
     <h2 id="fmt-title">League settings</h2>
-    <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. At each position the SPAM order stays put unless a player's value changes enough to pass someone; across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value.</p>
+    <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. At each position the AM order stays put unless a player's value changes enough to pass someone; across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value.</p>
     <div class="fmt-src" id="fmt-src" hidden></div>
     <div class="fmt-locked" id="fmt-locked" hidden></div>
     <div class="fmt-presets" id="fmt-presets" role="group" aria-label="Common formats"></div>
     <div id="fmt-grid"></div>
     <p class="fmt-summary" id="fmt-summary"></p>
     <div class="signin-actions fmt-actions">
-      <button class="btn link" id="fmt-reset" type="button">Reset to SPAM default</button>
+      <button class="btn link" id="fmt-reset" type="button">Reset to AM default</button>
       <span class="fmt-spacer"></span>
       <button class="btn" id="fmt-cancel" type="button">Cancel</button>
       <button class="btn primary" id="fmt-apply" type="submit">Apply</button>
@@ -4371,7 +4371,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      null = the site's own format. A connected league's settings always win over these. */
   const FMT_DEFAULT = { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 };
   const FMT_PRESETS = [
-    { id: "spm", label: "SPAM default", v: {} },
+    { id: "spm", label: "AM default", v: {} },
     { id: "1qb-ppr", label: "1QB · PPR", v: { qb: "1", tep: 0 } },
     { id: "1qb-half", label: "1QB · Half PPR", v: { qb: "1", rec: 0.5, tep: 0 } },
     { id: "1qb-std", label: "1QB · Standard", v: { qb: "1", rec: 0, tep: 0 } },
@@ -4437,13 +4437,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const valueLeague = () => {
     const lg = syncedLeague();
     if (lg && FMT_SRC !== "custom") return lg;
-    return FMT ? fmtLeague(FMT) : lg ? fmtLeague(FMT_DEFAULT) : null;   // custom format (SPAM default if none picked)
+    return FMT ? fmtLeague(FMT) : lg ? fmtLeague(FMT_DEFAULT) : null;   // custom format (AM default if none picked)
   };
   const usingCustom = () => !!syncedLeague() && FMT_SRC === "custom";
   // League-adjusted values and position ranks apply whenever a league (or hand-picked settings) is set,
-  // everywhere except the Rankings board, where the SPAM Board / League-adjusted toggle decides.
+  // everywhere except the Rankings board, where the AM Board / League-adjusted toggle decides.
   // Trade Finder, My Team, League, Free Agents, the calculator's league mode and player pages opened
-  // from them always use the league's own order, never the base SPAM positional rank.
+  // from them always use the league's own order, never the base AM positional rank.
   const leagueView = () => LG.fmtOn && (LG.mode === "league" || offRankings());
   const offRankings = () => { try { return currentTab !== "rankings"; } catch (e) { return false; } };
   const adjName = () => (LG.active ? "League-adjusted" : "Your settings");
@@ -4513,7 +4513,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T01:00Z";
+  const BUILD_ID = "2026-10-08T03:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4528,7 +4528,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if ($("update-bar")) return;
     const bar = document.createElement("div");
     bar.id = "update-bar"; bar.className = "update-bar"; bar.setAttribute("role", "status");
-    bar.innerHTML = `<span>A new version of SPAM is available.</span><button class="btn primary" type="button">Refresh</button>`;
+    bar.innerHTML = `<span>A new version of AM is available.</span><button class="btn primary" type="button">Refresh</button>`;
     bar.querySelector("button").addEventListener("click", () => location.reload());
     document.body.appendChild(bar);
   }
@@ -4543,7 +4543,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (animate) { root.classList.add("theme-anim"); clearTimeout(setTheme.timer); setTheme.timer = setTimeout(() => root.classList.remove("theme-anim"), 320); }
     root.setAttribute("data-theme", t);
     try { localStorage.setItem("spm_theme", t); } catch (e) {}
-    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F2EB" : "#1A1314";
+    const m = $("theme-color"); if (m) m.content = t === "light" ? "#FFFFFF" : "#000000";
     const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
     btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
     btn.setAttribute("aria-pressed", String(t === "light"));
@@ -4568,7 +4568,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     currentTab = name;
     if (CMP.on && name !== "rankings") { CMP.on = false; const ban = $("cmp-banner"); if (ban) ban.hidden = true; document.body.classList.remove("cmp-mode"); }
     keepTabInView(document.querySelector(".tabs"));
-    // with the SPAM Board view on, values differ between the Rankings board (base) and every
+    // with the AM Board view on, values differ between the Rankings board (base) and every
     // league view (adjusted), and views drawn in the background used the Rankings context: redraw on open
     const flip = was !== name && typeof LG === "object" && LG.fmtOn && LG.mode !== "league";
     if (flip) {
@@ -4605,7 +4605,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   $("rank-search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderRankings(); });
   /* Production sort (Alan, Oct 6): re-sort the same board by actual fantasy production in the selected league's
      scoring (Season PPG, Last 3 / Last 5 PPG, Season Points). A viewing mode only: it never touches ranks, tiers,
-     values, publishing or history; SPAM Rank restores the normal board. RK.min null = the default for this week. */
+     values, publishing or history; AM Rank restores the normal board. RK.min null = the default for this week. */
   const RK = { sort: "spam", min: null, dir: "desc" };
   const RK_HEAD = $("rk-head-row").innerHTML;
   const PROD_MODES = { ppg: { label: "Season PPG", short: "PPG", unit: "PPG" }, l3: { label: "Last 3 PPG", short: "L3", unit: "PPG", n: 3 },
@@ -4627,7 +4627,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const j = e.target.closest("[data-jump]"); if (!j) return;
     const id = j.dataset.jump;
     posFilter = "ALL"; query = ""; $("rank-search").value = "";
-    if (RK.sort !== "spam") { RK.sort = "spam"; syncRkControls(); saveRk(); }   // risers/fallers are about SPAM rank
+    if (RK.sort !== "spam") { RK.sort = "spam"; syncRkControls(); saveRk(); }   // risers/fallers are about AM rank
     $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.pos === "ALL"));
     if (LG.ownerFilter !== "all") { LG.ownerFilter = "all"; const o = $("owner-filter"); if (o) { o.value = "all"; } }
     renderRankings();
@@ -4700,7 +4700,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const byPos = (a, b) => (POS_ORDER[a.pos] ?? 9) - (POS_ORDER[b.pos] ?? 9) || (a.posNum ?? 1e9) - (b.posNum ?? 1e9);
 
   /* Custom = a value typed in and not published yet. Once published it is the player's
-     official SPAM value and looks like any other (it stays fixed until edited again). */
+     official AM value and looks like any other (it stays fixed until edited again). */
   let pubValCache = { csv: null, map: null };
   function publishedValueOf(p) {
     let csv;
@@ -4732,7 +4732,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function boardMove(from, to) {
     if (from == null || to == null || from === to) return "";
     const up = to < from, n = Math.abs(from - to);
-    return `<span class="bm ${up ? "bm-up" : "bm-down"}" title="${up ? "Up" : "Down"} ${n} from #${from} on the SPAM Board">${up ? "▲" : "▼"}${n}</span>`;
+    return `<span class="bm ${up ? "bm-up" : "bm-down"}" title="${up ? "Up" : "Down"} ${n} from #${from} on the AM Board">${up ? "▲" : "▼"}${n}</span>`;
   }
   const posLabel = p => (leagueView() && LG.adjPos.has(p.id) ? p.pos + LG.adjPos.get(p.id) : p.posRank);
   function renderRankings() {
@@ -4783,7 +4783,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
     const out = [];
     let lastGroup = null;
-    // tier editing: position tabs on the SPAM Board, no search/filter
+    // tier editing: position tabs on the AM Board, no search/filter
     const tierEdit = editing && canReorder && EDIT_POS.includes(posFilter) && !query && !filtered;
     const empties = tierEdit ? (TIER_EMPTY[posFilter] || []).slice().sort((a, b) => a.tier - b.tier) : [];
     // Small secondary note on each tier band, from the players currently in that tier only
@@ -4840,7 +4840,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if ($("player-modal").open) markCurrent();
   }
   /* Production view: the same rows, ranked by league-scored production (prodData). The production rank is the
-     row number, his SPAM rank stays beside the position badge and the SPAM value is a small secondary number; a thin
+     row number, his AM rank stays beside the position badge and the AM value is a small secondary number; a thin
      bar scaled to the best in the filtered set is the main comparison. Players under the minimum games, or with no
      games this season, are left out rather than given a made-up number. */
   function renderProd() {
@@ -4883,13 +4883,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const num = fp(r.v);
       const star = r.short ? `<span class="inj-star" title="${esc(`Includes ${shortCount(r.short)} (left early with an injury); the game still counts`)}">*</span>` : "";
       const sub = M.n ? (r.gp < M.n ? `<span class="psub thin" title="Only ${r.n} game${r.n === 1 ? "" : "s"} played this season">last ${r.n}</span>` : `<span class="psub">last ${r.n}</span>`) : `<span class="psub">${r.gp} GP</span>`;
-      const sr = spamRk(p), spamTxt = sr < 1e9 ? `SPAM #${sr}` : "SPAM —";
+      const sr = spamRk(p), spamTxt = sr < 1e9 ? `AM #${sr}` : "AM —";
       return `<tr class="player prod${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>
         <td class="rk">${r.rank}</td>
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
-        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted SPAM rank" : "SPAM Board rank"}">${spamTxt}</span></td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted AM rank" : "AM Board rank"}">${spamTxt}</span></td>
         <td class="prod-col"><div class="prodbar" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))"><div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div><span class="pnum">${num}${star}</span>${sub}</div></td>
-        <td class="val val-2"><span class="num-2" title="${leagueView() ? "League-adjusted SPAM value" : "SPAM value"}">${p.hasValue === false ? "—" : fmt(dv(p))}</span></td>
+        <td class="val val-2"><span class="num-2" title="${leagueView() ? "League-adjusted AM value" : "AM value"}">${p.hasValue === false ? "—" : fmt(dv(p))}</span></td>
       </tr>`;
     });
     $("rank-body").innerHTML = out.length ? out.join("") :
@@ -4897,7 +4897,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const notes = [`${list.length} player${list.length === 1 ? "" : "s"} · ${M.label} in ${scoringLabel()}`];
     if (under) notes.push(`${under} under ${min} games hidden`);
     if (none) notes.push(`${none} without a game this season`);
-    notes.push("SPAM-ranked players only");
+    notes.push("AM-ranked players only");
     $("rank-count").textContent = notes.join(" · ");
     updateEditorBar();
     queueRail();
@@ -4949,12 +4949,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   const origin = new Map();   // 3-team trades: player id -> side that sends him
   const TC3 = { on: false };
   const inTrade = id => sides.A.includes(id) || sides.B.includes(id) || sides.C.includes(id);
-  // Universal mode (no league): base SPAM values, any players. League mode: a synced Sleeper league.
+  // Universal mode (no league): base AM values, any players. League mode: a synced Sleeper league.
   const TC = { mode: (() => { try { return localStorage.getItem("spm_tc_mode") || "league"; } catch (e) { return "league"; } })() };
   const saveTc = () => { try { localStorage.setItem("spm_tc_mode", TC.mode); } catch (e) {} };
   const tcLeague = () => TC.mode === "league" && LG.active;
   // value used by the trade calculator: always the league-adjusted value for the active format (the connected
-  // league's settings, or your settings), also in "No league" mode; base SPAM values only when no format is set
+  // league's settings, or your settings), also in "No league" mode; base AM values only when no format is set
   const tv = adjOf;
   // where the calculator's values come from, in words
   const tcValuesName = () => (!LG.fmtOn ? "" : LG.active && !usingCustom() ? `${activeData().league.name || "League"}'s settings` : "Your settings");
@@ -5133,7 +5133,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return { title: row[0](), text: row[1]() };
   }
 
-  /* League context bar: universal mode (any players, base SPAM values) or league mode
+  /* League context bar: universal mode (any players, base AM values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
   const infoIcon = (text, label = "More info") => `<button class="info" type="button" aria-label="${esc(label)}" data-info="${esc(text)}">i</button>`;
   const TC_UI = { open: { A: false, B: false, C: false }, balance: false, lens: "market", ctx: null };
@@ -5155,7 +5155,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ? `<span class="tc-dot" aria-hidden="true"></span>League context: <b>${esc(activeData().league.name)}</b> ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
       : LG.fmtOn
         ? `<span class="tc-dot" aria-hidden="true"></span>${esc(tcValuesName())} · ${esc(formatParts(valueLeague()).join(" · "))} ${infoIcon("Values are league-adjusted for these settings. Pick a league above to also use its rosters. Your base rankings don't change.", "About league-adjusted values")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
-        : `SPAM Values ${infoIcon(`Base SPAM values for the site's format (${formatLabel()}). Pick your league's settings, or connect a league to use its rosters and scoring.`, "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
+        : `AM Values ${infoIcon(`Base AM values for the site's format (${formatLabel()}). Pick your league's settings, or connect a league to use its rosters and scoring.`, "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
     $("tc-badge").classList.toggle("on", on || LG.fmtOn);
     ["A", "B", "C"].forEach(s => {
       $("search-" + s).placeholder = on ? (sideTeam(s === "A" ? "B" : s === "B" ? "A" : s) && !TC3.on ? "Or search any player (hypothetical)" : "Search any player") : "Search players";
@@ -5341,7 +5341,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function lockUntouched(places, movedPos, who) {
     for (const pos of EDIT_POS) {
       if (movedPos.has(pos) || !places[pos] || places[pos][0] === places[pos][1]) continue;
-      console.warn(`SPAM check: ${who || "a team"}'s ${pos} grade moved in a trade with no ${pos}s; kept it unchanged.`);
+      console.warn(`AM check: ${who || "a team"}'s ${pos} grade moved in a trade with no ${pos}s; kept it unchanged.`);
       places[pos][1] = places[pos][0];
     }
     return places;
@@ -5855,7 +5855,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // Plain-English reasoning for universal mode
   function tradeWhyText(res, names, ahead, pct, fair) {
     const cap = t => t.charAt(0).toUpperCase() + t.slice(1), a = res.adj, out = [];
-    out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in SPAM Value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
+    out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in AM Value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
     if (a && a.bonus) out.push(`${cap(subj(a.best))} ${verb(a.best, "land", "lands")} the best player in an uneven trade, worth a small bonus (+${fmt(a.bonus)}).`);
     if (a && a.spot) out.push(`${cap(subj(a.more))} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, who only fill${a.extra > 1 ? "" : "s"} lineup spots next to the best player in the deal, so ${a.extra > 1 ? "they count" : "he counts"} for less (−${fmt(a.spot)}).`);
     const ns = Math.round((res.needA || 0) - (res.needB || 0));
@@ -5870,7 +5870,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("tc-breakdown-body").innerHTML = `<table class="bd-table">
         <thead><tr><th scope="col"></th><th scope="col">${esc(names.A)}</th><th scope="col">${esc(names.B)}</th></tr></thead>
         <tbody>
-          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), LG.fmtOn ? `League-adjusted SPAM values (${tcValuesName()}) for the players each side gets. See Format adjustment below.` : "Base SPAM values for the players each side gets.")}
+          ${row("Raw value", fmt(res.rawA), fmt(res.rawB), LG.fmtOn ? `League-adjusted AM values (${tcValuesName()}) for the players each side gets. See Format adjustment below.` : "Base AM values for the players each side gets.")}
           ${row("Package adjustment", sign(spotA), sign(spotB), "In an uneven trade (2-for-1, 3-for-1 …), the side getting more players counts its extra players at a share of their value: their value divided by the best player's in the deal (a 4,000 piece next to an 8,000 star counts about half). Shallow leagues discount extras more.")}
           ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
           ${row("Adjusted value", fmt(res.a), fmt(res.b), "", "bd-total")}
@@ -5880,7 +5880,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </tbody></table>
       <p class="pp-note">${pct} gap · ${esc(tier.range)}</p>${formatBreakdown(names)}`;
   }
-  // Base SPAM value → format steps → league-adjusted value, for every player in the trade
+  // Base AM value → format steps → league-adjusted value, for every player in the trade
   function formatBreakdown(names) {
     if (!LG.fmtOn) return "";
     const groups = (TC3.on ? ["A", "B", "C"] : ["A", "B"]).map(s => ({ s, ps: sides[s].map(id => byId.get(id)).filter(Boolean) })).filter(g => g.ps.length);
@@ -5891,8 +5891,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const head = all[0].f.steps.filter(st => cols.includes(st.key)).map(st => `<th scope="col">${esc(st.label)}</th>`).join("");
     const rows = groups.map(g => `<tr class="bd-group"><th scope="rowgroup" colspan="${cols.length + 3}">${esc(names[g.s] || g.s)} ${g.s === "A" && names.A === "You" ? "get" : "gets"}</th></tr>` +
       g.ps.map(p => { const f = formatSteps(p); return f ? `<tr><th scope="row">${esc(p.name)}</th><td>${fmt(f.base)}</td>${f.steps.filter(st => cols.includes(st.key)).map(st => `<td>${sign(st.d)}</td>`).join("")}<td><b>${fmt(f.adj)}</b></td></tr>` : ""; }).join("")).join("");
-    return `<h4 class="sub-label">Format adjustment ${infoIcon(`Base SPAM values are the site's format (${formatLabel()}). Each step re-prices them for ${tcValuesName()} (${formatParts(valueLeague()).join(", ")}): its scoring, then its TE premium, then its lineup and league size. The steps add up to the league-adjusted value. Your base rankings never change.`, "About format adjustment")}</h4>
-      <div class="bd-scroll"><table class="bd-table bd-fmt"><thead><tr><th scope="col"></th><th scope="col">Base SPAM Value</th>${head}<th scope="col">League-adjusted Value</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<h4 class="sub-label">Format adjustment ${infoIcon(`Base AM values are the site's format (${formatLabel()}). Each step re-prices them for ${tcValuesName()} (${formatParts(valueLeague()).join(", ")}): its scoring, then its TE premium, then its lineup and league size. The steps add up to the league-adjusted value. Your base rankings never change.`, "About format adjustment")}</h4>
+      <div class="bd-scroll"><table class="bd-table bd-fmt"><thead><tr><th scope="col"></th><th scope="col">Base AM Value</th>${head}<th scope="col">League-adjusted Value</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
   function renderContext(res, ctx, names) {
     const cv = contextVerdict(res, ctx), A = ctx.A, B = ctx.B;
@@ -6064,7 +6064,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const W = valueCheck(), real = W.filter(w => w.kind !== "rank");
     b.hidden = false;
     b.textContent = real.length ? `${real.length} value warning${real.length === 1 ? "" : "s"}` : "Values OK";
-    b.title = "Value-curve check: cliffs, tier gaps and tier sizes on the SPAM Board (warnings only, nothing changes)";
+    b.title = "Value-curve check: cliffs, tier gaps and tier sizes on the AM Board (warnings only, nothing changes)";
     const li = w => `<li class="${w.kind}">${esc(w.text)}</li>`;
     box.innerHTML = `<p>Warnings only: nothing on the board changes. Rank gaps are listed last: they come from your overall order, not the formula.</p>`
       + (W.length ? `<ul>${real.map(li).join("")}${W.filter(w => w.kind === "rank").map(li).join("")}</ul>` : "<p>No issues found.</p>");
@@ -6082,7 +6082,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
     $("eb-count").textContent = n ? `${n} unsaved` : "All saved";
     $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
-    $("eb-hint").textContent = leagueView() ? `${adjName()} view is read-only. Switch to SPAM Board to edit rankings.`
+    $("eb-hint").textContent = leagueView() ? `${adjName()} view is read-only. Switch to AM Board to edit rankings.`
       : posFilter === "ALL"
       ? "Drag or use the arrows to reorder. Click a value to override it."
       : EDIT_POS.includes(posFilter)
@@ -6713,7 +6713,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       taxi: (league.settings && league.settings.taxi_slots) || 0
     };
   }
-  // The one place format labels come from: the SPAM base format, or a league / your custom settings
+  // The one place format labels come from: the AM base format, or a league / your custom settings
   function formatLabel(league) { return formatParts(league || fmtLeague(FMT_DEFAULT)).join(" · "); }
   // TE premium shorthand for display: one "+" per 0.5 points per catch (+0.5 → "TE Premium +", +1.0 → "++").
   // Values that aren't a multiple of 0.5 keep the number. Calculations always use the real value.
@@ -6897,7 +6897,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       });
       // Superflex / 2QB (Alan, Oct 6): pricing tiers as blocks put a cliff inside the starting QBs of smaller
       // superflex leagues (8-team SF: QB12 2,866 → QB13 1,146 although ~16 QBs start). While QBs are still weekly
-      // starters (teams × QB + superflex slots), none falls further below the QB ahead than on the SPAM Board;
+      // starters (teams × QB + superflex slots), none falls further below the QB ahead than on the AM Board;
       // after the last starter they ease down to their format value (at most sfStarterEase of the board's step
       // per spot). Only ever raises a value, never above his base value; leagues of up to sfStarterTeams (8) teams only,
       // so 1QB leagues, 10+ team superflex and the base format are untouched.
@@ -6978,7 +6978,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const seq = withRank.map(p => (qs[p.pos] && LG.adjPos.has(p.id) ? qs[p.pos].shift() : p));
     const rest = ranked.filter(p => p.rank == null).sort((a, b) => LG.adj.get(b.id) - LG.adj.get(a.id));
     // Across positions the overall order follows the adjusted value (Alan, Oct 4: a lower value is never ranked
-    // ahead of a higher one, as on the SPAM Board): each position keeps its own order (above), and the position
+    // ahead of a higher one, as on the AM Board): each position keeps its own order (above), and the position
     // queues are merged by value, ties going to the earlier board slot. In the base format the values already
     // follow the board, so the order is unchanged. The tail (auto-added players) is merged the same way after
     // every player above it.
@@ -7021,7 +7021,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     } finally { Object.assign(LG, keep); }
   }
   // A player's league-adjusted value split into steps, each measured from the one before:
-  // base SPAM value → scoring → TE premium → lineup & league size = league-adjusted value (exact sum)
+  // base AM value → scoring → TE premium → lineup & league size = league-adjusted value (exact sum)
   function formatSteps(p) {
     const vl = valueLeague();
     if (!vl || !comps || !LG.adj.has(p.id)) return null;
@@ -7081,7 +7081,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     check("A league in the base format gives exactly the base values", same.map(p => p.name), same.length === 0);
     const live = LG.fmtOn ? players.slice(0, 50).filter(p => Math.round(adjMapFor(valueLeague()).get(p.id)) !== Math.round(LG.adj.get(p.id))) : [];
     check("The active league layer matches a fresh run of its settings", live.map(p => p.name), live.length === 0);
-    if (out.some(c => !c.pass)) console.warn("SPAM format check failed", out); else console.info("SPAM format check passed", out);
+    if (out.some(c => !c.pass)) console.warn("AM format check failed", out); else console.info("AM format check passed", out);
     return out;
   }
   // Tier drop guard + floor for formats that push deep tiers to ~0 (see FORMAT_ADJUST.tierKeep / floor).
@@ -7199,8 +7199,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the SPAM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
-      : `<span>Showing the SPAM Board · <b>${esc(formatLabel())}</b></span>`;
+      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
+      : `<span>Showing the AM Board · <b>${esc(formatLabel())}</b></span>`;
     if (!d) {
       $("fmt-override").hidden = true; $("league-chip").classList.remove("custom");
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
@@ -7439,7 +7439,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (locked) {
       $("fmt-locked").innerHTML = `<p>Values follow <b>${esc(d.league.name)}</b>'s own settings from ${esc(SOURCE_NAME[slSource()] === "pasted" ? "your pasted league" : SOURCE_NAME[slSource()])}:</p>
         <p class="fmt-summary">${esc(configText(d.league))}</p>
-        <p class="hint">Pick <b>Custom format</b> to try other settings. Your rosters stay; only the values change. Your SPAM Board never changes.</p>`;
+        <p class="hint">Pick <b>Custom format</b> to try other settings. Your rosters stay; only the values change. Your AM Board never changes.</p>`;
     } else renderFmtForm();
   }
   $("fmt-src").addEventListener("click", e => {
@@ -7506,7 +7506,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     setFormat(fmtDraft);
     fdialog.close();
-    toast(FMT ? `Using ${formatParts(fmtLeague(FMT)).join(" · ")}. Your settings are saved in this browser and in the page link.` : "Back to the SPAM default format.");
+    toast(FMT ? `Using ${formatParts(fmtLeague(FMT)).join(" · ")}. Your settings are saved in this browser and in the page link.` : "Back to the AM default format.");
   });
   $("fmt-chip").addEventListener("click", openFormat);
   $("fmt-import").addEventListener("click", e => {
@@ -8004,7 +8004,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (weak) row("Weakest starter", who(weak));
     const unranked = benchAll.find(id => !pl(id));
     const exp = unranked ? rosterEntry(unranked, map) : bench[bench.length - 1];
-    if (exp) row("Most expendable", unranked ? `<span class="rr-name">${esc(exp.name)}</span> <span class="rr-sub">${esc(exp.pos || "")} · not on the SPAM Board</span>` : who(exp));
+    if (exp) row("Most expendable", unranked ? `<span class="rr-name">${esc(exp.name)}</span> <span class="rr-sub">${esc(exp.pos || "")} · not on the AM Board</span>` : who(exp));
     try {   // the best free agent who'd start for you (Waiver Wire's Fit, among the top available)
       const K = leagueKit();
       const fa = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && !LG.ownerOf.has(p.id)).sort((a, b) => dv(b) - dv(a)).slice(0, 25)
@@ -8040,7 +8040,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
     };
     const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier mt-sec"><td colspan="7">${title}<span class="mt-sec-n">${(rowsHtml.match(/<tr class="mt-row(?! empty-slot)/g) || []).length}</span></td></tr>${rowsHtml}` : "";
-    // Sleeper's lineup; before one is set (all slots empty), SPAM's best lineup by value
+    // Sleeper's lineup; before one is set (all slots empty), AM's best lineup by value
     const ev = evaluateTeams(), mineEv = ev.list.find(x => x.team.mine);
     const noLineup = !(r.starters || []).some(x => x && x !== "0");
     let starterIds = r.starters;
@@ -8075,7 +8075,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <div class="strength-grid mt-strength">${strength}</div>
 
       <div class="mt-dash"><div class="mt-main">
-      <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are SPAM's best lineup</span>` : ""}</h3>
+      <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are AM's best lineup</span>` : ""}</h3>
       <div class="table-scroll"><table class="mt-table">
         <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="rk">Rk</th><th scope="col" class="mt-wk" title="${currentWeek() ? "Week " + currentWeek() + ": " : ""}his projection before kickoff, points (+ Live proj) during his game, his points once it's final, in your league's scoring (same as Matchups and Waiver Wire). Hover a cell for the opponent.">This week</th><th scope="col" class="mt-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
@@ -8130,12 +8130,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   /* ---------- Team evaluation (power rankings) ----------
      For every team: the best lineup its healthy roster can field in this league's
-     slots using SPAM Values, plus bench depth. Score = starters + benchWeight x bench.
+     slots using AM Values, plus bench depth. Score = starters + benchWeight x bench.
      Position rooms = starters at that position + benchWeight x bench at that position. */
   const ELIG = { QB: ["QB"], RB: ["RB"], WR: ["WR"], TE: ["TE"], WRRB_FLEX: ["RB", "WR"], REC_FLEX: ["WR", "TE"],
                  FLEX: ["RB", "WR", "TE"], SUPER_FLEX: ["QB", "RB", "WR", "TE"] };
   const SLOT_ORDER = ["QB", "RB", "WR", "TE", "WRRB_FLEX", "REC_FLEX", "FLEX", "SUPER_FLEX"];
-  // Best lineup a set of players can field in the league's starting slots (by SPAM Value),
+  // Best lineup a set of players can field in the league's starting slots (by AM Value),
   // plus bench depth (only as many bench players as the league has bench spots count)
   function leagueSlots(league) {
     return (league.roster_positions || []).filter(s => ELIG[s]).sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
@@ -8267,11 +8267,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
     }
     const title = LEAGUE_SUBS.find(([k]) => k === LT.sub)[1];
-    const sub = faOn ? "Available players in this league · sorted by SPAM rank"
+    const sub = faOn ? "Available players in this league · sorted by AM rank"
       : LT.sub === "tx" ? "Trades, waiver claims, adds and drops"
       : LT.sub === "matchups" ? "This league's weekly matchups, scored by Sleeper"
       : LT.sub === "rosters" ? "Each team's lineup, weekly projections and season production"
-      : `${leagueView() ? "League-adjusted" : "Base"} SPAM values`;
+      : `${leagueView() ? "League-adjusted" : "Base"} AM values`;
     box.innerHTML = `
       <div class="panel-head lg-head">
         <div>
@@ -8433,13 +8433,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     window.scrollTo({ top: Math.max(0, r.top + window.scrollY - window.innerHeight / 2 + r.height / 2), behavior: "smooth" });
   }
 
-  /* Standings: record order next to SPAM power rank */
+  /* Standings: record order next to AM power rank */
   const streakText = s => { const m = String(s || "").match(/(\d+)\s*([WLT])/i) || String(s || "").match(/([WLT])\s*(\d+)/i); if (!m) return "–"; const [num, k] = /\d/.test(m[1]) ? [m[1], m[2]] : [m[2], m[1]]; return k.toUpperCase() + num; };
   /* Standings (Steven, Oct 4): Sleeper's own divisions (names and grouping) and a playoff odds column.
      Divisions: when the league has them, teams are grouped under each division's name and ranked inside it
      (wins, then points for, as Sleeper does); "League" shows one table. Playoff odds: a Monte Carlo of the rest
      of the regular season on Sleeper's real schedule (so strength of schedule is built in), with each team's
-     weekly score drawn around a blend of its scoring so far and its SPAM roster strength, then the league's
+     weekly score drawn around a blend of its scoring so far and its AM roster strength, then the league's
      playoff settings applied (playoff_teams; division winners in first when there are divisions; ties on PF). */
   const stDivs = d => (d.league.divisions || []).length > 1 && LG.teams.some(t => (t.roster.settings || {}).division) ? d.league.divisions : null;
   const winPct = st => { const g = (st.wins || 0) + (st.losses || 0) + (st.ties || 0); return g ? ((st.wins || 0) + 0.5 * (st.ties || 0)) / g : 0; };
@@ -8485,7 +8485,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const played = teams.filter(x => x.g), lgPpg = played.length ? played.reduce((a, x) => a + x.ppg, 0) / played.length : 115;
     const avgScore = teams.reduce((a, x) => a + x.score, 0) / (teams.length || 1) || 1;
     teams.forEach(x => {
-      // team strength: SPAM roster score as points (square root, so the 10,000-point value scale doesn't overstate gaps),
+      // team strength: AM roster score as points (square root, so the 10,000-point value scale doesn't overstate gaps),
       // blended with actual points per game as the season goes on
       const strength = lgPpg * Math.sqrt(Math.max(0.05, x.score / avgScore)), wAct = x.g / (x.g + 6);
       x.mu = x.ppg != null ? wAct * x.ppg + (1 - wAct) * strength : strength;
@@ -8573,8 +8573,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const vs = r => {
       const dlt = r.recRank - r.x.power;
       if (!played || !dlt) return `<span class="muted">–</span>`;
-      return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, SPAM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">▲${dlt} <small>roster ahead</small></span>`
-                     : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, SPAM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">▼${-dlt} <small>record ahead</small></span>`;
+      return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">▲${dlt} <small>roster ahead</small></span>`
+                     : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">▼${-dlt} <small>record ahead</small></span>`;
     };
     const row = (r, rk) => `<tr class="st-row${r.t.mine ? " mine" : ""}" data-standing-team="${r.t.rosterId}" tabindex="0">
           <td class="rk">${rk}</td>
@@ -8591,24 +8591,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         }).join("") + (rows.some(r => !divs.some(x => x.id === (r.st.division || 0))) ? `<tr class="st-div"><th colspan="${COLS}" scope="colgroup"><span class="st-div-name">No division</span></th></tr>` + rows.filter(r => !divs.some(x => x.id === (r.st.division || 0))).map((r, i) => row(r, i + 1)).join("") : "")
       : rows.map(r => row(r, r.recRank)).join("");
     const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
-    const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its SPAM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${poRule(divs, spots)}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
+    const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its AM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${poRule(divs, spots)}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
     const toggle = divs ? `<div class="view-toggle st-view" role="group" aria-label="Standings view"><button class="vt-btn" type="button" data-st-view="div" aria-pressed="${byDiv}">By division</button><button class="vt-btn" type="button" data-st-view="league" aria-pressed="${!byDiv}">League</button></div>` : "";
-    return `<div class="st-top-row"><p class="method-note">Actual standings next to SPAM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
+    return `<div class="st-top-row"><p class="method-note">Actual standings next to AM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
       <div class="table-scroll"><table class="st-table">
-        <thead><tr><th scope="col">${byDiv ? "Div" : "Rk"}</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">SPAM Power Rank</th><th scope="col">Difference</th><th scope="col" class="st-odds-h">Playoff odds ${infoIcon(oddsInfo, "How playoff odds work")}</th></tr></thead>
+        <thead><tr><th scope="col">${byDiv ? "Div" : "Rk"}</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">AM Power Rank</th><th scope="col">Difference</th><th scope="col" class="st-odds-h">Playoff odds ${infoIcon(oddsInfo, "How playoff odds work")}</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>`;
   }
 
   /* Trade History: completed trades from Sleeper, judged with the calculator's verdicts.
      Three cases, always labeled:
-       historical  every player has a SPAM value on or before the trade date (the closest prior snapshot)
-       pre-SPAM    the trade happened before SPAM rankings were first published: judged with today's
+       historical  every player has a AM value on or before the trade date (the closest prior snapshot)
+       pre-AM    the trade happened before AM rankings were first published: judged with today's
                    values as a retrospective lookback, never as how players were valued at the time
-       current     after SPAM existed, but ranking history doesn't cover every player: today's values
+       current     after AM existed, but ranking history doesn't cover every player: today's values
      Draft picks are listed but not valued. */
   const HIST_GRACE_MS = 6 * 3600e3;   // a snapshot from the same day (a few hours later) still counts
-  // when SPAM values were first published: the earliest ranking-history entry
+  // when AM values were first published: the earliest ranking-history entry
   function spamStart() {
     const h = histNow();
     let first = Infinity;
@@ -8747,7 +8747,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const verdict = P.length === 2
       ? (r.a > 0 && r.b > 0
           ? `<span class="th-verdict${r.fair ? " fair" : ""}${lookback ? " lookback" : ""}">${lookback ? `<small>Today's values</small>` : ""}${esc(r.tier.title(P[r.ahead].team.name, P[1 - r.ahead].team.name))}</span>`
-          : `<span class="th-verdict">One-sided in SPAM values</span>`)
+          : `<span class="th-verdict">One-sided in AM values</span>`)
       : `<span class="th-verdict fair">${P.length}-team trade</span>`;
     const side = s => `<div class="th-side">
         <div class="th-team">${teamFace(s.team, "sm")}<div><b>${esc(s.team.name)}</b><span>receives</span></div></div>
@@ -8768,24 +8768,24 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>` : "";
     const tradeDay = new Date(t.at).toDateString(), basisDay = r.basisTs ? whenDate(r.basisTs).toDateString() : "";
     const basisDate = r.basisTs ? whenDate(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-    const tag = r.historical ? `<span class="th-tag hist">Historical SPAM values</span>`
-      : r.preSpam ? `<span class="th-tag pre">Pre-SPAM trade</span>` : `<span class="th-tag now">Current-value evaluation</span>`;
+    const tag = r.historical ? `<span class="th-tag hist">Historical AM values</span>`
+      : r.preSpam ? `<span class="th-tag pre">Pre-AM trade</span>` : `<span class="th-tag now">Current-value evaluation</span>`;
     const basis = r.historical
-      ? (basisDay === tradeDay ? `Evaluated using SPAM values from ${esc(basisDate)}` : `Evaluated using the nearest prior SPAM snapshot (${esc(basisDate)})`)
-      : r.preSpam ? "Retrospective evaluation using current SPAM values" : "Evaluated using current SPAM values (no ranking history for every player on this date)";
+      ? (basisDay === tradeDay ? `Evaluated using AM values from ${esc(basisDate)}` : `Evaluated using the nearest prior AM snapshot (${esc(basisDate)})`)
+      : r.preSpam ? "Retrospective evaluation using current AM values" : "Evaluated using current AM values (no ranking history for every player on this date)";
     const winTxt = P.length === 2 && r.a > 0 && r.b > 0
       ? (r.fair ? "Using today's values, this trade is about even" : `Using today's values, ${esc(P[r.ahead].team.name)} would win this trade by ${r.more.toFixed(1)}%`) : "";
     const context = r.historical ? "" : `<p class="th-context">${r.preSpam
-      ? `This trade was completed before SPAM rankings were published, so the verdict is a lookback with today's SPAM values, not how the players were valued at the time.${winTxt ? " " + winTxt + "." : ""}`
-      : `SPAM's ranking history doesn't cover every player in this trade on its date, so it's judged with today's values.${winTxt ? " " + winTxt + "." : ""}`}</p>`;
+      ? `This trade was completed before AM rankings were published, so the verdict is a lookback with today's AM values, not how the players were valued at the time.${winTxt ? " " + winTxt + "." : ""}`
+      : `AM's ranking history doesn't cover every player in this trade on its date, so it's judged with today's values.${winTxt ? " " + winTxt + "." : ""}`}</p>`;
     const anyPicks = P.some(s => s.picks.length);
     const diff = P.length === 2 && r.a > 0 && r.b > 0 ? `<b>Difference ${r.more.toFixed(1)}%</b> · ` : "";
     const fullHtml = !full ? "" : `<div class="th-full">
         ${P.length === 2 && r.model && r.model.adj ? `<p>Raw value ${fmt(r.model.rawA)} vs ${fmt(r.model.rawB)}. ${r.model.adj.bonus ? `${esc(P[r.model.adj.best === "A" ? 0 : 1].team.name)} gets a ${fmt(r.model.adj.bonus)} best-player bonus. ` : ""}${r.model.adj.spot ? `${esc(P[r.model.adj.more === "A" ? 0 : 1].team.name)} pays ${fmt(r.model.adj.spot)} for taking on extra players. ` : ""}</p>` : ""}
         ${P.length === 2 && r.a > 0 && r.b > 0 ? `<p>${esc(r.tier.text(P[r.ahead].team.name, P[1 - r.ahead].team.name, r.more.toFixed(1) + "%"))}</p>` : ""}
-        ${r.historical ? `<p><b>With today's values</b> (current SPAM values): ${P.map(s => `${esc(s.team.name)} ${fmt(s.items.reduce((a, x) => a + (x.now || 0), 0))}`).join(" · ")}</p>` : ""}
+        ${r.historical ? `<p><b>With today's values</b> (current AM values): ${P.map(s => `${esc(s.team.name)} ${fmt(s.items.reduce((a, x) => a + (x.now || 0), 0))}`).join(" · ")}</p>` : ""}
         ${P.length > 2 ? `<p>Each team is judged on what it received against what it sent: ${P.map(s => `${esc(s.team.name)} got ${fmt(s.total)} for ${fmt(s.sent)}`).join("; ")}.</p>` : ""}
-        ${anyPicks ? `<p class="muted">Draft picks aren't valued by SPAM yet, so they're listed but left out of the totals.</p>` : ""}
+        ${anyPicks ? `<p class="muted">Draft picks aren't valued by AM yet, so they're listed but left out of the totals.</p>` : ""}
       </div>`;
     return `<article class="th-card">
       <header class="th-head"><span class="th-date">${esc(when)}${t.week ? ` · Week ${t.week}` : ""}${tag}</span>${verdict}</header>
@@ -8799,7 +8799,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       ${fullHtml}
     </article>`;
   }
-  /* Transactions: trades (with the SPAM trade analysis), waiver claims, free-agent adds and drops, newest first */
+  /* Transactions: trades (with the AM trade analysis), waiver claims, free-agent adds and drops, newest first */
   // Filters: All · Trades · Waiver Wire (waiver claims, FAAB claims, free-agent adds, drops, commissioner moves).
   // Each card still says what it was: Waiver claim, Free agent, Drop (or Commissioner).
   const TX_TYPES = [["all", "All"], ["trade", "Trades"], ["moves", "Waiver Wire"]];
@@ -8824,7 +8824,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (error) return head + `<div class="lg-error"><p>Couldn't load transactions for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div></div>`;
     if (!d.tx) return head + `<p class="empty-note lg-loading">Loading transactions for ${esc(d.league.name)}…</p></div>`;
     const tradeNote = LT.txType === "all" || LT.txType === "trade"
-      ? `<p class="method-note">Trades are judged with SPAM values from the time of the trade when ranking history covers it. Trades from before SPAM rankings existed are labeled Pre-SPAM and evaluated as a retrospective with current values.</p>` : "";
+      ? `<p class="method-note">Trades are judged with AM values from the time of the trade when ranking history covers it. Trades from before AM rankings existed are labeled Pre-AM and evaluated as a retrospective with current values.</p>` : "";
     if (!list.length) return head + `<div class="tx-layout"><div class="tx-main"><p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p></div>${txRail(d)}</div></div>`;
     // grouped by week, newest first; the latest week shows by default and older weeks load on request
     const byWeek = new Map();
@@ -8930,7 +8930,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   /* Matchups: the selected week's Sleeper matchups. Scores and lineups come from Sleeper (kept in memory,
      never stored); NFL game status (kickoff, live, final) from our schedule. No projections or win
-     probabilities: Sleeper's public API doesn't provide projections, and SPAM doesn't invent them. */
+     probabilities: Sleeper's public API doesn't provide projections, and AM doesn't invent them. */
   // ET kickoff ("YYYY-MM-DD", "HH:MM") to a timestamp, daylight saving included
   function etMs(date, time) {
     const [y, m, d] = String(date).split("-").map(Number), [h, mi] = String(time || "13:00").split(":").map(Number);
@@ -9009,7 +9009,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <select class="select" id="mx-week" aria-label="Week">${Array.from({ length: Math.min(18, lastWeek) }, (_, i) => i + 1).map(n => `<option value="${n}"${n === w ? " selected" : ""}>Week ${n}${n === cur ? " · current" : ""}</option>`).join("")}</select>
         ${w !== cur ? `<button class="btn" type="button" data-mx-week="${cur}">Current week</button>` : ""}
         <button class="btn" type="button" data-mx-refresh${LT.mxLoading === key ? " disabled" : ""}>${LT.mxLoading === key ? "Loading…" : "Refresh scores"}</button></span>
-      <span class="mx-source">Scores: Sleeper · Projections: ${esc(projSource())} ${infoIcon("Live proj is each team's projected final score: SPAM's weekly projection (usage and recent production, calibrated with the Vegas team total, the matchup and player props when available), scored with this league's settings and summed over the starting lineup. Before kickoff it's the expected final score; during games it updates with points so far plus each player's projection for the part of his game that's left, estimated from the time since kickoff, so it's an estimate, not a real-time game model. Starters SPAM can't project use their season PPG when our stats have them; otherwise the total is marked partial and the bar is hidden. The bar shows each team's share of the two projected totals, not a win probability. Hover a player's projection to see its inputs.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
+      <span class="mx-source">Scores: Sleeper · Projections: ${esc(projSource())} ${infoIcon("Live proj is each team's projected final score: AM's weekly projection (usage and recent production, calibrated with the Vegas team total, the matchup and player props when available), scored with this league's settings and summed over the starting lineup. Before kickoff it's the expected final score; during games it updates with points so far plus each player's projection for the part of his game that's left, estimated from the time since kickoff, so it's an estimate, not a real-time game model. Starters AM can't project use their season PPG when our stats have them; otherwise the total is marked partial and the bar is hidden. The bar shows each team's share of the two projected totals, not a win probability. Hover a player's projection to see its inputs.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
     if (err) return weekSel + `<div class="lg-error"><p>Couldn't load Week ${w} matchups from Sleeper (${esc(err)}).</p><button class="btn primary" type="button" data-mx-refresh>Retry</button></div>`;
     if (!data) return weekSel + `<p class="empty-note lg-loading">Loading Week ${w} matchups…</p>`;
     const groups = new Map();
@@ -9041,7 +9041,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const win = state === "final" ? (A.pts > B.pts ? "A" : B.pts > A.pts ? "B" : "T") : "";
       const k = mxKey(id, w) + "|" + mid, open = LT.mOpen.has(k);
       const team = (s, which) => `<div class="mx-team ${which}${s.team.mine ? " mine" : ""}">${teamFace(s.team)}
-          <div class="mx-tname">${s.power ? `<span class="mx-pr">SPAM PR #${s.power}</span>` : ""}<b>${esc(s.team.name)}</b>
+          <div class="mx-tname">${s.power ? `<span class="mx-pr">AM PR #${s.power}</span>` : ""}<b>${esc(s.team.name)}</b>
             <span>${esc([s.team.manager !== s.team.name ? s.team.manager : "", recordText(s.team.roster.settings) || "0-0"].filter(Boolean).join(" · "))}</span></div></div>`;
       const score = (s, which) => `<div class="mx-sc ${which}${win === which ? " win" : ""}"><span class="mx-score">${fp(s.pts)}</span>
           ${state === "final" ? (win === which ? `<span class="mx-res win">Win</span>` : win === "T" ? `<span class="mx-res">Tie</span>` : `<span class="mx-res">Final</span>`)
@@ -9062,7 +9062,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         if (P.kind === "final") return `<td class="mx-pts final"><b>${P.pts != null ? fp(P.pts) : "—"}</b><small>${P.dnp ? "DNP" : P.pending ? "pts pending" : "Final"}</small></td>`;
         if (P.kind === "live") return `<td class="mx-pts live"><b>${fp(P.pts)}</b> <span class="mx-livetag">Live</span>${P.proj != null ? `<small title="${esc(projTip(P))}">Live proj ${fp(P.est)}</small>` : `<small>No projection</small>`}</td>`;
         if (P.kind === "bye" || P.kind === "out") return `<td class="mx-pts off">${esc(P.text)}</td>`;
-        if (P.missing) return `<td class="mx-pts up" title="No SPAM projection and no ${STATS_SEASONS[0]} games in our stats">No proj</td>`;
+        if (P.missing) return `<td class="mx-pts up" title="No AM projection and no ${STATS_SEASONS[0]} games in our stats">No proj</td>`;
         return `<td class="mx-pts up" title="${esc(projTip(P))}"><span>Live proj <b>${fp(P.proj)}</b></span>${P.fallback ? `<small>season PPG</small>` : ""}</td>`;
       };
       const row = x => x.empty ? `<tr class="mx-empty"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td><td colspan="3" class="muted">Empty</td><td class="mx-pts">—</td></tr>`
@@ -9086,7 +9086,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
 
   /* Rosters (Alan, Oct 4): one fantasy team's week as a dense dashboard. Lineup + weekly outlook per player
-     (the shared weekOutlook), season production in this league's scoring, league-adjusted SPAM rank, and the
+     (the shared weekOutlook), season production in this league's scoring, league-adjusted AM rank, and the
      team's season schedule. A past week shows the lineup Sleeper recorded for it (its /matchups); the current
      and future weeks show the current lineup. League context only: nothing here changes ownership or rankings. */
   const regularWeeks = d => { const ps = Number(d.league.settings && d.league.settings.playoff_week_start); return ps > 1 ? ps - 1 : 17; };
@@ -9118,13 +9118,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     // the season schedule: every regular-season week's matchups, once per league (memory only)
     loadSchedule(d, roRerender, LT.rWeek);
   }
-  // Slot colors: SPAM's position tokens; flex slots blend the positions they take
+  // Slot colors: AM's position tokens; flex slots blend the positions they take
   const SLOT_COLOR = { QB: "var(--qb)", RB: "var(--rb)", WR: "var(--wr)", TE: "var(--te)",
     FLEX: "var(--flex)", "W/R": "color-mix(in srgb, var(--rb) 50%, var(--wr))", "W/T": "color-mix(in srgb, var(--wr) 50%, var(--te))",
     SF: "var(--sf)" };
   const slotBadge = lab => `<span class="ro-sl" style="--c: ${SLOT_COLOR[lab] || "var(--pick)"}">${esc(lab)}</span>`;
   // The selected team's lineup for a week: Sleeper's recorded lineup for past/current weeks, else the current lineup
-  // (SPAM's best lineup when none is set). IR and taxi are always the current roster's.
+  // (AM's best lineup when none is set). IR and taxi are always the current roster's.
   function rosterWeek(d, t, w, ev) {
     const id = d.league.league_id, cur = mxCurrentWeek(d), r = t.roster;
     const data = slSource() === "sleeper" ? LT.mx[mxKey(id, w)] : null, m = data && data.list.find(x => x.roster_id === t.rosterId);
@@ -9135,7 +9135,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (w <= cur && m && set(m.starters)) { starters = m.starters.map(String); pool = (m.players || r.players || []).map(String); src = w < cur ? "recorded" : "sleeper"; }
     else if (w < cur && m) { starters = []; pool = (m.players || []).map(String); src = "none"; }
     else if (set(r.starters)) { starters = r.starters.map(String); pool = (r.players || []).map(String); src = "current"; }
-    else {   // no lineup set in Sleeper: SPAM's best lineup by value (as on My Team)
+    else {   // no lineup set in Sleeper: AM's best lineup by value (as on My Team)
       const x = ev.byRoster.get(String(t.rosterId)), left = x ? x.starters.slice() : [];
       starters = slots.map(sl => { const lab = SLOT_LABEL[sl] || sl, i = left.findIndex(p => (x.role.get(p.id) || "") === lab); return i >= 0 ? String(left.splice(i, 1)[0].sleeperId) : "0"; });
       pool = (r.players || []).map(String); src = "spam";
@@ -9157,7 +9157,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (LT.rTeam == null || !LG.teams.some(t => String(t.rosterId) === String(LT.rTeam))) LT.rTeam = String(order[0].team.rosterId);
     const x = ev.byRoster.get(String(LT.rTeam)), t = x.team, st = t.roster.settings || {}, F = faabLeft(d);
     const lastWeek = 18;
-    // team picker: every team, yours first, then by SPAM power rank
+    // team picker: every team, yours first, then by AM power rank
     const picker = `<div class="ro-picker" role="tablist" aria-label="Team">${order.map(o => `<button class="ro-pick${String(o.team.rosterId) === String(LT.rTeam) ? " on" : ""}${o.team.mine ? " mine" : ""}" type="button" role="tab" aria-selected="${String(o.team.rosterId) === String(LT.rTeam)}" data-ro-team="${esc(String(o.team.rosterId))}" title="${esc(o.team.name)}${o.team.manager && o.team.manager !== o.team.name ? " · " + esc(o.team.manager) : ""}">${teamFace(o.team, "sm")}<span>${esc(o.team.mine ? "You" : o.team.name)}</span></button>`).join("")}</div>`;
     const weekNav = sleeper ? `<div class="ro-week" role="group" aria-label="Week">
         <button class="ro-wk-btn" type="button" data-ro-week="${w - 1}" aria-label="Previous week"${w <= 1 ? " disabled" : ""}>‹</button>
@@ -9168,7 +9168,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const head = `<div class="ro-head${t.mine ? " mine" : ""}">
         <div class="ro-id">${teamFace(t, "lg")}<div class="ro-id-t">
           <h3 class="ro-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</h3>
-          <p class="ro-stats">${t.manager && t.manager !== t.name ? `<span class="ro-mgr">${esc(t.manager)}</span>` : ""}${stat("SPAM PR", `#${x.power}`)}${stat("Record", esc(recordText(st) || "0-0"))}${stat("PF", st.pf ? pts(st.pf) : "")}${stat("PA", st.pa ? pts(st.pa) : "")}${F ? stat("FAAB", `$${F.left.get(t.rosterId)}`, "faab") : ""}</p>
+          <p class="ro-stats">${t.manager && t.manager !== t.name ? `<span class="ro-mgr">${esc(t.manager)}</span>` : ""}${stat("AM PR", `#${x.power}`)}${stat("Record", esc(recordText(st) || "0-0"))}${stat("PF", st.pf ? pts(st.pf) : "")}${stat("PA", st.pa ? pts(st.pa) : "")}${F ? stat("FAAB", `$${F.left.get(t.rosterId)}`, "faab") : ""}</p>
         </div></div>
         ${weekNav}
       </div>`;
@@ -9187,7 +9187,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       if (o.kind === "live") return `<td class="ro-wk live"><b>${fp(o.pts)}</b><small><span class="ro-live">Live</span></small>${o.proj != null ? `<small class="ro-lp" title="${esc(projTip(o))}">Live proj ${fp(o.est)}</small>` : ""}</td>`;
       if (o.kind === "bye") return `<td class="ro-wk off">BYE</td>`;
       if (o.kind === "out") return `<td class="ro-wk out">OUT</td>`;
-      if (o.missing) return `<td class="ro-wk none" title="No SPAM projection and no ${STATS_SEASONS[0]} games in our stats">—</td>`;
+      if (o.missing) return `<td class="ro-wk none" title="No AM projection and no ${STATS_SEASONS[0]} games in our stats">—</td>`;
       return `<td class="ro-wk up" title="${esc(projTip(o))}"><b>${fp(o.proj)}</b><small>Proj${o.fallback ? " · szn PPG" : ""}</small></td>`;
     };
     const game = e => {
@@ -9209,15 +9209,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <td class="ro-pl"><div class="pl-cell">${face(e.sid, e.name, "sm")}<div class="pl-text"><span class="pl-head">${nameEl}${e.team ? `<span class="ro-tm">${teamLogo(e.team, "xs")}${nflTag(e.team)}</span>` : ""}${inj(e)}</span>${game(e)}</div></div></td>
         ${wkCell(e.o)}
         <td class="ro-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${e.pos.toLowerCase()})">${e.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
-        <td class="ro-rk" title="${e.ranked ? `League-adjusted SPAM rank · ${esc(posLabel(e.p))}` : "Not on the SPAM Board"}">${e.ranked ? `${overallRank(e.p)}<small>${esc(posLabel(e.p))}</small>` : `<span class="muted">—</span>`}</td>
+        <td class="ro-rk" title="${e.ranked ? `League-adjusted AM rank · ${esc(posLabel(e.p))}` : "Not on the AM Board"}">${e.ranked ? `${overallRank(e.p)}<small>${esc(posLabel(e.p))}</small>` : `<span class="muted">—</span>`}</td>
         <td class="ro-num">${sn ? sn.g : "—"}</td>
         <td class="ro-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
         <td class="ro-num">${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td></tr>`;
       if (!open) return main;
       const g = e.o && e.o.game, dx = g && g.kind === "upcoming" ? (D[e.pos] || {})[g.oppTeam] : null;
-      const base = e.ranked && String(e.p.rank) !== String(overallRank(e.p)) ? `<span><i>SPAM Board</i><b>#${e.p.rank} · ${esc(e.p.pos + e.p.posNum)}</b></span>` : "";
+      const base = e.ranked && String(e.p.rank) !== String(overallRank(e.p)) ? `<span><i>AM Board</i><b>#${e.p.rank} · ${esc(e.p.pos + e.p.posNum)}</b></span>` : "";
       return main + `<tr class="ro-detail"><td></td><td colspan="${cols - 1}"><div class="ro-det">
-        ${e.ranked ? `<span><i>SPAM value</i><b>${fmt(dv(e.p))}</b></span><span><i>League rank</i><b>#${overallRank(e.p)} · ${esc(posLabel(e.p))}</b></span>${base}` : `<span><i>SPAM</i><b>Not ranked</b></span>`}
+        ${e.ranked ? `<span><i>AM value</i><b>${fmt(dv(e.p))}</b></span><span><i>League rank</i><b>#${overallRank(e.p)} · ${esc(posLabel(e.p))}</b></span>${base}` : `<span><i>AM</i><b>Not ranked</b></span>`}
         ${dx ? `<span><i>Matchup</i><b class="fa-mx-v ${dx.grade}">${esc(VERDICT[dx.grade])}</b></span>` : ""}
         ${EDIT_POS.includes(e.pos) ? `<span class="ro-det-form"><i>Recent form</i>${recentForm(e.sid, e.pos, e.team)}</span>` : ""}
         ${EDIT_POS.includes(e.pos) ? `<button class="btn link inline" type="button" data-player="${esc(e.sid)}">Player page</button>` : ""}</div></td></tr>`;
@@ -9234,7 +9234,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       : allDone ? `<span class="ro-total"><b>${fp(R.points != null ? R.points : est)}</b> pts</span>`
       : `<span class="ro-total" title="${esc(LIVE_PROJ_TIP)}">${anyOn ? `<b>${fp(R.points != null ? R.points : st8.reduce((a, e) => a + (e.o.pts || 0), 0))}</b> pts · ` : ""}${anyOn ? "Live proj" : "Proj"} <b>${fp(est)}</b>${partial ? "*" : ""}</span>`;
     const sec = (title, rowsHtml, n, right = "", note = "") => rowsHtml ? `<tr class="ro-sec"><td colspan="${cols}"><span class="ro-sec-t">${title}<span class="mt-sec-n">${n}</span>${note ? `<span class="ro-sec-note">${note}</span>` : ""}</span>${right}</td></tr>${rowsHtml}` : "";
-    const srcNote = { recorded: `Sleeper's Week ${w} lineup`, sleeper: "Sleeper lineup", current: w > cur ? "Current lineup" : "", spam: "No lineup set in Sleeper: SPAM's best lineup", none: "" }[R.src];
+    const srcNote = { recorded: `Sleeper's Week ${w} lineup`, sleeper: "Sleeper lineup", current: w > cur ? "Current lineup" : "", spam: "No lineup set in Sleeper: AM's best lineup", none: "" }[R.src];
     const bench = sortBench(R.bench), past = w < cur ? "current" : "";
     const tbody = sec("Starters", starterRows, R.src === "none" ? 0 : R.starters.filter(s => s && s !== "0").length, total, srcNote)
       + sec("Bench", bench.map(s => row("BN", s, "bn")).join(""), bench.length)
@@ -9242,15 +9242,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       + sec("Taxi squad", R.taxi.map(s => row("TAXI", s, "inactive")).join(""), R.taxi.length, "", past ? "Current taxi squad" : "");
     const table = `<div class="ro-main"><div class="table-scroll"><table class="ro-table">
         <thead><tr><th scope="col">Slot</th><th scope="col">Player</th>
-          <th scope="col" class="ro-wk" title="Week ${w} in this league's scoring: actual points once his game is final, points so far and Live proj during it, SPAM's projection before it (Vegas, matchup and props calibrated when available).">Wk ${w}</th>
+          <th scope="col" class="ro-wk" title="Week ${w} in this league's scoring: actual points once his game is final, points so far and Live proj during it, AM's projection before it (Vegas, matchup and props calibrated when available).">Wk ${w}</th>
           <th scope="col" class="ro-srk" title="${STATS_SEASONS[0]} finish at his position by total fantasy points, in this league's scoring">Szn rk</th>
-          <th scope="col" class="ro-rk" title="League-adjusted SPAM rank (overall), position rank below">SPAM rk</th>
+          <th scope="col" class="ro-rk" title="League-adjusted AM rank (overall), position rank below">AM rk</th>
           <th scope="col" class="ro-num" title="Games played this season">GP</th><th scope="col" class="ro-num">FPTS</th><th scope="col" class="ro-num">PPG</th></tr></thead>
         <tbody>${tbody}</tbody></table></div>
-        <p class="method-note ro-note">Click a player for his SPAM value and recent form. Season stats use ${esc(d.league.name)}'s scoring; SPAM rk is league-adjusted.</p></div>`;
+        <p class="method-note ro-note">Click a player for his AM value and recent form. Season stats use ${esc(d.league.name)}'s scoring; AM rk is league-adjusted.</p></div>`;
     return picker + head + `<div class="ro-layout">${table}${scheduleHtml(d, t, ev, cur, w)}</div>`;
   }
-  // The selected team's season schedule: result, score, opponent (avatar, record, SPAM PR); a row opens that matchup
+  // The selected team's season schedule: result, score, opponent (avatar, record, AM PR); a row opens that matchup
   function scheduleHtml(d, t, ev, cur, sel) {
     if (slSource() !== "sleeper") return `<aside class="ro-sched"><h3 class="rail-title">Season schedule</h3><p class="rail-empty">The schedule comes from Sleeper, so it's available for Sleeper leagues.</p></aside>`;
     const id = d.league.league_id, last = regularWeeks(d);
@@ -9432,7 +9432,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return `<span class="rf"><span class="rf-scores">${weeks.slice().reverse().map(cell).join("")}</span>${avg != null ? `<span class="rf-sub">Avg ${fp(avg)}${trend ? " · " + trend : ""}</span>` : ""}</span>`;
   }
 
-  /* Waiver Wire: ranked players nobody in the selected league rosters. SPAM value leads (default sort = SPAM
+  /* Waiver Wire: ranked players nobody in the selected league rosters. AM value leads (default sort = AM
      rank); recent form, this week's matchup and where he'd fit on your roster are context, never the ranking. */
   let faSort = "rank";
   $("fa-sort").addEventListener("change", e => { faSort = e.target.value; renderFA(); });
@@ -9461,8 +9461,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      without touching any page. Season PPG is not a provider: it's a flagged fallback when no provider has him.
      Weekly projections never touch rankings, values, tiers or history. */
   const PROJ_PROVIDERS = [
-    { id: "spam", label: "SPAM", get: e => { const v = projPPGOf(e.p); return v != null ? { basePts: v } : null; } },
-    // Kickers and team defenses (Steven, Oct 4): SPAM doesn't rank or project them, so Matchups use Sleeper's own
+    { id: "spam", label: "AM", get: e => { const v = projPPGOf(e.p); return v != null ? { basePts: v } : null; } },
+    // Kickers and team defenses (Steven, Oct 4): AM doesn't rank or project them, so Matchups use Sleeper's own
     // weekly projection, scored with this league's K/DEF settings (sleeperPoints). See SLPROJ below.
     { id: "sleeper", label: "Sleeper (K, DEF)", get: (e, week) => (SLPROJ_POS.includes(e.pos) ? slProjFor(e.sid, week) : null) }
   ];
@@ -9514,8 +9514,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      3. Player props, when a props file exists (data/props/<season>.json, see CLAUDE.md): consensus lines become
         expected stats (receptions, yards, attempts, passing TDs; anytime-TD probability → expected TDs, split
         rush/receiving by his history), the rest of his stat line comes from his recent per-game averages, all
-        scored with the league's settings, then blended with the calibrated SPAM projection (more markets, more
-        weight, at most 60%). No props → the SPAM projection alone; missing props never count as zero. */
+        scored with the league's settings, then blended with the calibrated AM projection (more markets, more
+        weight, at most 60%). No props → the AM projection alone; missing props never count as zero. */
   function gameContext(e, g) {
     const out = { env: 1, mx: 1, inputs: [] };
     if (!g || !g.oppTeam || !e.team) return out;
@@ -9538,7 +9538,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     return out;
   }
-  /* Sleeper's weekly projections for kickers and team defenses (Steven, Oct 4). SPAM's pipeline only projects
+  /* Sleeper's weekly projections for kickers and team defenses (Steven, Oct 4). AM's pipeline only projects
      QB/RB/WR/TE, so a K or DEF starter used to leave a matchup "partial". The visitor's browser asks Sleeper
      directly for that week's K/DEF projections (memory only, never stored or committed, like the rest of the
      league data); each projection is a raw stat line (field goals by distance, extra points, sacks, takeaways,
@@ -9627,14 +9627,14 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     }
     return markets ? { pts: gamePoints(st, e.pos, sc), markets } : null;
   }
-  // The calibrated weekly projection for a game: SPAM base × Vegas × matchup, blended with props when available.
+  // The calibrated weekly projection for a game: AM base × Vegas × matchup, blended with props when available.
   // opts.props / opts.ctx override the inputs (tests); returns { pts, source, fallback, inputs } or null.
   function contextProjection(e, g, sc, opts = {}) {
     const P = weeklyProjection(e, sc, g && g.week);
     if (!P) return null;
     // Sleeper's K/DEF projection is already a weekly, matchup-aware number: no Vegas / matchup / props layer on top
     if (P.source === "sleeper") return { pts: P.pts, source: P.source, fallback: false, inputs: [`Sleeper's weekly ${e.pos === "DEF" ? "defense" : "kicker"} projection, scored with this league's settings`] };
-    const ctx = opts.ctx || gameContext(e, g), inputs = [P.fallback ? `Season PPG (no SPAM projection)` : "SPAM projection: usage, results, team outlook", ...ctx.inputs];
+    const ctx = opts.ctx || gameContext(e, g), inputs = [P.fallback ? `Season PPG (no AM projection)` : "AM projection: usage, results, team outlook", ...ctx.inputs];
     let pts = P.pts * ctx.env * ctx.mx;
     const pr = propsProjection(e, sc, opts.props !== undefined ? opts.props : (g && g.week ? propsFor(e.sid, g.week) : null));
     if (pr) { const w = Math.min(0.6, 0.15 + 0.15 * pr.markets); pts = w * pr.pts + (1 - w) * pts; inputs.push(`Player props: ${pr.markets} market${pr.markets === 1 ? "" : "s"}${PROPS.data && PROPS.data.books ? ` (consensus of ${PROPS.data.books.length} books)` : ""}`); }
@@ -9738,7 +9738,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const pp = [0, 1].map(x => cp(we, g0, { ctx: flat, props: { rec: 8, rec_yd: 90 }, sc: scOf({ rec: x, tep: 0 }) }));
     check(`${wr.name}: props are scored with the league's PPR setting`, pp, pp[1] > pp[0]);
     const nop = [cp(we, g0, { ctx: flat, props: null }), cp(we, g0, { ctx: flat, props: {} })];
-    check(`${wr.name}: no props (or an empty props line) leaves the SPAM projection unchanged`, nop, nop[0] === nop[1] && nop[0] === Math.round(10 * weeklyProjection(we, sc0).pts) / 10);
+    check(`${wr.name}: no props (or an empty props line) leaves the AM projection unchanged`, nop, nop[0] === nop[1] && nop[0] === Math.round(10 * weeklyProjection(we, sc0).pts) / 10);
     const none = weeklyProjection({ sid: "0", pos: "K", team: "BUF", p: null }, scOf({}));
     check("A kicker with no projection and no stats isn't given a made-up projection", [String(none)], none === null);
     // Sleeper K/DEF projections are scored with the league's own K/DEF settings (Sleeper's pts_* summaries ignored)
@@ -9747,7 +9747,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     check("Sleeper kicker projection scored with the league's kicker settings", [kPts, kPts2], kPts === 7.5 && kPts2 === 8);
     const dPts = sleeperPoints({ sack: 3, int: 1, def_td: 0.1, pts_allow: 18.4 }, kdSc), dPts2 = sleeperPoints({ sack: 3, int: 1, pts_allow_14_20: 0.5, pts_allow_0: 0.1, pts_allow: 18.4 }, kdSc);
     check("Sleeper defense projection: takeaways, sacks and the points-allowed bracket", [dPts, dPts2], dPts === 6.6 && dPts2 === 6.5);
-    if (out.some(c => !c.pass)) console.warn("SPAM projection check failed", out); else console.info("SPAM projection check passed", out);
+    if (out.some(c => !c.pass)) console.warn("AM projection check failed", out); else console.info("AM projection check passed", out);
     return out;
   }
   // Waiver Wire's Wk N cell, from the shared week outlook
@@ -9819,7 +9819,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const grade = p => { const g = nflGameState(p.team, wk); if (g.kind !== "upcoming") return 3; const x = D[p.pos] && D[p.pos][g.oppTeam]; return x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3; };
     const me = LG.teams.find(t => t.mine), K = me ? leagueKit() : null;
     const fit = new Map(K ? list.map(p => [p.id, faFit(K, me, p)]) : []);
-    // SPAM rank order (the RK shown). My team fit: a gentle nudge on that rank (starters ×0.85, bench depth ×1.1),
+    // AM rank order (the RK shown). My team fit: a gentle nudge on that rank (starters ×0.85, bench depth ×1.1),
     // never a re-sort by fit alone
     const rkOf = p => { const r = Number(overallRank(p)); return isFinite(r) ? r : 9999; };
     const key = p => rkOf(p) * (faFitSort && fit.has(p.id) ? (fit.get(p.id).cls === "start" ? 0.85 : fit.get(p.id).cls === "deep" ? 1.1 : 1) : 1);
@@ -9834,11 +9834,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     };
     list.sort(sorts[faSort] || byRank);
     $("fa-head").innerHTML = `<tr><th scope="col">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th>
-      <th scope="col" class="fa-proj" title="This week in ${esc(d.league.name)}'s scoring: his actual points once his game is final, otherwise SPAM's projection (rest-of-season points per game from usage, results and team outlook; not matchup-adjusted). — means no projection.">${wk ? `Wk ${wk}` : "Proj"}</th>
+      <th scope="col" class="fa-proj" title="This week in ${esc(d.league.name)}'s scoring: his actual points once his game is final, otherwise AM's projection (rest-of-season points per game from usage, results and team outlook; not matchup-adjusted). — means no projection.">${wk ? `Wk ${wk}` : "Proj"}</th>
       <th scope="col" class="fa-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th>
       <th scope="col" class="fa-wk">Matchup</th>
       <th scope="col" class="fa-srk" title="${STATS_SEASONS[0]} finish at his position by total fantasy points, in this league's scoring">Szn rk</th><th scope="col" class="fa-num">FPTS</th><th scope="col" class="fa-num">PPG</th>
-      <th scope="col" class="fa-fit" title="Where he'd fit on your roster in this league's lineup. Context only: it never changes his SPAM rank.">Fit</th></tr>`;
+      <th scope="col" class="fa-fit" title="Where he'd fit on your roster in this league's lineup. Context only: it never changes his AM rank.">Fit</th></tr>`;
     $("fa-body").innerHTML = list.length ? list.map(p => {
       const wv = waiverUntil(p), f = fit.get(p.id), pj = proj.get(p.id), sn = season.get(p.sleeperId);
       const tc = trend.get(p.sleeperId);
@@ -9856,7 +9856,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       <td class="fa-fit">${f ? `<span class="fa-fit-t ${f.cls}">${esc(f.text)}</span>` : `<span class="muted">—</span>`}</td></tr>`;
     }).join("")
       : `<tr><td class="empty" colspan="10">No ranked players available${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
-    $("fa-count").textContent = `${list.length} ranked player${list.length === 1 ? "" : "s"} available in ${d.league.name}. Projections are SPAM's (rescored for this league), not matchup-adjusted. Trending = adds across all Sleeper leagues in the last 24 hours (Sleeper's public data has no roster %). Click a row for the player page.`;
+    $("fa-count").textContent = `${list.length} ranked player${list.length === 1 ? "" : "s"} available in ${d.league.name}. Projections are AM's (rescored for this league), not matchup-adjusted. Trending = adds across all Sleeper leagues in the last 24 hours (Sleeper's public data has no roster %). Click a row for the player page.`;
   }
 
   /* Trade calculator: pick teams and click players from their rosters */
@@ -9887,7 +9887,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const short = n => { const parts = String(n).split(/\s+/); return parts.length > 1 ? parts[0][0] + ". " + compactName(n) : n; };
       box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Click to add to ${esc(sideName(s))} · click again to remove</span></div>
         <div class="rs-strip">${entries.map(e => {
-          if (!e.ranked) return `<div class="rs-card off" title="${esc(e.name)}: not on the SPAM Board">${face(e.sid, e.name, "", false)}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="rs-name">${esc(short(e.name))}</span></div>`;
+          if (!e.ranked) return `<div class="rs-card off" title="${esc(e.name)}: not on the AM Board">${face(e.sid, e.name, "", false)}<span class="pos-plain">${esc(e.pos || "—")}</span><span class="rs-name">${esc(short(e.name))}</span></div>`;
           const on = sides[s].includes(e.p.id);
           return `<button class="rs-card${on ? " on" : ""}" type="button" data-id="${e.p.id}" data-side="${s}" aria-pressed="${on}" title="${esc(e.name)} · ${esc(posLabel(e.p))} · ${fmt(tv(e.p))}">${face(e.sid, e.name, "", false)}<span class="pos ${esc(e.pos)}">${esc(posLabel(e.p))}</span><span class="rs-name">${esc(short(e.name))}</span><span class="rs-val">${fmt(tv(e.p))}</span></button>`;
         }).join("")}</div>`;
@@ -9919,7 +9919,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      Separate data layers meet here; none of them writes to another:
        identity  data/sleeper_players.json (Sleeper ID, name, position, team, nflverse ID, birthdate)
        stats     data/stats/<season>.json  (weekly game logs and schedules; refreshed every Tuesday)
-       rankings  RANKINGS_CSV + editor edits (rank, position rank, SPAM Value)
+       rankings  RANKINGS_CSV + editor edits (rank, position rank, AM Value)
        history   data/rank_history.json    (a snapshot saved each time rankings are published)
        league    Sleeper data in this browser (ownership, scoring, rosters)
      Photos come from Sleeper's CDN by Sleeper ID (face()). */
@@ -9962,7 +9962,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return parts;
   }
   const scoringLabel = () => {
-    const d = activeData(), who = d ? `${d.league.name} scoring` : FMT ? "Your scoring" : "SPAM scoring";
+    const d = activeData(), who = d ? `${d.league.name} scoring` : FMT ? "Your scoring" : "AM scoring";
     return [who, ...scoringParts(scoringNow())].join(" · ");
   };
   const STAT_KEYS = ["pass_cmp", "pass_att", "pass_yd", "pass_td", "pass_int", "pass_2pt", "pass_sack", "pass_fd",
@@ -10005,7 +10005,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const loc = injLocal();
     if (!editor.token || !Object.keys(loc).length) return;
     for (let attempt = 0; attempt < 3; attempt++) {
-      let file = null, base = { note: "Manual injury-shortened corrections (SPAM editors). short: true marks a game the detection missed; false clears a wrong flag.", seasons: {} };
+      let file = null, base = { note: "Manual injury-shortened corrections (AM editors). short: true marks a game the detection missed; false clears a wrong flag.", seasons: {} };
       try { file = await gh(`/repos/${REPO}/contents/${INJ_OV_FILE}?ref=${BRANCH}`); base = JSON.parse(b64decode(file.content)); base.seasons = base.seasons || {}; }
       catch (err) { if (err.status !== 404) throw err; }
       for (const [y, bySid] of Object.entries(loc)) for (const [sid, byW] of Object.entries(bySid)) for (const [w, v] of Object.entries(byW)) {
@@ -10417,7 +10417,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </div>
         <div class="pm-stats">
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
-          ${stat("Position", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "SPAM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
+          ${stat("Position", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "AM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
           ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
           ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? (curT.short ? `<span title="${esc(ppgNote(curT))}">${curT.g} G · ${curT.short} injury-shortened</span>` : `${curT.g} G · ${activeData() ? "league" : "site"} scoring`) : "No games")}
         </div>
@@ -10491,7 +10491,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const x = g.short, parts = [`Left Week ${g.w} early — injury${x.inj ? ` (${x.inj})` : ""}`];
     if (x.at != null) parts.push(x.at >= 29 && x.at <= 31 ? "around halftime" : `in the ${QTR[Math.min(3, Math.floor(x.at / 15))]}`);
     if (x.pct != null) parts.push(`${Math.round(100 * x.pct)}% of snaps${x.usual != null ? ` (usually ${Math.round(100 * x.usual)}%)` : ""}`);
-    if (x.manual) parts.push("marked by SPAM");
+    if (x.manual) parts.push("marked by AM");
     return parts.join(" · ");
   };
   const ptsStar = g => `${fp(g.pts)}${g.short ? `<span class="inj-star" title="${esc(shortTip(g))}">*</span>` : ""}`;
@@ -10548,7 +10548,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </div>
       ${usage ? `<h3 class="section-label">Usage</h3>${usage}` : ""}
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
-      ${projPPGOf(p) != null ? `<p class="pp-glance">SPAM projection: <b>${fp(projPPGOf(p))}</b> PPG rest of season (site scoring), from usage, results and team context.</p>` : ""}
+      ${projPPGOf(p) != null ? `<p class="pp-glance">AM projection: <b>${fp(projPPGOf(p))}</b> PPG rest of season (site scoring), from usage, results and team context.</p>` : ""}
       </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
   }
   // Last few committed ranking changes for this player (newest first)
@@ -11021,13 +11021,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   function ppHistory(info) {
     const h = historyOf(info.sid), p = info.p;
-    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the SPAM Rankings.</p>`;
-    const note = `<p class="pp-note">Ranking history records committed changes to your rankings and values, plus scheduled snapshots. Values are base SPAM values.</p>`;
+    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the AM Rankings.</p>`;
+    const note = `<p class="pp-note">Ranking history records committed changes to your rankings and values, plus scheduled snapshots. Values are base AM values.</p>`;
     if (!h.length) return `<p class="empty-note">No ranking history for ${esc(info.name)} yet.</p>` + note;
     if (h.length >= 2) {
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.rank })), invert: true, title: "Overall rank", fmt: v => "#" + v });
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.posRank })), invert: true, title: "Position rank", fmt: v => info.pos + v });
-      PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.value })), title: "SPAM Value", fmt: v => fmt(v) });
+      PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.value })), title: "AM Value", fmt: v => fmt(v) });
     }
     const tierCell = (x, prev) => x.tier === "" || x.tier == null ? "–" : isTagTier(x.tier) ? esc(tierLabel(info.pos, x.tier)) : `T${esc(String(x.tier))}${prev && prev.tier !== "" && prev.tier != null && String(prev.tier) !== String(x.tier) ? ` <span class="mv ${Number(x.tier) < Number(prev.tier) ? "up" : "down"}">${Number(x.tier) < Number(prev.tier) ? "▲" : "▼"}</span>` : ""}`;
     const rows = h.slice().reverse().map((x, i, arr) => {
@@ -11040,7 +11040,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return `${h.length >= 2 ? `<div class="pp-three">
         <div><h3 class="section-label">Overall rank</h3><div class="chart-box" data-chart="0"></div></div>
         <div><h3 class="section-label">Position rank</h3><div class="chart-box" data-chart="1"></div></div>
-        <div><h3 class="section-label">SPAM Value</h3><div class="chart-box" data-chart="2"></div></div></div>` : ""}
+        <div><h3 class="section-label">AM Value</h3><div class="chart-box" data-chart="2"></div></div></div>` : ""}
       <h3 class="section-label">Ranking changes</h3>
       <div class="table-scroll"><table class="gl-table">
         <thead><tr><th scope="col">Date</th><th scope="col">Overall</th><th scope="col">Move</th><th scope="col">Pos rank</th><th scope="col">Move</th><th scope="col">Tier</th><th scope="col">Value</th><th scope="col">Change</th><th scope="col">Source</th></tr></thead>
@@ -11059,7 +11059,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   /* Trade value: similar values, trade-up and trade-down targets */
   function ppTradeValue(info) {
     const p = info.p;
-    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the SPAM Rankings, so he has no trade value yet.</p>`;
+    if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the AM Rankings, so he has no trade value yet.</p>`;
     const h = historyOf(info.sid), today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     const before = h.filter(x => x.date < today).pop();
     const v = dv(p), mineOwner = ownerOfSid(info.sid);
@@ -11084,7 +11084,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const canFind = LG.active && mineOwner && mineOwner !== "fa";
     return `
       <div class="pp-grid">
-        ${tile("Current value", fmt(v), leagueView() ? (LG.active ? "League-adjusted SPAM Value" : "SPAM Value for your settings") : "Base SPAM Value")}
+        ${tile("Current value", fmt(v), leagueView() ? (LG.active ? "League-adjusted AM Value" : "AM Value for your settings") : "Base AM Value")}
         ${tile("Recent value movement", before ? valueMove(p.value - before.value) : "–", before ? `Base value since ${esc(longDate(before.date))}` : "No earlier snapshot yet")}
         ${tile("Ranking movement", before ? moveTag(before.rank - p.rank) : "–", before ? `Overall rank #${before.rank} → #${p.rank ?? "–"}` : "No earlier snapshot yet")}
       </div>
@@ -11125,7 +11125,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const vp = [
       ["Overall rank", S => (S.inf.p ? (leagueView() ? overallRank(S.inf.p) : S.inf.p.rank) : null), v => "#" + v, -1],
       ["Position rank", S => (S.inf.p ? S.inf.p.posNum : null), (v, S) => esc(S.inf.p ? posLabel(S.inf.p) : S.inf.pos + v), same ? -1 : 0],
-      ["SPAM value", S => (S.inf.p ? dv(S.inf.p) : null), v => fmt(v), 1, "value"],
+      ["AM value", S => (S.inf.p ? dv(S.inf.p) : null), v => fmt(v), 1, "value"],
       [`${STATS_SEASONS[0]} PPG`, S => (S.g ? S.t.ppg : null), (v, S) => fp(v) + injStar(S), 1, "ppg"],
     ];
     if ((A.t && A.t.distort) || (B.t && B.t.distort)) vp.push(["PPG in completed games", S => (S.t && S.t.fullG ? S.t.fullPpg : null), v => fp(v), 1]);
@@ -11206,7 +11206,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   function cmpSummary(A, B, rows) {
     // only differences in this table: a player "leads" a theme when his number is ≥12% better
-    const THEMES = { ppg: "scoring production", l3: "recent scoring", vol: "volume", tshare: "target share", snap: "snap share", rz: "red-zone role", eff: "efficiency per opportunity", rush: "rushing production", value: "SPAM value", proj: "rest-of-season projection" };
+    const THEMES = { ppg: "scoring production", l3: "recent scoring", vol: "volume", tshare: "target share", snap: "snap share", rz: "red-zone role", eff: "efficiency per opportunity", rush: "rushing production", value: "AM value", proj: "rest-of-season projection" };
     const lines = { a: [], b: [] };
     rows.forEach(r => {
       if (!r.theme || !THEMES[r.theme] || r.a == null || r.b == null || !r.better) return;
@@ -11768,7 +11768,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const lines = [];
     lines.push(mu ? `${SPoss} ${mu.pos} room goes ${arrow(mu)}${md ? `, while ${sPoss} ${md.pos} room goes ${arrow(md)}` : ""}.` : it.dS > 0 ? `${SPoss} starting lineup gets stronger.` : `${SPoss} lineup stays about level.`);
     lines.push(tu ? `${TPoss} ${tu.pos} room goes ${arrow(tu)}${td ? ` and its ${td.pos} room ${arrow(td)}` : ""}.` : it.dT > 0 ? `${TPoss} lineup gets stronger.` : `${T} gets the value but not a lineup upgrade, so they may need convincing.`);
-    it.fS.inc.forEach(e => lines.push(`${e.p.name}: ${fmt(dv(e.p))} SPAM Value, worth ${fmt(e.tv)} to ${sN} (${e.why.toLowerCase()}).`));
+    it.fS.inc.forEach(e => lines.push(`${e.p.name}: ${fmt(dv(e.p))} AM Value, worth ${fmt(e.tv)} to ${sN} (${e.why.toLowerCase()}).`));
     it.fT.inc.forEach(e => lines.push(`${e.p.name}: worth ${fmt(e.tv)} to ${T} (${e.why.toLowerCase()}).`));
     if (it.give.length > it.get.length) lines.push(`${you ? "You consolidate" : S.name + " consolidates"} into one stronger piece and ${you ? "open" : "opens"} a roster spot.`);
     else if (it.get.length > it.give.length) lines.push(`Taking ${it.get.length} players costs ${sPoss} bench a spot.`);
@@ -11844,7 +11844,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (!d) { body.innerHTML = ""; return; }
     if ($("panel-finder").hidden) { TF.dirty = true; return; }
     TF.dirty = false;
-    $("tf-sub").textContent = `${d.league.name} · ${formatParts(d.league).join(" · ")} · ${leagueView() ? "League-adjusted" : "Base"} SPAM Values`;
+    $("tf-sub").textContent = `${d.league.name} · ${formatParts(d.league).join(" · ")} · ${leagueView() ? "League-adjusted" : "Base"} AM Values`;
     renderFinderPick();
     const { X, Y, owner, S, mode, pkg } = finderTarget();
     const others = LG.teams;
@@ -12001,7 +12001,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 
   /* ---------- Ranking history ----------
      data/rank_history.json (version 2) keeps every player's committed changes:
-       players: { sleeper_id: [[timestamp, overall rank, position rank, tier, base SPAM value, source], ...] }
+       players: { sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source], ...] }
      source: "M" manual edit (committed with Save changes / Publish to live site), "S" scheduled Tuesday
      snapshot (pipeline/snapshot_history.py), "P" any other published update.
      A player gets a new entry only when his overall rank, position rank or tier changed, or his value moved by
@@ -12065,7 +12065,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (Object.keys(entries).length) writePending(readPending().concat([{ ts, entries }]));
     return Object.keys(entries).length;
   }
-  const historyText = h => `{"note":"SPAM ranking history: committed changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base SPAM value, source M=manual edit S=scheduled update P=published update], ...]}. A new entry is added only when something changed.","version":2,"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 6)))}`).join(",\n")}\n}}\n`;
+  const historyText = h => `{"note":"AM ranking history: committed changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source M=manual edit S=scheduled update P=published update], ...]}. A new entry is added only when something changed.","version":2,"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 6)))}`).join(",\n")}\n}}\n`;
   // Publish to live site: queued saves, then anything else that changed, into the shared file
   async function saveHistory() {
     for (let attempt = 0; attempt < 3; attempt++) {

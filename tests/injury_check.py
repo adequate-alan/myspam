@@ -137,7 +137,7 @@ with sync_playwright() as p:
     open_daniels(pg); game_log(pg)
     ok(row(pg, 1).locator(".inj-ov").inner_text() == "Mark injury" and row(pg, 2).locator(".inj-ov").inner_text() == "Clear flag", "?debug: Mark injury / Clear flag on each played game")
     row(pg, 1).locator(".inj-ov").click(); pg.wait_for_timeout(500)
-    ok(row(pg, 1).locator(".inj-tag").count() == 1 and "marked by SPAM" in row(pg, 1).locator(".inj-tag").get_attribute("title"), "Mark injury: Week 1 now Left early (marked by SPAM)")
+    ok(row(pg, 1).locator(".inj-tag").count() == 1 and "marked by AM" in row(pg, 1).locator(".inj-tag").get_attribute("title"), "Mark injury: Week 1 now Left early (marked by AM)")
     ok("2 injury-shortened" in pg.inner_text("#player-modal tfoot"), "Game Log footer counts 2 injury-shortened games")
     row(pg, 2).locator(".inj-ov").click(); pg.wait_for_timeout(500)
     ok(row(pg, 2).locator(".inj-tag").count() == 0, "Clear flag: Week 2 no longer flagged")

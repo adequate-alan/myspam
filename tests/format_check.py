@@ -106,7 +106,7 @@ with sync_playwright() as p:
     ok("test league" in pg.inner_text("#tc-badge").lower(), "Calculator says whose settings its values use: " + pg.inner_text("#tc-badge").strip())
     pg.evaluate("() => document.getElementById('tc-breakdown').open = true"); pg.wait_for_timeout(200)
     bd = pg.inner_text("#tc-breakdown-body")
-    ok(all(x in bd.lower() for x in ["base spam value", "league-adjusted value", "te premium (+ → none)"]), "Value breakdown shows Base / TE premium / League-adjusted")
+    ok(all(x in bd.lower() for x in ["base am value", "league-adjusted value", "te premium (+ → none)"]), "Value breakdown shows Base / TE premium / League-adjusted")
     m = re.search(r"George Kittle\s+([\d,]+)\s+(.*?)\s+([\d,]+)\s*$", [l for l in bd.splitlines() if "George Kittle" in l][0].replace("\t", " "))
     ok(m and num(m.group(1)) == base_k and num(m.group(3)) == v_none, f"Breakdown row: {m.group(0) if m else bd}")
     pg.evaluate("() => { const s = document.getElementById('tc-league'); s.value = 'L1'; s.dispatchEvent(new Event('change', { bubbles: true })); }")
