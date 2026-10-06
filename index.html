@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#000000" id="theme-color">
+<meta name="theme-color" content="#0A0A0B" id="theme-color">
 <meta http-equiv="Cache-Control" content="no-cache">
 <script>
   /* Theme before first paint: saved choice (spm_theme), else the device setting, else dark */
@@ -12,7 +12,7 @@
     try { t = localStorage.getItem("spm_theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", t);
-    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#FFFFFF" : "#000000";
+    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0A0A0B";
   })();
 </script>
 <meta name="description" content="AM fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
@@ -702,135 +702,135 @@ const TRADE_VERDICTS = [
    aliases of these tokens, so every rule follows the active theme. */
 :root, :root[data-theme="dark"] {
   /* surfaces */
-  --page-bg: #000000;            /* near-black warm page */
-  --nav-bg: #0A0A0A;             /* header */
-  --surface-bg: #171717;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
-  --surface-raised: #1F1F1F;     /* modals, dropdowns, menus, elevated sections */
-  --table-head: #202020;
-  --row-hover: #242014;
-  --tier-row: #1C1A12;           /* tier divider rows inside tables */
-  --control-bg: #121212;         /* inputs, selects, buttons */
-  --track: #2B2B2B;              /* value bars, slider tracks */
+  --page-bg: #0A0A0B;            /* near-black warm page */
+  --nav-bg: #0A0A0B;             /* header */
+  --surface-bg: #111214;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
+  --surface-raised: #1D1F24;     /* modals, dropdowns, menus, elevated sections */
+  --table-head: #17181C;
+  --row-hover: #181A1F;
+  --tier-row: #15161A;           /* tier divider rows inside tables */
+  --control-bg: #17181C;         /* inputs, selects, buttons */
+  --track: #23252B;              /* value bars, slider tracks */
   /* text */
-  --text-primary: #FFFFFF;
-  --text-strong: #FFFFFF;        /* names, numbers, emphasis */
-  --text-secondary: #BDBDBD;
-  --text-muted: #9A9A9A;
-  --text-rank: #D9D9D9;
-  --heading: #FFFFFF;            /* page and dialog titles */
+  --text-primary: #F3F1EB;
+  --text-strong: #F3F1EB;        /* names, numbers, emphasis */
+  --text-secondary: #B5AEA3;
+  --text-muted: #8C857A;
+  --text-rank: #E6E1D7;
+  --heading: #F5F2EA;            /* page and dialog titles */
   /* lines */
-  --border: #2B2B2B;
-  --border-soft: #212121;
-  --border-strong: #4A4A4A;
+  --border: #2A2D33;
+  --border-soft: #23252B;
+  --border-strong: #3A3D44;
   /* brand + accents */
-  --brand: #FFFFFF;
-  --brand-accent: #AA8A00;
-  --accent-primary: #AA8A00;     /* CTAs, active tabs, selected states */
-  --accent-hover: #D6B94C;
-  --accent-text: #000000;        /* text on the accent */
+  --brand: #F5F2EA;
+  --brand-accent: #C8A34D;
+  --accent-primary: #C8A34D;     /* CTAs, active tabs, selected states */
+  --accent-hover: #A8842C;
+  --accent-text: #111214;        /* text on the accent */
   --accent-secondary: #C9595A;   /* muted rose */
   --accent-secondary-text: #E8A3A3;
-  --burgundy-1: #7A6400;
-  --burgundy-2-t: #AA8A00;
-  --coral: #D6B94C;
-  --peach: #D6B94C;
+  --burgundy-1: #2A2D33;
+  --burgundy-2-t: #3A3D44;
+  --coral: #C8A34D;
+  --peach: #C8A34D;
   /* interaction */
-  --hover-bg: #262212;
+  --hover-bg: #1D1F24;
   --active-bg: color-mix(in srgb, var(--accent-primary) 14%, transparent);
   --btn-bg: var(--control-bg);
-  --btn-text: #FFFFFF;
-  --btn-hover-bg: #262212;
+  --btn-text: #F3F1EB;
+  --btn-hover-bg: #1D1F24;
   --danger-bg: #6B1F1F;
   --danger-hover: #842828;
   --danger-text: #F2C4C4;
-  --selection-bg: #7A6400;
-  --selection-text: #FFFFFF;
+  --selection-bg: #A8842C;
+  --selection-text: #111214;
   /* editor */
-  --editor-panel: #1A170C;
-  --editor-border: #4A3E0A;
-  --custom-panel: #211C0A;
-  --custom-border: #6B5A12;
+  --editor-panel: #16140F;
+  --editor-border: #3D3420;
+  --custom-panel: #1C1912;
+  --custom-border: #5A4B26;
   /* positions (kept recognizable, tuned to read on the burgundy surface) */
-  --pos-qb: #E8978A;   /* soft coral on a wine tint */
-  --pos-rb: #5CCB98;   /* emerald on a forest tint */
-  --pos-wr: #8DB3DE;   /* desaturated light blue on slate */
-  --pos-te: #C3A3E2;   /* lavender on plum */
-  --pos-flex: #DDB06A; /* muted amber */
-  --pos-sf: #E08FB0;   /* muted rose */
-  --pos-pick: #A08D8F; /* bench / IR / picks: neutral */
-  --badge-base: #0D0D0D;
+  --pos-qb: #D66A5A;   /* soft coral on a wine tint */
+  --pos-rb: #38A678;   /* emerald on a forest tint */
+  --pos-wr: #5284D6;   /* desaturated light blue on slate */
+  --pos-te: #9068C9;   /* lavender on plum */
+  --pos-flex: #8A919E; /* muted amber */
+  --pos-sf: #8A919E;   /* muted rose */
+  --pos-pick: #8A919E; /* bench / IR / picks: neutral */
+  --badge-base: #111214;
   /* depth */
   --shadow-color: rgba(0, 0, 0, 0.85);
   --shadow-soft: rgba(0, 0, 0, 0.6);
   --backdrop: rgba(0, 0, 0, 0.75);
-  --hero-tint: color-mix(in srgb, #AA8A00 16%, #171717);
+  --hero-tint: #15161A;
   --theme-scheme: dark;
-  --tier-line: #3A3214;
-  --tier-text: #D6B94C;
-  --disabled-bg: #1C1C1C;
-  --disabled-text: #7A7A7A;
-  --disabled-border: #2B2B2B;
+  --tier-line: #2A2D33;
+  --tier-text: #E6E1D7;
+  --disabled-bg: #17181C;
+  --disabled-text: #6E685F;
+  --disabled-border: #2A2D33;
 }
 :root[data-theme="light"] {
-  --page-bg: #FFFFFF;            /* warm cream */
-  --nav-bg: #FFFFFF;
-  --surface-bg: #F2F2F2;         /* cards and tables: a clear step darker than the page (never white) */
-  --surface-raised: #FFFFFF;     /* modals, dropdowns */
-  --table-head: #E6E6E6;
-  --row-hover: #F5F0DC;
-  --tier-row: #F3EEDA;
-  --control-bg: #FFFFFF;
-  --track: #D9D9D9;
-  --text-primary: #000000;
-  --text-strong: #000000;
-  --text-secondary: #3D3D3D;
-  --text-muted: #5E5E5E;
-  --text-rank: #2B2B2B;
-  --heading: #000000;
-  --border: #D9D9D9;
-  --border-soft: #E6E6E6;
-  --border-strong: #BDBDBD;
-  --brand: #000000;
-  --brand-accent: #AA8A00;
-  --accent-primary: #7A6400;     /* burgundy: buttons, active states, emphasis */
-  --accent-hover: #AA8A00;
-  --accent-text: #FFFFFF;
+  --page-bg: #F6F3EC;            /* warm cream */
+  --nav-bg: #F6F3EC;
+  --surface-bg: #FBF8F2;         /* cards and tables: a clear step darker than the page (never white) */
+  --surface-raised: #FFFDF8;     /* modals, dropdowns */
+  --table-head: #F1ECE3;
+  --row-hover: #F2EDE4;
+  --tier-row: #F1ECE3;
+  --control-bg: #FBF8F2;
+  --track: #E2DBCF;
+  --text-primary: #171717;
+  --text-strong: #171717;
+  --text-secondary: #4A453D;
+  --text-muted: #6D675D;
+  --text-rank: #2B2824;
+  --heading: #171717;
+  --border: #DDD5C8;
+  --border-soft: #E2DBCF;
+  --border-strong: #C9BFAF;
+  --brand: #171717;
+  --brand-accent: #A8842C;
+  --accent-primary: #A8842C;     /* burgundy: buttons, active states, emphasis */
+  --accent-hover: #8F6F1E;
+  --accent-text: #171717;
   --accent-secondary: #A33A3A;   /* coral, used sparingly */
   --accent-secondary-text: #9B2C2C;
-  --burgundy-1: #171717;
-  --burgundy-2-t: #2B2B2B;
-  --coral: #AA8A00;
-  --peach: #D6B94C;
-  --hover-bg: #EFEADA;
-  --btn-text: #000000;
-  --btn-hover-bg: #EFEADA;
+  --burgundy-1: #DDD5C8;
+  --burgundy-2-t: #C9BFAF;
+  --coral: #A8842C;
+  --peach: #C8A34D;
+  --hover-bg: #EFE9DD;
+  --btn-text: #171717;
+  --btn-hover-bg: #EFE9DD;
   --danger-bg: #F6DEDE;
   --danger-hover: #EFCACA;
   --danger-text: #9B2C2C;
-  --selection-bg: #D6B94C;
-  --selection-text: #000000;
-  --editor-panel: #F7F2DF;
-  --editor-border: #E3D59E;
-  --custom-panel: #F5EDCF;
-  --custom-border: #D6C27A;
-  --pos-qb: #A4483E;
-  --pos-rb: #1D7150;
-  --pos-wr: #33608F;
-  --pos-te: #774A9C;
-  --pos-flex: #8F6417;
-  --pos-sf: #A1456E;
-  --pos-pick: #8A7D76;
-  --badge-base: #FFFFFF;
-  --shadow-color: rgba(0, 0, 0, 0.14);
-  --shadow-soft: rgba(0, 0, 0, 0.08);
-  --backdrop: rgba(0, 0, 0, 0.3);
-  --hero-tint: #F5F0DC;
+  --selection-bg: #E6D3A0;
+  --selection-text: #171717;
+  --editor-panel: #F6EFD9;
+  --editor-border: #D7C28A;
+  --custom-panel: #F4ECD5;
+  --custom-border: #D7C28A;
+  --pos-qb: #B5503F;
+  --pos-rb: #237F59;
+  --pos-wr: #3B69B5;
+  --pos-te: #7650AE;
+  --pos-flex: #6E7480;
+  --pos-sf: #6E7480;
+  --pos-pick: #6E7480;
+  --badge-base: #FBF8F2;
+  --shadow-color: rgba(60, 48, 30, 0.14);
+  --shadow-soft: rgba(60, 48, 30, 0.08);
+  --backdrop: rgba(40, 32, 20, 0.28);
+  --hero-tint: #F1ECE3;
   --theme-scheme: light;
-  --tier-line: #D9CD9A;
-  --tier-text: #7A6400;
-  --disabled-bg: #EBEBEB;
-  --disabled-text: #6E6E6E;
-  --disabled-border: #D9D9D9;
+  --tier-line: #DDD5C8;
+  --tier-text: #3A352D;
+  --disabled-bg: #ECE6DA;
+  --disabled-text: #8A8378;
+  --disabled-border: #DDD5C8;
 }
 /* Aliases used throughout the stylesheet (they follow the tokens above) */
 :root {
@@ -1604,8 +1604,8 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 #panel-finder .tf-foot { padding-top: 2px; justify-content: space-between; gap: 16px; }
 
 /* Power Rankings row polish: whole-row hover, your-team accent, quieter method note */
-:root, :root[data-theme="dark"] { --mine-accent: #D6B94C; }
-:root[data-theme="light"] { --mine-accent: #7A6400; }
+:root, :root[data-theme="dark"] { --mine-accent: #C8A34D; }
+:root[data-theme="light"] { --mine-accent: #A8842C; }
 #league-body .pr-row:hover { background: var(--row-hover); }
 #league-body .pr-row:hover .pr-name, #league-body .pr-row:hover .pr-score { color: var(--heading); }
 #league-body .pr-row:hover .pr-score { color: var(--text-strong); }
@@ -3484,6 +3484,48 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
 }
+
+/* ---------- Balance pass (Alan, Oct 8): dark is the hero theme, light a warm alternate; gold only for active states,
+   primary actions, your team and real emphasis; hover/focus borders go neutral; three dark layers; muted badges. ---------- */
+:root { --gold-tint: rgba(200, 163, 77, 0.12); --focus-line: var(--border-strong); }
+.search:focus, .select:focus, .import-dialog textarea:focus, dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { border-color: var(--focus-line); }
+.info:hover, .info:focus-visible, .tw-btn:hover, .league-option:hover:not(:disabled), .pm-close:hover, .inj-ov:hover,
+.tr-send:hover:not(:disabled), .roster-toggle.main:hover, .pr-item.open .pr-caret { border-color: var(--focus-line); }
+/* nav: quiet inactive tabs, white active tab with the gold underline */
+.tab, .chip-btn { color: #A8A195; }
+.tab:hover, .chip-btn:hover { color: #D8D1C5; }
+.tab[aria-selected="true"], .chip-btn[aria-pressed="true"] { color: #F5F2EA; }
+.tab[aria-selected="true"]::after, .chip-btn[aria-pressed="true"]::after { background: #C8A34D; }
+:root[data-theme="light"] .tab, :root[data-theme="light"] .chip-btn { color: #6D675D; }
+:root[data-theme="light"] .tab:hover, :root[data-theme="light"] .chip-btn:hover { color: #3A352D; }
+:root[data-theme="light"] .tab[aria-selected="true"], :root[data-theme="light"] .chip-btn[aria-pressed="true"] { color: #171717; }
+:root[data-theme="light"] .tab[aria-selected="true"]::after, :root[data-theme="light"] .chip-btn[aria-pressed="true"]::after { background: #A8842C; }
+/* editor bar: a subtle utility bar, never brighter than the board */
+.editor-bar { background: rgba(200, 163, 77, 0.08); border-color: rgba(200, 163, 77, 0.25); color: #D8D1C5; }
+.editor-bar .eb-left strong { color: #D8D1C5; }
+.eb-left strong::before { background: #A8842C; }
+:root[data-theme="light"] .editor-bar { background: #F6EFD9; border-color: #D7C28A; color: #574B2A; }
+:root[data-theme="light"] .editor-bar .eb-left strong { color: #574B2A; }
+/* AM Board / League-adjusted toggle */
+.view-toggle { background: #17181C; border-color: #2B2D31; }
+.vt-btn { color: #C9C2B7; }
+.vt-btn[aria-pressed="true"] { background: #C8A34D; color: #171717; box-shadow: inset 0 0 0 1px #A8842C; }
+:root[data-theme="light"] .view-toggle { background: #ECE6DA; border-color: #D5CCBC; }
+:root[data-theme="light"] .vt-btn { color: #5E584F; }
+:root[data-theme="light"] .vt-btn:hover { color: #171717; }
+:root[data-theme="light"] .vt-btn[aria-pressed="true"] { background: #C8A34D; color: #171717; box-shadow: inset 0 0 0 1px #A8842C; }
+/* right rail: a secondary panel */
+.rk-rail { background: #101114; border-color: #26282E; }
+:root[data-theme="light"] .rk-rail { background: #F5F0E8; border-color: #DDD5C8; }
+.rk-rail .rail-title, .rk-rail h3, .rk-rail .section-label { color: color-mix(in srgb, var(--muted) 85%, transparent); }
+/* position badges: subtle tint, the text and border carry the color */
+.pos { background: color-mix(in srgb, var(--c) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent); }
+:root[data-theme="light"] .pos { background: color-mix(in srgb, var(--c) 11%, transparent); }
+/* quieter secondary text so the eye stays on name, rank, value and active controls */
+.owner-filter > span, .ctl-label, .fmt-note, .fmt-note b, .eb-vc { color: color-mix(in srgb, var(--muted) 85%, transparent); }
+#rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.5; }
+.fc-label { color: var(--muted); }
+.league-chip.custom .fc-label, .fmt-chip.custom .fc-label { color: var(--gold); }   /* a custom format over a league stays flagged in gold (§9) */
 </style>
 </head>
 <body>
@@ -4513,7 +4555,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T04:00Z";
+  const BUILD_ID = "2026-10-08T06:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4543,7 +4585,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (animate) { root.classList.add("theme-anim"); clearTimeout(setTheme.timer); setTheme.timer = setTimeout(() => root.classList.remove("theme-anim"), 320); }
     root.setAttribute("data-theme", t);
     try { localStorage.setItem("spm_theme", t); } catch (e) {}
-    const m = $("theme-color"); if (m) m.content = t === "light" ? "#FFFFFF" : "#000000";
+    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0A0A0B";
     const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
     btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
     btn.setAttribute("aria-pressed", String(t === "light"));
