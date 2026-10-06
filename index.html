@@ -266,7 +266,7 @@ Brenton Strange,TE,JAX,158,23,5,,7.37,3,8.69,9480,manual,Low TE2
 Tyler Higbee,TE,LAR,154,19,5,,14.18,2,12.43,3271,manual,Low TE2
 T.J. Hockenson,TE,MIN,132,17,5,,9.46,3,9.95,5844,manual,Low TE2
 Pat Freiermuth,TE,PIT,161,24,5,,10.86,3,10.79,7600,manual,Low TE2
-Jaxson Dart,QB,NYG,254,43,90,0,11.74,2,12.36,12508,manual,Out for season
+Jaxson Dart,QB,NYG,254,43,99,0,11.74,2,12.36,12508,manual,Out for season
 Marcus Mariota,QB,WAS,164,34,7,,13.67,2,13.33,2307,manual,Dead
 Carson Wentz,QB,MIN,187,35,7,,11.97,2,12.48,3161,manual,Dead
 Tyson Bagent,QB,CHI,128,33,7,,,,,11256,manual,Dead
@@ -277,7 +277,7 @@ Tua Tagovailoa,QB,ATL,208,39,7,,,,,6768,manual,Dead
 Shedeur Sanders,QB,CLE,209,40,7,,0.24,1,8.74,12524,manual,Dead
 Justin Fields,QB,KC,211,41,7,,,,,7591,manual,Dead
 Mac Jones,QB,SF,219,42,7,,0.68,1,8.88,7527,manual,Dead
-De'Von Achane,RB,MIA,253,72,90,,11.65,3,11.39,9226,manual,Out for season
+De'Von Achane,RB,MIA,253,72,99,,11.65,3,11.39,9226,manual,Out for season
 Isiah Pacheco,RB,DET,204,60,11,,,,,8205,auto,Dead
 Tyjae Spears,RB,TEN,195,56,10,,5.52,3,7.71,9508,manual,Dead
 MarShawn Lloyd,RB,GB,197,57,10,,6.71,3,8.43,11581,manual,Dead
@@ -583,6 +583,7 @@ const TIER_NAMES = {
   ALL: {
     // 1: "Elite",
     // 2: "Weekly Starters",
+    99: "Out for season",   // OUT_TIER: every position has it (Alan, Oct 6)
   },
   QB: {
     1: "Josh Allen",
@@ -1626,6 +1627,7 @@ tr.tier-edit:hover .tier-tools, tr.tier-edit:focus-within .tier-tools { opacity:
 .tier-tools button.danger:hover { border-color: var(--accent-secondary); color: var(--accent-secondary-text); }
 .tier-del-ask { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: none; color: var(--text-secondary); }
 .tier-del-ask .btn { height: 26px; font-size: 0.7rem; }
+tr.tier-none td { padding: 12px 22px; text-align: center; font-size: 0.72rem; color: var(--text-muted); }
 tr.tier-drop td { padding: 14px 22px; text-align: center; font-size: 0.74rem; color: var(--text-muted); border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--accent-primary) 4%, transparent); }
 tr.tier-edit.drop-before td, tr.tier-edit.drop-after td, tr.tier-drop.drop-before td, tr.tier-drop.drop-after td { box-shadow: inset 0 -2px 0 var(--accent-primary); }
 @media (hover: none) { .tier-tools, .tier-pen { opacity: 1; } }
@@ -4387,7 +4389,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-07T03:00Z";
+  const BUILD_ID = "2026-10-07T05:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4558,6 +4560,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     return presetTierName(pos, tier);
   }
   const isTagTier = t => Number(t) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+  const OUT_TIER = 99;   // Out for season: a tag tier every position has (see sendOut)
   // "All" view: his positional tier as a small tag beside the position badge (tiers are per position, so no bands here)
   const tierTag = p => `<span class="tier-tag${isTagTier(p.tier) ? " tagged" : ""}" title="${esc(p.pos)} ${esc(tierLabel(p.pos, p.tier))}">${isTagTier(p.tier) ? esc(tierNameOf(p.pos, p.tier) || "Tagged") : "T" + esc(String(p.tier))}</span>`;
   function tierLabel(pos, tier) {
@@ -4700,6 +4703,11 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       </tr>`);
     });
     if (tierEdit) flushEmpties(Infinity);
+    // every position tab ends with the Out for season tier, even when nobody is in it
+    if (EDIT_POS.includes(posFilter) && !leagueView() && !query && !filtered && !list.some(p => String(p.tier) === String(OUT_TIER))) {
+      const label = tierLabel(posFilter, OUT_TIER);
+      out.push(tierEdit ? tierHead(OUT_TIER, label, true) : tierBand(label) + `<tr class="tier-none"><td colspan="${cols}">No players out for the season</td></tr>`);
+    }
     $("rank-body").innerHTML = out.length ? out.join("") :
       `<tr><td class="empty" colspan="${cols}">${query ? `No players match “${esc(query)}”.` : "No ranked players here."}</td></tr>`;
     $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
@@ -6010,9 +6018,20 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (b > a) { a = above ? above.value : a; b = below ? below.value : b; }    // a squeezed edge: plain neighbours
     return Math.sqrt(Math.max(1, a) * Math.max(1, b));
   }
+  /* Out for season (Alan, Oct 6): a tag tier every position has, always shown at the bottom of each position tab.
+     Putting a player there (drag onto the tier or next to someone in it) sends him to the very bottom of the board
+     with a value of 0 (a 0 higher up would pull everyone ranked below him to 0, since values follow rank). */
+  function sendOut(me) {
+    const order = overallOrder().filter(p => p !== me); order.push(me);
+    draft.rows[me.id][colOf(draft, "value")] = "0";
+    writeOrder(order, me, String(OUT_TIER), { quiet: true });
+    const now = byId.get(me.id);
+    toast(`${me.name} is out for the season: #${now ? now.rank : order.length} overall, ${now ? now.posRank : ""}, value 0.`);
+  }
   function movePlayer(id, targetNum, forceTier) {
     const me = byId.get(id);
     if (!me || me.posNum == null) return;
+    if (forceTier != null && String(forceTier) === String(OUT_TIER)) { if (String(me.tier) !== String(OUT_TIER)) sendOut(me); return; }
     const group = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
     const from = group.indexOf(me), to = Math.max(0, Math.min(group.length - 1, targetNum - 1));
     if (from === to && (forceTier == null || String(forceTier) === String(me.tier))) return;
