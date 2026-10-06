@@ -2850,6 +2850,15 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pm-id-text { min-width: 0; }
 .pm-name { margin: 0; font-weight: 820; font-stretch: 108%; font-size: 1.85rem; line-height: 1.05; letter-spacing: -0.02em; color: var(--heading); }
 .pm-stats { display: flex; flex-wrap: wrap; row-gap: 12px; margin-top: 18px; }
+/* AM rank vs this season's production ranks (Alan, Oct 8): one quiet line; AM leads, FPTS and PPG are secondary */
+.pm-prodrk { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-top: 10px; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.pm-prodrk .pr-item { display: inline-flex; align-items: baseline; gap: 5px; cursor: help; }
+.pm-prodrk .pr-k { font: 600 0.62rem/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.pm-prodrk .pr-item b { font-family: var(--font-display); font-weight: 600; color: var(--text-secondary); }
+.pm-prodrk .pr-item.am b { color: var(--text-primary); font-weight: 700; font-size: 0.92rem; }
+.pm-prodrk .pr-item.nr b { font-weight: 500; color: var(--text-muted); }
+.pm-prodrk .pr-diff { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; cursor: help; }
+.pm-prodrk .pr-note { flex-basis: 100%; font-size: 0.7rem; color: var(--text-muted); }
 .pm-stat { display: flex; flex-direction: column; gap: 2px; padding: 0 22px; border-left: 1px solid var(--line-soft); min-width: 0; }
 .pm-stat:first-child { padding-left: 0; border-left: 0; }
 .pm-stat-label { font-size: 0.58rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
@@ -4766,7 +4775,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T19:00Z";
+  const BUILD_ID = "2026-10-08T20:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -10414,6 +10423,64 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     const sum = sample.reduce((a, g) => a + g.pts, 0);
     return { v: mode === "pts" ? sum : sum / sample.length, gp: games.length, n: sample.length, short: sample.filter(g => g.short).length };
   }
+  /* Production ranks for the player drawer (Alan, Oct 8): his position rank by total fantasy points (FPTS) and by
+     points per game (PPG) this season, from raw stats in the selected league's scoring (prodData: played games only,
+     so byes, OUT, inactive and future weeks never count; injury-shortened games count and are flagged). Everyone at
+     the position with a game is ranked by points; PPG only ranks players with the board's minimum games for this
+     week (rkMinDefault, at least 1), so one-game samples don't lead. Backward-looking context beside the
+     forward-looking AM rank: it never changes rankings, values or tiers. */
+  let prodRankCache = { key: null, map: null };
+  function prodRanks(sid) {
+    const data = prodData(), d = statsCache[STATS_SEASONS[0]];
+    if (!data || !d || !sid) return null;
+    const min = Math.max(1, rkMinDefault()), key = prodCache.key + "|" + min;
+    if (prodRankCache.key !== key) {
+      const by = {};
+      data.forEach((games, s) => {
+        const pl = d.players[s]; if (!pl || !games.length) return;
+        const pts = games.reduce((a, g) => a + g.pts, 0);
+        (by[pl.p] = by[pl.p] || []).push({ s, pts, gp: games.length, ppg: pts / games.length, short: games.filter(g => g.short).length });
+      });
+      const map = new Map();
+      Object.entries(by).forEach(([pos, rows]) => {
+        const elig = rows.filter(r => r.gp >= min);
+        rows.forEach(r => map.set(r.s, { ...r, pos, min, fpRank: 1 + rows.filter(x => x.pts > r.pts + 1e-9).length, fpN: rows.length,
+          ppgRank: r.gp >= min ? 1 + elig.filter(x => x.ppg > r.ppg + 1e-9).length : null, ppgN: elig.length }));
+      });
+      prodRankCache = { key, map };
+    }
+    return prodRankCache.map.get(String(sid)) || null;
+  }
+  // Drawer line: AM rank (primary) · FPTS rank · PPG rank (secondary), and a quiet gap marker when the AM position rank
+  // and the PPG rank are far apart
+  function prodRankLine(p, sid, pos, curT) {
+    const r = prodRanks(sid), am = p ? String(posLabel(p) || "") : "";
+    if (!am && !r) return "";
+    const P = r ? r.pos : pos, scName = activeData() ? "league scoring" : "AM default scoring";
+    const nth = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+    const item = (cls, k, v, tip) => `<span class="pr-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b></span>`;
+    const out = [];
+    if (am) out.push(item("am", "AM", esc(am), `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
+    if (!r) out.push(item("fp", "FPTS", "—", "No games played this season"), item("ppg", "PPG", "—", "No games played this season"));
+    else {
+      out.push(item("fp", "FPTS", `${P}${r.fpRank}`, `${nth(r.fpRank)} of ${r.fpN} ${P}s by total fantasy points this season: ${fp(r.pts)} pts in ${r.gp} game${r.gp === 1 ? "" : "s"} (${scName})`));
+      const star = r.short ? "*" : "";
+      const full = r.short && curT && curT.fullPpg != null ? ` · ${fp(curT.fullPpg)} PPG in completed games` : "";
+      if (r.ppgRank) out.push(item("ppg", "PPG", `${P}${r.ppgRank}${star}`, `${nth(r.ppgRank)} of ${r.ppgN} ${P}s with ${r.min}+ games by points per game: ${fp(r.ppg)} PPG (${scName})${r.short ? ` · includes ${r.short} injury-shortened game${r.short === 1 ? "" : "s"}${full}` : ""}`));
+      else out.push(item("ppg nr", "PPG", `NR · ${r.gp} GP`, `Not ranked yet: PPG ranks need ${r.min}+ games played at this point of the season (${fp(r.ppg)} PPG in ${r.gp})`));
+      const amN = am && p.pos === P ? Number(am.replace(/\D/g, "")) : null;
+      if (amN && r.ppgRank) {
+        const dlt = r.ppgRank - amN;
+        if (Math.abs(dlt) >= Math.max(4, Math.ceil(0.3 * Math.min(amN, r.ppgRank)))) {
+          const tip = dlt > 0 ? `AM ranks him ${dlt} spots higher (${am}) than his PPG so far (${P}${r.ppgRank}). AM is forward-looking; PPG is what he has scored.`
+            : `His PPG so far (${P}${r.ppgRank}) is ${-dlt} spots higher than his AM rank (${am}). AM is forward-looking; PPG is what he has scored.`;
+          out.push(`<span class="pr-diff ${dlt > 0 ? "am" : "ppg"}" title="${esc(tip)}">${dlt > 0 ? `AM +${dlt}` : `PPG +${-dlt}`}</span>`);
+        }
+      }
+      if (r.short && r.ppgRank) out.push(`<span class="pr-note">* includes ${r.short} injury-shortened game${r.short === 1 ? "" : "s"}</span>`);
+    }
+    return `<div class="pm-prodrk" aria-label="AM rank and this season's production ranks">${out.join("")}</div>`;
+  }
   // Default minimum games by the NFL week being played: weeks 1–2 none, week 3 2+, weeks 4–5 3+, week 6 on 4+
   function rkMinDefault() {
     const w = currentWeek();
@@ -10704,6 +10771,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
           ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
           ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? (curT.short ? `<span title="${esc(ppgNote(curT))}">${curT.g} G · ${curT.short} injury-shortened</span>` : `${curT.g} G · ${activeData() ? "league" : "site"} scoring`) : "No games")}
         </div>
+        ${loaded ? prodRankLine(p, sid, pos, curT) : ""}
         <div class="pm-actions">
           <button class="btn primary" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
           <button class="btn secondary" type="button" data-find-trades="${esc(sid)}"${findHint ? ` disabled title="${esc(findHint)}"` : ""}>${own && own !== "fa" && !own.mine && LG.teams.some(t => t.mine) ? "Target in Trade Finder" : "Find trades"}</button>
