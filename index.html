@@ -3568,6 +3568,128 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body .pl-name, .pl-name { font-family: var(--font-body); font-weight: 650; letter-spacing: -0.005em; }
 .section-label, .rail-title, .ctl-label, .owner-filter > span, .fc-label, .eb-left strong, .meta, th { font-family: var(--font-body); font-weight: 600; font-stretch: normal; }
 .pl-name, .pl-team, .own-tag { font-variant-numeric: normal; }
+
+/* =====================================================================
+   AM redesign (Alan, Oct 8): a reusable product layer on top of the T1 tokens and the Sora/Inter type.
+   App shell (sticky, blurred) → editor toolbar (mode | who + warnings | actions) → one control panel
+   (view switch row, then positions · sort · search · show) → the board as a card (bigger photos, refined
+   rows, premium badges, elegant value bars) → an insight rail of small cards. Components: .am-card surfaces,
+   segmented controls (.view-toggle, #pos-chips), pills (.pos, .tier-tag), buttons (.btn primary/secondary/plain).
+   ===================================================================== */
+:root { --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --ease: cubic-bezier(.2, .7, .2, 1); --lift: 0 1px 0 rgba(255,255,255,.03) inset, 0 10px 30px -18px rgba(0,0,0,.65); }
+:root[data-theme="light"] { --lift: 0 1px 0 rgba(255,255,255,.7) inset, 0 10px 26px -20px rgba(16,17,20,.22); }
+/* app shell */
+.masthead { background: color-mix(in srgb, var(--nav-bg) 84%, transparent); backdrop-filter: saturate(140%) blur(12px); -webkit-backdrop-filter: saturate(140%) blur(12px);
+  border-bottom: 1px solid var(--line-soft); }
+.masthead-top { padding-block: 14px 6px; }
+.brand { gap: 12px; }
+.tabs { gap: 6px; margin-top: 8px; }
+.tabs .tab { padding: 10px 14px 13px; border-radius: var(--r-sm) var(--r-sm) 0 0; transition: color .18s var(--ease), background .18s var(--ease); }
+.tabs .tab:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.tabs .tab::after { left: 14px; right: 14px; height: 2px; border-radius: 2px; }
+.tabs .tab[aria-selected="true"]::after { box-shadow: 0 0 12px rgba(228, 0, 43, .55); }
+.fmt-chip, .league-chip { border-radius: var(--r-md); border-color: color-mix(in srgb, var(--navy-ink) 30%, var(--line)); background: var(--navy-tint);
+  transition: border-color .18s var(--ease), background .18s var(--ease); }
+.fmt-chip:hover, .league-chip:hover { border-color: color-mix(in srgb, var(--navy-ink) 55%, var(--line)); background: color-mix(in srgb, var(--navy-ink) 14%, transparent); }
+.fc-format, .lc-format, .lc-name { font-family: var(--font-display); }
+.connect-btn { border-radius: var(--r-md); }
+.theme-toggle { border-radius: 999px; transition: color .18s var(--ease), border-color .18s var(--ease); }
+/* editor toolbar: mode + hint | who + warnings | save actions */
+.editor-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 18px;
+  padding: 7px 8px 7px 16px; border-radius: var(--r-md); box-shadow: var(--lift); margin-bottom: 14px; }
+.editor-bar[hidden] { display: none; }
+.eb-left { flex: none; }
+.eb-left #eb-hint { color: var(--eb-ink); font-size: 0.8rem; }
+.eb-mid { display: flex; align-items: center; gap: 10px; padding-left: 16px; border-left: 1px solid var(--eb-line); min-height: 26px; }
+.eb-mid:empty, .eb-mid:not(:has(#eb-who:not(:empty))):not(:has(#eb-vcheck:not([hidden]))) { display: none; }
+.eb-mid #eb-who { font-size: 0.74rem; }
+.eb-mid .eb-vc { margin-left: 0; padding: 3px 9px; border-radius: 999px; background: var(--warn-tint); color: var(--warn); font-weight: 600; font-size: 0.72rem; }
+.eb-right { justify-content: flex-end; }
+.eb-right .btn { border-radius: var(--r-sm); }
+@media (max-width: 900px) { .editor-bar { grid-template-columns: 1fr; } .eb-mid { border-left: 0; padding-left: 0; } .eb-right { justify-content: flex-start; } }
+/* control panel: one surface; row 1 = view switch + format, row 2 = positions · sort · search · show */
+#panel-rankings .controls { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 10px 12px; gap: 10px 14px;
+  align-items: center; box-shadow: var(--lift); margin-bottom: 14px; }
+#panel-rankings .controls .league-controls { order: -1; flex: 1 0 100%; flex-direction: row; align-items: center; gap: 6px 14px; margin: 0; padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft); }
+#panel-rankings .controls .league-controls[hidden] { display: none; }
+#panel-rankings .controls .fmt-note { font-size: 0.7rem; }
+.view-toggle { padding: 3px; gap: 3px; border-radius: var(--r-md); }
+.vt-btn { height: 32px; padding: 0 16px; border-radius: 7px; font-size: 0.8rem; transition: background .18s var(--ease), color .18s var(--ease), box-shadow .18s var(--ease); }
+.vt-btn[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--vt-on-line), 0 6px 18px -10px rgba(25, 47, 89, .9); }
+#pos-chips { gap: 2px; padding: 3px; background: var(--vt-bg); border: 1px solid var(--vt-line); border-radius: var(--r-md); }
+#pos-chips .chip-btn { height: 30px; padding: 0 14px; border-radius: 7px; font-size: 0.8rem; transition: background .18s var(--ease), color .18s var(--ease); }
+#pos-chips .chip-btn::after { left: 12px; right: 12px; bottom: 3px; height: 2px; border-radius: 2px; }
+#pos-chips .chip-btn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+#pos-chips .chip-btn[aria-pressed="true"] { background: var(--surface-raised); box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 4px 12px -8px rgba(0,0,0,.6); }
+#panel-rankings .rk-sort, #panel-rankings .ctl-right { margin-bottom: 0; }
+#panel-rankings .controls .search, #panel-rankings .controls .select, #panel-rankings .rk-dir { height: 36px; border-radius: var(--r-md); }
+#panel-rankings .controls .search { padding-left: 34px; background: var(--control-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23878c96' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 12px 50%; }
+#panel-rankings .controls .dd-btn { height: 36px; border-radius: var(--r-md); }
+/* the board as a card */
+#panel-rankings .table-scroll { border-radius: var(--r-lg); border-color: var(--line-soft); box-shadow: var(--lift); }
+#panel-rankings thead th { font-size: 0.6rem; letter-spacing: 0.14em; padding-block: 11px; background: color-mix(in srgb, var(--table-head) 85%, var(--surface)); }
+#panel-rankings tbody tr.player td { padding-block: 6px; border-bottom-color: color-mix(in srgb, var(--line-soft) 75%, transparent); }
+#panel-rankings thead tr th:first-child { border-top-left-radius: var(--r-lg); } #panel-rankings thead tr th:last-child { border-top-right-radius: var(--r-lg); }
+#rank-body tr.player td { transition: background .16s var(--ease), box-shadow .16s var(--ease); }
+#rank-body tr.player:hover td { background: color-mix(in srgb, var(--navy-ink) 7%, var(--surface)); }
+#rank-body tr.player:hover td:first-child { box-shadow: inset 2px 0 0 color-mix(in srgb, var(--navy-ink) 70%, transparent); }
+#rank-body tr.player.mine td:first-child { box-shadow: inset 3px 0 0 var(--mine-accent); }
+#rank-body tr.player.pp-current td { background: var(--row-sel); }
+#rank-body tr.player.pp-current td:first-child { box-shadow: inset 3px 0 0 var(--gold), inset 12px 0 18px -14px rgba(228,0,43,.8); }
+#rank-body td.rk { font-size: 1.04rem; color: var(--text-strong); }
+#rank-body .face { width: 46px; height: 46px; box-shadow: 0 0 0 1px var(--line), 0 6px 14px -10px rgba(0,0,0,.8); }
+#rank-body .pl-cell { gap: 12px; }
+#rank-body .pl-name { font-size: 1rem; font-weight: 700; }
+#rank-body .pl-team { font-size: 0.66rem; letter-spacing: 0.06em; }
+#rank-body .own-tag { font-size: 0.6rem; letter-spacing: 0.02em; }
+#rank-body .own-tag.mine { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px 1px 6px; border-radius: 999px; background: var(--red-tint); font-weight: 650; }
+#rank-body .own-tag.mine::before { margin-right: 0 !important; }
+@media (max-width: 1023px) { #rank-body .face { width: 38px; height: 38px; } }
+/* tier bands: a quiet header strip inside the board */
+#rank-body tr.tier td { background: linear-gradient(90deg, color-mix(in srgb, var(--navy-ink) 9%, var(--surface)), var(--surface) 70%); border-bottom-color: var(--line-soft); }
+/* premium pills: soft fill, crisp border, a faint glow; tier tags quieter and related */
+.pos { border-radius: 6px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) calc(var(--badge-a) * 140%), transparent), color-mix(in srgb, var(--c) calc(var(--badge-a) * 70%), transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) calc(var(--badge-b) * 100%), transparent), 0 0 14px -8px var(--c); }
+.tier-tag { border-radius: 6px; font-family: var(--font-display); font-weight: 600; letter-spacing: 0.02em; }
+/* value: a slimmer, rounded bar that fades in from its color; the number leads */
+.valbar { gap: 14px; }
+.valbar .track { height: 4px; border-radius: 999px; background: color-mix(in srgb, var(--track) 70%, transparent); }
+.valbar .fill { border-radius: 999px; opacity: 1; background: linear-gradient(90deg, color-mix(in srgb, var(--c, var(--ink)) 18%, transparent), color-mix(in srgb, var(--c, var(--ink)) 70%, transparent)); }
+.valbar .num { font-size: 1rem; letter-spacing: -0.01em; }
+/* insight rail: small cards, a companion panel */
+.rk-rail { background: none !important; border: 0 !important; padding: 0 !important; gap: 12px !important; }
+.rr-sec { background: var(--rail-bg); border: 1px solid var(--rail-line); border-radius: var(--r-lg); padding: 12px 14px; box-shadow: var(--lift); }
+.rr-label { font-size: 0.58rem; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 6px; }
+.rr-big { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
+.rr-up { border-top: 2px solid color-mix(in srgb, var(--rb) 70%, transparent); }
+.rr-down { border-top: 2px solid color-mix(in srgb, var(--rose) 70%, transparent); }
+.rr-list li { align-items: center; padding: 5px 0; border-top: 1px solid var(--rail-line); }
+.rr-list li:first-child { border-top: 0; }
+.rr-mv { font-family: var(--font-display); display: inline-flex; justify-content: center; min-width: 38px; padding: 2px 6px; border-radius: 999px; font-size: 0.66rem; font-weight: 700; }
+.rr-mv.up { color: var(--rb); background: color-mix(in srgb, var(--rb) 14%, transparent); }
+.rr-mv.down { color: var(--rose); background: color-mix(in srgb, var(--rose) 14%, transparent); }
+.rr-jump { transition: color .16s var(--ease); }
+.rr-jump:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--navy-ink) 60%, transparent); }
+@media (min-width: 1280px) {
+  .rk-layout { grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; align-items: start; }
+  .rk-rail { order: 0; position: sticky; top: calc(var(--mast-h, 0px) + 16px); flex-direction: column; flex-wrap: nowrap; }
+  .rr-list { flex-direction: column; gap: 0; }
+}
+@media (max-width: 1279px) { .rk-rail { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } .rk-rail[hidden] { display: none !important; } }
+@media (max-width: 640px) { .rk-rail { display: none !important; }
+  #panel-rankings tbody tr.player td, #panel-rankings thead th { padding-inline: 6px; }
+  #rank-body td.rk, #panel-rankings thead th#rk-head { width: 30px; text-align: center; } #rank-body td.rk { font-size: 0.92rem; }
+  #rank-body .face { width: 32px; height: 32px; } #rank-body .pl-cell { gap: 8px; } #rank-body .pl-name { font-size: 0.9rem; }
+  #panel-rankings .controls { align-items: stretch; } #pos-chips { align-self: flex-start; } #panel-rankings .rk-sort { justify-content: flex-start; } }
+/* buttons: one family */
+.btn { border-radius: var(--r-sm); transition: background .16s var(--ease), border-color .16s var(--ease), color .16s var(--ease), box-shadow .16s var(--ease), transform .08s var(--ease); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn.primary { box-shadow: 0 6px 18px -10px rgba(228, 0, 43, .9); }
+.btn.primary:hover:not(:disabled) { box-shadow: 0 8px 22px -10px rgba(228, 0, 43, 1); }
+.btn.primary:disabled { box-shadow: none; }
+:focus-visible { outline-color: var(--focus-line); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
@@ -3619,7 +3741,10 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     <div class="editor-bar" id="editor-bar" hidden>
       <div class="eb-left">
         <strong>Editor</strong>
-        <span id="eb-hint"></span><span id="eb-who"></span>
+        <span id="eb-hint"></span>
+      </div>
+      <div class="eb-mid">
+        <span id="eb-who"></span>
         <button class="btn link eb-vc" id="eb-vcheck" type="button" hidden aria-expanded="false" aria-controls="eb-vlist"></button>
       </div>
       <div class="eb-right">
@@ -4597,7 +4722,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T11:00Z";
+  const BUILD_ID = "2026-10-08T13:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4994,7 +5119,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   function renderRail() {
     const el = $("rk-rail"); if (!el) return;
     if (rankHistory === undefined) { loadHistory().then(renderRail); }
-    const sec = (label, body) => body ? `<section class="rr-sec"><h3 class="rr-label">${label}</h3>${body}</section>` : "";
+    const sec = (label, body, kind = "") => body ? `<section class="rr-sec${kind ? " rr-" + kind : ""}"><h3 class="rr-label">${label}</h3>${body}</section>` : "";
     const parts = [];
     parts.push(sec("Last updated", `<p class="rr-big">${esc(lastUpdated().replace(/, \d{4}$/, ""))}</p>`));
     const vl = valueLeague();
@@ -5019,8 +5144,8 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span><button class="rr-name rr-jump" type="button" data-jump="${m.p.id}" title="Show ${esc(m.p.name)} in the rankings">${esc(m.p.name)}</button><span class="rr-sub">#${m.p.rank}</span></li>`;
       const up = moves.filter(m => m.d > 0).sort((a, b) => b.d - a.d).slice(0, 3), dn = moves.filter(m => m.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
       const when = since ? ` <span class="rr-when">since ${esc(new Date(since + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }))}</span>` : "";
-      if (up.length) parts.push(sec("Biggest risers" + when, `<ul class="rr-list">${up.map(row).join("")}</ul>`));
-      if (dn.length) parts.push(sec("Biggest fallers" + when, `<ul class="rr-list">${dn.map(row).join("")}</ul>`));
+      if (up.length) parts.push(sec("Biggest risers" + when, `<ul class="rr-list">${up.map(row).join("")}</ul>`, "up"));
+      if (dn.length) parts.push(sec("Biggest fallers" + when, `<ul class="rr-list">${dn.map(row).join("")}</ul>`, "down"));
     }
     el.innerHTML = parts.join("");
     el.hidden = !parts.length;
