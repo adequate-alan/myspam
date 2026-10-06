@@ -41,7 +41,7 @@
 <title>AM Fantasy Rankings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Inter:wght@400..800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Inter:wght@400..800&family=Sora:wght@400..800&display=swap">
 
 <script>
 /* =====================================================================
@@ -869,9 +869,10 @@ const TRADE_VERDICTS = [
   --side-a: var(--accent-primary);
   --side-b: var(--accent-secondary);
   --good: var(--text-strong);
-  --font-display: "Archivo", "Inter Tight", "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-body: "Archivo", "Inter Tight", "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-data: "Archivo", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Sora", "Inter", "Helvetica Neue", Arial, sans-serif;   /* AM typography (Alan, Oct 8): Sora = personality */
+  --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;                 /* Inter = readable data and copy */
+  --font-data: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-logo: "Archivo", "Helvetica Neue", Arial, sans-serif;               /* the AM. wordmark keeps its own face */
   --radius: 8px;
   --radius-sm: 6px;
   color-scheme: var(--theme-scheme);
@@ -3551,6 +3552,22 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 .btn.secondary:hover:not(:disabled) { background: var(--navy-hi); border-color: var(--navy-hi); }
 .theme-toggle { color: var(--ink-2); }
 .theme-toggle:hover { color: var(--ink); }
+
+/* ---------- Typography (Alan, Oct 8): Sora for personality (nav, headings, ranks, values, badges, buttons, selected
+   controls, key numbers), Inter for data and copy (player names, teams, owners, formats, tables, labels). Same sizes as
+   before, so row heights don't change; numbers use tabular figures. The AM. wordmark keeps Archivo. ---------- */
+.brand-name { font-family: var(--font-logo); }
+.tab, .chip-btn, .panel-title, .side-title, .verdict h2, .pm-stat-val, td.rk, .valbar .num, .num-btn, .num-2,
+.pos, .btn, .vt-btn, .tier-name, tr.tier td, .rail-v, .rail-amt, .mx-score, .tf-verdict-big, .rk-rail .rail-big {
+  font-family: var(--font-display); font-stretch: normal;
+}
+.tab, .chip-btn, .btn, .vt-btn { font-weight: 600; letter-spacing: 0; }
+td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-weight: 600; font-variant-numeric: tabular-nums; }
+.pos { font-weight: 600; letter-spacing: 0.02em; }
+.panel-title, .verdict h2 { font-weight: 700; letter-spacing: -0.02em; }
+#rank-body .pl-name, .pl-name { font-family: var(--font-body); font-weight: 650; letter-spacing: -0.005em; }
+.section-label, .rail-title, .ctl-label, .owner-filter > span, .fc-label, .eb-left strong, .meta, th { font-family: var(--font-body); font-weight: 600; font-stretch: normal; }
+.pl-name, .pl-team, .own-tag { font-variant-numeric: normal; }
 </style>
 </head>
 <body>
@@ -4580,7 +4597,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T10:00Z";
+  const BUILD_ID = "2026-10-08T11:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;

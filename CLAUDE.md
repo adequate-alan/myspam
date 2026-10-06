@@ -286,7 +286,7 @@ Code changes go straight to `main` (see the workflow note at the top). Before pu
   - The board: names and value numbers bold; value bars shorter and lighter; "Owned by", format notes, Sort/Show labels muted. Favicon: navy tile, white AM, red dot.
   - Negative/destructive states (fallers, "them" verdicts, danger buttons) stay a muted red, so up and down never share a color.
   - All colors come from tokens at the top of the CSS.
-  - Archivo typography.
+  - **Typography (Alan, Oct 8): Sora + Inter.** Sora (`--font-display`) gives AM its personality: main nav and chips, page headings, rank numbers, values, position badges, buttons, selected controls and key stat numbers (600 for controls/numbers, 700 for headings). Inter (`--font-body`, the page default) keeps data readable: player names (650), NFL teams, owners, format text, tables, sidebar copy and small labels. Uppercase is only for small utility labels (LAST UPDATED, FORMAT, SORT, SHOW, EDITOR) in Inter 600 with letter spacing. Numbers use tabular figures; names don't (Inter's tabular hyphen widens "Smith-Njigba"). Same sizes as before, so rows stay 55px. The `AM.` wordmark keeps Archivo (`--font-logo`). Fonts load from Google Fonts (Archivo, Inter, Sora).
   - Custom dropdowns, checkboxes and radios; no native controls.
 
 ## 11. Known limitations and unfinished work
