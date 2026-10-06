@@ -1006,6 +1006,36 @@ main { padding-block: 32px 72px; }
 .ctl-right { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; margin-left: auto; }
 .ctl-right .search { margin-bottom: 0; width: min(240px, 100%); }
 .chips { display: inline-flex; flex-wrap: wrap; gap: 26px; }
+/* Production sort (Alan, Oct 6): a compact, secondary control between the view switch and search */
+.rk-sort { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.rk-sort .select { height: 30px; font-size: 0.76rem; }
+.rk-prod-opts { display: inline-flex; align-items: center; gap: 8px; }
+.rk-prod-opts[hidden] { display: none; }
+.rk-dir { all: unset; box-sizing: border-box; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; cursor: pointer;
+  font-size: 0.72rem; font-weight: 650; color: var(--muted); white-space: nowrap; background: var(--surface); }
+.rk-dir:hover { color: var(--ink); border-color: var(--border-strong); }
+.rk-dir:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+td.prod-col { width: 34%; min-width: 190px; padding-left: 14px; }
+.prodbar { display: grid; grid-template-columns: minmax(60px, 1fr) auto; align-items: center; column-gap: 14px; }
+.prodbar .track { height: 3px; border-radius: 2px; background: var(--line-soft); overflow: hidden; }
+.prodbar .fill { height: 100%; background: color-mix(in srgb, var(--c) 70%, transparent); border-radius: 2px; }
+.prodbar .pnum { font-size: 1rem; font-weight: 760; font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; min-width: 52px; }
+.prodbar .psub { grid-column: 2; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); text-align: right; white-space: nowrap; }
+.prodbar .psub.thin { color: var(--gold); }
+#panel-rankings td.val.val-2 { width: 1%; min-width: 0; white-space: nowrap; text-align: right; padding-right: 20px; }
+td.val.val-2 .num-2 { font-size: 0.8rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.spam-rk { display: block; margin-top: 3px; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+#panel-rankings thead th.prod-col { padding-left: 14px; }
+#panel-rankings thead th.val-2 { text-align: right; padding-right: 20px; }
+@media (max-width: 900px) { .rk-sort { flex-wrap: wrap; } }
+@media (max-width: 760px) {   /* phones: the production number stays on screen; bar and SPAM value step aside */
+  td.prod-col { min-width: 0; width: auto; padding-left: 8px !important; }
+  #panel-rankings thead th.prod-col { padding-left: 8px; }
+  .prodbar { grid-template-columns: auto; } .prodbar .track { display: none; } .prodbar .psub { grid-column: 1; }
+  #panel-rankings td.val.val-2, #panel-rankings th.val.val-2 { display: none; }
+  #rk-head-row .hd-lg { display: none; }
+}
+@media (min-width: 761px) { #rk-head-row .hd-sm { display: none; } }
 .chip-btn { height: 36px; padding: 0 1px; }
 .chip-btn::after { bottom: -1px; }
 .controls .search { margin-bottom: 8px; }
@@ -3512,6 +3542,26 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         </div>
         <span class="fmt-note" id="fmt-note"></span>
       </div>
+      <div class="rk-sort" id="rk-sort-wrap" role="group" aria-label="Sort the board">
+        <label class="owner-filter rk-sort-lab"><span>Sort</span>
+          <select class="select" id="rk-sort" aria-label="Sort">
+            <option value="spam">SPAM Rank</option>
+            <option value="ppg">Season PPG</option>
+            <option value="l3">Last 3 PPG</option>
+            <option value="l5">Last 5 PPG</option>
+            <option value="pts">Season Points</option>
+          </select>
+        </label>
+        <span class="rk-prod-opts" id="rk-prod-opts" hidden>
+          <select class="select" id="rk-min" aria-label="Minimum games played">
+            <option value="0">No minimum</option>
+            <option value="2">2+ games</option>
+            <option value="3">3+ games</option>
+            <option value="4">4+ games</option>
+          </select>
+          <button class="rk-dir" id="rk-dir" type="button" aria-label="Sort direction">High → Low</button>
+        </span>
+      </div>
       <div class="ctl-right">
         <input class="search" id="rank-search" type="search" placeholder="Search players" aria-label="Search players">
         <label class="owner-filter" id="owner-filter-wrap"><span>Show</span>
@@ -3525,7 +3575,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <div class="table-scroll">
           <table>
             <thead>
-              <tr><th scope="col" id="edit-head" hidden><span class="sr-only">Reorder</span></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="val">Value</th></tr>
+              <tr id="rk-head-row"><th scope="col" id="edit-head" hidden><span class="sr-only">Reorder</span></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="val">Value</th></tr>
             </thead>
             <tbody id="rank-body"></tbody>
           </table>
@@ -4334,7 +4384,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T15:00Z";
+  const BUILD_ID = "2026-10-06T22:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4420,14 +4470,35 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const b = e.target.closest("button"); if (!b) return;
     posFilter = b.dataset.pos;
     $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    if (RK.sort !== "spam") saveRk();
     renderRankings();
   });
   $("rank-search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderRankings(); });
+  /* Production sort (Alan, Oct 6): re-sort the same board by actual fantasy production in the selected league's
+     scoring (Season PPG, Last 3 / Last 5 PPG, Season Points). A viewing mode only: it never touches ranks, tiers,
+     values, publishing or history; SPAM Rank restores the normal board. RK.min null = the default for this week. */
+  const RK = { sort: "spam", min: null, dir: "desc" };
+  const RK_HEAD = $("rk-head-row").innerHTML;
+  const PROD_MODES = { ppg: { label: "Season PPG", short: "PPG", unit: "PPG" }, l3: { label: "Last 3 PPG", short: "L3", unit: "PPG", n: 3 },
+    l5: { label: "Last 5 PPG", short: "L5", unit: "PPG", n: 5 }, pts: { label: "Season Points", short: "Pts", unit: "pts" } };
+  const prodOn = () => RK.sort !== "spam" && posFilter !== "PICK";
+  const saveRk = () => { try { localStorage.setItem("spm_rk_sort", JSON.stringify(RK.sort === "spam" ? { sort: "spam" } : { ...RK, pos: posFilter })); } catch (e) {} };
+  function syncRkControls() {
+    $("rk-sort").value = RK.sort;
+    $("rk-prod-opts").hidden = RK.sort === "spam";
+    $("rk-min").value = String(rkMin());
+    const b = $("rk-dir"); b.textContent = RK.dir === "desc" ? "High → Low" : "Low → High";
+    b.title = RK.dir === "desc" ? "Highest first · click for lowest first" : "Lowest first · click for highest first";
+  }
+  $("rk-sort").addEventListener("change", e => { RK.sort = e.target.value; syncRkControls(); saveRk(); renderRankings(); });
+  $("rk-min").addEventListener("change", e => { RK.min = Number(e.target.value); saveRk(); renderRankings(); });
+  $("rk-dir").addEventListener("click", () => { RK.dir = RK.dir === "desc" ? "asc" : "desc"; syncRkControls(); saveRk(); renderRankings(); });
   // Rail risers/fallers: jump to that player's row on the board (All players, no search or owner filter) and flash it
   document.addEventListener("click", e => {
     const j = e.target.closest("[data-jump]"); if (!j) return;
     const id = j.dataset.jump;
     posFilter = "ALL"; query = ""; $("rank-search").value = "";
+    if (RK.sort !== "spam") { RK.sort = "spam"; syncRkControls(); saveRk(); }   // risers/fallers are about SPAM rank
     $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.pos === "ALL"));
     if (LG.ownerFilter !== "all") { LG.ownerFilter = "all"; const o = $("owner-filter"); if (o) { o.value = "all"; } }
     renderRankings();
@@ -4535,6 +4606,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   }
   const posLabel = p => (leagueView() && LG.adjPos.has(p.id) ? p.pos + LG.adjPos.get(p.id) : p.posRank);
   function renderRankings() {
+    $("rk-sort-wrap").hidden = posFilter === "PICK";
+    if (prodOn()) return renderProd();
+    if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
     let list, rk, group;
     const editing = editor.on && !leagueView();
     maxValue = Math.max(1, ...players.map(dv));
@@ -4626,6 +4700,70 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     $("rank-body").innerHTML = out.length ? out.join("") :
       `<tr><td class="empty" colspan="${cols}">${query ? `No players match “${esc(query)}”.` : "No ranked players here."}</td></tr>`;
     $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
+    updateEditorBar();
+    queueRail();
+    if ($("player-modal").open) markCurrent();
+  }
+  /* Production view: the same rows, ranked by league-scored production (prodData). The production rank is the
+     row number, his SPAM rank stays beside the position badge and the SPAM value is a small secondary number; a thin
+     bar scaled to the best in the filtered set is the main comparison. Players under the minimum games, or with no
+     games this season, are left out rather than given a made-up number. */
+  function renderProd() {
+    const M = PROD_MODES[RK.sort], season = STATS_SEASONS[0], head = $("rk-head-row");
+    document.body.classList.remove("editing");
+    if (!head.dataset.prod || head.dataset.prod !== RK.sort) {
+      head.innerHTML = `<th scope="col" id="edit-head" hidden></th><th scope="col" id="rk-head"><span class="hd-lg">${esc(M.short)} Rk</span><span class="hd-sm">Rk</span></th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="prod-col"><span class="hd-lg">${esc(M.label)}</span><span class="hd-sm">${esc(M.short)}</span></th><th scope="col" class="val val-2">Value</th>`;
+      head.dataset.prod = RK.sort;
+    }
+    const data = prodData();
+    if (!data) {
+      if (statsCache[season] === undefined) loadSeason(season).then(() => { if (prodOn()) renderRankings(); });
+      $("rank-body").innerHTML = `<tr><td class="empty" colspan="5">${statsCache[season] === null ? "This season's stats couldn't be loaded." : "Loading this season's stats…"}</td></tr>`;
+      $("rank-count").textContent = "";
+      return;
+    }
+    const min = rkMin(), spamRk = p => (leagueView() ? LG.adjRank.get(p.id) : p.rank) ?? 1e9;
+    if ($("rk-min").value !== String(min)) $("rk-min").value = String(min);   // the week's default once stats are in
+    let pool = players.filter(p => EDIT_POS.includes(p.pos) && (posFilter === "ALL" || p.pos === posFilter));
+    let none = 0, under = 0;
+    const rows = [];
+    pool.forEach(p => {
+      const m = prodMetric(data, p.sleeperId, RK.sort);
+      if (!m) { none++; return; }
+      if (m.gp < min) { under++; return; }
+      rows.push({ p, ...m });
+    });
+    rows.sort((a, b) => (b.v - a.v) || (spamRk(a.p) - spamRk(b.p)));
+    rows.forEach((r, i) => { r.rank = i + 1; });
+    const top = Math.max(0, ...rows.map(r => r.v));
+    if (RK.dir === "asc") rows.reverse();
+    let list = rows;
+    const filtered = LG.active && LG.ownerFilter !== "all";
+    if (filtered) list = list.filter(r => ownerMatch(r.p));
+    if (query) list = list.filter(r => (r.p.name + " " + r.p.team).toLowerCase().includes(query));
+    const out = list.map(r => {
+      const p = r.p, own = LG.active && LG.ownerOf.get(p.id);
+      const cmpA = CMP.on && p.sleeperId && String(p.sleeperId) === String(PP.sid);
+      const pct = top > 0 ? Math.max(0, r.v) / top * 100 : 0;
+      const num = fp(r.v);
+      const star = r.short ? `<span class="inj-star" title="${esc(`Includes ${shortCount(r.short)} (left early with an injury); the game still counts`)}">*</span>` : "";
+      const sub = M.n ? (r.gp < M.n ? `<span class="psub thin" title="Only ${r.n} game${r.n === 1 ? "" : "s"} played this season">last ${r.n}</span>` : `<span class="psub">last ${r.n}</span>`) : `<span class="psub">${r.gp} GP</span>`;
+      const sr = spamRk(p), spamTxt = sr < 1e9 ? `SPAM #${sr}` : "SPAM —";
+      return `<tr class="player prod${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>
+        <td class="rk">${r.rank}</td>
+        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted SPAM rank" : "SPAM Board rank"}">${spamTxt}</span></td>
+        <td class="prod-col"><div class="prodbar" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))"><div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div><span class="pnum">${num}${star}</span>${sub}</div></td>
+        <td class="val val-2"><span class="num-2" title="${leagueView() ? "League-adjusted SPAM value" : "SPAM value"}">${p.hasValue === false ? "—" : fmt(dv(p))}</span></td>
+      </tr>`;
+    });
+    $("rank-body").innerHTML = out.length ? out.join("") :
+      `<tr><td class="empty" colspan="5">${query ? `No players match “${esc(query)}”.` : "No players meet this minimum yet."}</td></tr>`;
+    const notes = [`${list.length} player${list.length === 1 ? "" : "s"} · ${M.label} in ${scoringLabel()}`];
+    if (under) notes.push(`${under} under ${min} games hidden`);
+    if (none) notes.push(`${none} without a game this season`);
+    notes.push("SPAM-ranked players only");
+    $("rank-count").textContent = notes.join(" · ");
     updateEditorBar();
     queueRail();
     if ($("player-modal").open) markCurrent();
@@ -9403,8 +9541,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const rows = [];
     Object.entries(d.players).forEach(([sid, pl]) => {
       if (!EDIT_POS.includes(pl.p)) return;
-      let pts = 0; pl.g.forEach(a => { const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; }); pts += gamePoints(g, pl.p, sc); });
-      rows.push({ sid, pos: pl.p, pts, g: pl.g.length, short: d.short && d.short[sid] ? d.short[sid].length : 0 });
+      let pts = 0, gp = 0; pl.g.forEach(a => { const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; }); if (!enteredGame(g)) return; pts += gamePoints(g, pl.p, sc); gp++; });
+      rows.push({ sid, pos: pl.p, pts, g: gp, short: d.short && d.short[sid] ? d.short[sid].length : 0 });
     });
     const map = new Map();
     EDIT_POS.forEach(pos => rows.filter(r => r.pos === pos).sort((a, b) => b.pts - a.pts).forEach((r, i) => map.set(r.sid, { ...r, rank: i + 1, ppg: r.g ? r.pts / r.g : null })));
@@ -9609,6 +9747,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      Game Log, Stats, Fantasy Performance, recent form, season ranks, Waiver Wire, My Team, Rosters, projections from
      raw stats) calls this; never store or reuse a points total computed under other scoring. */
   const calculateFantasyPoints = (stats, sc, pos) => gamePoints(stats, pos, sc);
+  // A game he actually played: a stat line or offensive snaps. A row with neither (inactive, or he never entered)
+  // is never a game played (PPG, games, Last 3/5, production sort)
+  const enteredGame = g => STAT_KEYS.some(k => g[k]) || g.snap > 0;
   function gamePoints(g, pos, sc) {
     let v = 0;
     for (const k of STAT_KEYS) { const w = Number(sc[k] || 0); if (w) v += w * (g[k] || 0); }
@@ -9629,7 +9770,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       g.pts = gamePoints(g, P, sc);
       if (shW && shW.has(g.w)) { const r = shW.get(g.w); g.short = { pct: r[1], usual: r[2], inj: r[3] || "" }; }   // left early with an injury
       return g;
-    });
+    }).filter(enteredGame);
     return { season, name: pl.n, pos: pl.p, games, data };
   }
   function totals(games) {
@@ -9653,6 +9794,60 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     t.touches = t.rush_att + t.rec;
     return t;
   }
+  /* Production data for the Rankings board's production sort: every game he actually played this season (a stat
+     line or offensive snaps; byes, inactive weeks and games he never entered have no line or an empty one, and
+     future games aren't in the file), scored with the selected league's scoring. Cached per scoring. */
+  let prodCache = { key: "", map: null };
+  function prodData() {
+    const y = STATS_SEASONS[0], d = statsCache[y];
+    if (!d || !d.players) return null;
+    const sc = scoringNow(), key = y + "|" + d.updated + "|" + JSON.stringify(sc);
+    if (prodCache.key === key) return prodCache.map;
+    const map = new Map();
+    Object.entries(d.players).forEach(([sid, pl]) => {
+      if (!EDIT_POS.includes(pl.p)) return;
+      const sh = new Set(((d.short && d.short[sid]) || []).map(r => r[0]));
+      const games = [];
+      pl.g.forEach(a => {
+        const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; });
+        if (!enteredGame(g)) return;   // inactive or never entered the game
+        games.push({ w: g.w, pts: gamePoints(g, pl.p, sc), short: sh.has(g.w) });
+      });
+      games.sort((a, b) => a.w - b.w);
+      map.set(sid, games);
+    });
+    prodCache = { key, map };
+    return map;
+  }
+  // One player's number for a production mode: v (the metric), gp (games played this season), n (games in the
+  // sample), short (injury-shortened games in the sample, still counted)
+  function prodMetric(data, sid, mode) {
+    const games = sid && data.get(String(sid));
+    if (!games || !games.length) return null;
+    const k = (PROD_MODES[mode] || {}).n, sample = k ? games.slice(-k) : games;
+    const sum = sample.reduce((a, g) => a + g.pts, 0);
+    return { v: mode === "pts" ? sum : sum / sample.length, gp: games.length, n: sample.length, short: sample.filter(g => g.short).length };
+  }
+  // Default minimum games by the NFL week being played: weeks 1–2 none, week 3 2+, weeks 4–5 3+, week 6 on 4+
+  function rkMinDefault() {
+    const w = currentWeek();
+    if (w == null) return 4;
+    return w <= 2 ? 0 : w === 3 ? 2 : w <= 5 ? 3 : 4;
+  }
+  function rkMin() { return RK.min == null ? (typeof statsCache === "object" && statsCache[STATS_SEASONS[0]] ? rkMinDefault() : 0) : RK.min; }
+  // restore the last production view (sort, minimum, direction, position) saved in this browser
+  (() => {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("spm_rk_sort") || "null"); } catch (e) {}
+    if (!saved || !PROD_MODES[saved.sort]) return;
+    RK.sort = saved.sort; RK.dir = saved.dir === "asc" ? "asc" : "desc";
+    RK.min = [0, 2, 3, 4].includes(saved.min) ? saved.min : null;
+    if (filters.includes(saved.pos) && saved.pos !== "PICK") {
+      posFilter = saved.pos;
+      $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.pos === posFilter));
+    }
+    loadSeason(STATS_SEASONS[0]).then(() => { syncRkControls(); renderRankings(); });
+  })();
   const ratio = (a, b, d = 1) => (b > 0 ? (a / b).toFixed(d) : "–");
   const pct = (a, b) => (b > 0 ? (100 * a / b).toFixed(1) + "%" : "–");
   const fp = v => (v == null || !isFinite(v) ? "–" : (Math.round(v * 10) / 10).toFixed(1));
