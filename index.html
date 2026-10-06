@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0A0A0B" id="theme-color">
+<meta name="theme-color" content="#0B0B0C" id="theme-color">
 <meta http-equiv="Cache-Control" content="no-cache">
 <script>
   /* Theme before first paint: saved choice (spm_theme), else the device setting, else dark */
@@ -12,7 +12,7 @@
     try { t = localStorage.getItem("spm_theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", t);
-    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0A0A0B";
+    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0B0B0C";
   })();
 </script>
 <meta name="description" content="AM fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
@@ -702,135 +702,135 @@ const TRADE_VERDICTS = [
    aliases of these tokens, so every rule follows the active theme. */
 :root, :root[data-theme="dark"] {
   /* surfaces */
-  --page-bg: #0A0A0B;            /* near-black warm page */
-  --nav-bg: #0A0A0B;             /* header */
+  --page-bg: #0B0B0C;            /* near-black warm page */
+  --nav-bg: #0B0B0C;             /* header */
   --surface-bg: #111214;         /* cards, tables, panels: very dark warm neutral (burgundy is for headers, hover, menus, dialogs, editor) */
-  --surface-raised: #1D1F24;     /* modals, dropdowns, menus, elevated sections */
-  --table-head: #17181C;
-  --row-hover: #181A1F;
-  --tier-row: #15161A;           /* tier divider rows inside tables */
-  --control-bg: #17181C;         /* inputs, selects, buttons */
-  --track: #23252B;              /* value bars, slider tracks */
+  --surface-raised: #1D1F22;     /* modals, dropdowns, menus, elevated sections */
+  --table-head: #17181B;
+  --row-hover: #1D1F22;
+  --tier-row: #17181B;           /* tier divider rows inside tables */
+  --control-bg: #17181B;         /* inputs, selects, buttons */
+  --track: #232427;              /* value bars, slider tracks */
   /* text */
-  --text-primary: #F3F1EB;
-  --text-strong: #F3F1EB;        /* names, numbers, emphasis */
-  --text-secondary: #B5AEA3;
-  --text-muted: #8C857A;
-  --text-rank: #E6E1D7;
-  --heading: #F5F2EA;            /* page and dialog titles */
+  --text-primary: #F4F1E9;
+  --text-strong: #F4F1E9;        /* names, numbers, emphasis */
+  --text-secondary: #AAA39A;
+  --text-muted: #77736D;
+  --text-rank: #E4E0D7;
+  --heading: #F4F1E9;            /* page and dialog titles */
   /* lines */
-  --border: #2A2D33;
-  --border-soft: #23252B;
-  --border-strong: #3A3D44;
+  --border: #292A2D;
+  --border-soft: #202124;
+  --border-strong: #36383C;
   /* brand + accents */
-  --brand: #F5F2EA;
-  --brand-accent: #C8A34D;
-  --accent-primary: #C8A34D;     /* CTAs, active tabs, selected states */
-  --accent-hover: #A8842C;
+  --brand: #F4F1E9;
+  --brand-accent: #C7A83D;
+  --accent-primary: #C7A83D;     /* CTAs, active tabs, selected states */
+  --accent-hover: #D5B94D;
   --accent-text: #111214;        /* text on the accent */
   --accent-secondary: #C9595A;   /* muted rose */
   --accent-secondary-text: #E8A3A3;
   --burgundy-1: #2A2D33;
   --burgundy-2-t: #3A3D44;
-  --coral: #C8A34D;
-  --peach: #C8A34D;
+  --coral: #C7A83D;
+  --peach: #C7A83D;
   /* interaction */
-  --hover-bg: #1D1F24;
+  --hover-bg: #1D1F22;
   --active-bg: color-mix(in srgb, var(--accent-primary) 14%, transparent);
   --btn-bg: var(--control-bg);
-  --btn-text: #F3F1EB;
-  --btn-hover-bg: #1D1F24;
+  --btn-text: #F4F1E9;
+  --btn-hover-bg: #1D1F22;
   --danger-bg: #6B1F1F;
   --danger-hover: #842828;
   --danger-text: #F2C4C4;
-  --selection-bg: #A8842C;
-  --selection-text: #111214;
+  --selection-bg: #94791E;
+  --selection-text: #F4F1E9;
   /* editor */
-  --editor-panel: #16140F;
-  --editor-border: #3D3420;
-  --custom-panel: #1C1912;
-  --custom-border: #5A4B26;
+  --editor-panel: #15140F;
+  --editor-border: #3A3320;
+  --custom-panel: #1B1810;
+  --custom-border: #57492A;
   /* positions (kept recognizable, tuned to read on the burgundy surface) */
-  --pos-qb: #D66A5A;   /* soft coral on a wine tint */
-  --pos-rb: #38A678;   /* emerald on a forest tint */
-  --pos-wr: #5284D6;   /* desaturated light blue on slate */
-  --pos-te: #9068C9;   /* lavender on plum */
-  --pos-flex: #8A919E; /* muted amber */
-  --pos-sf: #8A919E;   /* muted rose */
+  --pos-qb: #C96F62;   /* soft coral on a wine tint */
+  --pos-rb: #3E9B76;   /* emerald on a forest tint */
+  --pos-wr: #668DB8;   /* desaturated light blue on slate */
+  --pos-te: #9274AE;   /* lavender on plum */
+  --pos-flex: #B18A45; /* muted amber */
+  --pos-sf: #A86678;   /* muted rose */
   --pos-pick: #8A919E; /* bench / IR / picks: neutral */
   --badge-base: #111214;
   /* depth */
   --shadow-color: rgba(0, 0, 0, 0.85);
   --shadow-soft: rgba(0, 0, 0, 0.6);
   --backdrop: rgba(0, 0, 0, 0.75);
-  --hero-tint: #15161A;
+  --hero-tint: #17181B;
   --theme-scheme: dark;
-  --tier-line: #2A2D33;
-  --tier-text: #E6E1D7;
-  --disabled-bg: #17181C;
-  --disabled-text: #6E685F;
-  --disabled-border: #2A2D33;
+  --tier-line: #292A2D;
+  --tier-text: #E4E0D7;
+  --disabled-bg: #17181B;
+  --disabled-text: #5F5B55;
+  --disabled-border: #292A2D;
 }
 :root[data-theme="light"] {
   --page-bg: #F6F3EC;            /* warm cream */
   --nav-bg: #F6F3EC;
-  --surface-bg: #FBF8F2;         /* cards and tables: a clear step darker than the page (never white) */
-  --surface-raised: #FFFDF8;     /* modals, dropdowns */
-  --table-head: #F1ECE3;
-  --row-hover: #F2EDE4;
-  --tier-row: #F1ECE3;
-  --control-bg: #FBF8F2;
-  --track: #E2DBCF;
+  --surface-bg: #FCFAF6;         /* cards and tables: a clear step darker than the page (never white) */
+  --surface-raised: #FCFAF6;     /* modals, dropdowns */
+  --table-head: #F0ECE3;
+  --row-hover: #E9E3D8;
+  --tier-row: #F0ECE3;
+  --control-bg: #FCFAF6;
+  --track: #E6E0D5;
   --text-primary: #171717;
   --text-strong: #171717;
-  --text-secondary: #4A453D;
-  --text-muted: #6D675D;
+  --text-secondary: #6F695F;
+  --text-muted: #989086;
   --text-rank: #2B2824;
   --heading: #171717;
-  --border: #DDD5C8;
-  --border-soft: #E2DBCF;
-  --border-strong: #C9BFAF;
+  --border: #DED7CA;
+  --border-soft: #E8E2D7;
+  --border-strong: #CEC5B6;
   --brand: #171717;
-  --brand-accent: #A8842C;
-  --accent-primary: #A8842C;     /* burgundy: buttons, active states, emphasis */
-  --accent-hover: #8F6F1E;
+  --brand-accent: #B99A2E;
+  --accent-primary: #B99A2E;     /* burgundy: buttons, active states, emphasis */
+  --accent-hover: #94791E;
   --accent-text: #171717;
   --accent-secondary: #A33A3A;   /* coral, used sparingly */
   --accent-secondary-text: #9B2C2C;
   --burgundy-1: #DDD5C8;
   --burgundy-2-t: #C9BFAF;
-  --coral: #A8842C;
-  --peach: #C8A34D;
-  --hover-bg: #EFE9DD;
+  --coral: #B99A2E;
+  --peach: #B99A2E;
+  --hover-bg: #E9E3D8;
   --btn-text: #171717;
-  --btn-hover-bg: #EFE9DD;
+  --btn-hover-bg: #E9E3D8;
   --danger-bg: #F6DEDE;
   --danger-hover: #EFCACA;
   --danger-text: #9B2C2C;
-  --selection-bg: #E6D3A0;
+  --selection-bg: #F1E8C7;
   --selection-text: #171717;
-  --editor-panel: #F6EFD9;
-  --editor-border: #D7C28A;
-  --custom-panel: #F4ECD5;
-  --custom-border: #D7C28A;
-  --pos-qb: #B5503F;
-  --pos-rb: #237F59;
-  --pos-wr: #3B69B5;
-  --pos-te: #7650AE;
-  --pos-flex: #6E7480;
-  --pos-sf: #6E7480;
+  --editor-panel: #FAF6E9;
+  --editor-border: #E8DCAA;
+  --custom-panel: #F1E8C7;
+  --custom-border: #DCCB8E;
+  --pos-qb: #A9554A;
+  --pos-rb: #287558;
+  --pos-wr: #4A6F99;
+  --pos-te: #765A93;
+  --pos-flex: #8C6A2E;
+  --pos-sf: #8A4D5E;
   --pos-pick: #6E7480;
-  --badge-base: #FBF8F2;
+  --badge-base: #FCFAF6;
   --shadow-color: rgba(60, 48, 30, 0.14);
   --shadow-soft: rgba(60, 48, 30, 0.08);
   --backdrop: rgba(40, 32, 20, 0.28);
-  --hero-tint: #F1ECE3;
+  --hero-tint: #F0ECE3;
   --theme-scheme: light;
-  --tier-line: #DDD5C8;
+  --tier-line: #DED7CA;
   --tier-text: #3A352D;
-  --disabled-bg: #ECE6DA;
-  --disabled-text: #8A8378;
-  --disabled-border: #DDD5C8;
+  --disabled-bg: #F0ECE3;
+  --disabled-text: #989086;
+  --disabled-border: #DED7CA;
 }
 /* Aliases used throughout the stylesheet (they follow the tokens above) */
 :root {
@@ -1604,8 +1604,8 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 #panel-finder .tf-foot { padding-top: 2px; justify-content: space-between; gap: 16px; }
 
 /* Power Rankings row polish: whole-row hover, your-team accent, quieter method note */
-:root, :root[data-theme="dark"] { --mine-accent: #C8A34D; }
-:root[data-theme="light"] { --mine-accent: #A8842C; }
+:root, :root[data-theme="dark"] { --mine-accent: #C7A83D; }
+:root[data-theme="light"] { --mine-accent: #94791E; }
 #league-body .pr-row:hover { background: var(--row-hover); }
 #league-body .pr-row:hover .pr-name, #league-body .pr-row:hover .pr-score { color: var(--heading); }
 #league-body .pr-row:hover .pr-score { color: var(--text-strong); }
@@ -3485,47 +3485,57 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   *, *::before, *::after { transition: none !important; }
 }
 
-/* ---------- Balance pass (Alan, Oct 8): dark is the hero theme, light a warm alternate; gold only for active states,
-   primary actions, your team and real emphasis; hover/focus borders go neutral; three dark layers; muted badges. ---------- */
-:root { --gold-tint: rgba(200, 163, 77, 0.12); --focus-line: var(--border-strong); }
+/* ---------- Gen.G editorial (Alan, Oct 8): warm ivory + near-black + muted championship gold; position colors are
+   functional accents only. Gold = brand, selected state, primary action, your team. Borders are felt more than seen. ---------- */
+:root, :root[data-theme="dark"] {
+  --gold-tint: rgba(199, 168, 61, 0.12); --focus-line: var(--border-strong); --rail-bg: #0E0F11; --rail-line: #222326;
+  --nav-idle: #AAA39A; --nav-on: #F4F1E9; --nav-line: #C7A83D;
+  --eb-bg: rgba(199, 168, 61, 0.055); --eb-line: rgba(199, 168, 61, 0.18); --eb-ink: #AAA39A; --eb-strong: #D9D3C7;
+  --vt-bg: #17181B; --vt-ink: #AAA39A; --vt-line: #292A2D; --vt-on: #C7A83D; --vt-on-ink: #111214; --vt-on-line: #94791E;
+  --badge-a: 0.13; --badge-b: 0.42; --row-sel: rgba(199, 168, 61, 0.07);
+}
+:root[data-theme="light"] {
+  --gold-tint: #F1E8C7; --rail-bg: #F0ECE3; --rail-line: #E2DBCE;
+  --nav-idle: #6F695F; --nav-on: #171717; --nav-line: #B99A2E;
+  --eb-bg: #FAF6E9; --eb-line: #E8DCAA; --eb-ink: #6F695F; --eb-strong: #4A4232;
+  --vt-bg: #F0ECE3; --vt-ink: #6F695F; --vt-line: #DED7CA; --vt-on: #B99A2E; --vt-on-ink: #171717; --vt-on-line: #94791E;
+  --badge-a: 0.09; --badge-b: 0.35; --row-sel: rgba(185, 154, 46, 0.055);
+}
 .search:focus, .select:focus, .import-dialog textarea:focus, dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { border-color: var(--focus-line); }
 .info:hover, .info:focus-visible, .tw-btn:hover, .league-option:hover:not(:disabled), .pm-close:hover, .inj-ov:hover,
 .tr-send:hover:not(:disabled), .roster-toggle.main:hover, .pr-item.open .pr-caret { border-color: var(--focus-line); }
-/* nav: quiet inactive tabs, white active tab with the gold underline */
-.tab, .chip-btn { color: #A8A195; }
-.tab:hover, .chip-btn:hover { color: #D8D1C5; }
-.tab[aria-selected="true"], .chip-btn[aria-pressed="true"] { color: #F5F2EA; }
-.tab[aria-selected="true"]::after, .chip-btn[aria-pressed="true"]::after { background: #C8A34D; }
-:root[data-theme="light"] .tab, :root[data-theme="light"] .chip-btn { color: #6D675D; }
-:root[data-theme="light"] .tab:hover, :root[data-theme="light"] .chip-btn:hover { color: #3A352D; }
-:root[data-theme="light"] .tab[aria-selected="true"], :root[data-theme="light"] .chip-btn[aria-pressed="true"] { color: #171717; }
-:root[data-theme="light"] .tab[aria-selected="true"]::after, :root[data-theme="light"] .chip-btn[aria-pressed="true"]::after { background: #A8842C; }
-/* editor bar: a subtle utility bar, never brighter than the board */
-.editor-bar { background: rgba(200, 163, 77, 0.08); border-color: rgba(200, 163, 77, 0.25); color: #D8D1C5; }
-.editor-bar .eb-left strong { color: #D8D1C5; }
-.eb-left strong::before { background: #A8842C; }
-:root[data-theme="light"] .editor-bar { background: #F6EFD9; border-color: #D7C28A; color: #574B2A; }
-:root[data-theme="light"] .editor-bar .eb-left strong { color: #574B2A; }
+/* nav */
+.tab, .chip-btn { color: var(--nav-idle); }
+.tab:hover, .chip-btn:hover { color: var(--nav-on); }
+.tab[aria-selected="true"], .chip-btn[aria-pressed="true"] { color: var(--nav-on); }
+.tab[aria-selected="true"]::after, .chip-btn[aria-pressed="true"]::after { background: var(--nav-line); }
+/* editor bar: a quiet utility strip; its dot is gold (red is for real errors) */
+.editor-bar { background: var(--eb-bg); border-color: var(--eb-line); color: var(--eb-ink); }
+.editor-bar .eb-left strong { color: var(--eb-strong); }
+.eb-left strong::before { background: var(--gold); }
 /* AM Board / League-adjusted toggle */
-.view-toggle { background: #17181C; border-color: #2B2D31; }
-.vt-btn { color: #C9C2B7; }
-.vt-btn[aria-pressed="true"] { background: #C8A34D; color: #171717; box-shadow: inset 0 0 0 1px #A8842C; }
-:root[data-theme="light"] .view-toggle { background: #ECE6DA; border-color: #D5CCBC; }
-:root[data-theme="light"] .vt-btn { color: #5E584F; }
-:root[data-theme="light"] .vt-btn:hover { color: #171717; }
-:root[data-theme="light"] .vt-btn[aria-pressed="true"] { background: #C8A34D; color: #171717; box-shadow: inset 0 0 0 1px #A8842C; }
-/* right rail: a secondary panel */
-.rk-rail { background: #101114; border-color: #26282E; }
-:root[data-theme="light"] .rk-rail { background: #F5F0E8; border-color: #DDD5C8; }
-.rk-rail .rail-title, .rk-rail h3, .rk-rail .section-label { color: color-mix(in srgb, var(--muted) 85%, transparent); }
-/* position badges: subtle tint, the text and border carry the color */
-.pos { background: color-mix(in srgb, var(--c) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent); }
-:root[data-theme="light"] .pos { background: color-mix(in srgb, var(--c) 11%, transparent); }
-/* quieter secondary text so the eye stays on name, rank, value and active controls */
-.owner-filter > span, .ctl-label, .fmt-note, .fmt-note b, .eb-vc { color: color-mix(in srgb, var(--muted) 85%, transparent); }
+.view-toggle { background: var(--vt-bg); border-color: var(--vt-line); }
+.vt-btn { color: var(--vt-ink); }
+.vt-btn:hover { color: var(--ink); }
+.vt-btn[aria-pressed="true"] { background: var(--vt-on); color: var(--vt-on-ink); box-shadow: inset 0 0 0 1px var(--vt-on-line); }
+/* right rail: a secondary surface */
+.rk-rail { background: var(--rail-bg); border-color: var(--rail-line); }
+.rk-rail .rail-title, .rk-rail h3, .rk-rail .section-label { color: var(--muted); }
+/* position badges: faint tint, the text and border carry the color */
+.pos { background: color-mix(in srgb, var(--c) calc(var(--badge-a) * 100%), transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) calc(var(--badge-b) * 100%), transparent); }
+/* the board: names and values lead, bars shorter and lighter, meta quieter */
+#rank-body .pl-name { color: var(--text-strong); font-weight: 700; }
+.valbar .num { font-weight: 700; color: var(--text-strong); }
+.valbar .track { flex-basis: 150px; }
+#panel-rankings .valbar .track { max-width: 230px; }
+.valbar .fill { opacity: 0.42; }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.5; }
-.fc-label { color: var(--muted); }
+.owner-filter > span, .ctl-label, .fmt-note, .fmt-note b, .eb-vc, .fc-label { color: var(--muted); }
 .league-chip.custom .fc-label, .fmt-chip.custom .fc-label { color: var(--gold); }   /* a custom format over a league stays flagged in gold (§9) */
+.fmt-note [data-open-fmt] { color: var(--gold); }
+/* selected player: faint gold wash plus the thin gold edge */
+#rank-body tr.player.pp-current td { background: var(--row-sel); }
+#rank-body tr.player.pp-current td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
 </style>
 </head>
 <body>
@@ -4555,7 +4565,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T06:00Z";
+  const BUILD_ID = "2026-10-08T08:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -4585,7 +4595,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     if (animate) { root.classList.add("theme-anim"); clearTimeout(setTheme.timer); setTheme.timer = setTimeout(() => root.classList.remove("theme-anim"), 320); }
     root.setAttribute("data-theme", t);
     try { localStorage.setItem("spm_theme", t); } catch (e) {}
-    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0A0A0B";
+    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F6F3EC" : "#0B0B0C";
     const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
     btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
     btn.setAttribute("aria-pressed", String(t === "light"));
