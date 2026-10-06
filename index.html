@@ -649,7 +649,9 @@ const FORMAT_ADJUST = {
   avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 },  // players used for each position's average
   // Shallow formats can price a whole tier at waiver level (10-team 1QB: QB13+ ≈ 0). Two guards:
   tierKeep: 0.40,     // a tier keeps at least 40% of the last value above it (unless your base board's own drop there is steeper)
-  qb1Cushion: 0.5,    // 1QB leagues: QB replacement sits this share of the way from the last starting QB down to the waiver QB
+  qb1Cushion: 0.5,
+  sfStarterTeams: 8,     // superflex/2QB starter smoothing applies to leagues with at most this many teams (Alan, Oct 6: 8-team SF)
+  sfStarterEase: 0.75,   // superflex/2QB: after the last starting QB, each QB keeps at least this share of the base board's step down    // 1QB leagues: QB replacement sits this share of the way from the last starting QB down to the waiver QB
                       // (teams carry and stream QBs, so the 12th QB isn't true replacement). Alan Oct 5: QB5-QB12 in 12-team
                       // 1QB were ~25% of their Superflex values; points over replacement put them nearer 35-45%.
   floor: 25,          // a tiny floor of 25, easing down 2% per position spot, never above the player's base value
@@ -4332,7 +4334,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T14:00Z";
+  const BUILD_ID = "2026-10-06T15:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6547,6 +6549,26 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         else if (EDIT_POS.includes(p.pos) && p.posNum != null) v = shifted(p.pos, p.posNum, p.value);   // untiered, tagged (e.g. Hurt)
         raw.set(p.id, Math.max(0, v));
       });
+      // Superflex / 2QB (Alan, Oct 6): pricing tiers as blocks put a cliff inside the starting QBs of smaller
+      // superflex leagues (8-team SF: QB12 2,866 → QB13 1,146 although ~16 QBs start). While QBs are still weekly
+      // starters (teams × QB + superflex slots), none falls further below the QB ahead than on the SPAM Board;
+      // after the last starter they ease down to their format value (at most sfStarterEase of the board's step
+      // per spot). Only ever raises a value, never above his base value; leagues of up to sfStarterTeams (8) teams only,
+      // so 1QB leagues, 10+ team superflex and the base format are untouched.
+      {
+        const lu = lineupOf(vl);
+        if ((lu.SUPER_FLEX > 0 || lu.QB >= 2) && lu.teams <= (Number(FA.sfStarterTeams) || 0)) {
+          const S = Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0))), ease = Number(FA.sfStarterEase) || 0;
+          const qbs = players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum);
+          for (let i = 1; i < qbs.length; i++) {
+            const a = qbs[i - 1], p = qbs[i];
+            if (p.custom || !(a.value > 0)) continue;
+            const step = Math.min(1, p.value / a.value) * (p.posNum <= S ? 1 : ease);
+            const bound = Math.min(p.value, raw.get(a.id) * step);
+            if (raw.get(p.id) < bound * 0.999) raw.set(p.id, bound); else if (p.posNum > S) break;   // eased back onto the format's own values
+          }
+        }
+      }
       // the position curve alone never reorders a position: keep it in your order first…
       for (const pos of EDIT_POS) {
         let prev = Infinity;
