@@ -660,6 +660,7 @@ const FORMAT_ADJUST = {
   sfStarterEase: 0.75,   // superflex/2QB: after the last starting QB, each QB keeps at least this share of the base board's step down    // 1QB leagues: QB replacement sits this share of the way from the last starting QB down to the waiver QB
                       // (teams carry and stream QBs, so the 12th QB isn't true replacement). Alan Oct 5: QB5-QB12 in 12-team
                       // 1QB were ~25% of their Superflex values; points over replacement put them nearer 35-45%.
+  flexSoftness: 1.0,  // PPG: FLEX spots are shared between positions by how close their next starters score (replLevels; Alan, Oct 8)
   floor: 25,          // a tiny floor of 25, easing down 2% per position spot, never above the player's base value
   floorDecay: 0.98
 };
@@ -4765,7 +4766,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T17:00Z";
+  const BUILD_ID = "2026-10-08T19:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7035,13 +7036,24 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     return out;
   }
   // Replacement (last starter) and waiver levels in points per game, from a lineup
+  // FLEX spots are shared between the eligible positions by how close their next starters score (a softmax
+  // with FORMAT_ADJUST.flexSoftness PPG), not given whole to the single best one (Alan, Oct 8, TE audit): the
+  // all-or-nothing split sent four league FLEX spots to TEs with TE premium and none without, so TE replacement
+  // jumped TE13 -> TE17 and mid TE1s more than doubled from no TEP to +0.5. Superflex spots keep the
+  // all-or-nothing rule (they go to QBs). Starter counts can be fractional; the curves are read in between.
   function replLevels(curves, lu) {
-    const t = lu.teams, at = (pos, i) => curves[pos][Math.min(i, curves[pos].length - 1)];
+    const t = lu.teams, soft = Number(FORMAT_ADJUST.flexSoftness) || 0;
+    const at = (pos, i) => { const c = curves[pos], n = c.length - 1, j = Math.min(Math.max(i, 0), n), lo = Math.floor(j), hi = Math.min(n, lo + 1); return c[lo] + (c[hi] - c[lo]) * (j - lo); };
     const st = { QB: t * lu.QB, RB: t * lu.RB, WR: t * lu.WR, TE: t * lu.TE };
     const flex = [].concat(
       Array(t * lu.WRRB_FLEX).fill(["RB", "WR"]), Array(t * lu.REC_FLEX).fill(["WR", "TE"]),
       Array(t * lu.FLEX).fill(["RB", "WR", "TE"]), Array(t * lu.SUPER_FLEX).fill(["QB", "RB", "WR", "TE"]));
-    for (const el of flex) { const best = el.reduce((b, p) => (at(p, st[p]) > at(b, st[b]) ? p : b)); st[best]++; }
+    for (const el of flex) {
+      if (soft > 0 && !el.includes("QB")) {
+        const nx = el.map(p => at(p, st[p])), mx = Math.max(...nx), w = nx.map(v => Math.exp((v - mx) / soft)), ws = w.reduce((a, b) => a + b, 0);
+        el.forEach((p, i) => { st[p] += w[i] / ws; });
+      } else { const best = el.reduce((b, p) => (at(p, st[p]) > at(b, st[b]) ? p : b)); st[best]++; }
+    }
     const w = { QB: lu.SUPER_FLEX || lu.QB >= 2 ? 1 : 0.5, RB: 2, WR: 2, TE: 1 };
     const wsum = w.QB + w.RB + w.WR + w.TE;
     const repl = {}, waiver = {};
@@ -7323,6 +7335,25 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     }
     const two = [val({ qb: "1", tep: 0 }, at("QB", 12)), val({ qb: "2", tep: 0 }, at("QB", 12))];
     check(`${at("QB", 12).name} (QB12): 1QB vs 2QB`, two, two[1] > two[0] * 1.4);
+    // TE premium enhances TE value rather than creating it (Alan, Oct 8 TE audit): TE8's gain shrinks with each
+    // step and no TEP -> +0.5 stays under +90% (it was +113% with all-or-nothing FLEX spots)
+    const te8 = at("TE", 8), tp = [0, 0.5, 1, 1.5].map(t => val({ ...one, tep: t }, te8));
+    const g = [1, 2, 3].map(i => tp[i] / tp[i - 1] - 1);
+    check(`${te8.name} (TE8), 12-team 1QB Full PPR, TE premium none → + → ++ → +++: smooth steps`, tp, g[0] < 0.9 && g[0] > g[1] && g[1] > g[2] && g[2] > 0);
+    const te1 = at("TE", 1), ts = [8, 10, 12, 14].map(t => val({ ...one, tep: 0, teams: t }, te1));
+    check(`${te1.name} (TE1), no TEP: rises with league size 8 → 10 → 12 → 14`, ts, ts[0] < ts[1] && ts[1] < ts[2] && ts[2] < ts[3]);
+    // Mid TE1s vs the market (FantasyCalc 12-team 1QB Full PPR, no TEP): TE7-12 near market, TE13-20 not above it
+    try {
+      const mk = await (await fetch("data/market/redraft.json", { cache: "no-cache" })).json(), f = mk.formats && mk.formats.q1_t12;
+      if (f) {
+        const lg = fmtLeague({ ...FMT_DEFAULT, ...one, tep: 0 }), adj = adjMapFor(lg), med = a => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+        const ps = players.filter(p => p.sleeperId && f[p.sleeperId] && f[p.sleeperId][0] > 0 && !p.tail);
+        const sc = med(ps.filter(p => adj.get(p.id) >= 800).map(p => adj.get(p.id) / f[p.sleeperId][0]));
+        const band = (lo, hi) => med(ps.filter(p => p.pos === "TE" && p.posNum >= lo && p.posNum <= hi).map(p => adj.get(p.id) / (f[p.sleeperId][0] * sc)));
+        const mid = band(7, 12), low = band(13, 20);
+        check("TE7–TE12 near FantasyCalc and TE13–TE20 not above it (12-team 1QB Full PPR, no TEP; AM ÷ market)", [mid.toFixed(2), low.toFixed(2)], mid >= 0.85 && low <= 1.1);
+      }
+    } catch (e) { /* no market file: skip */ }
     const sl0 = syncedLeague();
     if (sl0) {
       const lu = lineupOf(valueLeague()), own = lineupOf(sl0);
