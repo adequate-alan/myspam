@@ -3062,6 +3062,9 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 #rank-body tr.cmp-row:hover .cmp-pick { background: color-mix(in srgb, var(--gold) 45%, transparent); }
 #rank-body tr.cmp-a td { background: color-mix(in srgb, var(--gold) 5%, transparent); }
 /* Injury context: games he left early with an injury */
+.inj-ov { all: unset; cursor: pointer; margin-left: 6px; padding: 1px 6px; border: 1px dashed var(--line); border-radius: 4px; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
+.inj-ov:hover { color: var(--ink); border-color: var(--gold); }
+.inj-ov:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .inj-star { color: color-mix(in srgb, var(--st-dnp) 75%, var(--muted)); font-weight: 800; margin-left: 1px; cursor: help; }
 .inj-note { display: block; margin-top: 2px; font-size: 0.68rem; color: var(--muted); white-space: normal; }
 .wk-sum .inj-note { text-align: right; }
@@ -4384,7 +4387,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-06T22:00Z";
+  const BUILD_ID = "2026-10-07T01:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9536,13 +9539,13 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function seasonRanks() {
     const y = STATS_SEASONS[0], d = statsCache[y], sc = scoringNow();
     if (!d || !d.players) return new Map();
-    const key = y + "|" + d.updated + "|" + JSON.stringify(sc);
+    const key = y + "|" + d.updated + "|" + INJ_OV_VER + "|" + JSON.stringify(sc);
     if (seasonRankCache.key === key) return seasonRankCache.map;
     const rows = [];
     Object.entries(d.players).forEach(([sid, pl]) => {
       if (!EDIT_POS.includes(pl.p)) return;
       let pts = 0, gp = 0; pl.g.forEach(a => { const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; }); if (!enteredGame(g)) return; pts += gamePoints(g, pl.p, sc); gp++; });
-      rows.push({ sid, pos: pl.p, pts, g: gp, short: d.short && d.short[sid] ? d.short[sid].length : 0 });
+      rows.push({ sid, pos: pl.p, pts, g: gp, short: shortMap(d, sid).size });
     });
     const map = new Map();
     EDIT_POS.forEach(pos => rows.filter(r => r.pos === pos).sort((a, b) => b.pts - a.pts).forEach((r, i) => map.set(r.sid, { ...r, rank: i + 1, ppg: r.g ? r.pts / r.g : null })));
@@ -9750,6 +9753,79 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   // A game he actually played: a stat line or offensive snaps. A row with neither (inactive, or he never entered)
   // is never a game played (PPG, games, Last 3/5, production sort)
   const enteredGame = g => STAT_KEYS.some(k => g[k]) || g.snap > 0;
+  /* Injury-shortened games: the pipeline's flags (data.short) plus manual corrections (Alan, Oct 6). Corrections live
+     in data/injury_overrides.json ({ seasons: { "2026": { sleeper_id: { week: { short: true|false, inj } } } } }),
+     published from the Game Log by a signed-in editor; a browser without a token keeps its own (spm_inj_overrides).
+     short: true marks a game the detection missed, false clears a wrong flag. Every PPG, Last 3/5, chart, Game Log,
+     Fantasy Performance, Compare and production-sort number reads the flag from here (shortMap). */
+  const INJ_OV_FILE = "data/injury_overrides.json", INJ_OV_LOCAL = "spm_inj_overrides";
+  let INJ_OV = { seasons: {} }, INJ_OV_VER = 0;
+  const injLocal = () => { try { return JSON.parse(localStorage.getItem(INJ_OV_LOCAL) || "{}") || {}; } catch (e) { return {}; } };
+  function injOverrides(season, sid) {
+    const pub = ((INJ_OV.seasons || {})[season] || {})[sid] || {}, loc = (injLocal()[season] || {})[sid] || {};
+    const out = { ...pub, ...loc };
+    Object.keys(loc).forEach(w => { if (loc[w] == null) delete out[w]; });   // null: undo a published correction
+    return out;
+  }
+  // Editors (a saved GitHub token) or ?debug get a correction button on each played game in the Game Log
+  const canFlagInj = () => !!editor.token || /[?&]debug\b/.test(location.search);
+  function setInjOverride(season, sid, w, val) {
+    const all = injLocal(); ((all[season] = all[season] || {})[sid] = all[season][sid] || {})[w] = val;
+    try { localStorage.setItem(INJ_OV_LOCAL, JSON.stringify(all)); } catch (e) {}
+    INJ_OV_VER++;
+  }
+  async function publishInjOverrides() {
+    const loc = injLocal();
+    if (!editor.token || !Object.keys(loc).length) return;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let file = null, base = { note: "Manual injury-shortened corrections (SPAM editors). short: true marks a game the detection missed; false clears a wrong flag.", seasons: {} };
+      try { file = await gh(`/repos/${REPO}/contents/${INJ_OV_FILE}?ref=${BRANCH}`); base = JSON.parse(b64decode(file.content)); base.seasons = base.seasons || {}; }
+      catch (err) { if (err.status !== 404) throw err; }
+      for (const [y, bySid] of Object.entries(loc)) for (const [sid, byW] of Object.entries(bySid)) for (const [w, v] of Object.entries(byW)) {
+        const t = ((base.seasons[y] = base.seasons[y] || {})[sid] = base.seasons[y][sid] || {});
+        if (v == null) delete t[w]; else t[w] = { ...v, by: editor.login || "", on: new Date().toISOString().slice(0, 10) };
+        if (!Object.keys(t).length) delete base.seasons[y][sid];
+      }
+      try {
+        await gh(`/repos/${REPO}/contents/${INJ_OV_FILE}`, { method: "PUT", body: JSON.stringify({
+          message: `Injury-shortened correction${editor.login ? " by @" + editor.login : ""}`,
+          content: b64encode(JSON.stringify(base, null, 1) + "\n"), branch: BRANCH, ...(file ? { sha: file.sha } : {}) }) });
+        INJ_OV = base; INJ_OV_VER++;
+        try { localStorage.removeItem(INJ_OV_LOCAL); } catch (e) {}
+        return true;
+      } catch (err) { if (err.status !== 409) throw err; }
+    }
+    throw new Error("The file kept changing. Try again.");
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-inj-ov]"); if (!b) return;
+    const [season, sid, w] = b.dataset.injOv.split("|"), d = statsCache[season];
+    const flagged = shortMap(d, sid).has(Number(w)), auto = ((d && d.short && d.short[sid]) || []).some(r => r[0] === Number(w));
+    // flagged → clear it (an auto flag gets short: false; a manual one is just removed); not flagged → mark it
+    // (or, if it was an auto flag someone cleared, restore it by removing the correction)
+    setInjOverride(season, sid, w, flagged ? (auto ? { short: false } : null) : (auto ? null : { short: true }));
+    renderRankings(); if ($("player-modal").open) renderPlayer();
+    const what = flagged ? "Injury flag cleared" : "Marked injury-shortened";
+    if (!editor.token) { toast(`${what} in this browser only (sign in to the editor to publish it).`); return; }
+    publishInjOverrides().then(() => toast(`${what} and published. The live site updates in about a minute.`))
+      .catch(err => toast(`${what} in this browser; publishing failed: ${err.message}`));
+  });
+  // week -> { pct, usual, inj, at, manual } for one player-season
+  function shortMap(data, sid) {
+    const m = new Map();
+    ((data && data.short && data.short[sid]) || []).forEach(r => m.set(r[0], { pct: r[1], usual: r[2], inj: r[3] || "", at: r[4] ?? null, manual: false }));
+    Object.entries(data ? injOverrides(String(data.season), String(sid)) : {}).forEach(([w, o]) => {
+      w = Number(w);
+      if (o && o.short === false) m.delete(w);
+      else if (o && o.short) m.set(w, { ...(m.get(w) || { pct: null, usual: null, at: null }), inj: o.inj || (m.get(w) || {}).inj || "", manual: true });
+    });
+    return m;
+  }
+  fetch(INJ_OV_FILE, { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null).then(d => {
+    if (!d || !d.seasons) return;
+    INJ_OV = d; INJ_OV_VER++;
+    renderRankings(); if ($("player-modal").open) renderPlayer();
+  });
   function gamePoints(g, pos, sc) {
     let v = 0;
     for (const k of STAT_KEYS) { const w = Number(sc[k] || 0); if (w) v += w * (g[k] || 0); }
@@ -9763,12 +9839,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
     const data = statsCache[season], pl = data && data.players[sid];
     if (!pl) return null;
     const sc = scoringNow(), P = pos || pl.p;
-    const sh = data.short && data.short[sid], shW = sh ? new Map(sh.map(r => [r[0], r])) : null;
+    const shW = shortMap(data, sid);
     const games = pl.g.map(a => {
       const g = { season };
       data.cols.forEach((c, i) => { g[c] = a[i]; });
       g.pts = gamePoints(g, P, sc);
-      if (shW && shW.has(g.w)) { const r = shW.get(g.w); g.short = { pct: r[1], usual: r[2], inj: r[3] || "" }; }   // left early with an injury
+      if (shW.has(g.w)) { const r = shW.get(g.w); g.short = { ...r, pct: r.pct ?? g.snap ?? null }; }   // left early with an injury
       return g;
     }).filter(enteredGame);
     return { season, name: pl.n, pos: pl.p, games, data };
@@ -9801,12 +9877,12 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   function prodData() {
     const y = STATS_SEASONS[0], d = statsCache[y];
     if (!d || !d.players) return null;
-    const sc = scoringNow(), key = y + "|" + d.updated + "|" + JSON.stringify(sc);
+    const sc = scoringNow(), key = y + "|" + d.updated + "|" + INJ_OV_VER + "|" + JSON.stringify(sc);
     if (prodCache.key === key) return prodCache.map;
     const map = new Map();
     Object.entries(d.players).forEach(([sid, pl]) => {
       if (!EDIT_POS.includes(pl.p)) return;
-      const sh = new Set(((d.short && d.short[sid]) || []).map(r => r[0]));
+      const sh = shortMap(d, sid);
       const games = [];
       pl.g.forEach(a => {
         const g = {}; d.cols.forEach((c, k) => { g[c] = a[k]; });
@@ -10182,7 +10258,15 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
      well under his usual plus injury evidence) counts in the official average but is always marked; trends use
      completed games. OUT / BYE / DNP weeks are never games played. */
   const fullAvg = games => { const f = games.filter(g => !g.short); return f.length ? avgPts(f) : null; };
-  const shortTip = g => (g && g.short ? `Left Week ${g.w} early — injury${g.short.inj ? ` (${g.short.inj})` : ""} · ${Math.round(100 * g.short.pct)}% of snaps (usually ${Math.round(100 * g.short.usual)}%)` : "");
+  const QTR = ["1st quarter", "2nd quarter", "3rd quarter", "4th quarter"];
+  const shortTip = g => {
+    if (!g || !g.short) return "";
+    const x = g.short, parts = [`Left Week ${g.w} early — injury${x.inj ? ` (${x.inj})` : ""}`];
+    if (x.at != null) parts.push(x.at >= 29 && x.at <= 31 ? "around halftime" : `in the ${QTR[Math.min(3, Math.floor(x.at / 15))]}`);
+    if (x.pct != null) parts.push(`${Math.round(100 * x.pct)}% of snaps${x.usual != null ? ` (usually ${Math.round(100 * x.usual)}%)` : ""}`);
+    if (x.manual) parts.push("marked by SPAM");
+    return parts.join(" · ");
+  };
   const ptsStar = g => `${fp(g.pts)}${g.short ? `<span class="inj-star" title="${esc(shortTip(g))}">*</span>` : ""}`;
   const shortCount = n => `${n} injury-shortened game${n === 1 ? "" : "s"}`;
   const ppgNote = t => (t && t.short ? `Includes ${shortCount(t.short)}${t.distort ? ` · ${fp(t.fullPpg)} PPG in completed games` : ""}` : "");
@@ -10598,7 +10682,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
       const g = byWeek.get(w), r = sched.find(x => x[0] === w);
       if (g) {
         const o = oppLabel(season, g), cls = g.pts >= hi ? " good" : g.pts < lo ? " weak" : "";
-        const res = (o.res ? `<span class="gl-res ${o.res[0]}">${esc(o.res)}</span>` : "") + (g.short ? ` <span class="inj-tag" title="${esc(shortTip(g))}">Left early</span>` : "");
+        const res = (o.res ? `<span class="gl-res ${o.res[0]}">${esc(o.res)}</span>` : "") + (g.short ? ` <span class="inj-tag" title="${esc(shortTip(g))}">Left early</span>` : "")
+          + (canFlagInj() ? ` <button class="inj-ov" type="button" data-inj-ov="${season}|${esc(info.sid)}|${w}" title="Editor: ${g.short ? "this game wasn't cut short by an injury" : "he left this game early with an injury"}">${g.short ? "Clear flag" : "Mark injury"}</button>` : "");
         rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(g.opp, "xs")}${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${ptsStar(g)}</td><td class="gl-fin">${esc(myFin[w] || "–")}</td>
           ${cols.map(c => `<td>${cellOf(g, c)}</td>`).join("")}</tr>`);
       } else if (!r) {
@@ -10620,7 +10705,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
         <tbody>${rows.join("")}</tbody>
         <tfoot><tr><td colspan="3">${t.g} G · ${fp(t.ppg)}/g${t.short ? ` · ${t.short} injury-shortened${t.distort ? ` · ${fp(t.fullPpg)}/g completed` : ""}` : ""}</td><td class="gl-pts">${fp(t.pts)}</td><td></td>${totalCells}</tr></tfoot>
       </table></div>
-      <p class="pp-note">${esc(scoringLabel())}. Fin = his finish at ${esc(pos)} that week.${t.short ? " * Left early with an injury (his snap share fell well under his usual and an injury was noted in play-by-play or on the next week's report); the game still counts in his average." : ""} ${line ? `Gold rows: ${fp(hi)}+ points (1.75× the ${pos} starter line of ${fp(line)}). Dim rows: under ${fp(lo)}.` : ""}</p>`;
+      <p class="pp-note">${esc(scoringLabel())}. Fin = his finish at ${esc(pos)} that week.${t.short ? " * Left early with an injury (an in-game injury or a new injury on the next week's report, and he didn't finish: his snap share fell well under his usual, or for a QB a backup took every dropback after he left); the game still counts in his average." : ""} ${line ? `Gold rows: ${fp(hi)}+ points (1.75× the ${pos} starter line of ${fp(line)}). Dim rows: under ${fp(lo)}.` : ""}</p>`;
   }
 
   /* Season stats */
