@@ -2908,6 +2908,13 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 /* AM rank vs this season's production ranks (Alan, Oct 8): one quiet line; AM leads, FPTS and PPG are secondary */
 .pm-prodrk { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-top: 10px; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 .pm-prodrk .pr-item { display: inline-flex; align-items: baseline; gap: 5px; cursor: help; }
+/* the production line (AM rank · FPTS · PPG): stacked like the stat cards, the player's number first, his rank under it */
+.pm-prodrk:not(.pm-mkt .pm-prodrk) { align-items: flex-start; gap: 6px 28px; margin-top: 14px; }
+.pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-item { display: inline-grid; gap: 3px; min-width: 64px; border-bottom: 0; }
+.pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-item b { font: 700 1.05rem/1.1 var(--font-display); color: var(--text-primary); }
+.pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-item.am b { font-size: 1.05rem; }
+.pm-prodrk .pr-sub { font: 600 0.72rem/1.2 var(--font-display); color: var(--text-secondary); opacity: .85; }
+.pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-diff { align-self: center; }
 .pm-prodrk .pr-k { font: 600 0.62rem/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
 .pm-prodrk .pr-item b { font-family: var(--font-display); font-weight: 600; color: var(--text-secondary); }
 .pm-prodrk .pr-item.am b { color: var(--text-primary); font-weight: 700; font-size: 0.92rem; }
@@ -5133,7 +5140,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T23:30Z";
+  const BUILD_ID = "2026-10-10T00:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -11235,16 +11242,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!am && !r) return "";
     const P = r ? r.pos : pos, scName = activeData() ? "league scoring" : "AM default scoring";
     const nth = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
-    const item = (cls, k, v, tip) => `<span class="pr-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b></span>`;
+    // stacked items (Alan, Oct 9): small label · the player's own number (primary) · his position rank under it (secondary)
+    const item = (cls, k, v, sub, tip) => `<span class="pr-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b><span class="pr-sub">${sub}</span></span>`;
     const out = [];
-    if (am) out.push(item("am", "AM", esc(am), `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
-    if (!r) out.push(item("fp", "FPTS", "—", "No games played this season"), item("ppg", "PPG", "—", "No games played this season"));
+    if (am) out.push(item("am", "AM rank", esc(am), "Rest of season", `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
+    if (!r) out.push(item("fp", "FPTS", "—", "No games", "No games played this season"), item("ppg", "PPG", "—", "No games", "No games played this season"));
     else {
-      out.push(item("fp", "FPTS", `${P}${r.fpRank}`, `${nth(r.fpRank)} of ${r.fpN} ${P}s by total fantasy points this season: ${fp(r.pts)} pts in ${r.gp} game${r.gp === 1 ? "" : "s"} (${scName})`));
+      out.push(item("fp", "FPTS", fp(r.pts), `${P}${r.fpRank} · ${r.gp} GP`, `${nth(r.fpRank)} of ${r.fpN} ${P}s by total fantasy points this season: ${fp(r.pts)} pts in ${r.gp} game${r.gp === 1 ? "" : "s"} (${scName})`));
       const star = r.short ? "*" : "";
       const full = r.short && curT && curT.fullPpg != null ? ` · ${fp(curT.fullPpg)} PPG in completed games` : "";
-      if (r.ppgRank) out.push(item("ppg", "PPG", `${P}${r.ppgRank}${star}`, `${nth(r.ppgRank)} of ${r.ppgN} ${P}s with ${r.min}+ games by points per game: ${fp(r.ppg)} PPG (${scName})${r.short ? ` · includes ${r.short} injury-shortened game${r.short === 1 ? "" : "s"}${full}` : ""}`));
-      else out.push(item("ppg nr", "PPG", `NR · ${r.gp} GP`, `Not ranked yet: PPG ranks need ${r.min}+ games played at this point of the season (${fp(r.ppg)} PPG in ${r.gp})`));
+      if (r.ppgRank) out.push(item("ppg", "PPG", `${fp(r.ppg)}${star}`, `${P}${r.ppgRank}`, `${nth(r.ppgRank)} of ${r.ppgN} ${P}s with ${r.min}+ games by points per game: ${fp(r.ppg)} PPG (${scName})${r.short ? ` · includes ${r.short} injury-shortened game${r.short === 1 ? "" : "s"}${full}` : ""}`));
+      else out.push(item("ppg nr", "PPG", fp(r.ppg), `Not ranked · ${r.gp} GP`, `Not ranked yet: PPG ranks need ${r.min}+ games played at this point of the season (${fp(r.ppg)} PPG in ${r.gp})`));
       const amN = am && p.pos === P ? Number(am.replace(/\D/g, "")) : null;
       if (amN && r.ppgRank) {
         const dlt = r.ppgRank - amN;
@@ -11547,7 +11555,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
           ${stat("Position", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "AM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
           ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
-          ${stat(`${STATS_SEASONS[0]} PPG`, curT && curT.g ? fp(curT.ppg) : "–", curT && curT.g ? (curT.short ? `<span title="${esc(ppgNote(curT))}">${curT.g} G · ${curT.short} injury-shortened</span>` : `${curT.g} G · ${activeData() ? "league" : "site"} scoring`) : "No games")}
+          ${(() => {   // Proj PPG (Alan, Oct 9; was "2026 PPG", which the PPG item below now shows): AM's rest-of-season projection,
+            // rescored to the scoring shown on this page the same way weekly projections are (projRatios); never invented
+            const base = projPPGOf(p), R = base != null && p ? projRatios(scoringNow()) : null;
+            const v = base != null && R ? base * (R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1) : null;
+            return stat("Proj PPG", v != null ? fp(v) : "–", v != null ? `<span title="AM's rest-of-season projection (usage, results and team context), in ${esc(activeData() ? "league" : "site")} scoring">Rest of season</span>` : "No projection");
+          })()}
         </div>
         ${loaded ? prodRankLine(p, sid, pos, curT) : ""}
         ${mkDrawer(p)}

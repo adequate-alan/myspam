@@ -228,11 +228,12 @@ with sync_playwright() as p:
             same = [r for r in rows.values() if r[0] == ps]
             fr = 1 + sum(1 for r in same if r[1] > pts + 1e-9)
             pr = 1 + sum(1 for r in same if r[2] >= mn and r[1] / r[2] > pts / gp + 1e-9) if gp >= mn else None
-            out[sid] = (ps, fr, pr, gp, sh)
+            out[sid] = (ps, fr, pr, gp, sh, pts)
         return out
     def drawer_ranks(pg, sid):
         pg.evaluate(f"() => document.querySelector('#rank-body [data-player=\"{sid}\"]').click()"); pg.wait_for_timeout(700)
-        r = pg.evaluate("""() => { const q = c => { const e = document.querySelector('.pm-prodrk .pr-item.' + c + ' b'); return e ? e.textContent.trim() : null; };
+        # stacked items (Oct 9): the player's number in <b>, his position rank under it in .pr-sub
+        r = pg.evaluate("""() => { const q = c => { const e = document.querySelector('.pm-prodrk .pr-item.' + c); return e ? { v: e.querySelector('b').textContent.trim(), sub: e.querySelector('.pr-sub').textContent.trim() } : null; };
           const d = document.querySelector('.pm-prodrk .pr-diff'), n = document.querySelector('.pm-prodrk .pr-note');
           const first = document.querySelector('.pm-prodrk .pr-item');
           return { am: q('am'), fp: q('fp'), ppg: q('ppg'), diff: d ? d.textContent : '', note: n ? n.textContent : '', firstAm: !!first && first.classList.contains('am') }; }""")
@@ -247,12 +248,17 @@ with sync_playwright() as p:
         pg = page(lid); exp = prod_ranks(SCORING[lid]); bad = []
         for sid in picks:
             e, got = exp.get(sid), drawer_ranks(pg, sid)
-            if not e: bad.append((board[sid]["player"], "no games", got)) if got["fp"] not in ("—", None) else None; continue
-            ps, fr, pr, gp, sh = e
-            want_ppg = f"{ps}{pr}{'*' if sh else ''}" if pr else f"NR · {gp} GP"
-            if got["fp"] != f"{ps}{fr}" or got["ppg"] != want_ppg or not got["firstAm"] or (sh and pr and "injury-shortened" not in got["note"]):
-                bad.append((board[sid]["player"], got, (f"{ps}{fr}", want_ppg)))
-        ok(not bad, f"{lid}: drawer FPTS and PPG ranks match the league-scored stats for {len(picks)} players, AM rank first {bad[:2]}")
+            if not e: bad.append((board[sid]["player"], "no games", got)) if got["fp"] and got["fp"]["v"] != "—" else None; continue
+            ps, fr, pr, gp, sh, pts = e
+            want = {"fp": (f"{pts}", f"{ps}{fr} · {gp} GP"),   # unrounded, compared within half a decimal
+                    "ppg": (f"{pts / gp}{'*' if pr and sh else ''}", f"{ps}{pr}" if pr else f"Not ranked · {gp} GP")}
+            have = {k: (got[k]["v"], got[k]["sub"]) if got[k] else None for k in ("fp", "ppg")}
+            num = lambda s: float(s.rstrip("*"))
+            same = all(have[k] and have[k][1] == want[k][1] and abs(num(have[k][0]) - num(want[k][0])) <= 0.0501
+                       and have[k][0].endswith("*") == want[k][0].endswith("*") for k in want)   # shown to one decimal
+            if not same or not got["firstAm"] or (sh and pr and "injury-shortened" not in got["note"]):
+                bad.append((board[sid]["player"], have, want))
+        ok(not bad, f"{lid}: drawer FPTS / PPG (the number first, his position rank under it) match the league-scored stats for {len(picks)} players, AM rank first {bad[:2]}")
         if lid == "TEP": tep_fp = {sid: exp[sid][1] for sid in picks if sid in exp and exp[sid][0] == "TE"}
         else: full_fp = {sid: exp[sid][1] for sid in picks if sid in exp and exp[sid][0] == "TE"}
         pg.close()
