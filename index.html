@@ -3985,14 +3985,19 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body .own-tag.mine { display: flex; width: fit-content; align-items: center; gap: 5px; padding: 0; background: none; color: var(--mine-accent); font-weight: 650; }
 #rank-body .own-tag.mine::before { margin-right: 0 !important; }
 /* position: the filled badge, then the tier as plain metadata */
-#panel-rankings table .pos-col { width: 170px; padding-left: 24px; white-space: nowrap; }
+#panel-rankings table .pos-col { padding-left: 16px; white-space: nowrap; }
 .tier-tag, #rank-body .tier-tag { display: inline; margin-left: 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
   font: 500 0.66rem/1 var(--font-body); letter-spacing: 0; color: var(--muted); opacity: .85; vertical-align: middle; }
 .tier-tag.tagged, #rank-body .tier-tag.tagged { color: color-mix(in srgb, var(--rose) 80%, var(--muted)); border: 0; background: none; }
 /* value: the number leads, a short meter under it (relative to #1) */
 #panel-rankings table td.val { width: 160px; min-width: 0; padding-right: 22px; }
 body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* room for Custom · Auto beside a typed value */
-#rank-body tr.player > td:has(> .pl-cell) { width: 100%; }   /* the player column takes the spare width; rank, position and value stay tight */
+/* column proportions (Alan, Oct 9): Rank | Player | Position + Tier | Value. The player column is capped (enough for photo,
+   long names, team and owner) so the position badge starts right after the player block; the position/tier column takes
+   the leftover width, and the value stays right-aligned at the end */
+#rank-body tr.player > td:has(> .pl-cell) { width: 44%; }
+@media (min-width: 1500px) { #rank-body tr.player > td:has(> .pl-cell) { width: 40%; } }
+#panel-rankings table th.pos-col, #panel-rankings table td.pos-col { width: auto; }
 #panel-rankings .valbar.stack { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: center; column-gap: 8px; row-gap: 4px; }
 #panel-rankings .valbar.stack .num, #panel-rankings .valbar.stack .num-btn { grid-row: 1; grid-column: 2; min-width: 0; font: 700 1.02rem/1.1 var(--font-display); letter-spacing: -0.005em; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 #panel-rankings .valbar.stack .val-extra { grid-row: 1; grid-column: 1; }
@@ -4009,7 +4014,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   #panel-rankings tbody tr.player td, #panel-rankings thead th { padding-inline: 6px; }
   #rank-body td.rk, #panel-rankings thead th#rk-head { width: 32px; } #rank-body td.rk { font-size: 0.92rem; }
   #rank-body .face { width: 34px; height: 34px; } #rank-body .pl-cell { gap: 8px; } #rank-body .pl-name { font-size: 0.9rem; }
-  #panel-rankings table .pos-col { width: 56px; } .tier-tag, #rank-body .tier-tag { display: none; }
+  #rank-body tr.player > td:has(> .pl-cell) { width: 100%; }
+  #panel-rankings table th.pos-col, #panel-rankings table td.pos-col { width: 56px; } .tier-tag, #rank-body .tier-tag { display: none; }
   #panel-rankings td.val { width: 76px; padding-right: 8px; } #panel-rankings thead th.val { padding-right: 8px; }
 }
 
@@ -4037,6 +4043,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .rr-moves .rr-list li:first-child { border-top: 0; }
 .rr-moves .rr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .rr-moves .rr-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 0.68rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rr-sublabel { margin: 6px 0 2px; font-size: 0.68rem; font-weight: 600; color: var(--ink-2); }
+.rr-ins .rr-list + .rr-sublabel { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line-soft); }
+.rr-src { margin: 8px 0 0; font-size: 0.66rem; color: var(--muted); line-height: 1.4; }
+.rr-src a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
 .rr-pos { font: 600 0.62rem/1 var(--font-display); color: color-mix(in srgb, var(--pos-c, var(--muted)) 85%, var(--ink)); }
 .rr-pos.QB { --pos-c: var(--qb); } .rr-pos.RB { --pos-c: var(--rb); } .rr-pos.WR { --pos-c: var(--wr); } .rr-pos.TE { --pos-c: var(--te); }
 .rr-list { display: flex; flex-direction: column; gap: 0; }
@@ -4047,7 +4057,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .rk-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
 @media (min-width: 1280px) {
   /* board ~78%, rail ~22% (Alan, Oct 9: a two-column rankings interface, not a narrow table in a big canvas) */
-  .rk-layout { grid-template-columns: minmax(0, 1fr) clamp(290px, 22%, 360px); gap: 22px; align-items: start; }
+  .rk-layout { grid-template-columns: minmax(0, 1fr) clamp(300px, 24%, 390px); gap: 26px; align-items: start; }
   .rk-rail { order: 0; display: flex !important; flex-direction: column; flex-wrap: nowrap; position: sticky; top: calc(var(--mast-h, 0px) + var(--ctl-h, 0px) + 6px);
     max-height: calc(100vh - var(--mast-h, 0px) - var(--ctl-h, 0px) - 18px); overflow-y: auto; scrollbar-width: thin; }
   .rk-rail[hidden] { display: none !important; }
@@ -5118,7 +5128,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T19:00Z";
+  const BUILD_ID = "2026-10-09T21:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5662,6 +5672,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const when = since ? ` <span class="rr-when">since ${esc(sinceText(since))}</span>` : "";
     if (up.length) parts.push(`<section class="rr-sec rr-moves rr-up"><h3 class="rr-label">Biggest risers${when}</h3><ul class="rr-list">${up.map(row).join("")}</ul></section>`);
     if (dn.length) parts.push(`<section class="rr-sec rr-moves rr-down"><h3 class="rr-label">Biggest fallers${when}</h3><ul class="rr-list">${dn.map(row).join("")}</ul></section>`);
+    // Ranking insights (Alan, Oct 9): the biggest AM vs market gaps in the active format, straight from the Market edge
+    // engine (mkAll: FantasyCalc + Flock consensus); read-only context, never changes ranks or values
+    try {
+      const all = mkAll();
+      if (all.srcs.length) {
+        const gaps = [...all.map.values()].filter(r => r.lvl >= 1 && r.p.rank != null);
+        const hi = gaps.filter(r => r.dir > 0).sort((a, b) => b.e - a.e).slice(0, 3), lo = gaps.filter(r => r.dir < 0).sort((a, b) => a.e - b.e).slice(0, 3);
+        const gRow = r => `<li><span class="rr-mv ${r.dir > 0 ? "up" : "down"}" title="Consensus position rank minus AM position rank">${r.dir > 0 ? "+" : "−"}${Math.abs(r.cRank - r.ap)}</span><button class="rr-name rr-jump" type="button" data-jump="${r.p.id}" title="Show ${esc(r.p.name)} in the rankings">${esc(r.p.name)}</button><span class="rr-sub"><span class="rr-pos ${esc(r.p.pos)}" title="AM position rank">${esc(r.p.pos + r.ap)}</span><span title="Market (consensus) position rank">Mkt ${esc(r.p.pos + r.cRank)}</span></span></li>`;
+        if (hi.length || lo.length) parts.push(`<section class="rr-sec rr-moves rr-ins"><h3 class="rr-label">Ranking insights <span class="rr-when">AM vs market</span></h3>
+          ${hi.length ? `<p class="rr-sublabel">AM higher than the market</p><ul class="rr-list">${hi.map(gRow).join("")}</ul>` : ""}
+          ${lo.length ? `<p class="rr-sublabel">Market higher than AM</p><ul class="rr-list">${lo.map(gRow).join("")}</ul>` : ""}
+          <p class="rr-src">${esc(all.srcs.map(s => s.name).join(" + "))} · ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></section>`);
+      }
+    } catch (e) {}
     el.innerHTML = parts.join("");
     el.hidden = !parts.length;
   }
@@ -13248,6 +13272,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function mkRefresh() {
     MK_CACHE.key = "";
     if (mkOn() && !$("panel-rankings").hidden) renderRankings();
+    else queueRail();   // the rail's Ranking insights card reads the market too
     if ($("player-modal").open && PP.sid) renderPlayer();
   }
   const mkVal = p => { const r = mkOf(p); return r ? r.cv : dv(p); };   // a player's value as the market / consensus sees it, on AM's scale
