@@ -137,7 +137,7 @@ with sync_playwright() as p:
       const hs = rows.map(r => r.getBoundingClientRect().height);
       const tall = rows.filter(r => r.getBoundingClientRect().height > Math.min(...hs) + 1).map(r => r.querySelector('td.rk').innerText.replace(/\\s+/g, ' '));
       return { tall, face: rows[0].querySelector('.face').getBoundingClientRect().width, min: Math.min(...hs), max: Math.max(...hs), off }; }""")
-    ok(geo["face"] == 48 and geo["max"] <= 60 and geo["max"] - geo["min"] < 1 and geo["off"] == 0, f"Rankings headshots 48px (Oct 9 board redesign), rows compact and even, rank/photo/badge/value (number + meter) centered: {geo}")
+    ok(geo["face"] == 50 and geo["max"] <= 60 and geo["max"] - geo["min"] < 1 and geo["off"] == 0, f"Rankings headshots 50px (Oct 9 polish), rows compact and even, rank/photo/badge/value (number + meter) centered: {geo}")
     if SHOTS:
         mine_rows.first.scroll_into_view_if_needed(); pg.wait_for_timeout(200)
         pg.screenshot(path=f"{SHOTS}/rankings_league.png")
