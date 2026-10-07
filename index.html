@@ -3125,7 +3125,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 /* Schedule tab (Alan, Oct 10): rank bars, green = softest → red = toughest */
 .sc-card { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line-soft); background: var(--surface); }
 .sc-card .table-scroll { border: 0; border-radius: 0; }
-.gl-table.sc-table th, .gl-table.sc-table td { text-align: left; padding: 9px 8px; }
+.gl-table.sc-table th, .gl-table.sc-table td { text-align: left; padding: 9px 7px; }
 .gl-table.sc-table th:first-child, .gl-table.sc-table td:first-child { padding-left: 14px; }
 .gl-table.sc-table thead th { font-size: 0.66rem; letter-spacing: 0.04em; text-transform: none; font-weight: 600; color: var(--ink-2); }
 .sc-table td.gl-wk { font-size: 1.02rem; font-weight: 700; color: var(--ink); }
@@ -3136,10 +3136,10 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .sc-opp { white-space: nowrap; }
 .sc-opp .sc-ha { display: inline-block; width: 20px; font-size: 0.7rem; color: var(--muted); }
 .sc-opp .tlogo { width: 24px; height: 24px; margin: 0; vertical-align: middle; }
-.sc-opp .sc-ab { margin-left: 5px; font-size: 0.72rem; font-weight: 600; color: var(--ink-2); }
+.sc-opp .sc-ab { display: none; margin-left: 5px; font-size: 0.72rem; font-weight: 600; color: var(--ink-2); }
 .sc-bye { color: var(--muted); font-weight: 600; }
 .sc-rk { display: inline-flex; align-items: center; gap: 7px; }
-.sc-bar { position: relative; display: block; width: 46px; height: 7px; border-radius: 4px; background: var(--fill-2); overflow: hidden; }
+.sc-bar { position: relative; display: block; width: 32px; height: 7px; border-radius: 4px; background: var(--fill-2); overflow: hidden; }
 .sc-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: hsl(var(--h) 68% 52%); }
 .sc-rk b { min-width: 1.4em; font-size: 0.86rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .sc-none { color: var(--muted); }
@@ -3147,11 +3147,17 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .sc-legend { display: inline-flex; align-items: center; gap: 7px; }
 .sc-legend i { display: inline-block; width: 70px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, hsl(105 68% 52%), hsl(55 68% 52%), hsl(5 68% 52%)); }
 :root[data-theme="light"] .sc-bar i, :root[data-theme="light"] .sc-legend i { filter: saturate(1.1) brightness(.88); }
-@container pm (min-width: 640px) { .sc-bar { width: 90px; } .gl-table.sc-table th, .gl-table.sc-table td { padding: 11px 12px; } }
-@container pm (max-width: 460px) { .sc-bar { width: 30px; } .gl-table.sc-table th, .gl-table.sc-table td { padding: 8px 5px; } .sc-rk { gap: 5px; } .sc-opp .sc-ab { display: none; } }
-@media (max-width: 520px) { .sc-bar { width: 30px; } .gl-table.sc-table th, .gl-table.sc-table td { padding: 8px 5px; } .sc-rk { gap: 5px; } .sc-opp .sc-ab { display: none; } }
-@container pm (max-width: 430px) { .sc-bar { width: 20px; } .sc-wk { display: none; } .sc-opp .sc-ha { width: 16px; } .gl-table.sc-table thead th { font-size: 0.6rem; white-space: normal; } }
-@media (max-width: 520px) { .sc-bar { width: 20px; } .sc-wk { display: none; } .sc-opp .sc-ha { width: 16px; } .gl-table.sc-table thead th { font-size: 0.6rem; white-space: normal; } }
+.sc-table td.sc-verdict { white-space: nowrap; }
+.sc-vd { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; color: var(--muted); background: var(--fill-1); }
+.sc-verdict.good .sc-vd { color: hsl(105 60% 50%); background: hsl(105 60% 50% / .13); }
+.sc-verdict.neutral .sc-vd { color: hsl(48 75% 52%); background: hsl(48 75% 52% / .13); }
+.sc-verdict.tough .sc-vd { color: hsl(5 70% 60%); background: hsl(5 70% 60% / .13); }
+:root[data-theme="light"] .sc-verdict.good .sc-vd { color: hsl(105 60% 30%); } :root[data-theme="light"] .sc-verdict.neutral .sc-vd { color: hsl(40 80% 32%); } :root[data-theme="light"] .sc-verdict.tough .sc-vd { color: hsl(5 65% 42%); }
+@container pm (min-width: 640px) { .sc-bar { width: 90px; } .sc-opp .sc-ab { display: inline; } .gl-table.sc-table th, .gl-table.sc-table td { padding: 11px 12px; } }
+@container pm (max-width: 460px) { .sc-bar { width: 24px; } .gl-table.sc-table th, .gl-table.sc-table td { padding: 8px 4px; } .sc-rk { gap: 5px; } .sc-opp .sc-ab { display: none; } }
+@media (max-width: 520px) { .sc-bar { width: 24px; } .gl-table.sc-table th, .gl-table.sc-table td { padding: 8px 4px; } .sc-rk { gap: 5px; } .sc-opp .sc-ab { display: none; } }
+@container pm (max-width: 430px) { .sc-bar { width: 14px; } .sc-vd { padding: 2px 4px; font-size: 0.62rem; } .sc-wk { display: none; } .sc-opp .sc-ha { width: 16px; } .gl-table.sc-table thead th { font-size: 0.6rem; white-space: normal; } }
+@media (max-width: 520px) { .sc-bar { width: 14px; } .sc-vd { padding: 2px 4px; font-size: 0.62rem; } .sc-wk { display: none; } .sc-opp .sc-ha { width: 16px; } .gl-table.sc-table thead th { font-size: 0.6rem; white-space: normal; } }
 .sc-verdict { font-size: 0.74rem; font-weight: 650; color: var(--muted); }
 .sc-verdict.good { color: var(--rb); } .sc-verdict.neutral { color: var(--gold); } .sc-verdict.tough { color: var(--qb); }
 /* Modal top: identity, numbers and actions left; this week's matchup right (desktop). On narrower screens the
@@ -5187,7 +5193,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T04:10Z";
+  const BUILD_ID = "2026-10-10T04:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -11873,26 +11879,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     };
     for (let w = wk || 1; w <= last; w++) {
       const r = byW.get(w);
-      if (!r) { out.push(`<tr class="sc-row off"><td class="gl-wk"><span class="sc-wk">Wk</span>${w}</td><td colspan="5" class="sc-bye">Bye week</td></tr>`); continue; }
+      if (!r) { out.push(`<tr class="sc-row off"><td class="gl-wk"><span class="sc-wk">Wk</span>${w}</td><td colspan="6" class="sc-bye">Bye week</td></tr>`); continue; }
       if (r[4] != null && w !== wk) continue;   // earlier weeks are in the game log; this week's game stays, as Final
       const x = D && D[r[1]], g = x ? x.grade : "", tm = teamMeta(r[1]);
       const when = r[4] != null ? `Final ${r[4] > r[5] ? "W" : r[4] < r[5] ? "L" : "T"} ${r[4]}-${r[5]}` : kickoffText(r[3], r[6]);
-      const tip = [`${r[2] ? "vs" : "at"} ${tm && tm.name ? tm.name : r[1]}`, when, x ? `Matchup: ${VERDICT[g]}` : ""].filter(Boolean).join(" · ");
+      const tip = [`${r[2] ? "vs" : "at"} ${tm && tm.name ? tm.name : r[1]}`, when].join(" · ");
       out.push(`<tr class="sc-row${w === wk ? " now" : ""}"><td class="gl-wk"><span class="sc-wk">Wk</span>${w}${w === wk ? `<span class="sc-now">Now</span>` : ""}</td>
         <td class="sc-opp" title="${esc(tip)}"><span class="sc-ha">${r[2] ? "vs" : "@"}</span>${teamLogo(r[1], "sm")}<span class="sc-ab">${esc(r[1])}</span></td>
+        <td class="sc-verdict ${g}">${x ? `<span class="sc-vd">${VERDICT[g].split(" ")[0]}</span>` : "–"}</td>
         ${cell(x && x.ppgRank, x && x.n, `Points allowed to ${info.pos}s`)}${cell(x && x.epaRank, x && x.n, "EPA allowed")}
         ${cell(x && x.succRank, x && x.n, "Success rate allowed")}${cell(x && x.explRank, x && x.n, "Explosive rate allowed")}</tr>`);
     }
     const d = statsCache[STATS_SEASONS[0]], run = info.pos === "RB" ? "rush" : "pass";
     return `<div class="sc-card"><div class="table-scroll"><table class="gl-table sc-table">
-        <thead><tr><th scope="col">Week</th><th scope="col">Opp</th>
+        <thead><tr><th scope="col">Week</th><th scope="col">Opp</th><th scope="col" class="sc-help" title="Blend of the four ranks: points 40%, EPA 25%, success 20%, explosive 15%">Matchup</th>
           <th scope="col" class="sc-help" title="Fantasy points allowed per game to ${esc(info.pos)}s. 1 = allows the most (best matchup).">FPs vs ${esc(info.pos)}</th>
           <th scope="col" class="sc-help" title="Expected points added per ${run} allowed. 1 = gives up the most per play.">EPA / ${run === "rush" ? "Rush" : "Pass"}</th>
           <th scope="col" class="sc-help" title="Share of ${run === "rush" ? "runs" : "dropbacks"} that are successful for the offense. 1 = allows the highest rate.">Success %</th>
           <th scope="col" class="sc-help" title="Share of ${run === "rush" ? "runs of 10+ yards" : "passes of 20+ yards"} allowed. 1 = allows the most big plays.">Explosive %</th></tr></thead>
-        <tbody>${out.join("") || `<tr><td colspan="6" class="empty">Season complete.</td></tr>`}</tbody></table></div>
+        <tbody>${out.join("") || `<tr><td colspan="7" class="empty">Season complete.</td></tr>`}</tbody></table></div>
       <div class="sc-foot"><span>Defense ranks · ${STATS_SEASONS[0]}${d && d.through_week ? ` · thru Wk ${d.through_week}` : ""}</span><span class="sc-legend">1 softest <i></i> ${D ? Object.values(D)[0]?.n || 32 : 32} toughest</span></div></div>
-      <p class="pp-note">Defense ranks vs ${esc(info.pos)}s from ${STATS_SEASONS[0]} games so far, in ${esc(scoringLabel())}. Hover a team for kickoff and the matchup verdict (points 40%, EPA 25%, success 20%, explosive 15%). Early-season ranks rest on a few games.</p>`;
+      <p class="pp-note">Defense ranks vs ${esc(info.pos)}s from ${STATS_SEASONS[0]} games so far, in ${esc(scoringLabel())}. Matchup blends the four ranks (points 40%, EPA 25%, success 20%, explosive 15%); hover a team for kickoff. Early-season ranks rest on a few games.</p>`;
   }
 
   /* Practice report tab: his team's and his next opponent's latest practice report */
