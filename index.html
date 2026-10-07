@@ -4927,7 +4927,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T02:00Z";
+  const BUILD_ID = "2026-10-09T03:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5376,11 +5376,11 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     const fl = srcs.find(s => s.id === "fl");
     $("mk-bar").innerHTML = `<div class="mk-bar-row">
         <p class="mk-fmt"><b>AM ROS</b> vs <b>${srcs.length ? srcs.map(s => esc(s.name)).join(" + ") : "no market source"}</b> · ${esc(formatLabel(F.vl))}</p>
-        <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}">${fl ? "Flock rankings" : "Import Flock rankings"}</button>
+        <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}">${fl ? (fl.site ? "Flock rankings (built in)" : "Flock rankings") : "Import Flock rankings"}</button>
       </div>
       <p class="mk-fresh">${srcs.length ? esc(mkFresh(srcs)) : "FantasyCalc values load with the page; Flock rankings come from an import in this browser."} ${mkCredit(srcs)}</p>
       ${MK_UI.open ? `<div class="mk-import">
-        <p class="pp-note">Flock's rankings stay in this browser only (never published). Use a Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or paste a ranked list.</p>
+        <p class="pp-note">${fl && fl.site ? "Using the Flock list built into the site (data/market/flock.json). An import here replaces it in this browser only. " : "An import stays in this browser only. "}Use a Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or paste a ranked list.</p>
         <div class="mk-imp-row">
           <label class="btn" for="mk-file">Choose CSV file</label><input type="file" id="mk-file" accept=".csv,text/csv,text/plain" hidden>
           <select class="select" id="mk-fl-qb" aria-label="Flock list format"><option value="sf">Superflex</option><option value="1qb">1QB</option></select>
@@ -12657,8 +12657,10 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
      both value, so "AM likes him more than the market" is a like-for-like comparison. */
   const MKT = { d: null, p: null, cur: null };
   function loadMarket() {
-    if (!MKT.p) MKT.p = fetch("data/market/redraft.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
-      .then(d => { MKT.d = d; if (d && !$("panel-finder").hidden) renderFinder(); return d; });
+    if (!MKT.p) MKT.p = Promise.all([
+      fetch("data/market/redraft.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("data/market/flock.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null)])
+      .then(([d, fl]) => { MKT.d = d; FLOCK_SITE.d = fl; FLOCK_SITE.v = null; MK_CACHE.key = ""; if (d && !$("panel-finder").hidden) renderFinder(); return d; });
     return MKT.p;
   }
   function marketNow() {
@@ -12691,6 +12693,15 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   const MK_STALE = { fc: 3, fl: 14 }, MK_DEAD = { fc: 21, fl: 45 };   // days: stale lowers confidence; dead drops the source
   const FLOCK_KEY = "spm_flock";
   let FLOCK = (() => { try { return JSON.parse(localStorage.getItem(FLOCK_KEY) || "null"); } catch (e) { return null; } })();
+  // Alan's own Flock list, committed in data/market/flock.json (Oct 8: the site is for his use only); a browser import wins
+  var FLOCK_SITE = { d: null, v: null };
+  function flockNow() {
+    if (FLOCK) return FLOCK;
+    const d = FLOCK_SITE.d;
+    if (!d || !d.csv || !players.length) return null;
+    if (!FLOCK_SITE.v) { const parsed = flockParse(d.csv); FLOCK_SITE.v = { at: d.updated, sf: !!d.sf, tep: Number(d.tep) || 0, rec: Number(d.rec ?? 1), file: d.file || "", rows: parsed.rows, site: true }; }
+    return FLOCK_SITE.v;
+  }
   function mkFmt() {
     const vl = valueLeague() || fmtLeague(FMT_DEFAULT), lu = lineupOf(vl), sc = vl.scoring_settings || {};
     return { vl, sf: lu.SUPER_FLEX > 0 || lu.QB >= 2, teams: lu.teams, rec: Number(sc.rec ?? 1), tep: Number(sc.bonus_rec_te || 0) };
@@ -12712,13 +12723,14 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
         out.push({ id: "fc", name: "FantasyCalc", kind: "trade market", rows, at: MKT.d.updated, notes, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: MKT.d.url || "https://www.fantasycalc.com/" });
       }
     }
-    if (FLOCK && FLOCK.rows && daysOld(FLOCK.at) < MK_DEAD.fl) {
+    const FL = flockNow();
+    if (FL && FL.rows && daysOld(FL.at) < MK_DEAD.fl) {
       const notes = [];
-      if (!!FLOCK.sf !== F.sf) notes.push(`${FLOCK.sf ? "Superflex" : "1QB"} list for a ${F.sf ? "Superflex" : "1QB"} league`);
-      if ((Number(FLOCK.tep) > 0) !== (F.tep > 0)) notes.push(FLOCK.tep > 0 ? "TE-premium list, league has none" : "no-TE-premium list, league has TE premium");
-      if (Number(FLOCK.rec ?? 1) !== F.rec) notes.push(`${recName(Number(FLOCK.rec ?? 1))} list for ${recName(F.rec)}`);
-      const rows = new Map(FLOCK.rows.map(r => [String(r[0]), { ov: r[1], pr: r[2], tier: r[3] || "" }]));
-      out.push({ id: "fl", name: "Flock", kind: "expert rankings", rows, at: FLOCK.at, notes, stale: daysOld(FLOCK.at) > MK_STALE.fl, file: FLOCK.file || "" });
+      if (!!FL.sf !== F.sf) notes.push(`${FL.sf ? "Superflex" : "1QB"} list for a ${F.sf ? "Superflex" : "1QB"} league`);
+      if ((Number(FL.tep) > 0) !== (F.tep > 0)) notes.push(FL.tep > 0 ? "TE-premium list, league has none" : "no-TE-premium list, league has TE premium");
+      if (Number(FL.rec ?? 1) !== F.rec) notes.push(`${recName(Number(FL.rec ?? 1))} list for ${recName(F.rec)}`);
+      const rows = new Map(FL.rows.map(r => [String(r[0]), { ov: r[1], pr: r[2], tier: r[3] || "" }]));
+      out.push({ id: "fl", name: "Flock", kind: "expert rankings", rows, at: FL.at, notes, stale: daysOld(FL.at) > MK_STALE.fl, file: FL.file || "", site: !!FL.site });
     }
     return out;
   }
@@ -12833,7 +12845,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   const mkEdgeTxt = n => (n > 0 ? `▲ +${n}` : n < 0 ? `▼ ${n}`.replace("-", "−") : "=");
   const mkPill = r => `<span class="mk-pill ${r.dir > 0 ? "buy" : r.dir < 0 ? "sell" : "even"} l${r.lvl}" title="${esc(mkSentence(r))}">${esc(r.bucket)}</span>`;
   function mkFresh(srcs) {
-    return srcs.map(s => `${s.name} ${s.id === "fl" ? "imported" : "updated"} ${ago(Date.parse(s.at))}${s.stale ? " (stale)" : ""}${s.notes.length ? ` · approximate: ${s.notes.join(", ")}` : " · same format"}`).join(" · ");
+    return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list from ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "updated"} ${ago(Date.parse(s.at))}`}${s.stale ? " (stale)" : ""}${s.notes.length ? ` · approximate: ${s.notes.join(", ")}` : " · same format"}`).join(" · ");
   }
   const mkCredit = srcs => srcs.some(s => s.id === "fc") ? `<a class="tf-credit" href="https://www.fantasycalc.com/" target="_blank" rel="noopener">Market values: FantasyCalc</a>` : "";
 
