@@ -1554,7 +1554,7 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .league-chip:hover, .league-chip[aria-expanded="true"] { border-color: var(--border-strong); background: var(--surface-2); }
 .lc-name { font-weight: 750; font-stretch: 106%; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 .lc-format { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lc-caret { font-size: 0.6rem; color: var(--muted); }
+.lc-caret { flex: none; width: 10px; height: 6px; margin-left: 2px; color: var(--muted); }
 .league-menu {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: 320px; max-width: calc(100vw - 32px);
   background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px;
@@ -1754,7 +1754,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
   appearance: none; -webkit-appearance: none;
   height: 34px; padding: 0 32px 0 12px; border-radius: 5px; border: 1px solid var(--line);
   background-color: var(--surface); color: var(--cream); font-size: 0.84rem; font-weight: 550; letter-spacing: 0; text-transform: none; cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238F8379' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23878c96' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center;
   transition: border-color 0.18s ease;
 }
@@ -3799,12 +3799,20 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   .masthead .tabs::-webkit-scrollbar { display: none; }
 }
 
-/* ---- editor bar: a slim utility strip, not a card ---- */
-.editor-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px 16px; min-height: 40px;
+/* ---- editor bar: a slim utility strip, not a card. Quiet while everything is saved; Save turns red only with
+   unsaved changes (.dirty, set by updateEditorBar) ---- */
+.editor-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px 16px; min-height: 38px;
   padding: 3px 4px 3px 14px; margin-bottom: 4px; border: 0; border-radius: var(--r-md); background: var(--eb-bg); box-shadow: none; }
 .editor-bar[hidden] { display: none; }
-.eb-left { flex: none; }
-.eb-left #eb-hint { color: var(--eb-ink); font-size: 0.78rem; }
+.eb-left { flex: none; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.eb-left strong { font-size: 0.6rem; letter-spacing: .12em; color: var(--eb-strong); }
+.eb-left #eb-hint { color: var(--muted); font-size: 0.74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#eb-count { font-size: 0.72rem; font-weight: 500; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+#eb-count::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--rb) 70%, var(--muted)); opacity: .8; }
+.editor-bar.dirty #eb-count { color: var(--ink); font-weight: 600; }
+.editor-bar.dirty #eb-count::before { background: var(--warn); opacity: 1; }
+.eb-right .btn:disabled, .eb-right .btn.primary:disabled { background: none; border-color: transparent; color: var(--muted); opacity: .7; }
+.editor-bar.dirty #eb-cancel { background: var(--fill-1); color: var(--ink); }
 .eb-mid { display: flex; align-items: center; gap: 0; padding-left: 14px; border-left: 1px solid var(--eb-line); min-height: 22px; }
 .eb-mid:empty, .eb-mid:not(:has(#eb-who:not(:empty))):not(:has(#eb-vcheck:not([hidden]))):not(:has(#eb-mcheck:not([hidden]))) { display: none; }
 .eb-mid #eb-who { font-size: 0.74rem; }
@@ -3821,7 +3829,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .eb-ico { width: 12px; height: 12px; flex: none; opacity: .8; }
 .eb-right { justify-content: flex-end; }
 .eb-right .btn { height: 30px; border-radius: var(--r-sm); }
-.eb-right .btn:not(.primary):not(.link):not(.danger):not(.publish) { border-color: transparent; background: var(--fill-1); }
+.eb-right .btn:not(.primary):not(.link):not(.danger):not(.publish):not(:disabled) { border-color: transparent; background: var(--fill-1); }
 @media (max-width: 900px) { .editor-bar { grid-template-columns: 1fr; } .eb-mid { border-left: 0; padding-left: 0; } .eb-right { justify-content: flex-start; } }
 
 /* ---- review panel (value warnings / market audit) ---- */
@@ -3877,7 +3885,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 :root[data-theme="light"] .vt-btn[aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--accent-primary), 0 1px 2px rgba(16, 17, 20, .12); }
 
 /* ---- rankings toolbar: one tight row on the page background, sticky under the header on desktop ---- */
-#panel-rankings { --row-pad: 5px; }
+#panel-rankings { --row-pad: 4px; }
 #panel-rankings .controls { position: sticky; top: var(--mast-h, 0px); z-index: 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start;
   gap: 8px 14px; margin: 0 0 6px; padding: 10px 0; background: var(--bg); border: 0; border-radius: 0; box-shadow: none; }
 #panel-rankings .controls .league-controls { order: 0; flex: none; display: flex; flex-direction: row; align-items: center; gap: 6px 12px; margin: 0; padding: 0; border: 0; }
@@ -3924,39 +3932,51 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body tr.player.mine td:first-child { box-shadow: inset 2px 0 0 var(--mine-accent); }
 #rank-body tr.player.pp-current td { background: var(--row-sel); }
 #rank-body tr.player.pp-current td:first-child { box-shadow: inset 2px 0 0 var(--accent-primary); }
-/* rank: a strong tabular number, movement since the last update under it */
-#rank-body td.rk, #panel-rankings thead th#rk-head { width: 64px; text-align: center; }
-#rank-body td.rk { font: 700 1.02rem/1.1 var(--font-display); color: var(--text-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* drag column: handle + stacked arrows right beside the rank, quiet until the row is hovered */
+#panel-rankings td.edit-col, #panel-rankings thead th#edit-head { width: 40px; padding: 0 0 0 8px; }
+#panel-rankings td.edit-col { white-space: nowrap; }
+.ed-move { display: inline-flex; align-items: center; gap: 0; vertical-align: middle; }
+.ed-arrows { display: inline-flex; flex-direction: column; }
+#panel-rankings .handle { width: 16px; height: 28px; opacity: .35; color: var(--muted); }
+#panel-rankings .handle svg { width: 10px; height: 16px; }
+#panel-rankings .arrow { width: 16px; height: 14px; font-size: 0.5rem; border-radius: 3px; }
+#rank-body tr.player:hover .handle { opacity: .9; color: var(--ink); }
+#panel-rankings .handle:hover:not(:disabled), #panel-rankings .handle:focus-visible, tr.dragging .handle { opacity: 1; background: var(--fill-2); }
+/* rank: a strong tabular number, movement since the last update under it; the top 3 a touch larger */
+#rank-body td.rk, #panel-rankings thead th#rk-head { width: 50px; padding-inline: 4px; text-align: center; }
+#rank-body td.rk { font: 700 0.98rem/1.1 var(--font-display); color: var(--text-rank); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#rank-body tr.player.top3 td.rk { font-size: 1.12rem; color: var(--text-strong); }
 .rk-mv { display: block; margin-top: 3px; font: 700 0.6rem/1 var(--font-display); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .rk-mv.up { color: var(--rb); } .rk-mv.down { color: var(--rose); }
 #rank-body td.rk .bm { display: block; margin: 3px 0 0; font-size: 0.6rem; }
 /* player: portrait, name strongest, team second, owner third */
-#rank-body .pl-cell { gap: 12px; }
-#rank-body .face { width: 48px; height: 48px; box-shadow: none; background: radial-gradient(circle at 50% 30%, var(--fill-2), var(--fill-1) 70%); }
+#rank-body .pl-cell { gap: 14px; }
+#rank-body .face { width: 50px; height: 50px; box-shadow: none; background: var(--fill-1); }
+#rank-body .face img { object-position: center 14%; transform: scale(1.06); transform-origin: 50% 30%; }
 #rank-body .pl-name { font-size: 1.02rem; font-weight: 700; color: var(--text-strong); letter-spacing: 0; }
-#rank-body .pl-team { font-size: 0.68rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); opacity: 1; }
-#rank-body .own-tag { display: block; margin-top: 2px; font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
-#rank-body .own-tag:not(.mine):not(.fa) { opacity: .72; }
+#rank-body .pl-team { margin-left: 7px; font-size: 0.68rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); opacity: 1; }
+#rank-body .own-tag { display: block; margin-top: 3px; font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+#rank-body .own-tag:not(.mine):not(.fa) { opacity: .82; }
+#rank-body tr.player:hover .own-tag:not(.mine):not(.fa) { opacity: 1; }
 #rank-body .own-tag .own-by { opacity: 1; margin-right: 3px; }
 #rank-body .own-tag.fa { opacity: 1; color: color-mix(in srgb, var(--rb) 70%, var(--ink-2)); }
 #rank-body .own-tag.mine { display: flex; width: fit-content; align-items: center; gap: 5px; padding: 0; background: none; color: var(--mine-accent); font-weight: 650; }
 #rank-body .own-tag.mine::before { margin-right: 0 !important; }
 /* position: the filled badge, then the tier as plain metadata */
 #panel-rankings table .pos-col { width: 150px; white-space: nowrap; }
-.tier-tag, #rank-body .tier-tag { display: inline; margin-left: 8px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
-  font: 500 0.68rem/1 var(--font-body); letter-spacing: 0; color: var(--muted); vertical-align: middle; }
+.tier-tag, #rank-body .tier-tag { display: inline; margin-left: 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+  font: 500 0.66rem/1 var(--font-body); letter-spacing: 0; color: var(--muted); opacity: .85; vertical-align: middle; }
 .tier-tag.tagged, #rank-body .tier-tag.tagged { color: color-mix(in srgb, var(--rose) 80%, var(--muted)); border: 0; background: none; }
 /* value: the number leads, a short meter under it (relative to #1) */
 #panel-rankings table td.val { width: 150px; min-width: 0; padding-right: 22px; }
 body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* room for Custom · Auto beside a typed value */
 #rank-body tr.player > td:has(> .pl-cell) { width: 100%; }   /* the player column takes the spare width; rank, position and value stay tight */
-#panel-rankings td.edit-col { width: 64px; }
-#panel-rankings .valbar.stack { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: center; column-gap: 8px; row-gap: 5px; }
+#panel-rankings .valbar.stack { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: center; column-gap: 8px; row-gap: 4px; }
 #panel-rankings .valbar.stack .num, #panel-rankings .valbar.stack .num-btn { grid-row: 1; grid-column: 2; min-width: 0; font: 700 1.02rem/1.1 var(--font-display); letter-spacing: -0.005em; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 #panel-rankings .valbar.stack .val-extra { grid-row: 1; grid-column: 1; }
 #panel-rankings .valbar.stack .val-extra:empty { display: none; }
-#panel-rankings .valbar.stack .track { grid-row: 2; grid-column: 1 / 3; width: 78px; max-width: none; flex: none; height: 3px; border-radius: 3px; background: var(--fill-2); }
-#panel-rankings .valbar.stack .fill { border-radius: 3px; opacity: 1; background: color-mix(in srgb, var(--c, var(--ink)) 72%, transparent); }
+#panel-rankings .valbar.stack .track { grid-row: 2; grid-column: 2; justify-self: end; width: 52px; max-width: none; flex: none; height: 2px; border-radius: 2px; background: var(--fill-1); }
+#panel-rankings .valbar.stack .fill { border-radius: 2px; opacity: 1; background: color-mix(in srgb, var(--c, var(--ink)) 55%, transparent); }
 #panel-rankings .valbar.stack.custom .fill { opacity: .9; }
 /* tier bands: a quiet strip inside the board */
 #rank-body tr.tier td { background: color-mix(in srgb, var(--ink) 2.5%, var(--surface)); border-bottom: 1px solid var(--line-soft); }
@@ -3971,19 +3991,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   #panel-rankings td.val { width: 76px; padding-right: 8px; } #panel-rankings thead th.val { padding-right: 8px; }
 }
 
-/* ---- context rail: one compact card + movers, desktop only ---- */
+/* ---- context rail: the league context card (Updated · Format · Your team) and the Biggest risers / fallers card,
+   desktop only; same surface, border and radius as the board ---- */
 .rk-rail { background: none !important; border: 0 !important; padding: 0 !important; gap: 10px !important; }
 .rr-sec { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 12px 14px; box-shadow: none; }
-.rr-ctx dl { margin: 0; display: grid; gap: 9px; }
-.rr-row { display: grid; grid-template-columns: 74px minmax(0, 1fr); align-items: baseline; gap: 8px; }
-.rr-row dt { font: 600 0.58rem/1.4 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.rr-row dd { margin: 0; font-size: 0.8rem; color: var(--ink); line-height: 1.35; }
+.rr-ctx dl { margin: 0; display: grid; gap: 7px; }
+.rr-row { display: grid; grid-template-columns: 62px minmax(0, 1fr); align-items: baseline; gap: 10px; }
+.rr-row dt { font: 600 0.58rem/1.5 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.rr-row dd { margin: 0; font-size: 0.78rem; color: var(--ink-2); line-height: 1.4; }
 .rr-sec .rr-fmt, .rr-sec .btn.link.inline { font-size: 0.72rem; padding: 0; height: auto; color: var(--muted); }
 .rr-sec .rr-fmt:hover:not(:disabled) { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-.rr-me dd { display: flex; align-items: center; gap: 7px; }
-.rr-me b { font: 700 0.95rem var(--font-display); color: var(--text-strong); }
-.rr-label { margin: 0 0 6px; font-size: 0.58rem; letter-spacing: 0.12em; color: var(--muted); }
-.rr-moves .rr-list + .rr-list { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line-soft); }
+/* Your team: the card's lead line, set apart by a hairline */
+.rr-me { grid-template-columns: 1fr; gap: 6px; margin-top: 3px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.rr-me dd { display: flex; align-items: center; gap: 10px; color: var(--ink); }
+.rr-me .face { width: 30px; height: 30px; }
+.rr-me-txt { display: grid; gap: 1px; min-width: 0; }
+.rr-me-txt b { font: 700 1.05rem/1.1 var(--font-display); color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.rr-me-txt b small { font: 500 0.72rem var(--font-body); color: var(--muted); }
+.rr-me-txt span { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-label { margin: 0 0 5px; font-size: 0.58rem; letter-spacing: 0.12em; color: var(--muted); }
+.rr-moves .rr-label + .rr-list { margin-bottom: 0; }
+.rr-moves .rr-list + .rr-label { margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--line-soft); }
 .rr-list { display: flex; flex-direction: column; gap: 0; }
 .rr-list li { align-items: center; padding: 3px 0; border: 0; font-size: 0.8rem; }
 .rr-mv { font-family: var(--font-display); display: inline-flex; justify-content: flex-start; min-width: 30px; padding: 0; border-radius: 0; background: none !important; font-size: 0.68rem; font-weight: 700; }
@@ -3991,7 +4019,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .rr-jump:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
 .rk-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
 @media (min-width: 1280px) {
-  .rk-layout { grid-template-columns: minmax(0, 1fr) 240px; align-items: start; }
+  .rk-layout { grid-template-columns: minmax(0, 1fr) 248px; align-items: start; }
   .rk-rail { order: 0; display: flex !important; flex-direction: column; flex-wrap: nowrap; position: sticky; top: calc(var(--mast-h, 0px) + var(--ctl-h, 0px) + 6px); }
   .rk-rail[hidden] { display: none !important; }
 }
@@ -4029,13 +4057,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <svg class="ti-moon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.2 8.2 0 1 0 10.5 10.5z"/></svg>
         </button>
         <button class="fmt-chip" id="fmt-chip" type="button" aria-haspopup="dialog">
-          <span class="fc-label">League settings</span><span class="fc-format" id="fc-format"></span><span class="lc-caret" aria-hidden="true">▾</span>
+          <span class="fc-label">League settings</span><span class="fc-format" id="fc-format"></span><svg class="lc-caret" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="league-slot" id="league-slot">
           <button class="btn connect-btn" id="sl-connect" type="button">Connect league</button>
           <div class="league-pick" id="league-pick" hidden>
             <button class="league-chip" id="league-chip" type="button" aria-haspopup="true" aria-expanded="false">
-              <span class="lc-name" id="lc-name"></span><span class="lc-format" id="lc-format"></span><span class="lc-caret" aria-hidden="true">▾</span>
+              <span class="lc-name" id="lc-name"></span><span class="lc-format" id="lc-format"></span><svg class="lc-caret" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <div class="league-menu" id="league-menu" role="menu" hidden></div>
           </div>
@@ -5061,7 +5089,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T12:00Z";
+  const BUILD_ID = "2026-10-09T15:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5308,6 +5336,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const d = m && (pos ? m.dp : m.d); if (!d) return "";
     return `<span class="rk-mv ${d > 0 ? "up" : "down"}" title="${d > 0 ? "Up" : "Down"} ${Math.abs(d)} ${pos ? "at his position " : ""}since ${esc(sinceText(m.since))}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>`;
   }
+  // drag handle: a 2×3 dot grip (SVG, so it renders the same in every font)
+  const GRIP_SVG = `<svg viewBox="0 0 10 16" aria-hidden="true" fill="currentColor"><circle cx="2.5" cy="3" r="1.3"/><circle cx="7.5" cy="3" r="1.3"/><circle cx="2.5" cy="8" r="1.3"/><circle cx="7.5" cy="8" r="1.3"/><circle cx="2.5" cy="13" r="1.3"/><circle cx="7.5" cy="13" r="1.3"/></svg>`;
   const posLabel = p => (leagueView() && LG.adjPos.has(p.id) ? p.pos + LG.adjPos.get(p.id) : p.posRank);
   function renderRankings() {
     $("rk-sort-wrap").hidden = posFilter === "PICK";
@@ -5394,10 +5424,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       lastGroup = g;
       const editCol = !editing ? "" : `<td class="edit-col">${canReorder && numOf(p) != null ? `
-          <button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>⠿</button><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${numOf(p) <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${numOf(p) >= lastNum ? " disabled" : ""}>▼</button>` : ""}</td>`;
+          <span class="ed-move"><button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>${GRIP_SVG}</button><span class="ed-arrows"><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${numOf(p) <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${numOf(p) >= lastNum ? " disabled" : ""}>▼</button></span></span>` : ""}</td>`;
       const own = LG.active && LG.ownerOf.get(p.id);
       const cmpA = CMP.on && p.sleeperId && String(p.sleeperId) === String(PP.sid);
-      out.push(`<tr class="player${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
+      const shownRank = posFilter === "ALL" ? (leagueView() ? LG.adjRank.get(p.id) : p.rank) : (leagueView() ? LG.adjPos.get(p.id) : p.posNum);
+      out.push(`<tr class="player${own && own.mine ? " mine" : ""}${shownRank != null && shownRank <= 3 && posFilter !== "PICK" ? " top3" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
         <td class="rk">${rk(p)}</td>
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
@@ -5584,10 +5615,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const parts = [], vl = valueLeague();
     // board context: last update, the format the values follow, your power rank
     const ctx = [`<div class="rr-row"><dt>Updated</dt><dd>${esc(lastUpdated().replace(/, \d{4}$/, ""))}</dd></div>`,
-      `<div class="rr-row"><dt>${leagueView() && vl ? "Values" : "Format"}</dt><dd>${esc(leagueView() && vl ? formatLabel(vl) : formatLabel())}${vl || LG.active ? ` <button class="btn link inline rr-fmt" type="button" data-open-fmt>${LG.active ? "Customize" : "Change"}</button>` : ""}</dd></div>`];
+      `<div class="rr-row"><dt>${leagueView() && vl ? "Values" : "Format"}</dt><dd>${esc(leagueView() && vl ? formatLabel(vl) : formatLabel()).replace(/ \+/g, " +")}${vl || LG.active ? ` <button class="btn link inline rr-fmt" type="button" data-open-fmt>${LG.active ? "Customize" : "Change"}</button>` : ""}</dd></div>`];
     if (LG.active && LG.myRosterId != null) {
       const ev = evaluateTeams(), me = ev.list.find(x => x.team.mine);
-      if (me) ctx.push(`<div class="rr-row rr-me"><dt>Your team</dt><dd>${teamFace(me.team, "sm")}<span><b>#${me.power}</b> of ${ev.n}</span></dd></div>`);
+      if (me) ctx.push(`<div class="rr-row rr-me"><dt>Your team · power rank</dt><dd>${teamFace(me.team)}<span class="rr-me-txt"><b>#${me.power} <small>of ${ev.n}</small></b><span title="${esc(me.team.name)}">${esc(me.team.name)}</span></span></dd></div>`);
     }
     parts.push(`<section class="rr-sec rr-ctx"><dl>${ctx.join("")}</dl></section>`);
     // risers / fallers: overall rank now vs the latest history entry from an earlier day (rankMoves)
@@ -5596,8 +5627,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     players.forEach(p => { const m = mv.get(p.id); if (m && m.d) { moves.push({ p, d: m.d }); if (m.since > since) since = m.since; } });
     const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span><button class="rr-name rr-jump" type="button" data-jump="${m.p.id}" title="Show ${esc(m.p.name)} in the rankings">${esc(m.p.name)}</button><span class="rr-sub">#${m.p.rank}</span></li>`;
     const up = moves.filter(m => m.d > 0).sort((a, b) => b.d - a.d).slice(0, 3), dn = moves.filter(m => m.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
-    if (up.length || dn.length) parts.push(`<section class="rr-sec rr-moves"><h3 class="rr-label">Movers${since ? ` <span class="rr-when">since ${esc(sinceText(since))}</span>` : ""}</h3>
-      ${up.length ? `<ul class="rr-list">${up.map(row).join("")}</ul>` : ""}${dn.length ? `<ul class="rr-list">${dn.map(row).join("")}</ul>` : ""}</section>`);
+    // one card, the original Biggest risers / Biggest fallers sections (same calculation and names as before)
+    const when = since ? ` <span class="rr-when">since ${esc(sinceText(since))}</span>` : "";
+    if (up.length || dn.length) parts.push(`<section class="rr-sec rr-moves">
+      ${up.length ? `<h3 class="rr-label">Biggest risers${when}</h3><ul class="rr-list">${up.map(row).join("")}</ul>` : ""}
+      ${dn.length ? `<h3 class="rr-label">Biggest fallers${up.length ? "" : when}</h3><ul class="rr-list">${dn.map(row).join("")}</ul>` : ""}</section>`);
     el.innerHTML = parts.join("");
     el.hidden = !parts.length;
   }
@@ -6862,6 +6896,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
     $("eb-count").textContent = n ? `${n} unsaved` : "All saved";
     $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
+    $("editor-bar").classList.toggle("dirty", n > 0);   // Save turns red only while there are unsaved changes
     $("eb-hint").textContent = leagueView() ? `${adjName()} view is read-only. Switch to AM Board to edit rankings.`
       : posFilter === "ALL"
       ? "Drag or use the arrows to reorder. Click a value to override it."
