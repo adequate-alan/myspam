@@ -103,7 +103,7 @@ with sync_playwright() as p:
     pg.evaluate("() => { const s = document.getElementById('mk-fl-qb'); s.value = '1qb'; }")
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
     bar = pg.inner_text("#mk-bar")
-    ok("Imported" in bar and "Flock" in bar and "approximate" in bar and "1QB list" in bar, "Flock CSV imports; a 1QB list in a Superflex format is labelled approximate")
+    ok("Imported" in bar and "Flock" in bar and "approximate" in bar and "1QB source used in a Superflex league" in bar, "Flock CSV imports; a 1QB list in a Superflex format is labelled approximate")
     ok(pg.evaluate("() => !!JSON.parse(localStorage.getItem('spm_flock') || 'null')"), "Flock rankings are kept in this browser (spm_flock)")
     pg.evaluate("() => { const s = document.getElementById('mk-fl-qb'); s.value = 'sf'; }")
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
@@ -162,10 +162,26 @@ with sync_playwright() as p:
     sends = [c.evaluate("e => [...e.querySelectorAll('.tf-side')[1].querySelectorAll('[data-player]')].map(x => x.dataset.player)") for c in cards]
     ok(cards and all(set(x) <= set(mine) for x in sends), f"Market leverage offers ({len(cards)}) send only your players")
     ok(any(SELL in x for x in sends), "Market leverage uses the player the market likes more than AM")
+    # the Market Leverage card: both perspectives, labels, reasons (Alan, Oct 8 refinement)
+    ml = [" ".join(c.inner_text().split()) for c in pg.locator(".ml-card").all()]
+    print("   ml card:", ml[0][:420] if ml else "none")
+    edges = [float(re.search(r"AM Edge \+([\d.]+)%", x).group(1)) for x in ml if re.search(r"AM Edge \+([\d.]+)%", x)]
+    ok(ml and len(edges) == len(ml) and all(2 <= e <= 30.05 for e in edges), f"Every Market Leverage card shows an AM Edge within 2–30% {edges}")
+    ok(all(re.search(r"Market Edge [+−][\d.]+% for them", x) for x in ml), "Every card shows the Market Edge for them")
+    ok(all(re.search(r"Acceptance Plausibility: (High|Moderate|Low)", x) and re.search(r"Market Confidence: (High|Moderate|Low)", x) for x in ml), "Acceptance Plausibility and Market Confidence on every card")
+    ok(all(re.search(r"(Small|Good|Strong|Very Strong) (Market )?Leverage", x) for x in ml), "Leverage label on every card")
+    ok(all("Why you do it" in x and "Why they may do it" in x and "Receive" in x and "They receive" in x for x in ml), "Why you do it / Why they may do it and both sides' totals")
+    ok(all("Values are close" not in x for x in ml), "Reasons never fall back to 'values are close'")
+    ok(all(re.search(r"My starting lineup [+−][\d.]+% · PR #\d+ → #\d+", x) and re.search(r"Their starting lineup [+−][\d.]+%", x) and "asset leverage" in x for x in ml),
+       "My Roster Impact (starter strength % with power rank as context) and the opponent's lineup, separate from Acceptance Plausibility")
+    if pg.locator(".ml-card [data-tf-full]").count():
+        pg.locator(".ml-card [data-tf-full]").first.click(); pg.wait_for_timeout(800)
+        det = pg.inner_text(".ml-card .tf-full") if pg.locator(".ml-card .tf-full").count() else ""
+        ok("market confidence" in det.lower() and "FantasyCalc —" in det, "Full analysis: per-player AM vs market table and each source's format")
     # discover buys / sells
     pg.click("#tf-src [data-src='discover']"); pg.wait_for_timeout(1500)
     disc = pg.inner_text("#tf-body")
-    ok("Best market buys" in disc and "Best market sells" in disc, "Find targets has Best market buys / sells")
+    ok("Best Market Targets" in disc and "Best Market Sells" in disc, "Find targets has Best Market Targets / Best Market Sells")
     pg.click("[data-tf-disc='sell']"); pg.wait_for_timeout(1200)
     sells = pg.inner_text("#tf-body")
     ok(name_of[SELL] in sells, f"Best market sells lists {name_of[SELL]}")
@@ -179,6 +195,8 @@ with sync_playwright() as p:
         pg.locator("[data-tf-open]").first.click(); pg.wait_for_timeout(1500)
         mk = pg.inner_text("#tc-mkt") if not pg.locator("#tc-mkt").is_hidden() else ""
         ok("Market comparison" in mk and "AM" in mk and "FantasyCalc" in mk and "Flock" in mk, f"Calculator shows Market comparison beside AM: {mk[:120]!r}")
+        lens = pg.eval_on_selector_all("#tc-lens button", "bs => bs.map(b => b.textContent.trim())")
+        ok(lens == ["AM Value", "Roster Fit"], f"Calculator toggle reads AM Value / Roster Fit {lens}")
     else:
         ok(False, "No Market leverage card to open in the calculator")
     pg.close()
