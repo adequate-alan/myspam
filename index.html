@@ -3899,19 +3899,21 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
    the same palette as the value bars and lineup slots. A data label, not a button: a soft tinted fill, brighter text in
    the position color, a thin border in the same family, a small radius. Tier tags (T1…) are neutral metadata, so the
    hierarchy reads position rank → player/value → tier. ---------- */
-:root, :root[data-theme="dark"] { --pos-fill: 15%; --pos-line: 30%; --pos-ink-mix: #FFFFFF; --pos-ink: 72%; }
-:root[data-theme="light"] { --pos-fill: 9%; --pos-line: 26%; --pos-ink-mix: #000000; --pos-ink: 88%; }
+/* filled chips (Alan, Oct 8, second pass): an opaque tinted fill over the surface, a slightly darker border in the same
+   family, bright text; muted, not saturated */
+:root, :root[data-theme="dark"] { --pos-fill: 30%; --pos-fill-base: #121419; --pos-line: 55%; --pos-line-mix: #000000; --pos-ink-mix: #FFFFFF; --pos-ink: 62%; }
+:root[data-theme="light"] { --pos-fill: 16%; --pos-fill-base: #FFFFFF; --pos-line: 42%; --pos-line-mix: #FFFFFF; --pos-ink-mix: #000000; --pos-ink: 78%; }
 .pos.QB { --c: var(--qb); } .pos.RB { --c: var(--rb); } .pos.WR { --c: var(--wr); } .pos.TE { --c: var(--te); }
 .pos.FLEX { --c: var(--flex); } .pos.SF { --c: var(--sf); } .pos.PICK, .pos.BN, .pos.IR { --c: var(--pick); }
 .pos {
   border-radius: 4px; font-weight: 650; letter-spacing: 0.03em;
   color: color-mix(in srgb, var(--c) var(--pos-ink), var(--pos-ink-mix));
-  background: color-mix(in srgb, var(--c) var(--pos-fill), transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) var(--pos-line), transparent);
+  background: color-mix(in srgb, var(--c) var(--pos-fill), var(--pos-fill-base));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, color-mix(in srgb, var(--c) 70%, var(--pos-line-mix)) var(--pos-line), transparent);
 }
 .tier-tag, #rank-body .tier-tag {
-  border-radius: 3px; border: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
-  background: color-mix(in srgb, var(--muted) 9%, transparent); color: color-mix(in srgb, var(--muted) 85%, transparent);
+  border-radius: 3px; border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
+  background: color-mix(in srgb, var(--muted) 12%, var(--pos-fill-base)); color: color-mix(in srgb, var(--muted) 85%, transparent);
   font-family: var(--font-body); font-weight: 550; font-size: 0.56rem; letter-spacing: 0.04em; padding: 0 4px; line-height: 15px;
 }
 .tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 35%, transparent); background: none; }
@@ -4969,7 +4971,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T05:00Z";
+  const BUILD_ID = "2026-10-09T06:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
