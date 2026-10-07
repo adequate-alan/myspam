@@ -777,24 +777,24 @@ const TRADE_VERDICTS = [
   --disabled-border: #26292F;
 }
 :root[data-theme="light"] {
-  --page-bg: #F7F7F8;            /* warm cream */
-  --nav-bg: #F7F7F8;
+  --page-bg: #ECEEF2;            /* warm cream */
+  --nav-bg: #ECEEF2;
   --surface-bg: #FFFFFF;         /* cards and tables: a clear step darker than the page (never white) */
   --surface-raised: #FFFFFF;     /* modals, dropdowns */
-  --table-head: #F1F2F4;
-  --row-hover: #E9EAED;
-  --tier-row: #F1F2F4;
-  --control-bg: #FFFFFF;
-  --track: #E2E4E8;
+  --table-head: #F7F8FA;
+  --row-hover: #F2F4F7;
+  --tier-row: #F3F4F7;
+  --control-bg: #E3E6EB;
+  --track: #DDE1E7;
   --text-primary: #101114;
   --text-strong: #101114;
-  --text-secondary: #62656C;
-  --text-muted: #9699A1;
+  --text-secondary: #50545C;
+  --text-muted: #71767F;
   --text-rank: #25272C;
   --heading: #101114;
-  --border: #DEE0E4;
-  --border-soft: #E8E9EC;
-  --border-strong: #CBCED4;
+  --border: #D2D6DD;
+  --border-soft: #E0E3E8;
+  --border-strong: #BCC1CA;
   --brand: #101114;
   --brand-accent: #E4002B;
   --accent-primary: #E4002B;     /* burgundy: buttons, active states, emphasis */
@@ -806,9 +806,9 @@ const TRADE_VERDICTS = [
   --burgundy-2-t: #101114;
   --coral: #E4002B;
   --peach: #62656C;
-  --hover-bg: #E9EAED;
+  --hover-bg: #E6E9EE;
   --btn-text: #101114;
-  --btn-hover-bg: #E9EAED;
+  --btn-hover-bg: #E2E5EA;
   --danger-bg: #F6DEDE;
   --danger-hover: #EFCACA;
   --danger-text: #9B2C2C;
@@ -818,24 +818,24 @@ const TRADE_VERDICTS = [
   --editor-border: #DEE0E4;
   --custom-panel: #F1F2F4;
   --custom-border: #CBCED4;
-  --pos-qb: #C24A38;
-  --pos-rb: #1A8A5A;
-  --pos-wr: #2E69BD;
-  --pos-te: #6E4CC2;
-  --pos-flex: #A06F17;
-  --pos-sf: #A8486A;
+  --pos-qb: #CC3F2B;
+  --pos-rb: #0F8A55;
+  --pos-wr: #2463C8;
+  --pos-te: #6A3DCC;
+  --pos-flex: #A3680A;
+  --pos-sf: #AE3B66;
   --pos-pick: #6E7480;
   --badge-base: #FFFFFF;
   --shadow-color: rgba(60, 48, 30, 0.14);
   --shadow-soft: rgba(60, 48, 30, 0.08);
   --backdrop: rgba(40, 32, 20, 0.28);
-  --hero-tint: #F1F2F4;
+  --hero-tint: #E6E9EE;
   --theme-scheme: light;
-  --tier-line: #DEE0E4;
+  --tier-line: #D2D6DD;
   --tier-text: #25272C;
-  --disabled-bg: #F1F2F4;
-  --disabled-text: #9699A1;
-  --disabled-border: #DEE0E4;
+  --disabled-bg: #E6E9EE;
+  --disabled-text: #8A8F98;
+  --disabled-border: #D2D6DD;
 }
 /* Aliases used throughout the stylesheet (they follow the tokens above) */
 :root {
@@ -3613,9 +3613,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 }
 :root[data-theme="light"] {
   --navy: #101114; --navy-hi: #2A2D33; --navy-tint: rgba(16, 17, 20, 0.05); --navy-ink: #25272C; --red-tint: rgba(228, 0, 43, 0.07);
-  --focus-line: #9699A1; --rail-bg: #FFFFFF; --rail-line: #E8E9EC;
+  --focus-line: #9699A1; --rail-bg: #FFFFFF; --rail-line: #D2D6DD;
   --nav-idle: #62656C; --nav-on: #101114; --nav-line: #E4002B;
-  --eb-bg: rgba(16, 17, 20, 0.035); --eb-line: #DEE0E4; --eb-ink: #62656C; --eb-strong: #101114; --eb-dot: #9699A1;
+  --eb-bg: #FFFFFF; --eb-line: #D2D6DD; --eb-ink: #62656C; --eb-strong: #101114; --eb-dot: #9699A1;
   --vt-bg: rgba(16, 17, 20, 0.045); --vt-ink: #62656C; --vt-line: transparent; --vt-on: #FFFFFF; --vt-on-ink: #101114; --vt-on-line: transparent;
   --warn: #B7791F; --warn-tint: rgba(183, 121, 31, 0.08);
   --badge-a: 0.09; --badge-b: 0.35; --row-sel: rgba(228, 0, 43, 0.045);
@@ -3732,7 +3732,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 /* filled chips (Alan, Oct 8, second pass): an opaque tinted fill over the surface, a slightly darker border in the same
    family, bright text; muted, not saturated */
 :root, :root[data-theme="dark"] { --pos-fill: 30%; --pos-fill-base: #121419; --pos-line: 55%; --pos-line-mix: #000000; --pos-ink-mix: #FFFFFF; --pos-ink: 62%; }
-:root[data-theme="light"] { --pos-fill: 16%; --pos-fill-base: #FFFFFF; --pos-line: 42%; --pos-line-mix: #FFFFFF; --pos-ink-mix: #000000; --pos-ink: 78%; }
+:root[data-theme="light"] { --pos-fill: 22%; --pos-fill-base: #FFFFFF; --pos-line: 58%; --pos-line-mix: #FFFFFF; --pos-ink-mix: #000000; --pos-ink: 70%; }   /* richer badges in light (Alan, Oct 9) */
 .pos.QB { --c: var(--qb); } .pos.RB { --c: var(--rb); } .pos.WR { --c: var(--wr); } .pos.TE { --c: var(--te); }
 .pos.FLEX { --c: var(--flex); } .pos.SF { --c: var(--sf); } .pos.PICK, .pos.BN, .pos.IR { --c: var(--pick); }
 .pos {
@@ -3779,7 +3779,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
    glows, no gradients. This block replaces the Oct 8 "AM redesign" layer and comes last so it wins.
    ===================================================================== */
 :root { --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --ease: cubic-bezier(.2, .7, .2, 1); --lift: none; --fill-1: rgba(255, 255, 255, .045); --fill-2: rgba(255, 255, 255, .08); }
-:root[data-theme="light"] { --fill-1: rgba(16, 17, 20, .045); --fill-2: rgba(16, 17, 20, .08); }
+:root[data-theme="light"] { --fill-1: rgba(22, 30, 46, .07); --fill-2: rgba(22, 30, 46, .11); }
 
 /* ---- header: one row ---- */
 .masthead { background: color-mix(in srgb, var(--nav-bg) 90%, transparent); backdrop-filter: saturate(140%) blur(12px); -webkit-backdrop-filter: saturate(140%) blur(12px); border-bottom: 1px solid var(--line-soft); }
@@ -4084,6 +4084,23 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .btn.secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 12%, transparent); border-color: transparent; }
 :focus-visible { outline-color: var(--focus-line); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ---------- Light theme contrast (Alan, Oct 9): dark stays the flagship; light gets real surface separation instead of
+   everything living in near-white. Page = cool light gray, table / rail cards / editor bar = white with a visible border,
+   controls a touch darker than the page, row separators and secondary text one step stronger, richer position colors.
+   Borders and surface contrast, no extra shadows. The red accent is unchanged. ---------- */
+:root[data-theme="light"] #panel-rankings .table-scroll { border-color: var(--border); }
+:root[data-theme="light"] #panel-rankings tbody tr.player td { border-bottom-color: var(--border-soft); }
+:root[data-theme="light"] #panel-rankings thead th { background: var(--table-head); box-shadow: inset 0 -1px 0 var(--border); color: var(--text-secondary); }
+:root[data-theme="light"] #rank-body tr.tier td { background: #F3F4F7; border-bottom-color: var(--border); }
+:root[data-theme="light"] .rr-sec { border-color: var(--border); }
+:root[data-theme="light"] .editor-bar { background: var(--eb-bg); box-shadow: inset 0 0 0 1px var(--border); }
+:root[data-theme="light"] #rank-body .own-tag:not(.mine):not(.fa) { opacity: 1; color: var(--text-secondary); }
+:root[data-theme="light"] .tier-tag, :root[data-theme="light"] #rank-body .tier-tag { opacity: 1; color: var(--text-secondary); }
+:root[data-theme="light"] #rank-body .pl-team { color: var(--text-muted); }
+:root[data-theme="light"] #panel-rankings .valbar.stack .fill { background: color-mix(in srgb, var(--c, var(--ink)) 72%, transparent); }
+:root[data-theme="light"] #panel-rankings .valbar.stack .track { background: var(--track); }
+:root[data-theme="light"] .masthead { border-bottom-color: var(--border); }
 </style>
 </head>
 <body>
@@ -5140,7 +5157,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T02:00Z";
+  const BUILD_ID = "2026-10-10T03:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;

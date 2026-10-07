@@ -25,6 +25,9 @@ on:
     - cron: "0 22 * * 5"    # Fri 6 PM ET: final practice report with game statuses
     - cron: "45 16 * * 3"   # Wed 12:45 PM ET: midweek refresh (FantasyCalc market values, depth charts, stats)
     - cron: "45 16 * * 6"   # Sat 12:45 PM ET: pre-Sunday refresh (market values, depth charts, stats)
+    # FantasyCalc market values only, every 8 hours (Alan, Oct 9): 00:20, 08:20 and 16:20 UTC. Stdlib only, no
+    # stats, projections or snapshot; failures keep the last file. Never touches ranks, tiers or values.
+    - cron: "20 */8 * * *"
   workflow_dispatch:
     inputs:
       stats_only:
@@ -56,7 +59,8 @@ jobs:
         if: github.event_name != 'push'
         id: mode
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "0 14 * * 2" ]; then echo "stats=true" >> "$GITHUB_OUTPUT";
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "20 */8 * * *" ]; then echo "stats=market" >> "$GITHUB_OUTPUT";
+          elif [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "0 14 * * 2" ]; then echo "stats=true" >> "$GITHUB_OUTPUT";
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.stats_only }}" = "true" ]; then echo "stats=true" >> "$GITHUB_OUTPUT";
           else echo "stats=false" >> "$GITHUB_OUTPUT"; fi
 
@@ -69,8 +73,13 @@ jobs:
           python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
+      - name: Refresh FantasyCalc market values only (every 8 hours)
+        if: github.event_name != 'push' && steps.mode.outputs.stats == 'market'
+        working-directory: pipeline
+        run: python build_market.py || echo "Market values not refreshed (kept the last file)"
+
       - name: Refresh projections and stats (weekly / manual runs only)
-        if: github.event_name != 'push' && steps.mode.outputs.stats != 'true'
+        if: github.event_name != 'push' && steps.mode.outputs.stats == 'false'
         working-directory: pipeline
         run: |
           pip install pandas numpy
@@ -83,7 +92,7 @@ jobs:
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
       - name: Scheduled ranking-history snapshot (weekly / manual runs only)
-        if: github.event_name != 'push' && steps.mode.outputs.stats != 'true'
+        if: github.event_name != 'push' && steps.mode.outputs.stats == 'false'
         working-directory: pipeline
         run: |
           pip install playwright
@@ -99,8 +108,8 @@ jobs:
           if [ -f data/depth_charts.json ]; then git add data/depth_charts.json; fi
           if [ -f data/projections.json ]; then git add data/projections.json; fi
           if [ -f data/market/redraft.json ]; then git add data/market/redraft.json; fi
-          git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
-          git push
+          git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'market' && 'Market values refresh' || steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
+          git pull --rebase origin main && git push
 
       - uses: actions/configure-pages@v5
 
