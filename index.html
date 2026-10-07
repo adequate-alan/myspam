@@ -1158,7 +1158,6 @@ td.val { width: 42%; min-width: 230px; padding-left: 14px; }
 .eb-right { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
 .eb-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .eb-local { padding-left: 14px; border-left: 1px solid var(--editor-line); }
-.eb-vc { color: var(--gold-bright); font-size: 0.74rem; margin-left: 10px; }
 .eb-vlist { margin: 6px 0 10px; padding: 10px 14px; border: 1px solid var(--editor-line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 80%, transparent); font-size: 0.76rem; line-height: 1.55; max-height: 260px; overflow: auto; }
 .eb-vlist p { margin: 0 0 6px; color: var(--muted); }
 .eb-vlist ul { margin: 0; padding-left: 18px; }
@@ -3599,7 +3598,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 #panel-rankings .valbar .track { max-width: 230px; }
 .valbar .fill { opacity: 0.42; }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: 0.5; }
-.owner-filter > span, .ctl-label, .fmt-note, .fmt-note b, .eb-vc { color: var(--muted); }
+.owner-filter > span, .ctl-label, .fmt-note, .fmt-note b { color: var(--muted); }
 /* selected player: faint red wash plus a thin red edge */
 #rank-body tr.player.pp-current td { background: var(--row-sel); }
 #rank-body tr.player.pp-current td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
@@ -3657,9 +3656,66 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .eb-left { flex: none; }
 .eb-left #eb-hint { color: var(--eb-ink); font-size: 0.8rem; }
 .eb-mid { display: flex; align-items: center; gap: 10px; padding-left: 16px; border-left: 1px solid var(--eb-line); min-height: 26px; }
-.eb-mid:empty, .eb-mid:not(:has(#eb-who:not(:empty))):not(:has(#eb-vcheck:not([hidden]))) { display: none; }
+.eb-mid:empty, .eb-mid:not(:has(#eb-who:not(:empty))):not(:has(#eb-vcheck:not([hidden]))):not(:has(#eb-mcheck:not([hidden]))) { display: none; }
 .eb-mid #eb-who { font-size: 0.74rem; }
-.eb-mid .eb-vc { margin-left: 0; padding: 3px 9px; border-radius: 999px; background: var(--warn-tint); color: var(--warn); font-weight: 600; font-size: 0.72rem; }
+/* Review tools (Alan, Oct 8): quiet status items in the editor bar, not call-to-action pills */
+.eb-mid { gap: 0; }
+.eb-mid > #eb-who:not(:empty) { padding-right: 12px; }
+.eb-stat { display: inline-flex; align-items: center; gap: 6px; padding: 2px 12px; margin: 0; border: 0; border-left: 1px solid var(--eb-line); background: none; color: var(--eb-ink); font: 500 0.74rem/1.4 var(--font-body); cursor: pointer; border-radius: 0; transition: color .15s var(--ease, ease); white-space: nowrap; }
+.eb-mid > #eb-who:empty + .eb-stat { border-left: 0; padding-left: 0; }
+.eb-stat:hover, .eb-stat[aria-expanded="true"] { color: var(--eb-strong); }
+.eb-stat:focus-visible { outline: 2px solid var(--focus-line, var(--eb-dot)); outline-offset: 2px; border-radius: 4px; }
+.eb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--eb-ink); opacity: .55; flex: none; }
+.eb-stat.sev-low .eb-dot { background: var(--warn); opacity: .7; }
+.eb-stat.sev-high .eb-dot { background: var(--warn); opacity: 1; box-shadow: 0 0 0 3px var(--warn-tint); }
+.eb-stat.sev-high { color: color-mix(in srgb, var(--warn) 70%, var(--eb-ink)); }
+.eb-stat.sev-none { opacity: .75; }
+.eb-ico { width: 12px; height: 12px; flex: none; opacity: .8; }
+/* Review panel: one right-side slideout for value warnings and the market audit */
+.rv-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 80; width: min(460px, 100vw); display: flex; flex-direction: column; background: var(--surface, var(--bg)); color: var(--text-primary); border-left: 1px solid var(--border); box-shadow: -18px 0 40px rgba(0, 0, 0, .18); animation: rv-in .18s var(--ease, ease-out); }
+@keyframes rv-in { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rv-panel { animation: none; } }
+.rv-head { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px 8px; padding: 16px 18px 0; border-bottom: 1px solid var(--border); }
+.rv-title { margin: 0; font: 700 1.05rem/1.2 var(--font-display); }
+.rv-close { grid-row: 1; grid-column: 2; width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--text-muted); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.rv-close:hover { background: var(--hover, rgba(127,127,127,.1)); color: var(--text-primary); }
+.rv-tabs { grid-column: 1 / -1; display: flex; gap: 18px; }
+.rv-tab { padding: 6px 0 10px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-muted); font: 600 0.8rem var(--font-body); cursor: pointer; }
+.rv-tab[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--navy-ink, var(--text-primary)); }
+.rv-body { flex: 1; overflow-y: auto; padding: 14px 18px 28px; display: grid; gap: 18px; align-content: start; }
+.rv-summary { display: grid; gap: 8px; }
+.rv-lead { margin: 0; font-size: 0.86rem; color: var(--text-primary); font-weight: 600; }
+.rv-note, .rv-empty, .rv-source { margin: 0; font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }
+.rv-warnline { color: color-mix(in srgb, var(--warn) 75%, var(--text-muted)); }
+.rv-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: var(--r-md, 8px); }
+.rv-stat { display: grid; gap: 2px; padding: 9px 10px; }
+.rv-stat + .rv-stat { border-left: 1px solid var(--border); }
+.rv-stat b { font: 600 1.05rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.rv-stat span { font-size: 0.66rem; color: var(--text-muted); line-height: 1.25; }
+.rv-sec { display: grid; gap: 6px; }
+.rv-sec h3 { margin: 0; display: flex; align-items: baseline; gap: 6px; font: 600 0.68rem/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+.rv-sec h3 span { color: var(--text-muted); font-weight: 500; letter-spacing: 0; }
+.rv-list, .rv-sug { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.rv-row, .rv-sug li, .rv-wrow { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.rv-row { display: grid; gap: 3px; }
+.rv-who { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.82rem; }
+.rv-who .pos { font-size: 0.62rem; padding: 1px 6px; }
+.rv-reason { flex-basis: 100%; font-size: 0.72rem; color: var(--text-muted); }
+.rv-nums { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 0.74rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rv-diff { margin-left: auto; font: 600 0.76rem var(--font-display); color: var(--text-muted); }
+.rv-diff.up { color: color-mix(in srgb, var(--good) 80%, var(--text-muted)); }
+.rv-diff.down { color: color-mix(in srgb, var(--danger-text) 80%, var(--text-muted)); }
+.rv-acts { display: flex; gap: 12px; }
+.rv-acts button, .rv-more { padding: 0; border: 0; background: none; color: var(--text-muted); font: 500 0.7rem var(--font-body); cursor: pointer; }
+.rv-acts button:hover, .rv-more:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: 2px; }
+.rv-more { justify-self: start; padding-top: 2px; }
+.rv-sug li { display: grid; gap: 4px; }
+.rv-sug p { margin: 0; font-size: 0.8rem; line-height: 1.45; color: var(--text-primary); }
+.rv-wrow { display: flex; gap: 8px; font-size: 0.76rem; line-height: 1.45; color: var(--text-secondary); }
+.rv-wrow.rank { color: var(--text-muted); }
+.rv-wk { flex: none; width: 38px; font: 600 0.6rem/1.8 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.rv-wrow.order .rv-wk { color: color-mix(in srgb, var(--warn) 80%, var(--text-muted)); }
+@media (max-width: 560px) { .rv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rv-stat:nth-child(3) { border-left: 0; } .rv-stat:nth-child(n+3) { border-top: 1px solid var(--border); } }
 .eb-right { justify-content: flex-end; }
 .eb-right .btn { border-radius: var(--r-sm); }
 @media (max-width: 900px) { .editor-bar { grid-template-columns: 1fr; } .eb-mid { border-left: 0; padding-left: 0; } .eb-right { justify-content: flex-start; } }
@@ -3844,8 +3900,8 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       </div>
       <div class="eb-mid">
         <span id="eb-who"></span>
-        <button class="btn link eb-vc" id="eb-vcheck" type="button" hidden aria-expanded="false" aria-controls="eb-vlist"></button>
-        <button class="btn link eb-vc" id="eb-mcheck" type="button" hidden aria-expanded="false" aria-controls="eb-mlist">Market audit</button>
+        <button class="eb-stat" id="eb-vcheck" type="button" hidden aria-expanded="false" aria-controls="rv-panel"></button>
+        <button class="eb-stat eb-audit" id="eb-mcheck" type="button" hidden aria-expanded="false" aria-controls="rv-panel"><svg class="eb-ico" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 10.5h9M3 8V5.5M6 8V2.5M9 8V4" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>Market audit</button>
       </div>
       <div class="eb-right">
         <div class="eb-group">
@@ -3861,8 +3917,17 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
         <button class="btn link" id="eb-signout" type="button" hidden title="Remove your GitHub token from this browser">Sign out</button>
       </div>
     </div>
-    <div class="eb-vlist" id="eb-vlist" hidden></div>
-    <div class="eb-vlist eb-mlist" id="eb-mlist" hidden></div>
+    <aside class="rv-panel" id="rv-panel" role="dialog" aria-modal="false" aria-labelledby="rv-title" hidden>
+      <header class="rv-head">
+        <h2 class="rv-title" id="rv-title">Review</h2>
+        <div class="rv-tabs" role="tablist" aria-label="Review tools">
+          <button class="rv-tab" type="button" role="tab" data-rv-tab="warn" aria-selected="true">Value warnings</button>
+          <button class="rv-tab" type="button" role="tab" data-rv-tab="mkt" aria-selected="false">Market audit</button>
+        </div>
+        <button class="rv-close" type="button" data-rv-close aria-label="Close review panel">×</button>
+      </header>
+      <div class="rv-body" id="rv-body"></div>
+    </aside>
     <div class="ed-warn" id="ed-warn" role="alert" hidden></div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
@@ -4832,7 +4897,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T22:00Z";
+  const BUILD_ID = "2026-10-08T23:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6499,53 +6564,120 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     }
     return out;
   }
+  /* Review tools (Alan, Oct 8: "secondary review tools, not primary actions"): the editor bar shows two quiet status
+     items (value warnings with a severity dot, Market audit); both open one right-side Review panel. Read-only. */
+  var RV;   // var + function: the editor bar renders during start-up, before this line runs
+  function rvShow() { return editor.on && (!!editor.token || /[?&]debug\b/.test(location.search)); }
+  function vcState() {
+    const W = valueCheck(), real = W.filter(w => w.kind !== "rank");
+    return { W, real, severe: real.some(w => w.kind === "order") || real.length >= 10 };   // values out of order, or a lot of them
+  }
   function renderValueCheck() {
     if (!VCHECK) return;
-    const b = $("eb-vcheck"), box = $("eb-vlist"), show = editor.on && (!!editor.token || /[?&]debug\b/.test(location.search));
-    if (!show) { b.hidden = true; box.hidden = true; return; }
-    const W = valueCheck(), real = W.filter(w => w.kind !== "rank");
+    const b = $("eb-vcheck");
+    if (!RV) RV = { open: false, tab: "warn" };
+    if (!rvShow()) { b.hidden = true; if (RV.open) closeReview(); return; }
+    const { real, severe } = vcState();
     b.hidden = false;
-    b.textContent = real.length ? `${real.length} value warning${real.length === 1 ? "" : "s"}` : "Values OK";
-    b.title = "Value-curve check: cliffs, tier gaps and tier sizes on the AM Board (warnings only, nothing changes)";
-    const li = w => `<li class="${w.kind}">${esc(w.text)}</li>`;
-    box.innerHTML = `<p>Warnings only: nothing on the board changes. Rank gaps are listed last: they come from your overall order, not the formula.</p>`
-      + (W.length ? `<ul>${real.map(li).join("")}${W.filter(w => w.kind === "rank").map(li).join("")}</ul>` : "<p>No issues found.</p>");
+    b.className = `eb-stat ${real.length ? (severe ? "sev-high" : "sev-low") : "sev-none"}`;
+    b.innerHTML = `<span class="eb-dot" aria-hidden="true"></span>${real.length ? `${real.length} value warning${real.length === 1 ? "" : "s"}` : "No warnings"}`;
+    b.title = "Value-curve check: cliffs, tier gaps and tier sizes on the AM Board (review only, nothing changes)";
+    b.setAttribute("aria-expanded", String(RV.open && RV.tab === "warn"));
   }
-  $("eb-vcheck").addEventListener("click", () => {
-    const box = $("eb-vlist"), open = box.hidden;
-    box.hidden = !open; $("eb-vcheck").setAttribute("aria-expanded", String(open));
-  });
-
-  /* Market audit (editors only): where FantasyCalc / Flock disagree with AM, so each edge can be judged as intentional
-     conviction or a ranking that hasn't been updated. Read-only: never moves anyone. */
   function renderMarketAudit() {
-    const b = $("eb-mcheck"), box = $("eb-mlist"), show = editor.on && (!!editor.token || /[?&]debug\b/.test(location.search));
-    if (!show || typeof MK_READY === "undefined" || !MK_READY) { b.hidden = true; box.hidden = true; return; }
-    b.hidden = false;
-    if (box.hidden) return;   // built only when open
-    const all = mkAll(), recs = [...all.map.values()];
-    if (!all.srcs.length) { box.innerHTML = "<p>No market source loaded yet. FantasyCalc loads with the page; import Flock rankings from the Market edge sort.</p>"; return; }
-    const line = r => { const p = r.p, src = Object.values(r.per).map(x => `${x.id === "fc" ? "FC" : "Flock"} ${p.pos}${x.pr}`).join(" · ");
-      return `<li><b>${esc(p.name)}</b> · AM ${p.pos}${r.ap} · ${esc(src)}${r.srcN > 1 ? ` · consensus ${p.pos}${r.cRank}` : ""} · ${esc(r.bucket)}${r.lvl ? ` (${r.conf})` : ""}${r.tierGap ? ` · tier ${r.amTier} vs ${r.mTier}` : ""}${r.review ? ` · <i>${esc(r.review)}</i>` : ""}</li>`; };
-    const sec = (t, list, note) => `<h4>${esc(t)} <span>${list.length}</span></h4>${note ? `<p>${esc(note)}</p>` : ""}${list.length ? `<ul>${list.slice(0, 10).map(line).join("")}</ul>` : "<p>None.</p>"}`;
-    const both = recs.filter(r => r.per.fc && r.per.fl);
-    box.innerHTML = `<p>Read-only: nothing on the board changes. ${esc(mkFresh(all.srcs))}</p>`
-      + sec("AM higher than market", recs.filter(r => r.dir > 0 && r.lvl >= 2).sort((a, b) => b.e - a.e))
-      + sec("Market higher than AM", recs.filter(r => r.dir < 0 && r.lvl >= 2).sort((a, b) => a.e - b.e))
-      + sec("FantasyCalc and Flock agree against AM", both.filter(r => r.lvl >= 1 && r.per.fc.dir === r.dir && r.per.fl.dir === r.dir && r.per.fc.lvl && r.per.fl.lvl).sort((a, b) => Math.abs(b.e) - Math.abs(a.e)), "The strongest signals: both outside sources lean the same way.")
-      + sec("FantasyCalc and Flock disagree with each other", both.filter(r => Math.abs(Math.log((r.per.fc.pr + 3) / (r.per.fl.pr + 3))) >= 0.4 && Math.max(r.am, r.cv) >= 400).sort((a, b) => Math.abs(Math.log((b.per.fc.pr + 3) / (b.per.fl.pr + 3))) - Math.abs(Math.log((a.per.fc.pr + 3) / (a.per.fl.pr + 3)))), "The market itself is split: lower confidence either way.")
-      + sec("Largest tier disagreements", recs.filter(r => Math.abs(r.tierGap) >= 2 && Math.max(r.am, r.cv) >= 400).sort((a, b) => Math.abs(b.tierGap) - Math.abs(a.tierGap) || Math.abs(b.e) - Math.abs(a.e)))
-      + sec("Potential ranking review", recs.filter(r => r.review === "Ranking deserves review").sort((a, b) => Math.abs(b.e) - Math.abs(a.e)), "Big gaps on manual spots you haven't moved in the last 3 weeks. Recently moved players show as Strong AM conviction instead.");
+    if (!RV) RV = { open: false, tab: "warn" };
+    const b = $("eb-mcheck");
+    b.hidden = !rvShow() || typeof MK_READY === "undefined" || !MK_READY;
+    b.setAttribute("aria-expanded", String(RV.open && RV.tab === "mkt"));
   }
-  $("eb-mcheck").addEventListener("click", () => {
-    const box = $("eb-mlist"), open = box.hidden;
-    box.hidden = !open; $("eb-mcheck").setAttribute("aria-expanded", String(open));
-    renderMarketAudit();
+  function openReview(tab) {
+    if (modalOpen()) closePlayer();   // the panel and the player drawer share the right edge
+    RV.open = true; RV.tab = tab;
+    $("rv-panel").hidden = false;
+    renderReview(); renderValueCheck(); renderMarketAudit();
+    $("rv-panel").querySelector(`[data-rv-tab="${tab}"]`).focus();
+  }
+  function closeReview() { RV.open = false; $("rv-panel").hidden = true; renderValueCheck(); renderMarketAudit(); }
+  $("eb-vcheck").addEventListener("click", () => (RV.open && RV.tab === "warn" ? closeReview() : openReview("warn")));
+  $("eb-mcheck").addEventListener("click", () => (RV.open && RV.tab === "mkt" ? closeReview() : openReview("mkt")));
+  $("rv-panel").addEventListener("click", e => {
+    if (e.target.closest("[data-rv-close]")) { closeReview(); return; }
+    const t = e.target.closest("[data-rv-tab]"); if (t) { RV.tab = t.dataset.rvTab; renderReview(); renderValueCheck(); renderMarketAudit(); return; }
+    const pl = e.target.closest("[data-rv-player]"); if (pl) { closeReview(); openPlayer(pl.dataset.rvPlayer); return; }
+    const more = e.target.closest("[data-rv-more]"); if (more) { RV.all = RV.all || new Set(); RV.all.add(more.dataset.rvMore); renderReview(); }
   });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && RV && RV.open && !modalOpen()) closeReview(); });
+  function renderReview() {
+    if (!RV.open) return;
+    $("rv-panel").querySelectorAll("[data-rv-tab]").forEach(t => t.setAttribute("aria-selected", String(t.dataset.rvTab === RV.tab)));
+    $("rv-title").textContent = RV.tab === "warn" ? "Value warnings" : "Market audit";
+    $("rv-body").innerHTML = RV.tab === "warn" ? reviewWarnings() : reviewMarket();
+  }
+  const rvSec = (key, title, items, note, limit = 8) => {
+    const all = RV.all && RV.all.has(key), shown = all ? items : items.slice(0, limit);
+    return `<section class="rv-sec"><h3>${esc(title)}<span>${items.length}</span></h3>${note ? `<p class="rv-note">${esc(note)}</p>` : ""}
+      ${items.length ? `<ul class="rv-list">${shown.join("")}</ul>${items.length > shown.length ? `<button class="rv-more" type="button" data-rv-more="${key}">Show all ${items.length}</button>` : ""}` : `<p class="rv-empty">None.</p>`}</section>`;
+  };
+  function reviewWarnings() {
+    const { W, real, severe } = vcState();
+    const li = w => `<li class="rv-wrow ${w.kind}"><span class="rv-wk">${w.kind === "order" ? "Order" : w.kind === "tier" ? "Tier" : "Gap"}</span>${esc(w.text)}</li>`;
+    return `<div class="rv-summary"><p class="rv-lead">${real.length ? `${real.length} warning${real.length === 1 ? "" : "s"} on the AM Board${severe ? " · worth a look" : ""}` : "No warnings on the AM Board."}</p>
+        <p class="rv-note">Review only: nothing on the board changes. Rank gaps come from your overall order, not the formula.</p></div>`
+      + rvSec("w-order", "Values out of order", W.filter(w => w.kind === "order").map(li), "A model value above someone ranked ahead of him.")
+      + rvSec("w-tier", "Tier structure", W.filter(w => w.kind === "tier").map(li), "One-player tiers, very large or wide tiers, and tier breaks with almost no value gap.")
+      + rvSec("w-rank", "Rank gaps", W.filter(w => w.kind === "rank").map(li), "Big drops at a position that come from where you ranked players overall.");
+  }
+  function reviewMarket() {
+    const all = mkAll(), recs = [...all.map.values()];
+    if (!all.srcs.length) return `<div class="rv-summary"><p class="rv-lead">No market data yet.</p><p class="rv-note">FantasyCalc loads with the page; Flock rankings come from the import under Sort → Market edge.</p></div>`;
+    const d = r => r.cRank - r.ap;
+    const row = (r, reason) => {
+      const p = r.p, dd = d(r), cls = dd > 0 ? "up" : dd < 0 ? "down" : "";
+      return `<li class="rv-row"><div class="rv-who"><b>${esc(p.name)}</b><span class="pos ${esc(p.pos)}">${esc(p.pos)}</span><span class="rv-reason">${esc(reason)}</span></div>
+        <div class="rv-nums"><span title="AM position rank and value in this format">AM ${p.pos}${r.ap} · ${fmt(r.am)}</span><span title="Consensus position rank and what AM pays for that spot">Mkt ${p.pos}${r.cRank} · ${fmt(r.cv)}</span><b class="rv-diff ${cls}" title="Consensus rank minus AM rank: + = AM higher">${dd > 0 ? "+" : dd < 0 ? "−" : ""}${Math.abs(dd)}</b></div>
+        <div class="rv-acts"><button type="button" data-rv-player="${esc(p.sleeperId)}">View player</button><button type="button" data-jump="${p.id}">Show on board</button></div></li>`;
+    };
+    const conf = r => (r.lvl ? ` · ${r.conf.toLowerCase()} confidence` : "");
+    const amHi = recs.filter(r => r.dir > 0 && r.lvl >= 2).sort((a, b) => b.e - a.e);
+    const mkHi = recs.filter(r => r.dir < 0 && r.lvl >= 2).sort((a, b) => a.e - b.e);
+    const tierC = recs.filter(r => Math.abs(r.tierGap) >= 2 && Math.max(r.am, r.cv) >= 400).sort((a, b) => Math.abs(b.tierGap) - Math.abs(a.tierGap) || Math.abs(b.e) - Math.abs(a.e));
+    const misT = recs.filter(r => Math.abs(r.tierGap) === 1 && r.lvl >= 1).sort((a, b) => Math.abs(b.e) - Math.abs(a.e));
+    const review = recs.filter(r => r.review === "Ranking deserves review").sort((a, b) => Math.abs(b.e) - Math.abs(a.e));
+    const split = recs.filter(r => r.per.fc && r.per.fl && r.per.fc.lvl && r.per.fl.lvl && r.per.fc.dir !== r.per.fl.dir).sort((a, b) => Math.abs(b.per.fc.e - b.per.fl.e) - Math.abs(a.per.fc.e - a.per.fl.e));
+    // suggestions: the few things most worth doing, one per player
+    const sug = [], seen = new Set(), add = (r, text) => { if (!seen.has(r.p.id) && sug.length < 5) { seen.add(r.p.id); sug.push({ r, text }); } };
+    review.forEach(r => add(r, `Review ${r.p.name} (${r.p.pos}${r.ap}): ${r.srcN > 1 ? "FantasyCalc and Flock both" : Object.values(r.per)[0].name} put him around ${r.p.pos}${r.cRank}, and his spot hasn't moved in 3 weeks.`));
+    tierC.forEach(r => {   // name the border next to his tier, in the market's direction
+      const to = r.amTier + Math.sign(r.mTier - r.amTier), lo = Math.min(r.amTier, to), hi = Math.max(r.amTier, to);
+      add(r, r.tierGap < 0 ? `Consider moving ${r.p.name} toward the Tier ${lo}/${hi} border: the consensus spot ${r.p.pos}${r.cRank} sits in your Tier ${r.mTier} (he's in Tier ${r.amTier}).`
+        : `${r.p.name} may be overvalued relative to his tier: the consensus spot ${r.p.pos}${r.cRank} sits in your Tier ${r.mTier}, so the Tier ${lo}/${hi} border is worth a look.`);
+    });
+    recs.forEach(r => {   // a gap far bigger than his neighbours' at the position
+      if (!r.lvl) return;
+      const peers = recs.filter(x => x !== r && x.p.pos === r.p.pos && Math.abs(x.ap - r.ap) <= 4).map(x => Math.abs(d(x))).sort((a, b) => a - b);
+      const med = peers.length ? peers[Math.floor(peers.length / 2)] : 0;
+      if (Math.abs(d(r)) >= Math.max(6, 3 * med)) r._peer = med;
+    });
+    recs.filter(r => r._peer != null).sort((a, b) => Math.abs(d(b)) - Math.abs(d(a))).forEach(r => add(r, `${r.p.name}'s gap (${d(r) > 0 ? "+" : "−"}${Math.abs(d(r))}) is much bigger than nearby ${r.p.pos}s' (typically ${r._peer}).`));
+    const stale = all.srcs.filter(s => s.stale).map(s => s.name), approx = all.srcs.filter(s => s.notes.length).map(s => `${s.name}: ${s.notes.join(", ")}`);
+    const missing = ["FantasyCalc", "Flock"].filter(n => !all.srcs.some(s => s.name === n));
+    const stat = (n, l) => `<div class="rv-stat"><b>${n}</b><span>${l}</span></div>`;
+    return `<div class="rv-summary"><div class="rv-stats">${stat(amHi.length, "AM much higher")}${stat(mkHi.length, "Market much higher")}${stat(tierC.length, "Tier conflicts")}${stat(review.length, "Needs review")}</div>
+        ${stale.length || missing.length ? `<p class="rv-note rv-warnline">${esc([stale.length ? `${stale.join(" and ")} ${stale.length > 1 ? "are" : "is"} stale` : "", missing.length ? `${missing.join(" and ")} not loaded` : ""].filter(Boolean).join(" · "))}: confidence is lower.</p>` : ""}</div>`
+      + (sug.length ? `<section class="rv-sec"><h3>Suggestions<span>${sug.length}</span></h3><ul class="rv-sug">${sug.map(x => `<li><p>${esc(x.text)}</p><span class="rv-acts"><button type="button" data-rv-player="${esc(x.r.p.sleeperId)}">View player</button><button type="button" data-jump="${x.r.p.id}">Show on board</button></span></li>`).join("")}</ul></section>` : "")
+      + rvSec("m-amhi", "AM much higher than market", amHi.map(r => row(r, `${r.bucket}${conf(r)}`)))
+      + rvSec("m-mkhi", "Market much higher than AM", mkHi.map(r => row(r, `${r.bucket}${conf(r)}`)))
+      + rvSec("m-tier", "Tier conflicts", tierC.map(r => row(r, `Your Tier ${r.amTier} · consensus spot in Tier ${r.mTier}`)), "The consensus spot sits two or more of your tiers away.")
+      + rvSec("m-mist", "Possibly mis-tiered", misT.map(r => row(r, `One tier off: your Tier ${r.amTier} vs Tier ${r.mTier}`)))
+      + rvSec("m-rev", "Needs review", review.map(r => row(r, "Big gap, spot not moved in 3 weeks")), "Players you moved recently count as conviction instead.")
+      + rvSec("m-split", "Sources disagree", split.map(r => row(r, `FC ${r.p.pos}${r.per.fc.pr} vs Flock ${r.p.pos}${r.per.fl.pr}`)), "The market itself is split, so read these gaps with care.")
+      + `<p class="rv-source">Based on ${esc(all.srcs.map(s => s.name).join(" + "))} comparison · ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p>`;
+  }
 
   function updateEditorBar() {
     renderValueCheck();
     renderMarketAudit();
+    if (RV && RV.open) renderReview();
     $("editor-bar").hidden = !editor.on;
     if (!editor.on || savedCsv == null) return;
     const n = changedRows().length, local = Object.keys(localEdits).length;
@@ -10860,6 +10992,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   }
 
   async function openPlayer(sid, opener) {
+    if (RV && RV.open) closeReview();   // the Review panel and the player drawer share the right edge
     sid = String(sid);
     if (!modalOpen()) {
       Object.assign(PP, { trail: [], compare: null, picking: false, opener: opener || document.activeElement });

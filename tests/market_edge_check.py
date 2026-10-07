@@ -123,9 +123,15 @@ with sync_playwright() as p:
     snap1 = pg.evaluate("() => SPM.rankingSnapshot()")
     ok(snap0 == snap1, "AM ranks, tiers and values are identical with market data loaded")
     # 5. editor audit (?debug)
+    ok(pg.locator("#eb-mcheck").is_visible() and pg.eval_on_selector("#eb-mcheck", "b => getComputedStyle(b).backgroundColor") in ("rgba(0, 0, 0, 0)", "transparent"), "Market audit is a quiet text item in the editor bar, not a pill")
     pg.click("#eb-mcheck"); pg.wait_for_timeout(500)
-    a = pg.inner_text("#eb-mlist")
-    ok(all(k in a.upper() for k in ("AM HIGHER THAN MARKET", "MARKET HIGHER THAN AM", "AGREE AGAINST AM", "DISAGREE WITH EACH OTHER", "TIER DISAGREEMENTS", "RANKING REVIEW")) and name_of[BUY] in a, "Editor market audit lists every section")
+    a = pg.inner_text("#rv-body") if not pg.locator("#rv-panel").is_hidden() else ""
+    ok(all(k in a.upper() for k in ("AM MUCH HIGHER", "MARKET MUCH HIGHER", "TIER CONFLICTS", "NEEDS REVIEW", "SOURCES DISAGREE", "BASED ON FANTASYCALC + FLOCK")) and name_of[BUY] in a, "Market audit opens the Review panel with summary, buckets and a source note")
+    ok(pg.locator("#rv-body .rv-row [data-rv-player]").count() > 0 and pg.locator("#rv-body .rv-row [data-jump]").count() > 0, "Audit rows offer View player and Show on board")
+    pg.click("[data-rv-tab='warn']"); pg.wait_for_timeout(300)
+    ok(pg.inner_text("#rv-title") == "Value warnings" and "AM Board" in pg.inner_text("#rv-body"), "The Review panel switches to Value warnings")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+    ok(pg.locator("#rv-panel").is_hidden(), "Escape closes the Review panel")
     # persistence + removal
     pg.reload(wait_until="domcontentloaded"); pg.wait_for_timeout(4000)
     ok(pg.evaluate("() => document.querySelectorAll('#rank-body tr.mkrow').length") > 100, "After a reload the board comes back in the saved Market edge sort")
