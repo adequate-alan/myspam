@@ -15,21 +15,21 @@
     var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
   })();
 </script>
-<meta name="description" content="AM fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
-<meta name="application-name" content="AM">
-<meta name="apple-mobile-web-app-title" content="AM">
+<meta name="description" content="Adequate: fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
+<meta name="application-name" content="Adequate">
+<meta name="apple-mobile-web-app-title" content="Adequate">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="AM">
-<meta property="og:title" content="AM Fantasy Rankings">
-<meta property="og:description" content="AM Rankings, AM Values and a trade calculator for redraft fantasy football. Connect Sleeper, ESPN or Yahoo, or pick your league settings.">
+<meta property="og:site_name" content="Adequate">
+<meta property="og:title" content="Adequate · Fantasy Football Rankings">
+<meta property="og:description" content="Fantasy football rankings, values and trade tools for redraft. Connect Sleeper, ESPN or Yahoo, or pick your league settings.">
 <!-- The site's public address lives only here (canonical + og:url); every asset and link below is relative,
      so moving to a custom domain later only means a CNAME file and these two lines. -->
 <link rel="canonical" href="https://adequate-alan.github.io/myspam/">
 <meta property="og:url" content="https://adequate-alan.github.io/myspam/">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="AM Fantasy Rankings">
-<meta name="twitter:description" content="AM Rankings, AM Values and a trade calculator for redraft fantasy football.">
-<link rel="icon" href="favicon.svg?v=am2" type="image/svg+xml">
+<meta name="twitter:title" content="Adequate · Fantasy Football Rankings">
+<meta name="twitter:description" content="Fantasy football rankings, values and trade tools for redraft.">
+<link rel="icon" href="favicon.svg?v=adq1" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest?v=am1">
 <style>
   /* base reset (the claude.ai host used to add this) */
@@ -38,7 +38,7 @@
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>AM Fantasy Rankings</title>
+<title>Adequate · Fantasy Football Rankings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&display=swap">
@@ -49,7 +49,7 @@
    SITE SETTINGS
    ===================================================================== */
 const SITE = {
-  name: "AM",
+  name: "Adequate",            // the site's brand (Alan, Oct 9); "AM" stays the name of Alan's ranking system (AM Board, AM Rank, AM value)
   tagline: "Fantasy Football Rankings",
   updated: "Oct 1, 2026",
   author: "AM",
@@ -926,7 +926,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-weight: 850; font-stretch: 112%; font-size: 1.75rem; line-height: 1; letter-spacing: -0.035em;
   margin: 0; color: var(--brand);
 }
-.brand-name::after {   /* the brand's period: T1 red in both themes (part of the AM. wordmark) */
+.brand-name::after {   /* the brand's period: AM red in both themes (part of the ADEQUATE. wordmark) */
   content: ""; display: inline-block; width: 0.2em; height: 0.2em; margin-left: 0.07em; background: var(--brand-accent);
   vertical-align: baseline; border-radius: 1px;
 }
@@ -3785,7 +3785,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .masthead { background: color-mix(in srgb, var(--nav-bg) 90%, transparent); backdrop-filter: saturate(140%) blur(12px); -webkit-backdrop-filter: saturate(140%) blur(12px); border-bottom: 1px solid var(--line-soft); }
 .masthead-top { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 0 26px; min-height: 58px; padding-block: 0; }
 .brand { flex: none; align-items: center; gap: 10px; }
-.brand-name { font-size: 1.5rem; }
+.brand-name { font-size: 1.3rem; font-weight: 850; font-stretch: 104%; letter-spacing: -0.02em; text-transform: uppercase; white-space: nowrap; }   /* ADEQUATE. (Alan, Oct 9) */
 .brand-tag { display: none; }
 .masthead .tabs { flex: 1 1 auto; min-width: 0; display: flex; align-items: stretch; gap: 2px; margin: 0; }
 .masthead .tab { display: block; height: auto; line-height: 57px; padding: 0 12px; font-size: 0.88rem; border-radius: 0; white-space: nowrap; transition: color .16s var(--ease); }
@@ -3799,7 +3799,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .fmt-chip:hover, .league-chip:hover { background: var(--fill-2); border: 0; }
 .fc-format, .lc-format, .lc-name { font-family: var(--font-display); }
 .connect-btn { border-radius: var(--r-md); }
-@media (min-width: 1500px) { .brand-tag { display: inline; font-size: 0.74rem; } }
+@media (min-width: 1400px) { .brand-tag { display: inline; font-size: 0.72rem; color: var(--muted); white-space: nowrap; } }
 @media (max-width: 1099px) {
   .masthead-top { flex-wrap: wrap; align-items: center; justify-content: space-between; padding-top: 10px; gap: 4px 16px; }
   .masthead .tabs { order: 3; flex: 1 0 100%; height: 44px; } .masthead .tab { line-height: 43px; } .masthead .tabs { overflow-x: auto; scrollbar-width: none; margin-inline: -12px; }
@@ -5140,7 +5140,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T00:30Z";
+  const BUILD_ID = "2026-10-10T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
