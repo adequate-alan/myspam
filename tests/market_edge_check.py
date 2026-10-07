@@ -72,6 +72,7 @@ with sync_playwright() as p:
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
         pg.route("**/data/market/redraft.json", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(market)))
+        pg.route("**/data/market/flock.json", lambda r: r.fulfill(status=404, body=""))   # synthetic Flock only: the built-in list stays out
         pg.goto(f"http://127.0.0.1:{port}/{'?debug' if debug else ''}#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
         return pg
     def connect(pg):
