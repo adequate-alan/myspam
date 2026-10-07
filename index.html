@@ -2460,9 +2460,15 @@ th.fa-proj { text-align: right; }
 .ro-wk small.ro-lp { letter-spacing: 0.02em; text-transform: none; font-size: 0.66rem; }
 .ro-wk.off, .ro-wk.none, .ro-wk.dnp { color: var(--muted); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; }
 .ro-wk.out { color: var(--st-out, var(--st-dnp)); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; }
+/* rank cells (Alan, Oct 8): AM rank = the compact tinted chip (primary), Szn rk = a quieter dot + text (secondary) */
+.rk-chip { display: inline-block; min-width: 40px; padding: 3px 7px; border-radius: 5px; font-family: var(--font-display, inherit); font-size: 0.72rem; font-weight: 700; line-height: 1.2; text-align: center; color: var(--ink); font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--c, var(--muted)) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, var(--muted)) 26%, transparent); }
+.rk-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rk-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c, var(--muted)); opacity: 0.75; flex: none; }
 .ro-srk { width: 70px; text-align: right; white-space: nowrap; }
-.ro-rk { width: 74px; text-align: right; white-space: nowrap; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.ro-rk small { display: block; font-size: 0.64rem; font-weight: 600; color: var(--muted); }
+.ro-rk { width: 96px; text-align: right; white-space: nowrap; }
+.ro-am { display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.ro-am small { font-size: 0.68rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 .ro-num { width: 62px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .ro-sec td { background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface)); border-top: 1px solid color-mix(in srgb, var(--accent-primary) 28%, transparent); padding: 7px 14px 7px 10px; }
@@ -4921,7 +4927,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T01:00Z";
+  const BUILD_ID = "2026-10-09T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9917,8 +9923,8 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
         <td class="ro-slot">${slotBadge(lab)}</td>
         <td class="ro-pl"><div class="pl-cell">${face(e.sid, e.name, "sm")}<div class="pl-text"><span class="pl-head">${nameEl}${e.team ? `<span class="ro-tm">${teamLogo(e.team, "xs")}${nflTag(e.team)}</span>` : ""}${inj(e)}</span>${game(e)}</div></div></td>
         ${wkCell(e.o)}
-        <td class="ro-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${e.pos.toLowerCase()})">${e.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
-        <td class="ro-rk" title="${e.ranked ? `League-adjusted AM rank · ${esc(posLabel(e.p))}` : "Not on the AM Board"}">${e.ranked ? `${overallRank(e.p)}<small>${esc(posLabel(e.p))}</small>` : `<span class="muted">—</span>`}</td>
+        <td class="ro-srk" title="${sn && sn.g ? `${STATS_SEASONS[0]} finish: ${e.pos}${sn.rank} by total fantasy points` : "No games this season"}">${sn && sn.g ? `<span class="rk-dot" style="--c: var(--${e.pos.toLowerCase()})">${e.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
+        <td class="ro-rk" title="${e.ranked ? `League-adjusted AM rank: ${esc(posLabel(e.p))} · #${overallRank(e.p)} overall` : "Not on the AM Board"}">${e.ranked ? `<span class="ro-am"><small>#${overallRank(e.p)}</small><span class="rk-chip" style="--c: var(--${e.pos.toLowerCase()})">${esc(posLabel(e.p))}</span></span>` : `<span class="muted">—</span>`}</td>
         <td class="ro-num">${sn ? sn.g : "—"}</td>
         <td class="ro-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
         <td class="ro-num">${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td></tr>`;
