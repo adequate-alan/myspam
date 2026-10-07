@@ -3943,12 +3943,15 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body tr.player:hover .handle { opacity: .9; color: var(--ink); }
 #panel-rankings .handle:active { cursor: grabbing; }
 /* drag and drop: a floating copy of the row, a faded placeholder, a thin red insertion line, a live rank preview */
-#rank-body tr.player { transition: transform .12s var(--ease); }
+#rank-body tr.player { transition: transform .14s cubic-bezier(.2, 0, 0, 1); }
 #rank-body tr.nudge-up { transform: translateY(-5px); }
 #rank-body tr.nudge-down { transform: translateY(5px); }
+#rank-body img { -webkit-user-drag: none; user-drag: none; }
+#panel-rankings .handle { position: relative; }
+#panel-rankings .handle::after { content: ""; position: absolute; inset: -6px -4px; }   /* a larger hit target, same icon */
 #rank-body tr.drag-origin td { opacity: .28; background: none !important; box-shadow: none !important; }
 #rank-body tr.drag-origin .face, #rank-body tr.drag-origin .pos, #rank-body tr.drag-origin .valbar { filter: grayscale(.7); }
-.drag-float { position: fixed; z-index: 30; pointer-events: none; border-radius: var(--r-md); overflow: hidden;
+.drag-float { position: fixed; z-index: 30; pointer-events: none; border-radius: var(--r-md); overflow: hidden; transition: none !important; will-change: transform;
   box-shadow: 0 0 0 1px var(--line), 0 16px 34px -14px rgba(0, 0, 0, .65), 0 4px 10px -6px rgba(0, 0, 0, .4); }
 :root[data-theme="light"] .drag-float { box-shadow: 0 0 0 1px var(--line), 0 16px 30px -16px rgba(16, 17, 20, .35), 0 4px 10px -6px rgba(16, 17, 20, .18); }
 .drag-float table { table-layout: fixed; border-collapse: collapse; margin: 0; }
@@ -5130,7 +5133,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T22:00Z";
+  const BUILD_ID = "2026-10-09T23:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7285,24 +7288,33 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
   });
 
-  /* Drag and drop (pointer events: works with mouse, pen and touch). Alan, Oct 9: the row lifts as a full floating
-     copy (photo, name, badge, tier, value) with a live "#8 → #4" preview, its own spot stays as a faded placeholder,
-     a thin AM-red line marks where it will land (the two rows beside it ease 3px apart), and the page auto-scrolls
-     near the top or bottom of the visible board. Where it lands is decided exactly as before (endDrag). */
-  let drag = null;
+  /* Drag and drop (pointer events: mouse, pen and touch; drag starts from the handle only). Alan, Oct 9, technical pass:
+     - activation after DRAG_START_PX of movement, so a click on the handle never starts a drag
+     - the floating copy is placed exactly over the source row and moved only by translate3d(0, dy, 0), dy = pointer Y −
+       the Y where it was grabbed: the grab point stays under the cursor, no jump on start, no horizontal drift, no easing
+       (position: fixed + viewport pointer coordinates, so scrolling never needs an offset)
+     - row geometry is measured once at activation in document coordinates (scroll-proof, and immune to the 5px nudges of
+       the rows beside the insertion line); the landing slot changes only once the pointer passes a row's midpoint by
+       DRAG_HYST px, so it never flickers at a boundary
+     - the source row stays in place as a faded placeholder, a thin AM-red line marks the landing slot, the rows beside it
+       ease apart; the "#3 → #5" chip and the line update only when the slot changes
+     Where he lands is computed exactly as before (endDrag; the chip uses the same numbers). */
+  let drag = null, dragPending = null;
+  const DRAG_START_PX = 4, DRAG_HYST = 6;
   const clearMarks = () => $("rank-body").querySelectorAll(".drop-before, .drop-after, .nudge-up, .nudge-down").forEach(r => r.classList.remove("drop-before", "drop-after", "nudge-up", "nudge-down"));
-  function dragFloat(tr) {
+  function dragFloat(tr, r) {
     // a copy of the row in its own one-row table, inside the board so the board's row styles apply
     // (the copy's tbody reuses the id rank-body; it comes after the real one, so $("rank-body") still finds the board)
-    const r = tr.getBoundingClientRect(), wrap = document.createElement("div");
+    const wrap = document.createElement("div");
     wrap.className = "drag-float";
     wrap.innerHTML = `<table><tbody id="rank-body"></tbody></table><span class="drag-rk"></span>`;
     const copy = tr.cloneNode(true);
-    copy.classList.remove("pp-current", "flash");
-    [...tr.children].forEach((td, i) => { copy.children[i].style.width = td.getBoundingClientRect().width + "px"; });
+    copy.classList.remove("pp-current", "flash", "nudge-up", "nudge-down");
+    [...tr.children].forEach((td, i) => { const w = td.getBoundingClientRect().width; copy.children[i].style.width = copy.children[i].style.minWidth = copy.children[i].style.maxWidth = w + "px"; });
+    copy.style.height = r.height + "px";
     wrap.querySelector("tbody").append(copy);
     wrap.querySelector("table").style.width = r.width + "px";
-    wrap.style.left = r.left + "px"; wrap.style.width = r.width + "px";
+    wrap.style.left = r.left + "px"; wrap.style.top = r.top + "px"; wrap.style.width = r.width + "px";
     tr.closest(".table-scroll").append(wrap);
     const rk = tr.querySelector("td.rk");
     if (rk) { const k = rk.getBoundingClientRect(); wrap.querySelector(".drag-rk").style.left = (k.left - r.left + k.width / 2) + "px"; }
@@ -7324,53 +7336,86 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (key(me) < num) num -= 1;
     return num;
   }
-  function dragUpdate() {
-    if (!drag) return;
-    const y = drag.y;
-    // the floating row hangs just below the pointer (more than half a row), so the insertion line at the pointer's
-    // nearest row boundary is always visible above it: origin, moving row and destination never overlap
-    drag.float.style.top = (y + drag.lead) + "px";
-    clearMarks(); drag.target = null; drag.line.hidden = true;
-    const el = document.elementFromPoint(drag.x, y);
-    const row = el && (el.closest("#rank-body tr.player") || el.closest("#rank-body tr.tier-edit, #rank-body tr.tier-drop"));
-    if (row && row !== drag.tr && $("rank-body").contains(row)) {
-      const r = row.getBoundingClientRect();
-      drag.after = y > r.top + r.height / 2;
-      drag.target = row;
-      if (row.classList.contains("player")) {
-        // the insertion line sits on the boundary; the rows on either side ease apart a little
-        const t = drag.tb.getBoundingClientRect(), edge = drag.after ? r.bottom : r.top;
-        drag.line.style.top = (edge - 1) + "px"; drag.line.style.left = t.left + "px"; drag.line.style.width = t.width + "px";
-        drag.line.hidden = false;
-        const sib = drag.after ? row.nextElementSibling : row.previousElementSibling;
-        row.classList.add(drag.after ? "nudge-up" : "nudge-down");
-        if (sib && sib !== drag.tr && sib.classList.contains("player")) sib.classList.add(drag.after ? "nudge-down" : "nudge-up");
-      } else row.classList.add(drag.after ? "drop-after" : "drop-before");
-    }
-    const me = byId.get(drag.id), n = dropNum(), all = posFilter === "ALL";
-    const from = me ? (all ? me.rank : me.posNum) : null, lab = v => all ? "#" + v : me.pos + v;
-    drag.pill.textContent = from == null ? "" : n == null || n === from ? lab(from) : `${lab(from)} → ${lab(n)}`;
-    drag.pill.classList.toggle("moved", n != null && n !== from);
+  function dragStart(p) {
+    const tr = p.tr, r = tr.getBoundingClientRect(), sy = window.scrollY;
+    // geometry, once: other player rows (the slots), tier headers / empty tiers (tier drops), the table's left and width
+    const rows = [], tiers = [];
+    $("rank-body").querySelectorAll("tr.player, tr.tier-edit, tr.tier-drop").forEach(row => {
+      if (row === tr) return;
+      const b = row.getBoundingClientRect(), g = { tr: row, top: b.top + sy, bot: b.bottom + sy, mid: (b.top + b.bottom) / 2 + sy };
+      (row.classList.contains("player") ? rows : tiers).push(g);
+    });
+    const t = tr.closest("table").getBoundingClientRect(), head = document.querySelector("#panel-rankings thead");
+    const line = document.createElement("div"); line.className = "drop-line"; line.hidden = true;
+    line.style.left = t.left + "px"; line.style.width = t.width + "px"; document.body.append(line);
+    const me = byId.get(p.id), all = posFilter === "ALL";
+    drag = { id: p.id, tr, rows, tiers, line, downY: p.y, y: p.y, slot: -1, tierRow: null, target: null, after: false, edgeDoc: null,
+      float: dragFloat(tr, r), headBottom: head ? head.getBoundingClientRect().bottom : 0, raf: 0,
+      from: me ? (all ? me.rank : me.posNum) : null, lab: v => all ? "#" + v : (me ? me.pos : "") + v };
+    // the slot he starts in: right where he is, so nothing moves until the pointer does
+    drag.slot = rows.filter(g => g.mid < r.top + r.height / 2 + sy).length;
+    drag.pill = drag.float.querySelector(".drag-rk");
+    tr.classList.add("drag-origin"); document.body.classList.add("is-dragging");
+    document.addEventListener("keydown", dragKey);
+    applySlot();
+    dragMove();
+    drag.raf = requestAnimationFrame(dragLoop);
   }
-  // smooth auto-scroll while the pointer sits near the top (under the sticky column guide) or bottom of the screen
+  // marks, line and chip for the current slot (only runs when the slot or tier target changes)
+  function applySlot() {
+    clearMarks(); drag.target = null; drag.edgeDoc = null;
+    if (drag.tierRow) { drag.target = drag.tierRow.tr; drag.after = false; drag.tierRow.tr.classList.add("drop-before"); }
+    else if (drag.rows.length) {
+      const R = drag.rows, k = drag.slot, n = R.length;
+      drag.target = k < n ? R[k].tr : R[n - 1].tr; drag.after = k >= n;
+      drag.edgeDoc = k < n ? R[k].top : R[n - 1].bot;
+      if (k > 0) R[k - 1].tr.classList.add("nudge-up");
+      if (k < n) R[k].tr.classList.add("nudge-down");
+    }
+    const n = dropNum(), moved = n != null && n !== drag.from;
+    if (!moved) { clearMarks(); drag.edgeDoc = null; }   // dropping back where he was: no line, nothing eases apart
+    if (drag.from != null) drag.pill.textContent = moved ? `${drag.lab(drag.from)} → ${drag.lab(n)}` : drag.lab(drag.from);
+    drag.pill.classList.toggle("moved", moved);
+  }
+  // every pointer move or scroll frame: the transform (1:1, vertical only), the slot (with hysteresis), the line position
+  function dragMove() {
+    const yDoc = drag.y + window.scrollY;
+    drag.float.style.transform = `translate3d(0, ${drag.y - drag.downY}px, 0)`;
+    const tierRow = drag.tiers.find(g => yDoc >= g.top && yDoc < g.bot) || null;
+    let changed = tierRow !== drag.tierRow;
+    drag.tierRow = tierRow;
+    if (!tierRow) {
+      const R = drag.rows, cur = drag.slot;
+      let k = 0; while (k < R.length && R[k].mid < yDoc) k++;
+      if (k > cur && yDoc < R[k - 1].mid + DRAG_HYST) k = cur;   // moving down: past the midpoint by a margin
+      if (k < cur && yDoc > R[k].mid - DRAG_HYST) k = cur;       // moving up: the same, the other way
+      if (k !== cur) { drag.slot = k; changed = true; }
+    }
+    if (changed) applySlot();
+    if (drag.edgeDoc != null) { drag.line.style.top = (drag.edgeDoc - window.scrollY - 1) + "px"; drag.line.hidden = false; }
+    else drag.line.hidden = true;
+  }
+  // smooth auto-scroll near the top (under the sticky column guide) or bottom of the screen, faster closer to the edge;
+  // the float is viewport-fixed, so it stays under the pointer while the page moves
   function dragLoop() {
     if (!drag) return;
-    const head = document.querySelector("#panel-rankings thead"), top = head ? head.getBoundingClientRect().bottom : 0, zone = 80;
+    const zone = 80, top = drag.headBottom;
     let v = 0;
     if (drag.y < top + zone) v = -Math.ceil(18 * Math.min(1, (top + zone - drag.y) / zone));
     else if (drag.y > window.innerHeight - zone) v = Math.ceil(18 * Math.min(1, (drag.y - (window.innerHeight - zone)) / zone));
-    if (v) { window.scrollBy(0, v); dragUpdate(); }
+    if (v) { const before = window.scrollY; window.scrollBy(0, v); if (window.scrollY !== before) dragMove(); }
     drag.raf = requestAnimationFrame(dragLoop);
   }
   const dragKey = e => { if (e.key === "Escape" && drag) { e.preventDefault(); endDrag(false); } };
   function endDrag(commit) {
+    dragPending = null;
     if (!drag) return;
-    const { id, target, after, tr } = drag;
+    const { id, target, after, tr } = drag, moved = drag.pill.classList.contains("moved");
     cancelAnimationFrame(drag.raf); drag.float.remove(); drag.line.remove();
     drag = null;
     document.removeEventListener("keydown", dragKey);
     clearMarks(); tr.classList.remove("dragging", "drag-origin"); document.body.classList.remove("is-dragging");
-    if (!commit || !target) return;
+    if (!commit || !target || !moved) return;
     const me = byId.get(id);
     if (!me) return;
     if (target.dataset.tier != null && !target.classList.contains("player")) {   // a tier header or an empty tier
@@ -7392,23 +7437,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   $("rank-body").addEventListener("pointerdown", e => {
     const h = e.target.closest(".handle");
-    if (!h || h.disabled || !editor.on) return;
+    if (!h || h.disabled || !editor.on || drag) return;
     e.preventDefault();
     h.setPointerCapture(e.pointerId);
-    const tr = h.closest("tr.player"), r = tr.getBoundingClientRect();
-    const line = document.createElement("div"); line.className = "drop-line"; line.hidden = true; document.body.append(line);
-    drag = { id: Number(tr.dataset.id), tr, target: null, after: false, x: e.clientX, y: e.clientY, lead: Math.round(r.height / 2) + 8,
-      tb: tr.closest("table"), line, float: dragFloat(tr), raf: 0 };
-    drag.pill = drag.float.querySelector(".drag-rk");
-    tr.classList.add("drag-origin"); document.body.classList.add("is-dragging");
-    document.addEventListener("keydown", dragKey);
-    dragUpdate();
-    drag.raf = requestAnimationFrame(dragLoop);
+    const tr = h.closest("tr.player");
+    dragPending = { id: Number(tr.dataset.id), tr, x: e.clientX, y: e.clientY };
   });
   $("rank-body").addEventListener("pointermove", e => {
+    if (dragPending && !drag) {
+      if (Math.hypot(e.clientX - dragPending.x, e.clientY - dragPending.y) < DRAG_START_PX) return;
+      const p = dragPending; dragPending = null; dragStart(p);
+    }
     if (!drag) return;
-    drag.x = e.clientX; drag.y = e.clientY;
-    dragUpdate();
+    drag.y = e.clientY;
+    dragMove();
   });
   $("rank-body").addEventListener("pointerup", () => endDrag(true));
   $("rank-body").addEventListener("pointercancel", () => endDrag(false));
