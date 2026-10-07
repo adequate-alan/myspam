@@ -41,7 +41,8 @@
 <title>AM Fantasy Rankings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=Inter:wght@400..800&family=Sora:wght@400..800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&display=swap">
+<link rel="stylesheet" href="https://use.typekit.net/pov0agu.css"><!-- Proxima Nova, Alan's Adobe Fonts kit (public embed link) -->
 
 <script>
 /* =====================================================================
@@ -873,9 +874,9 @@ const TRADE_VERDICTS = [
   --side-a: var(--accent-primary);
   --side-b: var(--accent-secondary);
   --good: var(--text-strong);
-  --font-display: "Sora", "Inter", "Helvetica Neue", Arial, sans-serif;   /* AM typography (Alan, Oct 8): Sora = personality */
-  --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;                 /* Inter = readable data and copy */
-  --font-data: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "proxima-nova", "Proxima Nova", Arial, sans-serif;   /* AM typography (Alan, Oct 9): Proxima Nova site-wide */
+  --font-body: "proxima-nova", "Proxima Nova", Arial, sans-serif;      /* from Alan's Adobe Fonts kit (use.typekit.net) */
+  --font-data: "proxima-nova", "Proxima Nova", Arial, sans-serif;
   --font-logo: "Archivo", "Helvetica Neue", Arial, sans-serif;               /* the AM. wordmark keeps its own face */
   --radius: 8px;
   --radius-sm: 6px;
@@ -1376,7 +1377,7 @@ body.editing #panel-rankings td.val { min-width: 330px; }
   content: attr(data-info); position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
   width: max-content; max-width: min(260px, 70vw); padding: 8px 10px; border-radius: 6px; white-space: normal; text-align: left;
   background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); box-shadow: 0 14px 30px -14px var(--shadow-color);
-  font: 500 0.76rem/1.4 "Archivo", "Inter", system-ui, sans-serif; font-style: normal; letter-spacing: 0;
+  font: 500 0.76rem/1.4 var(--font-body); font-style: normal; letter-spacing: 0;
 }
 .side-needs { margin: 0; font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .side-needs b { color: var(--ink-2); font-weight: 650; }
@@ -3931,6 +3932,15 @@ tr.player:hover .handle { opacity: 0.75; }
 .theme-toggle:hover svg { opacity: 1; }
 .eb-ico { opacity: 0.7; }
 #rank-body td.rk, #rank-body .num, .num, .rail-v, .rail-amt, .tfi-v, .ml-n, .st-table td.num, .ro-num, .mt-table td.val, .th-v, .th-total b { font-variant-numeric: tabular-nums; }
+
+/* ---------- Proxima Nova weights (Alan, Oct 9). Adobe kit cuts: Regular 400, Medium 500, Semibold 600, Bold 700.
+   Player names, ranks and values read strongest (Bold); nav, headings, buttons and labels Semibold; metadata Medium.
+   Same sizes as before, numbers keep tabular figures; the AM. wordmark keeps Archivo. ---------- */
+#rank-body .pl-name, .pl-name { font-weight: 700; letter-spacing: 0; }
+td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tab, .chip-btn, .btn, .vt-btn, .pos, .tier-name, tr.tier td, .panel-title, .side-title, .verdict h2 { font-weight: 600; }
+.section-label, .rail-title, .ctl-label, .owner-filter > span, .fc-label, .eb-left strong, th { font-weight: 600; }
+.pl-team, .own-tag, .meta, .muted, .tier-tag, .pm-scoring { font-weight: 500; }
 </style>
 </head>
 <body>
@@ -4983,7 +4993,7 @@ tr.player:hover .handle { opacity: 0.75; }
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T07:00Z";
+  const BUILD_ID = "2026-10-09T09:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
