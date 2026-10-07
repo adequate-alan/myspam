@@ -3941,7 +3941,27 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #panel-rankings .handle svg { width: 10px; height: 16px; }
 #panel-rankings .arrow { width: 16px; height: 14px; font-size: 0.5rem; border-radius: 3px; }
 #rank-body tr.player:hover .handle { opacity: .9; color: var(--ink); }
-#panel-rankings .handle:hover:not(:disabled), #panel-rankings .handle:focus-visible, tr.dragging .handle { opacity: 1; background: var(--fill-2); }
+#panel-rankings .handle:active { cursor: grabbing; }
+/* drag and drop: a floating copy of the row, a faded placeholder, a thin red insertion line, a live rank preview */
+#rank-body tr.player { transition: transform .12s var(--ease); }
+#rank-body tr.nudge-up { transform: translateY(-3px); }
+#rank-body tr.nudge-down { transform: translateY(3px); }
+#rank-body tr.drag-origin td { opacity: .32; background: none !important; box-shadow: none !important; }
+.drag-float { position: fixed; z-index: 30; pointer-events: none; border-radius: var(--r-md); overflow: hidden;
+  box-shadow: 0 0 0 1px var(--line), 0 16px 34px -14px rgba(0, 0, 0, .65), 0 4px 10px -6px rgba(0, 0, 0, .4); }
+:root[data-theme="light"] .drag-float { box-shadow: 0 0 0 1px var(--line), 0 16px 30px -16px rgba(16, 17, 20, .35), 0 4px 10px -6px rgba(16, 17, 20, .18); }
+.drag-float table { table-layout: fixed; border-collapse: collapse; margin: 0; }
+.drag-float tr.player td { background: color-mix(in srgb, var(--ink) 7%, var(--surface)) !important; border-bottom: 0 !important; transition: none; }
+.drag-float tr.player td.rk { color: transparent !important; }
+.drag-float tr.player td.rk > * { visibility: hidden; }
+.drag-float .handle { opacity: 1 !important; color: var(--text-strong) !important; background: var(--fill-2) !important; }
+.drag-float .arrow, .drag-float .val-extra { visibility: hidden; }
+.drag-rk { position: absolute; top: 50%; transform: translate(-50%, -50%); padding: 3px 7px; border-radius: 5px; white-space: nowrap;
+  font: 700 0.74rem/1 var(--font-display); font-variant-numeric: tabular-nums; color: var(--text-strong); background: var(--fill-2); }
+.drag-rk.moved { background: color-mix(in srgb, var(--accent-primary) 16%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary) 45%, transparent); }
+.drop-line { position: fixed; z-index: 31; height: 2px; border-radius: 2px; background: var(--accent-primary); pointer-events: none; }
+.drop-line::before { content: ""; position: absolute; left: 0; top: -3px; width: 4px; height: 8px; border-radius: 2px; background: var(--accent-primary); }
+.drop-line[hidden] { display: none; }#panel-rankings .handle:hover:not(:disabled), #panel-rankings .handle:focus-visible, tr.dragging .handle { opacity: 1; background: var(--fill-2); }
 /* rank: a strong tabular number, movement since the last update under it; the top 3 a touch larger */
 #rank-body td.rk, #panel-rankings thead th#rk-head { width: 50px; padding-inline: 4px; text-align: center; }
 #rank-body td.rk { font: 700 0.98rem/1.1 var(--font-display); color: var(--text-rank); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -5098,7 +5118,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T17:00Z";
+  const BUILD_ID = "2026-10-09T19:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7239,14 +7259,89 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
   });
 
-  /* Drag and drop (pointer events: works with mouse, pen and touch) */
+  /* Drag and drop (pointer events: works with mouse, pen and touch). Alan, Oct 9: the row lifts as a full floating
+     copy (photo, name, badge, tier, value) with a live "#8 → #4" preview, its own spot stays as a faded placeholder,
+     a thin AM-red line marks where it will land (the two rows beside it ease 3px apart), and the page auto-scrolls
+     near the top or bottom of the visible board. Where it lands is decided exactly as before (endDrag). */
   let drag = null;
-  const clearMarks = () => $("rank-body").querySelectorAll(".drop-before, .drop-after").forEach(r => r.classList.remove("drop-before", "drop-after"));
+  const clearMarks = () => $("rank-body").querySelectorAll(".drop-before, .drop-after, .nudge-up, .nudge-down").forEach(r => r.classList.remove("drop-before", "drop-after", "nudge-up", "nudge-down"));
+  function dragFloat(tr) {
+    // a copy of the row in its own one-row table, inside the board so the board's row styles apply
+    // (the copy's tbody reuses the id rank-body; it comes after the real one, so $("rank-body") still finds the board)
+    const r = tr.getBoundingClientRect(), wrap = document.createElement("div");
+    wrap.className = "drag-float";
+    wrap.innerHTML = `<table><tbody id="rank-body"></tbody></table><span class="drag-rk"></span>`;
+    const copy = tr.cloneNode(true);
+    copy.classList.remove("pp-current", "flash");
+    [...tr.children].forEach((td, i) => { copy.children[i].style.width = td.getBoundingClientRect().width + "px"; });
+    wrap.querySelector("tbody").append(copy);
+    wrap.querySelector("table").style.width = r.width + "px";
+    wrap.style.left = r.left + "px"; wrap.style.width = r.width + "px";
+    tr.closest(".table-scroll").append(wrap);
+    const rk = tr.querySelector("td.rk");
+    if (rk) { const k = rk.getBoundingClientRect(); wrap.querySelector(".drag-rk").style.left = (k.left - r.left + k.width / 2) + "px"; }
+    return wrap;
+  }
+  // where the drop would put him: the same numbers endDrag uses
+  function dropNum() {
+    const me = byId.get(drag.id); if (!me || !drag.target) return null;
+    const all = posFilter === "ALL", key = p => all ? p.rank : p.posNum;
+    if (drag.target.dataset.tier != null && !drag.target.classList.contains("player")) {
+      const t = Number(drag.target.dataset.tier);
+      const rest = players.filter(p => p.pos === me.pos && p.posNum != null && p !== me).sort((a, b) => a.posNum - b.posNum);
+      let idx = rest.findIndex(p => Number(p.tier) === t && !isTagTier(p.tier));
+      if (idx < 0) { idx = 0; rest.forEach((p, k) => { if (!isTagTier(p.tier) && Number(p.tier) < t) idx = k + 1; }); }
+      return idx + 1;
+    }
+    const tp = byId.get(Number(drag.target.dataset.id)); if (!tp) return null;
+    let num = key(tp) + (drag.after ? 1 : 0);
+    if (key(me) < num) num -= 1;
+    return num;
+  }
+  function dragUpdate() {
+    if (!drag) return;
+    const y = drag.y;
+    drag.float.style.top = (y - drag.dy) + "px";
+    clearMarks(); drag.target = null; drag.line.hidden = true;
+    const el = document.elementFromPoint(drag.x, y);
+    const row = el && (el.closest("#rank-body tr.player") || el.closest("#rank-body tr.tier-edit, #rank-body tr.tier-drop"));
+    if (row && row !== drag.tr && $("rank-body").contains(row)) {
+      const r = row.getBoundingClientRect();
+      drag.after = y > r.top + r.height / 2;
+      drag.target = row;
+      if (row.classList.contains("player")) {
+        // the insertion line sits on the boundary; the rows on either side ease apart a little
+        const t = drag.tb.getBoundingClientRect(), edge = drag.after ? r.bottom : r.top;
+        drag.line.style.top = (edge - 1) + "px"; drag.line.style.left = t.left + "px"; drag.line.style.width = t.width + "px";
+        drag.line.hidden = false;
+        const sib = drag.after ? row.nextElementSibling : row.previousElementSibling;
+        row.classList.add(drag.after ? "nudge-up" : "nudge-down");
+        if (sib && sib !== drag.tr && sib.classList.contains("player")) sib.classList.add(drag.after ? "nudge-down" : "nudge-up");
+      } else row.classList.add(drag.after ? "drop-after" : "drop-before");
+    }
+    const me = byId.get(drag.id), n = dropNum(), all = posFilter === "ALL";
+    const from = me ? (all ? me.rank : me.posNum) : null, lab = v => all ? "#" + v : me.pos + v;
+    drag.pill.textContent = from == null ? "" : n == null || n === from ? lab(from) : `${lab(from)} → ${lab(n)}`;
+    drag.pill.classList.toggle("moved", n != null && n !== from);
+  }
+  // smooth auto-scroll while the pointer sits near the top (under the sticky column guide) or bottom of the screen
+  function dragLoop() {
+    if (!drag) return;
+    const head = document.querySelector("#panel-rankings thead"), top = head ? head.getBoundingClientRect().bottom : 0, zone = 80;
+    let v = 0;
+    if (drag.y < top + zone) v = -Math.ceil(18 * Math.min(1, (top + zone - drag.y) / zone));
+    else if (drag.y > window.innerHeight - zone) v = Math.ceil(18 * Math.min(1, (drag.y - (window.innerHeight - zone)) / zone));
+    if (v) { window.scrollBy(0, v); dragUpdate(); }
+    drag.raf = requestAnimationFrame(dragLoop);
+  }
+  const dragKey = e => { if (e.key === "Escape" && drag) { e.preventDefault(); endDrag(false); } };
   function endDrag(commit) {
     if (!drag) return;
     const { id, target, after, tr } = drag;
+    cancelAnimationFrame(drag.raf); drag.float.remove(); drag.line.remove();
     drag = null;
-    clearMarks(); tr.classList.remove("dragging"); document.body.classList.remove("is-dragging");
+    document.removeEventListener("keydown", dragKey);
+    clearMarks(); tr.classList.remove("dragging", "drag-origin"); document.body.classList.remove("is-dragging");
     if (!commit || !target) return;
     const me = byId.get(id);
     if (!me) return;
@@ -7272,24 +7367,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!h || h.disabled || !editor.on) return;
     e.preventDefault();
     h.setPointerCapture(e.pointerId);
-    const tr = h.closest("tr.player");
-    drag = { id: Number(tr.dataset.id), tr, target: null, after: false };
-    tr.classList.add("dragging"); document.body.classList.add("is-dragging");
+    const tr = h.closest("tr.player"), r = tr.getBoundingClientRect();
+    const line = document.createElement("div"); line.className = "drop-line"; line.hidden = true; document.body.append(line);
+    drag = { id: Number(tr.dataset.id), tr, target: null, after: false, x: e.clientX, y: e.clientY, dy: e.clientY - r.top,
+      tb: tr.closest("table"), line, float: dragFloat(tr), raf: 0 };
+    drag.pill = drag.float.querySelector(".drag-rk");
+    tr.classList.add("drag-origin"); document.body.classList.add("is-dragging");
+    document.addEventListener("keydown", dragKey);
+    dragUpdate();
+    drag.raf = requestAnimationFrame(dragLoop);
   });
   $("rank-body").addEventListener("pointermove", e => {
     if (!drag) return;
-    clearMarks(); drag.target = null;
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const row = el && (el.closest("#rank-body tr.player") || el.closest("#rank-body tr.tier-edit, #rank-body tr.tier-drop"));
-    if (row && row !== drag.tr) {
-      const r = row.getBoundingClientRect();
-      drag.after = e.clientY > r.top + r.height / 2;
-      drag.target = row;
-      row.classList.add(drag.after ? "drop-after" : "drop-before");
-    }
-    const top = document.querySelector(".masthead").getBoundingClientRect().bottom;
-    if (e.clientY < top + 60) window.scrollBy(0, -14);
-    else if (e.clientY > window.innerHeight - 60) window.scrollBy(0, 14);
+    drag.x = e.clientX; drag.y = e.clientY;
+    dragUpdate();
   });
   $("rank-body").addEventListener("pointerup", () => endDrag(true));
   $("rank-body").addEventListener("pointercancel", () => endDrag(false));
