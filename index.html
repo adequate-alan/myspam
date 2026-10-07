@@ -2736,6 +2736,25 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .th-actions .btn.link { padding-inline: 0; }
 .th-full { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 0.82rem; color: var(--ink-2); }
 .th-full p { margin: 0 0 6px; }
+/* Market Leverage card (Alan, Oct 8) */
+.ml-persp { display: grid; gap: 6px; margin: 10px 0 6px; padding: 9px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.ml-p { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; align-items: baseline; gap: 10px; font-size: 0.8rem; }
+.ml-k { font-size: 0.62rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ml-n { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ml-e { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.ml-e.up { color: var(--rb); } .ml-e.them { color: var(--ink); } .ml-e.down { color: var(--danger-text); }
+.ml-say { margin: 4px 0 6px; font-size: 0.82rem; color: var(--ink-2); }
+.ml-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.ml-line { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 6px; font-size: 0.78rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ml-line b.up { color: var(--rb); } .ml-line b.down { color: var(--danger-text); }
+.ml-types { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; }
+.ml-types span { font-size: 0.66rem; font-weight: 650; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); }
+.tf-pill.lev.l3 { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rb) 55%, transparent); }
+.ml-tbl { width: 100%; border-collapse: collapse; font-size: 0.74rem; margin: 6px 0; }
+.ml-tbl th, .ml-tbl td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+.ml-tbl th { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tf-full { overflow-x: auto; }
+@media (max-width: 560px) { .ml-p { grid-template-columns: 1fr auto; } .ml-p .ml-n { grid-column: 1 / -1; order: 3; } }
 /* trade history: at the time vs today (Alan, Oct 8) */
 .th-verdict small { display: block; text-align: right; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); font-stretch: 100%; margin-bottom: 1px; }
 .th-ages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--bg) 60%, transparent); }
@@ -4159,7 +4178,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
         </div>
         <div class="actions">
           <div class="view-toggle tc-lens" id="tc-lens" role="group" aria-label="Value lens" hidden>
-            <button class="chip-btn" type="button" data-lens="market" aria-pressed="true">Market value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false">League fit</button>
+            <button class="chip-btn" type="button" data-lens="am" aria-pressed="true" title="The trade in AM's league-adjusted values for this league's format">AM Value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false" title="What each side is worth to these two rosters: starting lineup impact, positional needs, replacement level, depth, consolidation and the league's format">Roster Fit</button>
           </div>
           <button class="btn balance-btn" id="balance-btn" type="button" aria-expanded="false" aria-controls="balance" hidden>Balance this trade</button>
           <button class="btn link" id="bal-undo" type="button" hidden>Undo</button>
@@ -4927,7 +4946,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T03:00Z";
+  const BUILD_ID = "2026-10-09T04:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5575,7 +5594,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     $("roster-" + side).innerHTML = ids.length ? ids.map(id => {
       const p = byId.get(id), fe = X ? X.fit.inc.find(e => e.p === p) : null;
       const value = fe && fitView ? fe.tv : tv(p);
-      const tip = fe ? (fitView ? `${fe.why}. Market value ${fmt(tv(p))}.` : `Worth ${fmt(fe.tv)} to ${team}: ${fe.why}.`) : "";
+      const tip = fe ? (fitView ? `${fe.why}. AM value ${fmt(tv(p))}.` : `Worth ${fmt(fe.tv)} to ${team}: ${fe.why}.`) : "";
       const cls = fe && fitView ? (fe.f < 0.9 ? " low" : fe.f > 1.0 ? " high" : "") : "";
       const dot = `<span class="tc-pl-dot" aria-hidden="true">·</span>`;
       const meta = [p.team ? `<span class="pl-team">${esc(p.team)}</span>` : "", TC3.on ? fromMenu(id, side) : tcOwner(p, side)].filter(Boolean).join(dot);
@@ -5648,7 +5667,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   /* League context bar: universal mode (any players, base AM values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
   const infoIcon = (text, label = "More info") => `<button class="info" type="button" aria-label="${esc(label)}" data-info="${esc(text)}">i</button>`;
-  const TC_UI = { open: { A: false, B: false, C: false }, balance: false, lens: "market", ctx: null };
+  const TC_UI = { open: { A: false, B: false, C: false }, balance: false, lens: "am", ctx: null };
   function renderTradeContext() {
     const sel = $("tc-league"), on = tcLeague();
     const leagues = sl && sl.leagues ? sl.leagues : [];
@@ -6007,7 +6026,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       : amP && !mkP ? `AM prefers ${amP > 0 ? nA : nB}'s side; the market calls it even.` : !amP && mkP ? `AM calls it even; the market prefers ${mkP > 0 ? nA : nB}'s side.` : amP ? `AM and the market agree on ${amP > 0 ? nA : nB}'s side.` : "AM and the market both call it close.";
     el.innerHTML = `<details class="tc-mkt-d"${amP && mkP && amP !== mkP ? " open" : ""}><summary>Market comparison <span class="sum-hint">${esc(say)}</span></summary>
       <div class="tc-more-body"><table class="tc-mkt-t"><thead><tr><th></th><th>${esc(nA)} gets</th><th>${esc(nB)} gets</th><th>Prefers</th></tr></thead><tbody>${lines.map(row).join("")}</tbody></table>
-      <p class="pp-note">AM is the verdict above. Market lines put FantasyCalc and Flock on AM's value scale (each source's rank → what AM pays for that spot), with the same package adjustment; they are never mixed into AM's number. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
+      <p class="pp-note">AM is the verdict above. Market lines put FantasyCalc and Flock on AM's value scale (each source's position rank priced on AM's curve, FantasyCalc also by its own value gaps; the consensus weights them by source type, format match and freshness), with the same package adjustment; they are never mixed into AM's number. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
     el.hidden = false;
   }
   function renderTrade() {
@@ -6351,7 +6370,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   }
 
   const fmtNet = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
-  // "Fair on value, bad fit for X" when market value and lineup fit disagree
+  // "Fair on value, bad fit for X" when AM value and roster fit disagree
   function fitHeadline(ctx, names, marketFair) {
     const n = { A: ctx.A.fit.net, B: ctx.B.fit.net };
     const bad = ["A", "B"].filter(s => n[s] <= -8), good = ["A", "B"].filter(s => n[s] >= 3);
@@ -12350,6 +12369,103 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     if (fT.net < (strict ? -8 : -10)) return false;                                     // roster-adjusted, still close for them
     return true;
   }
+  /* Market Leverage (Alan, Oct 8, refined the same day): two perspectives on every idea, kept separate.
+       AM Edge      how much AM prefers S's side (league-adjusted values, package adjustment). 2–30% is the search range:
+                    a boundary, not a realism rule; a big AM Edge counts in the idea's favor when the rest holds up.
+       Market Edge  how much the FantasyCalc/Flock consensus prefers T's side (same package adjustment, on AM's scale).
+                    An acceptance signal, not a hard rule: down to −8%, and below −3% only with a clear roster gain for T.
+     Acceptance Plausibility is judged from T's side only (market view, roster benefit in market terms, positional need,
+     construction: starters vs filler, losing their best player), never from the size of S's AM Edge. */
+  const ML_MAX = 30, ML_LEVELS = ["Small Leverage", "Good Leverage", "Strong Leverage", "Very Strong Leverage"];
+  function mlAssess(K, S, T, give, get, more, tAfter, dT, fT, pl, scale) {
+    const c01 = v => Math.max(0, Math.min(1, v));
+    const mm = runModel(get.map(p => p.id), give.map(p => p.id), mkVal, false);
+    if (mm.error || !(mm.a > 0 && mm.b > 0)) return null;
+    const them = 100 * (mm.b - mm.a) / Math.min(mm.a, mm.b);   // + = by the market, T gets more
+    if (them < -8) return null;
+    const base = K.base.get(T.rosterId), n = LG.teams.length, low = n - Math.ceil(n / 3);
+    const getsStarter = fT.inc.some(e => e.starts), nStart = fT.inc.filter(e => e.starts).length;
+    const roomUp = EDIT_POS.some(pos => pl && pl[pos] && pl[pos][1] < pl[pos][0]);
+    const weakFix = EDIT_POS.some(pos => pl && pl[pos] && pl[pos][0] > low && pl[pos][1] < pl[pos][0]);
+    if (!(getsStarter || roomUp || dT > 0)) return null;                                   // they need a real reason
+    const drop = base.startVal > 0 ? (base.startVal - tAfter.startVal) / base.startVal : 0;
+    if (drop > 0.06) return null;                                                          // their lineup can't get much worse
+    if (get.some(p => base.labels.has(p.id)) && !getsStarter) return null;                 // a starter out, only bench pieces back
+    // their side in market terms, weighted by what each piece means to their roster (a starter counts, filler doesn't)
+    const recv = fT.inc.reduce((a, e) => a + e.f * mkVal(e.p), 0), sent = fT.out.reduce((a, e) => a + e.f * mkVal(e.p), 0);
+    const netM = recv > 0 && sent > 0 ? 100 * (recv - sent) / Math.min(recv, sent) : 0;
+    if (netM < -12) return null;
+    if (them < -3 && !(netM >= 2 || weakFix)) return null;                                 // market slightly against them: needs a roster reason
+    const best = K.tradable(T)[0], losesBest = !!best && get.includes(best);
+    if (losesBest && !(getsStarter && netM > -5)) return null;                             // their best player only for a real upgrade
+    // filler never bridges an elite gap: T's best outgoing piece needs a real piece back, or two starters
+    const topOut = Math.max(...get.map(dv)), topIn = Math.max(...give.map(dv));
+    const filler = fT.inc.filter(e => !e.starts && dv(e.p) < 0.25 * Math.max(topOut, topIn)).length;
+    if (topIn < 0.55 * topOut && nStart < 2) return null;
+    const holes = EDIT_POS.filter(pos => pl && pl[pos] && pl[pos][0] <= low && pl[pos][1] > low);   // a room drops into the bottom third
+    const mktT = c01((them + 8) / 16);
+    const theirs = 0.6 * c01((netM + 10) / 25) + 0.4 * c01((dT / scale + 0.02) / 0.1);
+    const need = weakFix ? 1 : roomUp ? 0.7 : getsStarter ? 0.5 : 0.2;
+    const constr = c01(0.5 + 0.5 * nStart / Math.max(1, give.length) - 0.3 * Math.min(1, filler) - (losesBest ? 0.25 : 0));
+    const acc = 0.35 * mktT + 0.3 * theirs + 0.2 * need + 0.15 * constr - (holes.length ? 0.15 : 0);
+    // Market Confidence for the deal: each player's, weighted by his market value (no market data counts as Low)
+    let cw = 0, cs = 0;
+    give.concat(get).forEach(p => { const r = mkOf(p), w = Math.max(1, mkVal(p)); cw += w; cs += w * (r ? { High: 2, Moderate: 1, Low: 0 }[r.mconf] : 0); });
+    const cAvg = cw ? cs / cw : 0, mconf = cAvg >= 1.5 ? "High" : cAvg >= 0.8 ? "Moderate" : "Low";
+    let lvl = more < 5 ? 0 : more < 10 ? 1 : more < 20 ? 2 : 3;
+    if (them >= 8) lvl++;
+    if (them < -3) lvl--;
+    if (mconf === "Low") lvl--;
+    lvl = Math.max(0, Math.min(3, lvl));
+    // their roster depletion caps it (never anything about S's roster): a weaker lineup, a new hole, or value that would sit
+    let accLabel = acc >= 0.6 ? "High" : acc >= 0.4 ? "Moderate" : "Low";
+    const capMod = holes.length || drop > 0.03 || nStart === 0, capLow = drop > 0.05 || (losesBest && nStart < 2 && netM < 0);
+    if (capLow) accLabel = "Low"; else if (capMod && accLabel === "High") accLabel = "Moderate";
+    return { am: more, them, mm, netM, acc, accLabel, theirLine: -100 * drop, theirs, mconf, lvl, label: ML_LEVELS[lvl],
+      nStart, filler, losesBest, weakFix, holes, lev: more + them };
+  }
+  // What kind of win it is for S (several can apply): asset value and immediate lineup strength are different things
+  function mlTypes(give, get, myLine, more, fS) {
+    const t = [];
+    if (myLine >= 1) t.push("Immediate Upgrade");
+    if (more >= 5 && myLine < 1) t.push("Asset Value Gain");
+    if (get.length > give.length && fS.inc.some(e => !e.starts)) t.push("Depth Gain");
+    if (give.length > get.length) t.push("Consolidation");
+    if (get.some(p => { const r = mkOf(p); return r && r.dir > 0 && r.lvl >= 2; })) t.push("High-Upside Bet");
+    return t;
+  }
+  const mlLinePhrase = d => (d >= 1 ? "Immediate lineup upgrade" : d > -1 ? "Lineup about even" : d > -3 ? "Slight short-term lineup downgrade" : "Short-term lineup downgrade");
+  // Why each side would do a Market Leverage deal, in plain words
+  function mlWhyYou(it) {
+    const S = it.S, list = it.get.map(p => ({ p, r: mkOf(p) })).filter(x => x.r && x.r.ap < x.r.cRank).sort((a, b) => dv(b.p) - dv(a.p));
+    const lead = list[0], up = bestUp(moveList(it.places, S.rosterId));
+    const a = lead ? `AM ranks ${lead.p.name} ${lead.p.pos}${lead.r.ap}, consensus ${lead.p.pos}${lead.r.cRank}, and values the incoming ${it.get.length > 1 ? "package" : "side"} ${it.mk.am.toFixed(0)}% higher than what you send.`
+      : `AM values what you receive ${it.mk.am.toFixed(0)}% higher than what you send.`;
+    return a + (up ? ` Your ${up.pos} room goes ${ordinal(up.b)} → ${ordinal(up.a)}.` : "");
+  }
+  function mlWhyThem(it, K) {
+    const T = it.team, out = [], before = K.base.get(T.rosterId).labels, after = it.tAfter.labels;
+    const holder = (labels, role) => { for (const [id, r] of labels) if (r === role) return byId.get(id); return null; };
+    const num = p => Number(String(posLabel(p)).replace(/^\D+/, "")) || 999;
+    // a starting slot that gets a better player ("Upgrades their RB2 from RB31 to RB16")
+    const ups = [...new Set(after.values())].filter(r => /^(QB|RB|WR|TE)\d*$/.test(r)).map(r => ({ r, b: holder(before, r), a: holder(after, r) }))
+      .filter(x => x.a && x.b && x.a !== x.b && num(x.a) < num(x.b)).sort((x, y) => (num(y.b) - num(y.a)) - (num(x.b) - num(x.a)));
+    if (ups[0]) out.push(`Upgrades their ${ups[0].r} from ${posLabel(ups[0].b)} to ${posLabel(ups[0].a)}.`);
+    const startIn = it.fT.inc.filter(e => e.starts);
+    if (it.get.length === 1 && startIn.length >= 2) out.push(`They lose one ${dv(it.get[0]) >= 5000 ? "elite " : ""}asset but receive two immediate starters.`);
+    else if (it.fT.out.every(e => !e.starts) && startIn.length) {
+      const sp = [...new Set(it.get.map(p => p.pos))].join("/");
+      if (!ups[0] || startIn[0].p.pos !== sp) out.push(`Moves surplus ${sp} depth into a starting ${startIn[0].p.pos} ${it.fT.inc.length > 1 ? "piece" : "upgrade"}.`);
+    }
+    const mkUp = it.give.map(p => ({ p, r: mkOf(p) })).filter(x => x.r && x.r.cRank < x.r.ap);
+    if (mkUp.length === it.give.length && mkUp.length > 1) out.push(`FantasyCalc/Flock value ${mkUp.length === 2 ? "both" : "all"} incoming players above AM.`);
+    else if (mkUp.length) out.push(`FantasyCalc/Flock value ${mkUp[0].p.name} more than AM (market ${mkUp[0].p.pos}${mkUp[0].r.cRank}, AM ${mkUp[0].p.pos}${mkUp[0].r.ap}).`);
+    if (it.mk.them >= 1) out.push(`The market sees their side ${it.mk.them.toFixed(0)}% ahead.`);
+    if (it.mk.holes.length) out.push(`It does thin their ${it.mk.holes.join("/")} room, so expect pushback.`);
+    if (!out.length) out.push(theyWhy(it, K).replace(/^./, c => c.toUpperCase()));
+    if (it.mk.holes.length) { const h = out.pop(); return out.slice(0, 2).concat(h).join(" "); }
+    return out.slice(0, 3).join(" ");
+  }
   // target: one player, or a 2-player package from the same roster (shopped together)
   function findTrades(target, mode, S, opts) {
     const K = leagueKit(), V = K.V, byVal = K.byVal, sum = list => list.reduce((a, p) => a + V(p), 0);
@@ -12414,21 +12530,26 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
                              without: list => K.strength(pool.filter(p => !list.includes(p))) });
         };
         const fS = fitOf(S, sAfter, get, give), fT = fitOf(T, tAfter, give, get), fitMin = Math.min(fS.net, fT.net);
-        if (fitMin < -20) continue;   // fair on paper but no practical sense for one of the teams
+        // fair on paper but no practical sense for one of the teams (Market leverage judges their side by the market instead)
+        if (opts.goal !== "market" && fitMin < -20) continue;
+        if (opts.goal === "market" && fS.net < -20) continue;
         const size = give.length + get.length - 2, c01 = v => Math.max(0, Math.min(1, v));
         let score, mkInfo = null;
         const edge = GOAL_RANGE[opts.goal];
         if (opts.goal === "market") {
           // Market leverage (Alan, Oct 8): AM prefers what S receives while the market / expert consensus prefers (or calls
-          // even) what T receives: sell market strength, buy AM conviction. Still has to make roster sense for T.
-          if (!(m.a > m.b) || more < 2 || more > 25) continue;
-          const mm = runModel(get.map(p => p.id), give.map(p => p.id), mkVal, false);
-          if (mm.error || !(mm.a > 0 && mm.b > 0)) continue;
-          const mkThem = 100 * (mm.b - mm.a) / Math.min(mm.a, mm.b);   // + = by the market, T gets more
-          if (mkThem < -3) continue;
-          if (!plausibleForThem(K, T, get, tAfter, dT, fT, places[T.rosterId], "edge")) continue;
-          mkInfo = { am: more, them: mkThem, lev: more + mkThem };
-          score = 0.4 * c01(mkInfo.lev / 30) + 0.3 * c01((fT.net + 12) / 20) + 0.2 * c01((fS.net + 5) / 25) + 0.1 * (fit + 1) / 2 - 0.05 * size;
+          // about even) what T receives: sell market strength, buy AM conviction. See mlAssess.
+          if (!(m.a > m.b) || more < 2 || more > ML_MAX) continue;
+          // My Roster Impact (Alan, Oct 8): S's starting-lineup change is shown and penalised in steps, never a tight cutoff;
+          // only extreme damage is dropped (−20% or worse, or −15% for under 5% AM Edge); a −14% lineup for +4% stays, ranked low
+          const sBase = K.base.get(S.rosterId).startVal, myLine = sBase > 0 ? 100 * (sAfter.startVal - sBase) / sBase : 0;
+          if (myLine <= -20 || (myLine <= -15 && more < 5)) continue;
+          mkInfo = mlAssess(K, S, T, give, get, more, tAfter, dT, fT, places[T.rosterId], scale);
+          if (!mkInfo) continue;
+          const dec = -myLine, linePen = dec <= 0 ? 0 : dec < 3 ? 0.03 : dec < 6 ? 0.08 : dec < 10 ? 0.16 : 0.28;
+          const mineT = 0.6 * c01((fS.net + 5) / 30) + 0.4 * c01((myLine + 2) / 8);
+          Object.assign(mkInfo, { mine: mineT, myLine, linePen, types: mlTypes(give, get, myLine, more, fS) });
+          score = 0.25 * c01(more / 20) + 0.15 * c01((mkInfo.them + 8) / 20) + 0.15 * mineT + 0.1 * mkInfo.theirs + 0.3 * mkInfo.acc + 0.05 * Math.max(0, 1 - 0.2 * size) - linePen;
         } else if (edge) {
           // Slight edge / Best value (Alan, Oct 4): S comes out ahead by the goal's range in adjusted value, and the deal
           // still has to make roster sense for the other team (never just the biggest value gap)
@@ -12720,19 +12841,33 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
         if (F.rec !== 1) notes.push(`Full PPR market for ${recName(F.rec)}`);
         if (F.tep > 0 && key.endsWith("_tep") && F.tep !== 0.5) notes.push("TE Premium + market for a bigger TE premium");
         const rows = new Map(Object.entries(f).map(([sid, r]) => [sid, { ov: Number(r[1]) || 9999, pr: Number(r[3]) || 999, raw: r[0], trend: r[4] }]));
-        out.push({ id: "fc", name: "FantasyCalc", kind: "trade market", rows, at: MKT.d.updated, notes, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: MKT.d.url || "https://www.fantasycalc.com/" });
+        const mis = { qb: false, tep: !key.endsWith("_tep") && F.tep > 0, rec: F.rec !== 1, teams: F.teams !== t };
+        out.push(mkWeigh({ id: "fc", name: "FantasyCalc", kind: "trade market", rows, at: MKT.d.updated, notes, mis, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: MKT.d.url || "https://www.fantasycalc.com/" }));
       }
     }
     const FL = flockNow();
     if (FL && FL.rows && daysOld(FL.at) < MK_DEAD.fl) {
       const notes = [];
-      if (!!FL.sf !== F.sf) notes.push(`${FL.sf ? "Superflex" : "1QB"} list for a ${F.sf ? "Superflex" : "1QB"} league`);
-      if ((Number(FL.tep) > 0) !== (F.tep > 0)) notes.push(FL.tep > 0 ? "TE-premium list, league has none" : "no-TE-premium list, league has TE premium");
-      if (Number(FL.rec ?? 1) !== F.rec) notes.push(`${recName(Number(FL.rec ?? 1))} list for ${recName(F.rec)}`);
+      const mis = { qb: !!FL.sf !== F.sf, tep: (Number(FL.tep) > 0) !== (F.tep > 0), rec: Number(FL.rec ?? 1) !== F.rec, teams: false };
+      if (mis.qb) notes.push(`${FL.sf ? "Superflex" : "1QB"} source used in ${F.sf ? "a Superflex" : "a 1QB"} league`);
+      if (mis.tep) notes.push(FL.tep > 0 ? "TE-premium list, league has none" : "no-TE-premium list, league has TE premium");
+      if (mis.rec) notes.push(`${recName(Number(FL.rec ?? 1))} list for ${recName(F.rec)}`);
       const rows = new Map(FL.rows.map(r => [String(r[0]), { ov: r[1], pr: r[2], tier: r[3] || "" }]));
-      out.push({ id: "fl", name: "Flock", kind: "expert rankings", rows, at: FL.at, notes, stale: daysOld(FL.at) > MK_STALE.fl, file: FL.file || "", site: !!FL.site });
+      out.push(mkWeigh({ id: "fl", name: "Flock", kind: "expert rankings", rows, at: FL.at, notes, mis, stale: daysOld(FL.at) > MK_STALE.fl, file: FL.file || "", site: !!FL.site }));
     }
     return out;
+  }
+  /* Source weights (Alan, Oct 8): FantasyCalc is a trade-market signal, Flock an expert-ranking signal, so they're never
+     blindly averaged. Each gets a weight from its kind, how well its format matches the league (a Superflex list in a 1QB
+     league counts a quarter), and freshness; `fmt` says it in words ("exact format" / "…, reduced weight"). */
+  const MK_BASE_W = { fc: 1, fl: 0.85 }, MK_MIS_W = { qb: 0.25, tep: 0.75, rec: 0.85, teams: 0.95 };
+  function mkWeigh(s) {
+    let w = MK_BASE_W[s.id] || 1;
+    Object.entries(s.mis || {}).forEach(([k, on]) => { if (on) w *= MK_MIS_W[k]; });
+    if (s.stale) w *= 0.6;
+    s.w = w;
+    s.fmt = (s.notes.length ? s.notes.join(", ") : "exact format") + (w < 0.5 ? ", reduced weight" : "") + (s.stale ? " (stale)" : "");
+    return s;
   }
   let MK_CACHE = { key: "", map: null, srcs: [] };
   // sid → market record for every AM-ranked QB/RB/WR/TE with at least one source
@@ -12768,14 +12903,41 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       const lr = r >= 0.6 ? 3 : r >= 0.35 ? 2 : r >= 0.18 ? 1 : 0, lv = dv >= 1200 ? 3 : dv >= 600 ? 2 : dv >= 250 ? 1 : 0;
       return { lvl: Math.min(lr, lv), dir: Math.sign(oO - amO), score: Math.sign(oO - amO) * (Math.min(lr, lv) * 10 + Math.min(r, 2) + dv / 4000) };
     };
+    // FantasyCalc has real trade values, not just ranks: fit AM ≈ a·raw^b over the two value curves (k-th best FC value vs
+    // k-th best AM value, same players), so a big market gap between neighbours stays a big gap on AM's scale
+    const fit = {};
+    srcRank.forEach(x => {
+      if (x.s.id !== "fc") return;
+      const ps = pool.filter(p => x.s.rows.has(p.sleeperId) && Number(x.s.rows.get(p.sleeperId).raw) > 0);
+      const raws = desc(ps.map(p => Number(x.s.rows.get(p.sleeperId).raw))), ams = desc(ps.map(amV)), n = Math.min(150, raws.length);
+      let sx = 0, sy = 0, sxx = 0, sxy = 0, k = 0;
+      for (let i = 0; i < n; i++) { if (!(ams[i] > 0)) continue; const lx = Math.log(raws[i]), ly = Math.log(ams[i]); sx += lx; sy += ly; sxx += lx * lx; sxy += lx * ly; k++; }
+      if (k >= 20) { const b = (k * sxy - sx * sy) / (k * sxx - sx * sx), a = (sy - b * sx) / k; if (isFinite(a) && isFinite(b) && b > 0) fit[x.s.id] = raw => Math.exp(a + b * Math.log(raw)); }
+    });
     const map = new Map();
     pool.forEach(p => {
-      const sv = srcRank.filter(x => x.ov.has(p.sleeperId)).map(x => ({ id: x.s.id, name: x.s.name, ov: x.ov.get(p.sleeperId), pr: x.pr.get(p.sleeperId), v: Math.max(1, at(posCurve[p.pos], x.pr.get(p.sleeperId))), approx: x.s.notes.length > 0, stale: x.s.stale, tier: (x.s.rows.get(p.sleeperId) || {}).tier }));
+      const sv = srcRank.filter(x => x.ov.has(p.sleeperId)).map(x => {
+        const pr = x.pr.get(p.sleeperId), row = x.s.rows.get(p.sleeperId) || {}, vr = Math.max(1, at(posCurve[p.pos], pr));
+        // a source's value on AM's scale: what AM pays for its position rank, blended (FantasyCalc) with its own value gaps
+        const vf = fit[x.s.id] && Number(row.raw) > 0 ? fit[x.s.id](Number(row.raw)) : null, v = vf ? Math.sqrt(vr * Math.max(1, vf)) : vr;
+        return { id: x.s.id, name: x.s.name, ov: x.ov.get(p.sleeperId), pr, v, w: x.s.w, fmt: x.s.fmt, approx: x.s.notes.length > 0, stale: x.s.stale, tier: row.tier };
+      });
       if (!sv.length) return;
-      const am = amV(p);
-      // consensus position rank = geometric mean of the sources' position ranks; its value = what AM pays for that spot
-      const ap = amPos(p), cPos = Math.exp(sv.reduce((a, x) => a + Math.log(x.pr), 0) / sv.length), cRank = Math.max(1, Math.round(cPos));
-      const cv = Math.max(1, at(posCurve[p.pos], cPos)), amOv = ovRk(am), cOv = ovRk(cv);
+      const am = amV(p), W = sv.reduce((a, x) => a + x.w, 0);
+      // consensus = weighted geometric mean of the sources (position rank and value), weighted by kind, format and freshness
+      const ap = amPos(p), cPos = Math.exp(sv.reduce((a, x) => a + x.w * Math.log(x.pr), 0) / W), cRank = Math.max(1, Math.round(cPos));
+      const cv = Math.max(1, Math.exp(sv.reduce((a, x) => a + x.w * Math.log(x.v), 0) / W)), amOv = ovRk(am), cOv = ovRk(cv);
+      // Market Confidence: how sure the outside world is about him (agreement, freshness, format match, completeness)
+      // (both full-weight sources: WR13 vs WR14 = High, WR12 vs WR29 = Low; a down-weighted second source caps it at Moderate
+      // and only a wide split counts against it; one source = Moderate; stale or no near-format source = one step down)
+      let mc;
+      if (sv.length >= 2) {
+        const sp = Math.abs(Math.log((sv[0].pr + 3) / (sv[1].pr + 3)));
+        mc = sv.filter(x => x.w >= 0.5).length >= 2 ? (sp >= 0.4 ? 0 : sp >= 0.15 ? 1 : 2) : (sp >= 0.6 ? 0 : 1);
+      } else mc = 1;
+      if (sv.some(x => x.stale)) mc -= 1;
+      if (Math.max(...sv.map(x => x.w)) < 0.7) mc -= 1;
+      const mconf = mc >= 2 ? "High" : mc === 1 ? "Moderate" : "Low";
       const amTier = Number(p.tier) < 90 ? Number(p.tier) : null, mTier = tierAt(p.pos, cRank);
       const tierGap = amTier != null && mTier != null ? mTier - amTier : 0;   // > 0: the market puts him in a lower AM tier
       const g = grade(ap, cPos, am, cv);
@@ -12798,7 +12960,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       const bucket = lvl === 0 ? "Market aligned" : `${lvl === 1 ? "Slight " : lvl === 3 ? "Strong " : ""}${dir > 0 ? "buy" : "sell"}`.replace(/^./, ch => ch.toUpperCase());
       const review = lvl >= 2 && p.source === "manual" && !p.tail && agree !== false ? (recent(p.sleeperId) ? "Strong AM conviction" : "Ranking deserves review") : "";
       const e = dir === 0 ? g.score / 10 : Math.sign(g.score) * (lvl * 10 + (Math.abs(g.score) % 10));
-      map.set(p.sleeperId, { p, am, ap, cv, cRank, e, amOv, cOv, edge: cRank - ap, lvl, dir, bucket, conf, tierGap, amTier, mTier, agree, review, per, srcN: sv.length });
+      map.set(p.sleeperId, { p, am, ap, cv, cRank, e, amOv, cOv, edge: cRank - ap, lvl, dir, bucket, conf, mconf, tierGap, amTier, mTier, agree, review, per, srcN: sv.length });
     });
     MK_CACHE = { key, map, srcs, F };
     return MK_CACHE;
@@ -12845,7 +13007,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   const mkEdgeTxt = n => (n > 0 ? `▲ +${n}` : n < 0 ? `▼ ${n}`.replace("-", "−") : "=");
   const mkPill = r => `<span class="mk-pill ${r.dir > 0 ? "buy" : r.dir < 0 ? "sell" : "even"} l${r.lvl}" title="${esc(mkSentence(r))}">${esc(r.bucket)}</span>`;
   function mkFresh(srcs) {
-    return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list from ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "updated"} ${ago(Date.parse(s.at))}`}${s.stale ? " (stale)" : ""}${s.notes.length ? ` · approximate: ${s.notes.join(", ")}` : " · same format"}`).join(" · ");
+    return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list from ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "updated"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
   }
   const mkCredit = srcs => srcs.some(s => s.id === "fc") ? `<a class="tf-credit" href="https://www.fantasycalc.com/" target="_blank" rel="noopener">Market values: FantasyCalc</a>` : "";
 
@@ -12969,6 +13131,41 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     it.conf = likely ? "Likely" : it.fT.net >= -4 && !hole ? "Plausible" : "Long shot";
     return it;
   }
+  // Market Leverage card (Alan, Oct 8): both perspectives side by side, then why each manager does it; detail stays collapsed
+  function mlCard(it, i, K) {
+    const mk = it.mk, pm = powerMoves(it, K), full = TF.openFull.has(i), you = it.S.mine, sN = you ? "you" : it.S.name;
+    const recv = you ? "You receive" : `${it.S.name} receives`, send = you ? "You send" : `${it.S.name} sends`;
+    const row = (p, note) => { const r = mkOf(p); return `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">AM ${esc(posLabel(p))}</b>${r ? ` · Market ${p.pos}${r.cRank}` : ""}${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`; };
+    const lvCls = ["l0", "l1", "l2", "l3"][mk.lvl], accCls = { High: "hi", Moderate: "mid", Low: "lo" };
+    const fw = full ? fullWhy(it) : [];
+    const detail = full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
+        <table class="ml-tbl"><thead><tr><th>Player</th><th>Goes to</th><th>AM</th><th>Market</th><th>FantasyCalc</th><th>Flock</th><th>Market confidence</th></tr></thead><tbody>${it.give.map(p => [p, it.team.name]).concat(it.get.map(p => [p, you ? "You" : it.S.name])).map(([p, to]) => { const r = mkOf(p);
+          return `<tr><td>${esc(p.name)}</td><td>${esc(to)}</td><td>${esc(posLabel(p))} · ${fmt(dv(p))}</td><td>${r ? `${p.pos}${r.cRank} · ${fmt(r.cv)}` : "—"}</td><td>${r && r.per.fc ? p.pos + r.per.fc.pr : "—"}</td><td>${r && r.per.fl ? p.pos + r.per.fl.pr : "—"}</td><td>${r ? r.mconf : "No data"}</td></tr>`; }).join("")}</tbody></table>
+        <p class="pp-note">Their side in market terms, weighted by what each piece means to their roster: ${fmtNet(mk.netM)}. Market values are FantasyCalc and Flock on AM's scale (each source's position rank priced on AM's curve, FantasyCalc also by its own value gaps), weighted by source type, format match and freshness: ${esc(mkAll().srcs.map(s => `${s.name} — ${s.fmt}`).join(" · "))}.</p>
+        <dl class="tf-nums"><div><dt>AM raw · send vs receive</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
+        <div><dt>Market raw · they receive vs send</dt><dd>${fmt(mk.mm.rawB ?? 0)} <span>vs</span> ${fmt(mk.mm.rawA ?? 0)}</dd></div></dl></div>` : "";
+    return `<article class="tf-card tf-tcard ml-card${mk.accLabel === "High" ? " good-fit" : ""}">
+      <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div>
+        <span class="tf-pills"><span class="tf-pill lev ${lvCls}" title="AM Edge for ${esc(sN)} plus whether the market's view of their side supports it">${esc(mk.label)}</span><span class="tf-size">${it.give.length}-for-${it.get.length}</span></span></header>
+      <div class="tf-sides">
+        <div class="tf-side"><h4>${esc(recv)}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return row(p, K.outSet(it.team).has(String(p.sleeperId)) ? "on IR: no help to your lineup yet" : fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
+        <div class="tf-side"><h4>${esc(send)}</h4><ul>${it.give.map(p => { const fe = it.fT.inc.find(e => e.p === p); return row(p, K.outSet(it.S).has(String(p.sleeperId)) ? "on IR" : fe && fe.starts ? "would start for them at " + fe.role : ""); }).join("")}</ul></div>
+      </div>
+      <div class="ml-persp">
+        <div class="ml-p"><span class="ml-k">AM</span><span class="ml-n">Receive ${fmt(it.m.a)} · Send ${fmt(it.m.b)}</span><b class="ml-e up" title="How much AM prefers ${esc(sN === "you" ? "your" : sN + "'s")} side: league-adjusted values with the package adjustment">AM Edge ${signPct(mk.am)}</b></div>
+        <div class="ml-p"><span class="ml-k">Market</span><span class="ml-n">They receive ${fmt(mk.mm.b)} · They send ${fmt(mk.mm.a)}</span><b class="ml-e ${mk.them >= 0 ? "them" : "down"}" title="How much the FantasyCalc / Flock consensus prefers their side, on AM's scale with the same package adjustment">Market Edge ${signPct(mk.them)} for them</b></div>
+      </div>
+      <p class="ml-say"><b>${esc(mk.label.replace(" Leverage", " asset leverage"))} · ${esc(mlLinePhrase(mk.myLine))}</b> · ${mk.them >= 0 ? "AM prefers your side while market consensus prefers theirs." : "AM prefers your side; the market sees theirs as only slightly behind."}</p>
+      <p class="ml-line"><span title="${esc(you ? "Your" : it.S.name + "'s")} best starting lineup by AM, before → after: the main measure; power rank is context (ranks can be tightly packed)">${you ? "My" : esc(it.S.name + "'s")} starting lineup <b class="${mk.myLine >= 0.5 ? "up" : mk.myLine <= -0.5 ? "down" : ""}">${signPct(mk.myLine)}</b> · PR #${pm(it.S.rosterId)[0]} → #${pm(it.S.rosterId)[1]}</span><span>Their starting lineup <b class="${mk.theirLine >= 0.5 ? "up" : mk.theirLine <= -0.5 ? "down" : ""}">${signPct(mk.theirLine)}</b> · PR #${pm(it.team.rosterId)[0]} → #${pm(it.team.rosterId)[1]}</span></p>
+      ${mk.types.length ? `<p class="ml-types">${mk.types.map(t => `<span>${esc(t)}</span>`).join("")}</p>` : ""}
+      <p class="ml-meta"><span class="tf-pill conf ${accCls[mk.accLabel]}" title="How plausible it is that the other manager accepts: the market's view, what it does for their roster and needs, starters vs filler, and whether they lose their best player. Capped when it depletes their roster. Never about your roster or the size of your AM Edge.">Acceptance Plausibility: ${mk.accLabel}</span><span class="tf-pill conf ${accCls[mk.mconf]}" title="How sure the outside market is about these players: FantasyCalc/Flock agreement, freshness, format match and missing data">Market Confidence: ${mk.mconf}</span></p>
+      <p class="tf-why2"><b>Why ${you ? "you" : esc(it.S.name)} do it:</b> ${esc(mlWhyYou(it))}</p>
+      <p class="tf-why2"><b>Why they may do it:</b> ${esc(mlWhyThem(it, K))}</p>
+      <div class="tf-impact"><div><span class="ctl-label">${you ? "Your team" : esc(it.S.name)}</span>${impactLine(it, it.S.rosterId, pm)}</div><div><span class="ctl-label">${esc(it.team.name)}</span>${impactLine(it, it.team.rosterId, pm)}</div></div>
+      ${detail}
+      <div class="tf-foot"><button class="tf-act" type="button" data-tf-full="${i}" aria-expanded="${full}">${full ? "Hide analysis" : "Full analysis"}</button><button class="tf-act" type="button" data-tf-open="${i}">Open in calculator →</button></div>
+    </article>`;
+  }
   function targetVerdict(it) {
     const ahead = it.m.a >= it.m.b, d = it.more;
     if (d < 3) return { label: "Basically even", cls: "fair" };
@@ -13012,7 +13209,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
         const after = K.after(me, [], [p], [T]), gain = myBase.startVal > 0 ? (after.startVal - myBase.startVal) / myBase.startVal : 0;
         if (gain <= 0.004) continue;   // he has to start for you
         let score = Math.min(gain, 0.12) * 4;
-        if (r && r.dir > 0) { score += 0.25 * r.lvl + (r.conf === "High" ? 0.1 : 0); tags.push(`AM ${p.pos}${r.ap} · market ${p.pos}${r.cRank} (+${r.cRank - r.ap})`); }
+        if (r && r.dir > 0) { score += 0.25 * r.lvl + (r.conf === "High" ? 0.1 : 0); tags.push(`AM ${p.pos}${r.ap} · Market ${p.pos}${r.cRank} · AM +${r.cRank - r.ap}`); }
         else if (r && r.dir < 0) score -= 0.15 * r.lvl;
         if (mine.needs.includes(p.pos)) { score += 0.3; tags.push(`Fills your ${p.pos} need (${ordinal(mine.r[p.pos])})`); }
         else tags.push(`Starts for you · +${(gain * 100).toFixed(1)}% lineup`);
@@ -13020,7 +13217,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
         if (theirs.strong.includes(p.pos)) { score += 0.1; tags.push(`They're deep at ${p.pos}`); }
         else if (theirs.needs.includes(p.pos)) score -= 0.2;   // pulling from a thin room is a hard sell
         score *= 0.6 + 0.4 * Math.min(1, dv(p) / 4000);
-        out.push({ p, T, tags, score, r, verdict: r && r.dir > 0 && r.lvl >= 2 && (canHelp.length || theirs.strong.includes(p.pos)) ? "Excellent target" : "" });
+        out.push({ p, T, tags, score, r, verdict: r && r.dir > 0 && r.lvl >= 2 && (canHelp.length || theirs.strong.includes(p.pos)) ? "Strong Target" : r && r.dir > 0 && r.lvl >= 1 ? "Target" : "" });
       }
     }
     return out.sort((a, b) => b.score - a.score).slice(0, 12);
@@ -13044,19 +13241,19 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   }
   function mkShopFlag(X) {
     const r = mkOf(X); if (!r || !r.lvl) return "";
-    if (r.dir < 0) return `<p class="tf-mkflag sell"><b>${r.lvl >= 3 ? "Strong sell opportunity" : "Sell opportunity"}</b>: the market has him ${X.pos}${r.cRank}, AM ${X.pos}${r.ap} (${r.conf.toLowerCase()} confidence). ${TF.goal === "market" ? "" : `<button class="tf-act" type="button" data-tf-goal="market">Use Market leverage →</button>`}</p>`;
+    if (r.dir < 0) return `<p class="tf-mkflag sell"><b>${r.lvl >= 3 ? "Strong Market Sell Opportunity" : "Market Sell Opportunity"}</b>: the market has him ${X.pos}${r.cRank}, AM ${X.pos}${r.ap} (${r.conf.toLowerCase()} confidence). ${TF.goal === "market" ? "" : `<button class="tf-act" type="button" data-tf-goal="market">Use Market leverage →</button>`}</p>`;
     return `<p class="tf-mkflag buy">AM is higher on him (${X.pos}${r.ap}) than the market (${X.pos}${r.cRank}): trading him now sells him below what AM thinks he's worth.</p>`;
   }
   function renderDiscover(K, me) {
     if (!me) return `<p class="empty-note">Find targets needs your team in this league.</p>`;
-    const all = mkAll(), sw = `<div class="view-toggle tf-disc-sw" role="group" aria-label="Discover"><button class="vt-btn" type="button" data-tf-disc="buy" aria-pressed="${TF.disc !== "sell"}">Best market buys</button><button class="vt-btn" type="button" data-tf-disc="sell" aria-pressed="${TF.disc === "sell"}">Best market sells</button></div>`;
+    const all = mkAll(), sw = `<div class="view-toggle tf-disc-sw" role="group" aria-label="Discover"><button class="vt-btn" type="button" data-tf-disc="buy" aria-pressed="${TF.disc !== "sell"}">Best Market Targets</button><button class="vt-btn" type="button" data-tf-disc="sell" aria-pressed="${TF.disc === "sell"}">Best Market Sells</button></div>`;
     const fresh = all.srcs.length ? `<p class="mk-fresh">${esc(mkFresh(all.srcs))}</p>` : `<p class="mk-fresh">No market source loaded: buys use roster fit only, sells need FantasyCalc or Flock rankings.</p>`;
     if (TF.disc === "sell") {
       const list = findSells(K, me);
       if (!list.length) return sw + fresh + `<p class="empty-note">None of your players is ranked meaningfully higher by the market than by AM right now.</p>`;
       return sw + fresh + `<div class="tf-disc">` + list.map(x => `
         <article class="tf-dcard">${face(x.p.sleeperId, x.p.name)}<div class="tf-dmain"><div class="pl-head"><b>${nameLink(x.p.sleeperId, x.p.name)}</b>${nflTag(x.p.team)}<span class="pos ${esc(x.p.pos)}">${esc(posLabel(x.p))}</span>${mkPill(x.r)}</div>
-          <p class="tf-dsub">AM ${x.p.pos}${x.r.ap} · market ${x.p.pos}${x.r.cRank} (market +${x.r.ap - x.r.cRank}) · ${esc(x.r.conf)} confidence</p>
+          <p class="tf-dsub">AM ${x.p.pos}${x.r.ap} · Market ${x.p.pos}${x.r.cRank} · Market +${x.r.ap - x.r.cRank} · Market Confidence ${esc(x.r.mconf)}</p>
           <p class="tf-dtags">${x.returns.length ? x.returns.map(y => `<span>${esc(y.q.name)} · ${esc(y.T.name)} · AM ${y.q.pos}${y.rq.ap} vs market ${y.q.pos}${y.rq.cRank}</span>`).join("") : "<span>No clear return target at his market price</span>"}</p></div>
           <button class="btn secondary" type="button" data-tf-shop="${esc(x.p.sleeperId)}">Shop him</button></article>`).join("") + `</div>${mkCredit(all.srcs)}`;
     }
@@ -13064,7 +13261,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     if (!list.length) return sw + fresh + `<p class="empty-note">No player on another roster would start for you right now.</p>`;
     return sw + fresh + `<p class="pp-note">${esc(roomsLine(roomSummary(K, me), "Your rooms"))}</p><div class="tf-disc">` + list.map(x => `
       <article class="tf-dcard">${face(x.p.sleeperId, x.p.name)}<div class="tf-dmain"><div class="pl-head"><b>${nameLink(x.p.sleeperId, x.p.name)}</b>${nflTag(x.p.team)}<span class="pos ${esc(x.p.pos)}">${esc(posLabel(x.p))}</span>${x.r && x.r.lvl ? mkPill(x.r) : ""}${x.verdict ? `<span class="tf-pill conf hi">${esc(x.verdict)}</span>` : ""}</div>
-        <p class="tf-dsub">${teamFace(x.T, "xs")}${esc(x.T.name)} · AM ${fmt(dv(x.p))}${x.r ? ` · ${esc(x.r.conf)} confidence` : ""}</p>
+        <p class="tf-dsub">${teamFace(x.T, "xs")}${esc(x.T.name)} · AM ${fmt(dv(x.p))}${x.r ? ` · Market Confidence ${esc(x.r.mconf)}` : ""}</p>
         <p class="tf-dtags">${x.tags.map(t => `<span>${esc(t)}</span>`).join("")}</p></div>
         <button class="btn secondary" type="button" data-tf-target="${esc(x.p.sleeperId)}">See offers</button></article>`).join("") + `</div>${mkCredit(all.srcs)}`;
   }
@@ -13120,9 +13317,9 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       return;
     }
     if (mode === "get" && !owner) { body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent, so there's no one to trade with. ${esc(S.mine ? "You" : S.name)} can pick him up off waivers.</p>`; return; }
-    const gap = TF.goal === "edge" ? 10 : TF.goal === "value" ? 15 : TF.goal === "market" ? 25 : TF.goal === "any" ? Math.max(TF.gap, 15) : TF.fair ? 2.99 : TF.gap;
+    const gap = TF.goal === "edge" ? 10 : TF.goal === "value" ? 15 : TF.goal === "market" ? ML_MAX : TF.goal === "any" ? Math.max(TF.gap, 15) : TF.fair ? 2.99 : TF.gap;
     const opts = { pos: TF.pos, against: TF.against, gap, packages: tfSize(pkg, mode) !== "11", shape: tfSize(pkg, mode) === "all" ? null : tfSize(pkg, mode).split("").map(Number), goal: TF.goal, triples: !!tgt };
-    const within = TF.goal === "market" ? `where AM favors ${S.mine ? "you" : S.name} and the market favors them` : TF.goal === "edge" ? `with a ${GOAL_RANGE.edge.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "value" ? `with a ${GOAL_RANGE.value.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "any" ? `within ${gap}%` : TF.fair ? "within the fair range" : `within ${TF.gap}%`;
+    const within = TF.goal === "market" ? `where AM favors ${S.mine ? "you" : S.name} (2–${ML_MAX}% AM Edge) and the market sees their side as fair or better` : TF.goal === "edge" ? `with a ${GOAL_RANGE.edge.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "value" ? `with a ${GOAL_RANGE.value.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "any" ? `within ${gap}%` : TF.fair ? "within the fair range" : `within ${TF.gap}%`;
     let ideas = findTrades(pkg || X, mode, S, opts);
     const sortKey = {
       best: (a, b) => b.score - a.score,
@@ -13133,8 +13330,9 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       fewest: (a, b) => (a.give.length + a.get.length) - (b.give.length + b.get.length) || a.more - b.more,
     }[TF.sort] || ((a, b) => b.score - a.score);
     // Target a player: rank by realism (benefit to you, their reasons to say yes, fit, market plausibility), not the biggest gap
-    if (tgt) { ideas.forEach(it => enrichTarget(it, TK, X)); if (TF.sort === "best") ideas.sort((a, b) => b.real - a.real); }
-    ideas = ideas.slice().sort(tgt && TF.sort === "best" ? (a, b) => b.real - a.real : sortKey).slice(0, 20);
+    const mlOn = TF.goal === "market";
+    if (tgt && !mlOn) { ideas.forEach(it => enrichTarget(it, TK, X)); if (TF.sort === "best") ideas.sort((a, b) => b.real - a.real); }
+    ideas = ideas.slice().sort(tgt && !mlOn && TF.sort === "best" ? (a, b) => b.real - a.real : sortKey).slice(0, 20);
     TF.ideas = ideas;
     TF.ideas3 = TF.three && !pkg ? findThree(X, mode, S, opts) : [];   // 3-team cycles are for single players
 
@@ -13147,7 +13345,9 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     // scan order: partner → verdict → players → fit; first TF_PAGE ideas, then "Show more"
     const showKey = [TF.src, TF.sid, TF.sid2, TF.from, TF.against, TF.pos, TF.size, TF.gap, TF.fair, TF.goal, TF.sort, TF.srcTeam].join("|");
     if (TF.showKey !== showKey) { TF.showKey = showKey; TF.show = TF_PAGE; }
+    const MK = mlOn ? TK || leagueKit() : null;
     const cards = ideas.slice(0, TF.show).map((it, i) => {
+      if (mlOn && it.mk) return mlCard(it, i, MK);
       if (tgt) return targetCard(it, i, TK, X);
       const sAhead = it.m.a >= it.m.b, v = finderVerdict(it.more, sAhead, S, it.team);
       const full = TF.openFull.has(i), fw = fullWhy(it);
@@ -13183,6 +13383,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     }).join("");
     const more = ideas.length - Math.min(TF.show, ideas.length);
     body.innerHTML = (ideas.length ? `<div class="tf-list">${cards}</div>${more > 0 ? `<div class="tf-more-wrap"><button class="btn" type="button" data-tf-more>Show ${Math.min(TF_PAGE, more)} more idea${Math.min(TF_PAGE, more) === 1 ? "" : "s"} <span class="muted">(${more} left)</span></button></div>` : ""}`
+        : mlOn ? `<p class="empty-note">No Market Leverage trades for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}: none where AM favors ${esc(S.mine ? "you" : S.name)} while the market and their roster give the other team a reason to say yes.${mkAll().srcs.length ? "" : " No market source is loaded."} Try All packages or another player.</p>`
         : GOAL_RANGE[TF.goal] ? `<p class="empty-note">No realistic trades ${esc(within)} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}: every one that favors ${esc(S.mine ? "you" : S.name)} by that much doesn't make enough sense for the other team. Try ${TF.goal === "value" ? "Slight edge" : "Fair / balanced"}${tfSize(pkg, mode) !== "all" ? " or All packages" : ""}.</p>`
         : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${tfSize(pkg, mode) !== "all" ? " or All packages" : ""}.</p>`) +
       (TF.three && !pkg ? `<h3 class="section-label">3-team ideas</h3>` + (cards3 ? `<div class="tf-list">${cards3}</div>` : `<p class="pp-note">No 3-team deal solves something a 2-team trade can't here.</p>`) : "");
