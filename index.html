@@ -3917,8 +3917,20 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   font-family: var(--font-body); font-weight: 550; font-size: 0.56rem; letter-spacing: 0.04em; padding: 0 4px; line-height: 15px;
 }
 .tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 35%, transparent); background: none; }
-/* value bars: the same palette, toned down so the number and the badge lead */
-.valbar .fill { background: linear-gradient(90deg, color-mix(in srgb, var(--c, var(--ink)) 12%, transparent), color-mix(in srgb, var(--c, var(--ink)) 52%, transparent)); }
+/* value bars: the same palette, toned down further so the badge stays the strongest position cue */
+.valbar .fill { background: linear-gradient(90deg, color-mix(in srgb, var(--c, var(--ink)) 10%, transparent), color-mix(in srgb, var(--c, var(--ink)) 42%, transparent)); }
+/* Visual polish (Alan, Oct 8): tier tags quieter still (no border, lighter text), one icon weight (1.8 outline strokes),
+   a subtle drag handle that brightens on hover, a lighter theme toggle, tabular figures for every number column */
+.tier-tag, #rank-body .tier-tag { border-color: transparent; background: color-mix(in srgb, var(--muted) 10%, var(--pos-fill-base)); color: color-mix(in srgb, var(--muted) 75%, transparent); font-weight: 500; }
+.handle { opacity: 0.45; font-size: 0.9rem; transition: opacity .16s var(--ease, ease), color .16s var(--ease, ease); }
+tr.player:hover .handle { opacity: 0.75; }
+.handle:hover:not(:disabled), .handle:focus-visible, tr.dragging .handle { opacity: 1; }
+.arrow { opacity: 0.6; } tr.player:hover .arrow, .arrow:focus-visible { opacity: 1; }
+.theme-toggle { color: color-mix(in srgb, var(--ink-2) 80%, transparent); }
+.theme-toggle svg { opacity: 0.85; }
+.theme-toggle:hover svg { opacity: 1; }
+.eb-ico { opacity: 0.7; }
+#rank-body td.rk, #rank-body .num, .num, .rail-v, .rail-amt, .tfi-v, .ml-n, .st-table td.num, .ro-num, .mt-table td.val, .th-v, .th-total b { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -3932,8 +3944,8 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       <div class="mast-right">
         <div class="meta" id="meta"></div>
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light mode" title="Switch to light mode">
-          <svg class="ti-sun" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g></svg>
-          <svg class="ti-moon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20.2 14.6A8.4 8.4 0 0 1 9.4 3.8a8.4 8.4 0 1 0 10.8 10.8z" fill="currentColor"/></svg>
+          <svg class="ti-sun" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M5.5 18.5l1.4-1.4M17.1 6.9l1.4-1.4"/></svg>
+          <svg class="ti-moon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.2 8.2 0 1 0 10.5 10.5z"/></svg>
         </button>
         <button class="fmt-chip" id="fmt-chip" type="button" aria-haspopup="dialog">
           <span class="fc-label">League settings</span><span class="fc-format" id="fc-format"></span><span class="lc-caret" aria-hidden="true">▾</span>
@@ -4971,7 +4983,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T06:00Z";
+  const BUILD_ID = "2026-10-09T07:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
