@@ -905,7 +905,7 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* Page width: a wide app layout on large desktops (capped so ultrawide screens don't stretch), centered and a
    little tighter on laptops, single column on tablets, fully stacked on phones. Side padding scales 16–40px. */
-.wrap { max-width: 1560px; margin: 0 auto; padding-inline: clamp(16px, 2.6vw, 40px); }
+.wrap { max-width: 1720px; margin: 0 auto; padding-inline: clamp(16px, 2.6vw, 40px); }
 
 /* ---------- Masthead ---------- */
 .masthead {
@@ -3955,20 +3955,22 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body .face img { object-position: center 14%; transform: scale(1.06); transform-origin: 50% 30%; }
 #rank-body .pl-name { font-size: 1.02rem; font-weight: 700; color: var(--text-strong); letter-spacing: 0; }
 #rank-body .pl-team { margin-left: 7px; font-size: 0.68rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); opacity: 1; }
-#rank-body .own-tag { display: block; margin-top: 3px; font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+/* owner line in caps (Alan, Oct 9), small and spaced, still readable: brighter than the old faint system label */
+#rank-body .own-tag { display: block; margin-top: 4px; font-size: 0.63rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: .82; }
+#rank-body .own-tag .own-by { margin-right: 0; font-weight: 500; }
 #rank-body tr.player:hover .own-tag:not(.mine):not(.fa) { opacity: 1; }
-#rank-body .own-tag .own-by { opacity: 1; margin-right: 3px; }
+#rank-body .own-tag .own-by { opacity: 1; }
 #rank-body .own-tag.fa { opacity: 1; color: color-mix(in srgb, var(--rb) 70%, var(--ink-2)); }
 #rank-body .own-tag.mine { display: flex; width: fit-content; align-items: center; gap: 5px; padding: 0; background: none; color: var(--mine-accent); font-weight: 650; }
 #rank-body .own-tag.mine::before { margin-right: 0 !important; }
 /* position: the filled badge, then the tier as plain metadata */
-#panel-rankings table .pos-col { width: 150px; white-space: nowrap; }
+#panel-rankings table .pos-col { width: 170px; padding-left: 24px; white-space: nowrap; }
 .tier-tag, #rank-body .tier-tag { display: inline; margin-left: 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
   font: 500 0.66rem/1 var(--font-body); letter-spacing: 0; color: var(--muted); opacity: .85; vertical-align: middle; }
 .tier-tag.tagged, #rank-body .tier-tag.tagged { color: color-mix(in srgb, var(--rose) 80%, var(--muted)); border: 0; background: none; }
 /* value: the number leads, a short meter under it (relative to #1) */
-#panel-rankings table td.val { width: 150px; min-width: 0; padding-right: 22px; }
+#panel-rankings table td.val { width: 160px; min-width: 0; padding-right: 22px; }
 body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* room for Custom · Auto beside a typed value */
 #rank-body tr.player > td:has(> .pl-cell) { width: 100%; }   /* the player column takes the spare width; rank, position and value stay tight */
 #panel-rankings .valbar.stack { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: center; column-gap: 8px; row-gap: 4px; }
@@ -4010,8 +4012,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .rr-me-txt b small { font: 500 0.72rem var(--font-body); color: var(--muted); }
 .rr-me-txt span { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rr-label { margin: 0 0 5px; font-size: 0.58rem; letter-spacing: 0.12em; color: var(--muted); }
-.rr-moves .rr-label + .rr-list { margin-bottom: 0; }
-.rr-moves .rr-list + .rr-label { margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--line-soft); }
+.rr-moves .rr-label { margin-bottom: 4px; }
+.rr-moves .rr-list li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 5px 0; border-top: 1px solid var(--line-soft); }
+.rr-moves .rr-list li:first-child { border-top: 0; }
+.rr-moves .rr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.rr-moves .rr-sub { display: inline-flex; align-items: center; gap: 6px; font-size: 0.68rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rr-pos { font: 600 0.62rem/1 var(--font-display); color: color-mix(in srgb, var(--pos-c, var(--muted)) 85%, var(--ink)); }
+.rr-pos.QB { --pos-c: var(--qb); } .rr-pos.RB { --pos-c: var(--rb); } .rr-pos.WR { --pos-c: var(--wr); } .rr-pos.TE { --pos-c: var(--te); }
 .rr-list { display: flex; flex-direction: column; gap: 0; }
 .rr-list li { align-items: center; padding: 3px 0; border: 0; font-size: 0.8rem; }
 .rr-mv { font-family: var(--font-display); display: inline-flex; justify-content: flex-start; min-width: 30px; padding: 0; border-radius: 0; background: none !important; font-size: 0.68rem; font-weight: 700; }
@@ -4019,8 +4026,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .rr-jump:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
 .rk-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
 @media (min-width: 1280px) {
-  .rk-layout { grid-template-columns: minmax(0, 1fr) 248px; align-items: start; }
-  .rk-rail { order: 0; display: flex !important; flex-direction: column; flex-wrap: nowrap; position: sticky; top: calc(var(--mast-h, 0px) + var(--ctl-h, 0px) + 6px); }
+  /* board ~78%, rail ~22% (Alan, Oct 9: a two-column rankings interface, not a narrow table in a big canvas) */
+  .rk-layout { grid-template-columns: minmax(0, 1fr) clamp(290px, 22%, 360px); gap: 22px; align-items: start; }
+  .rk-rail { order: 0; display: flex !important; flex-direction: column; flex-wrap: nowrap; position: sticky; top: calc(var(--mast-h, 0px) + var(--ctl-h, 0px) + 6px);
+    max-height: calc(100vh - var(--mast-h, 0px) - var(--ctl-h, 0px) - 18px); overflow-y: auto; scrollbar-width: thin; }
   .rk-rail[hidden] { display: none !important; }
 }
 @media (max-width: 1279px) { .rk-rail, .rk-rail:not([hidden]) { display: none !important; } }
@@ -5089,7 +5098,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T15:00Z";
+  const BUILD_ID = "2026-10-09T17:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5232,7 +5241,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const c = "own-tag" + (cls ? " " + cls : "");
     if (!o || o === "fa") return `<span class="${c} fa">Free agent</span>`;
     if (o.mine) return `<span class="${c} mine">My team</span>`;
-    return `<span class="${c}" title="Fantasy team: ${esc(o.name)}"><span class="own-by">Owned by</span>${esc(nameOf(o))}</span>`;
+    return `<span class="${c}" title="Fantasy team: ${esc(o.name)}"><span class="own-by">Owned by</span> ${esc(nameOf(o))}</span>`;
   }
   // Who owns a player in the active league (rankings rows use the shorter manager name)
   function ownerTag(p, cls = "") {
@@ -5625,13 +5634,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const mv = boardMoves(), moves = [];
     let since = "";
     players.forEach(p => { const m = mv.get(p.id); if (m && m.d) { moves.push({ p, d: m.d }); if (m.since > since) since = m.since; } });
-    const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span><button class="rr-name rr-jump" type="button" data-jump="${m.p.id}" title="Show ${esc(m.p.name)} in the rankings">${esc(m.p.name)}</button><span class="rr-sub">#${m.p.rank}</span></li>`;
-    const up = moves.filter(m => m.d > 0).sort((a, b) => b.d - a.d).slice(0, 3), dn = moves.filter(m => m.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
-    // one card, the original Biggest risers / Biggest fallers sections (same calculation and names as before)
+    const row = m => `<li><span class="rr-mv ${m.d > 0 ? "up" : "down"}">${m.d > 0 ? "▲" : "▼"}${Math.abs(m.d)}</span><button class="rr-name rr-jump" type="button" data-jump="${m.p.id}" title="Show ${esc(m.p.name)} in the rankings">${esc(m.p.name)}</button><span class="rr-sub"><span class="rr-pos ${esc(m.p.pos)}">${esc(m.p.posRank || m.p.pos)}</span> #${m.p.rank}</span></li>`;
+    // the original Biggest risers / Biggest fallers (same calculation and names), stacked as two cards under the
+    // context card so the rail keeps going down the page; up to RAIL_MOVERS each
+    const RAIL_MOVERS = 6;
+    const up = moves.filter(m => m.d > 0).sort((a, b) => b.d - a.d).slice(0, RAIL_MOVERS), dn = moves.filter(m => m.d < 0).sort((a, b) => a.d - b.d).slice(0, RAIL_MOVERS);
     const when = since ? ` <span class="rr-when">since ${esc(sinceText(since))}</span>` : "";
-    if (up.length || dn.length) parts.push(`<section class="rr-sec rr-moves">
-      ${up.length ? `<h3 class="rr-label">Biggest risers${when}</h3><ul class="rr-list">${up.map(row).join("")}</ul>` : ""}
-      ${dn.length ? `<h3 class="rr-label">Biggest fallers${up.length ? "" : when}</h3><ul class="rr-list">${dn.map(row).join("")}</ul>` : ""}</section>`);
+    if (up.length) parts.push(`<section class="rr-sec rr-moves rr-up"><h3 class="rr-label">Biggest risers${when}</h3><ul class="rr-list">${up.map(row).join("")}</ul></section>`);
+    if (dn.length) parts.push(`<section class="rr-sec rr-moves rr-down"><h3 class="rr-label">Biggest fallers${when}</h3><ul class="rr-list">${dn.map(row).join("")}</ul></section>`);
     el.innerHTML = parts.join("");
     el.hidden = !parts.length;
   }
