@@ -755,12 +755,12 @@ const TRADE_VERDICTS = [
   --custom-panel: #132038;
   --custom-border: #2A4373;
   /* positions (kept recognizable, tuned to read on the burgundy surface) */
-  --pos-qb: #C96A61;   /* soft coral on a wine tint */
-  --pos-rb: #3F9873;   /* emerald on a forest tint */
-  --pos-wr: #6588B3;   /* desaturated light blue on slate */
-  --pos-te: #8B70A8;   /* lavender on plum */
-  --pos-flex: #B18A45; /* muted amber */
-  --pos-sf: #A86678;   /* muted rose */
+  --pos-qb: #E8735F;   /* warm coral (Alan, Oct 8: one position palette for badges, bars and slots) */
+  --pos-rb: #2FB67E;   /* emerald */
+  --pos-wr: #4F8EE0;   /* clean medium blue */
+  --pos-te: #9D7FE0;   /* violet */
+  --pos-flex: #DDA23C; /* amber / gold */
+  --pos-sf: #D16C8C;   /* rose */
   --pos-pick: #8A919E; /* bench / IR / picks: neutral */
   --badge-base: #101216;
   /* depth */
@@ -817,12 +817,12 @@ const TRADE_VERDICTS = [
   --editor-border: #D5DAE3;
   --custom-panel: #EBEFF6;
   --custom-border: #B8C3D8;
-  --pos-qb: #A8524A;
-  --pos-rb: #2A7556;
-  --pos-wr: #45678F;
-  --pos-te: #6E5590;
-  --pos-flex: #8C6A2E;
-  --pos-sf: #8A4D5E;
+  --pos-qb: #C24A38;
+  --pos-rb: #1A8A5A;
+  --pos-wr: #2E69BD;
+  --pos-te: #6E4CC2;
+  --pos-flex: #A06F17;
+  --pos-sf: #A8486A;
   --pos-pick: #6E7480;
   --badge-base: #FFFFFF;
   --shadow-color: rgba(60, 48, 30, 0.14);
@@ -3894,6 +3894,29 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .tf-dtags span { font-size: 0.68rem; padding: 2px 7px; border-radius: 999px; background: var(--navy-tint); color: var(--ink-2); }
 .tf-disc-note { margin: 6px 0 0; max-width: 560px; }
 @media (max-width: 760px) { .tfi-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tf-dcard { grid-template-columns: auto minmax(0, 1fr); } .tf-dcard .btn { grid-column: 1 / -1; } .tf-pills { margin-left: 0; flex-wrap: wrap; } }
+
+/* ---------- Position badge system (Alan, Oct 8): one reusable variant per position (.pos.QB/RB/WR/TE/FLEX/SF/PICK),
+   the same palette as the value bars and lineup slots. A data label, not a button: a soft tinted fill, brighter text in
+   the position color, a thin border in the same family, a small radius. Tier tags (T1…) are neutral metadata, so the
+   hierarchy reads position rank → player/value → tier. ---------- */
+:root, :root[data-theme="dark"] { --pos-fill: 15%; --pos-line: 30%; --pos-ink-mix: #FFFFFF; --pos-ink: 72%; }
+:root[data-theme="light"] { --pos-fill: 9%; --pos-line: 26%; --pos-ink-mix: #000000; --pos-ink: 88%; }
+.pos.QB { --c: var(--qb); } .pos.RB { --c: var(--rb); } .pos.WR { --c: var(--wr); } .pos.TE { --c: var(--te); }
+.pos.FLEX { --c: var(--flex); } .pos.SF { --c: var(--sf); } .pos.PICK, .pos.BN, .pos.IR { --c: var(--pick); }
+.pos {
+  border-radius: 4px; font-weight: 650; letter-spacing: 0.03em;
+  color: color-mix(in srgb, var(--c) var(--pos-ink), var(--pos-ink-mix));
+  background: color-mix(in srgb, var(--c) var(--pos-fill), transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) var(--pos-line), transparent);
+}
+.tier-tag, #rank-body .tier-tag {
+  border-radius: 3px; border: 1px solid color-mix(in srgb, var(--muted) 22%, transparent);
+  background: color-mix(in srgb, var(--muted) 9%, transparent); color: color-mix(in srgb, var(--muted) 85%, transparent);
+  font-family: var(--font-body); font-weight: 550; font-size: 0.56rem; letter-spacing: 0.04em; padding: 0 4px; line-height: 15px;
+}
+.tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 35%, transparent); background: none; }
+/* value bars: the same palette, toned down so the number and the badge lead */
+.valbar .fill { background: linear-gradient(90deg, color-mix(in srgb, var(--c, var(--ink)) 12%, transparent), color-mix(in srgb, var(--c, var(--ink)) 52%, transparent)); }
 </style>
 </head>
 <body>
@@ -4946,7 +4969,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-09T04:00Z";
+  const BUILD_ID = "2026-10-09T05:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
