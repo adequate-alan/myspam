@@ -2730,6 +2730,30 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .th-actions .btn.link { padding-inline: 0; }
 .th-full { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 0.82rem; color: var(--ink-2); }
 .th-full p { margin: 0 0 6px; }
+/* trade history: at the time vs today (Alan, Oct 8) */
+.th-verdict small { display: block; text-align: right; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); font-stretch: 100%; margin-bottom: 1px; }
+.th-ages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.th-age { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.th-age-k { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.th-age b { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.th-age b small { font-size: 0.72rem; font-weight: 550; color: var(--muted); }
+.th-age > small { font-size: 0.66rem; color: var(--muted); }
+.th-age-none { font-size: 0.78rem; color: var(--muted); line-height: 1.35; }
+.th-aged { grid-column: 1 / -1; margin: 4px 0 0; padding-top: 7px; border-top: 1px solid var(--line-soft); font-size: 0.8rem; font-weight: 650; color: var(--ink-2); }
+.thh-basis { font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
+.thh-basis b { color: var(--ink-2); }
+.thh-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 16px; margin: 8px 0 10px; }
+.thh-side h4 { margin: 0 0 4px; font-size: 0.66rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.thh-side ul { list-style: none; margin: 0; padding: 0; }
+.thh-row, .thh-total { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
+.thh-total { border-bottom: 0; font-size: 0.74rem; color: var(--muted); }
+.thh-name { display: flex; flex-direction: column; min-width: 0; font-weight: 650; color: var(--text-strong); }
+.thh-name small { font-size: 0.68rem; font-weight: 500; color: var(--muted); }
+.thh-vals { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 0.8rem; color: var(--ink-2); }
+.thh-arrow { color: var(--muted); }
+.thh-d { font-weight: 700; color: var(--muted); }
+.thh-d.up { color: var(--rb); } .thh-d.down { color: var(--danger-text); }
+@media (max-width: 560px) { .th-ages { grid-template-columns: 1fr; } }
 @media (max-width: 900px) {
   .tx-board, .tx-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tx-summary .tx-sum:last-child { grid-column: 1 / -1; }
@@ -4897,7 +4921,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(m); else window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-08T23:30Z";
+  const BUILD_ID = "2026-10-09T01:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9232,14 +9256,12 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
       </table></div>`;
   }
 
-  /* Trade History: completed trades from Sleeper, judged with the calculator's verdicts.
-     Three cases, always labeled:
-       historical  every player has a AM value on or before the trade date (the closest prior snapshot)
-       pre-AM    the trade happened before AM rankings were first published: judged with today's
-                   values as a retrospective lookback, never as how players were valued at the time
-       current     after AM existed, but ranking history doesn't cover every player: today's values
-     Draft picks are listed but not valued. */
-  const HIST_GRACE_MS = 6 * 3600e3;   // a snapshot from the same day (a few hours later) still counts
+  /* Trade History: completed trades from Sleeper, judged twice and never mixed (Alan, Oct 8):
+       at the time  the latest AM values published at or before the trade (rank, position rank, tier, value);
+                    only when every valued player had one, never an update from after the trade
+       today        today's AM values for the same assets: how the trade aged, never a rewrite of the original verdict
+     Trades before AM rankings existed say so and only show today. Both use base AM Board values (a league's past
+     settings can't be rebuilt). Draft picks and FAAB are listed but not valued. */
   // when AM values were first published: the earliest ranking-history entry
   function spamStart() {
     const h = histNow();
@@ -9253,8 +9275,8 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     const list = histNow().players[sid];
     if (!list || !list.length) return null;
     let best = null;
-    list.forEach(e => { const t = whenDate(e[0]).getTime(); if (t <= ms + 6 * 3600e3 && (!best || t >= best.t)) best = { t, v: e[4], ts: e[0], pr: e[2] }; });
-    return best;   // only a value known on or before the trade date counts
+    list.forEach(e => { const t = whenDate(e[0]).getTime(); if (t <= ms && (!best || t >= best.t)) best = { t, ts: e[0], rank: e[1], pr: e[2], tier: e[3], v: e[4] }; });
+    return best;   // only a value published at or before the trade counts, never an update from after it
   }
   // one Sleeper call with a time limit, so a request that never answers can't leave the view stuck
   const slGetTimed = (path, ms = 12000) => Promise.race([slGet(path), new Promise((_, rej) => setTimeout(() => rej(new Error("Sleeper took too long to answer")), ms))]);
@@ -9332,30 +9354,44 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     Object.entries(t.drops).forEach(([sid, rid]) => { const s = partOf(rid); if (s) s.give.push(String(sid)); });
     t.picks.forEach(pk => { const s = partOf(pk.owner); if (s) s.picks.push(pk); });
     t.faab.forEach(b => { const s = partOf(b.receiver); if (s) s.faab += b.amount; });
+    // two snapshots, never mixed: "then" = the AM values published at or before the trade, "now" = today's AM values.
+    // Both are base AM Board values so they compare like for like (a league's past settings can't be rebuilt).
     const all = [...new Set(parts.flatMap(s => s.get))];
-    const valued = all.filter(sid => map.get(sid));
-    const hist = new Map(valued.map(sid => [sid, valueAt(sid, t.at)]));
-    const historical = valued.length > 0 && valued.every(sid => hist.get(sid));
-    const basisTs = historical ? valued.map(sid => hist.get(sid).ts).sort().pop() : null;
-    const preSpam = !historical && t.at + HIST_GRACE_MS < spamStart();
-    const val = sid => { const p = map.get(sid); if (!p) return 0; return historical ? hist.get(sid).v : dv(p); };
+    const then = new Map(all.map(sid => [sid, valueAt(sid, t.at)]));
+    const valued = all.filter(sid => map.get(sid) || then.get(sid));   // K, DEF and other unranked players are never valued
+    const thenAll = valued.length > 0 && valued.every(sid => then.get(sid));
+    const thenNone = valued.every(sid => !then.get(sid));
+    const basisTs = thenAll ? valued.map(sid => then.get(sid)).sort((a, b) => a.t - b.t).pop().ts : null;
+    const preSpam = !thenAll && t.at < spamStart();
     parts.forEach(s => {
-      s.items = s.get.map(sid => { const e = rosterEntry(sid, map), p = map.get(sid), hv = historical ? hist.get(sid) : null; return { sid, e, p, v: val(sid), now: p ? dv(p) : null, posThen: hv && hv.pr ? e.pos + hv.pr : null }; }).sort((a, b) => b.v - a.v);
+      s.items = s.get.map(sid => {
+        const e = rosterEntry(sid, map), p = map.get(sid), h = then.get(sid) || null;
+        return { sid, e, p, then: h, thenV: h ? h.v : null, now: p ? p.value : (h ? 0 : null), nowAdj: p ? adjOf(p) : null,
+          posThen: h && h.pr ? e.pos + h.pr : null, v: thenAll ? h.v : (p ? p.value : 0) };
+      }).sort((a, b) => b.v - a.v);
       s.total = s.items.reduce((a, x) => a + x.v, 0);
-      s.sent = s.give.reduce((a, sid) => a + val(sid), 0);
     });
-    const res = { t, parts, historical, basisTs, preSpam };
-    if (parts.length === 2) {
-      LEAGUE_DEPTH = historical ? 1 : (leagueView() ? LG.depth || 1 : 1);
-      const m = tradeModel(parts[0].items.map(x => ({ value: x.v })), parts[1].items.map(x => ({ value: x.v })));
-      res.model = m; res.a = m.scoreA; res.b = m.scoreB;
-      res.ahead = m.scoreA >= m.scoreB ? 0 : 1;
-      res.more = pctMore(m.scoreA, m.scoreB);
-      res.tier = TRADE_VERDICTS.find(x => res.more < x.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
-      res.fair = res.tier.upTo <= 3;
-    } else {
-      parts.forEach(s => { s.more = pctMore(s.total, s.sent); const row = SIDE_LABELS.find(x => s.more < x[0]); s.label = !isFinite(s.more) ? (s.total >= s.sent ? "Win" : "Loss") : s.total >= s.sent ? row[1] : row[2]; s.up = s.total >= s.sent; });
-    }
+    const snapshot = key => {   // the AM verdict with one set of values (key = "thenV" or "now")
+      const got = s => s.items.reduce((a, x) => a + (x[key] || 0), 0);
+      const sent = s => s.give.reduce((a, sid) => { const o = parts.flatMap(q => q.items).find(x => x.sid === sid); return a + ((o && o[key]) || 0); }, 0);
+      if (parts.length === 2) {
+        const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 1;
+        const m = tradeModel(parts[0].items.map(x => ({ value: x[key] || 0 })), parts[1].items.map(x => ({ value: x[key] || 0 })));
+        LEAGUE_DEPTH = keep;
+        if (!(m.scoreA > 0 && m.scoreB > 0)) return { model: m, totals: [got(parts[0]), got(parts[1])], oneSided: true, ahead: m.scoreA >= m.scoreB ? 0 : 1, diff: Math.abs(m.scoreA - m.scoreB) };
+        const more = pctMore(m.scoreA, m.scoreB), tier = TRADE_VERDICTS.find(x => more < x.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+        return { model: m, totals: [got(parts[0]), got(parts[1])], a: m.scoreA, b: m.scoreB, ahead: m.scoreA >= m.scoreB ? 0 : 1, more, tier, fair: tier.upTo <= 3, diff: Math.abs(m.scoreA - m.scoreB) };
+      }
+      const nets = parts.map(s => ({ got: got(s), sent: sent(s) }));
+      nets.forEach(n => { n.net = n.got - n.sent; n.more = pctMore(n.got, n.sent); });
+      const lead = nets.reduce((bi, n, i) => (n.net > nets[bi].net ? i : bi), 0);
+      const fair = nets.every(n => !isFinite(n.more) ? Math.abs(n.net) < 1 : n.more < 3);
+      return { nets, totals: nets.map(n => n.got), ahead: lead, fair, diff: nets[lead].net };
+    };
+    const res = { t, parts, thenAll, thenNone, basisTs, preSpam, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
+    // what the rest of the site reads (Analyze trade): today's snapshot for two-team trades
+    res.historical = thenAll;
+    if (parts.length === 2) { const n = res.now; res.model = n.model; res.a = n.a; res.b = n.b; res.ahead = n.ahead; res.more = n.more; res.tier = n.tier; res.fair = n.fair; }
     return res;
   }
   const pickText = (pk, parts) => { const f = parts.find(s => s.rid === pk.from); return `${pk.season} Round ${pk.round}${f && pk.from !== pk.owner ? ` (${f.team.name}'s)` : ""}`; };
@@ -9372,64 +9408,105 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     }
     return P.map(s => s.items[0] ? `${s.team.name} got ${s.items[0].e.name}${s.items.length > 1 ? ` +${s.items.length - 1}` : ""}` : `${s.team.name} got picks`).join("; ") + ".";
   }
+  // one snapshot as a short line: "Team A +120", "Basically even", or a three-team list of each team's net
+  function snapText(r, s) {
+    const P = r.parts;
+    if (!s) return "";
+    if (P.length === 2) {
+      if (s.oneSided) return `${esc(P[s.ahead].team.name)} +${fmt(s.diff)}`;
+      return s.fair ? `Basically even${s.diff >= 1 ? ` <small>(${esc(P[s.ahead].team.name)} +${fmt(s.diff)})</small>` : ""}` : `${esc(P[s.ahead].team.name)} +${fmt(s.diff)}`;
+    }
+    return P.map((q, i) => `${esc(q.team.name)} ${s.nets[i].net >= 0 ? "+" : "−"}${fmt(Math.abs(s.nets[i].net))}`).join(" · ");
+  }
+  // how the trade aged: process (at the time) vs outcome (today)
+  function agedText(r) {
+    const P = r.parts, a = r.then, b = r.now;
+    if (!a || !b) return "";
+    const name = s => P[s.ahead].team.name;
+    if (a.fair && b.fair) return "Basically even then · basically even now";
+    if (a.fair) return `Fair at the time · ${name(b)} ahead today`;
+    if (b.fair) return `${name(a)} won at the time · basically even now`;
+    if (a.ahead === b.ahead) return `${name(a)} won at the time · still ahead today`;
+    return `${name(a)} won the initial value · ${name(b)} won the outcome`;
+  }
+  const dShort = ms => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const tsLong = ts => whenDate(ts).toLocaleString("en-US", hasTime(ts) ? { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric", year: "numeric" });
   function tradeCard(r) {
     const t = r.t, P = r.parts, full = LT.tradesFull.has(t.id);
     const when = new Date(t.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    const lookback = !r.historical;   // judged with today's values, not values known at the time
+    const main = r.then || r.now;   // the headline verdict: at the time when AM values existed, else today's (labeled)
     const verdict = P.length === 2
-      ? (r.a > 0 && r.b > 0
-          ? `<span class="th-verdict${r.fair ? " fair" : ""}${lookback ? " lookback" : ""}">${lookback ? `<small>Today's values</small>` : ""}${esc(r.tier.title(P[r.ahead].team.name, P[1 - r.ahead].team.name))}</span>`
+      ? (!main.oneSided
+          ? `<span class="th-verdict${main.fair ? " fair" : ""}${r.then ? "" : " lookback"}"><small>${r.then ? "At the time" : "Today"}</small>${esc(main.tier.title(P[main.ahead].team.name, P[1 - main.ahead].team.name))}</span>`
           : `<span class="th-verdict">One-sided in AM values</span>`)
       : `<span class="th-verdict fair">${P.length}-team trade</span>`;
     const side = s => `<div class="th-side">
         <div class="th-team">${teamFace(s.team, "sm")}<div><b>${esc(s.team.name)}</b><span>receives</span></div></div>
         <ul class="th-list">${s.items.map(x => `<li>${face(x.sid, x.e.name, "xs")}<span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.sid, x.e.name, "th-name") : `<span class="th-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span>
-            <span class="pos ${esc(x.e.pos)}">${esc(x.posThen || (x.p ? posLabel(x.p) : x.e.pos || ""))}</span><span class="th-v">${x.p ? fmt(x.v) : "–"}</span></li>`).join("")}
+            <span class="pos ${esc(x.e.pos)}">${esc(r.then ? (x.posThen || x.e.pos || "") : (x.p ? x.p.posRank : x.e.pos || ""))}</span><span class="th-v">${x.p || x.then ? fmt(x.v) : "–"}</span></li>`).join("")}
           ${s.picks.map(pk => `<li class="th-pick"><span class="th-name">${esc(pickText(pk, P))}</span><span class="th-v">pick</span></li>`).join("")}
           ${s.faab ? `<li class="th-pick"><span class="th-name">$${s.faab} FAAB</span><span class="th-v"></span></li>` : ""}
           ${!s.items.length && !s.picks.length && !s.faab ? `<li class="th-pick"><span class="th-name muted">Nothing</span></li>` : ""}</ul>
-        <div class="th-total"><span>Total value</span><b>${fmt(s.total)}</b></div>
-        ${P.length > 2 ? `<div class="th-sidev ${s.label === "Fair" ? "fair" : s.up ? "up" : "down"}">${esc(s.label)}${isFinite(s.more) ? ` · ${s.up ? "+" : "−"}${s.more.toFixed(1)}%` : ""}</div>` : ""}
+        <div class="th-total"><span>${r.then ? "Value at trade" : "Value today"}</span><b>${fmt(s.total)}</b></div>
       </div>`;
-    // value meter: each team's share of the value in the deal (2-team: adjusted scores, like the calculator)
-    const shares = P.length === 2 ? [r.a || 0, r.b || 0] : P.map(s => s.total);
-    const tot = shares.reduce((a, v) => a + v, 0);
-    const meter = tot > 0 ? `<div class="th-meter">
-        <div class="meter${P.length > 2 ? " three" : ""}">${shares.map((v, i) => `<div class="m${"abc"[i] || "c"}" style="width:${(100 * v / tot).toFixed(1)}%"></div>`).join("")}</div>
-        <div class="meter-labels">${P.map((s, i) => `<span class="ml-${"abc"[i] || "c"}">${esc(s.team.name)} · ${fmt(shares[i])}${Math.round(shares[i]) !== Math.round(s.total) ? ` <small title="Includes the calculator's package adjustment for uneven trades">adjusted</small>` : ""}</span>`).join("")}</div>
-      </div>` : "";
-    const tradeDay = new Date(t.at).toDateString(), basisDay = r.basisTs ? whenDate(r.basisTs).toDateString() : "";
-    const basisDate = r.basisTs ? whenDate(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-    const tag = r.historical ? `<span class="th-tag hist">Historical AM values</span>`
-      : r.preSpam ? `<span class="th-tag pre">Pre-AM trade</span>` : `<span class="th-tag now">Current-value evaluation</span>`;
-    const basis = r.historical
-      ? (basisDay === tradeDay ? `Evaluated using AM values from ${esc(basisDate)}` : `Evaluated using the nearest prior AM snapshot (${esc(basisDate)})`)
-      : r.preSpam ? "Retrospective evaluation using current AM values" : "Evaluated using current AM values (no ranking history for every player on this date)";
-    const winTxt = P.length === 2 && r.a > 0 && r.b > 0
-      ? (r.fair ? "Using today's values, this trade is about even" : `Using today's values, ${esc(P[r.ahead].team.name)} would win this trade by ${r.more.toFixed(1)}%`) : "";
-    const context = r.historical ? "" : `<p class="th-context">${r.preSpam
-      ? `This trade was completed before AM rankings were published, so the verdict is a lookback with today's AM values, not how the players were valued at the time.${winTxt ? " " + winTxt + "." : ""}`
-      : `AM's ranking history doesn't cover every player in this trade on its date, so it's judged with today's values.${winTxt ? " " + winTxt + "." : ""}`}</p>`;
+    const basisDate = r.basisTs ? whenDate(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+    const tag = r.then ? `<span class="th-tag hist">AM values at trade</span>`
+      : r.preSpam ? `<span class="th-tag pre">Pre-AM trade</span>` : `<span class="th-tag now">Partial AM history</span>`;
+    const noThen = r.preSpam ? "No AM value existed at the time of this trade"
+      : `Not every player had an AM value at the time (${P.flatMap(s => s.items).filter(x => (x.p || x.then) && !x.then).map(x => esc(x.e.name)).join(", ")})`;
+    const aged = agedText(r);
+    const ages = `<div class="th-ages">
+        <div class="th-age"><span class="th-age-k">AM at trade</span>${r.then ? `<b>${snapText(r, r.then)}</b><small>${esc(basisDate)} values</small>` : `<span class="th-age-none">${noThen}</span>`}</div>
+        <div class="th-age"><span class="th-age-k">AM today</span><b>${snapText(r, r.now)}</b><small>${esc(dShort(Date.now()))} values</small></div>
+        ${aged ? `<p class="th-aged">${esc(aged)}</p>` : ""}
+      </div>`;
     const anyPicks = P.some(s => s.picks.length);
-    const diff = P.length === 2 && r.a > 0 && r.b > 0 ? `<b>Difference ${r.more.toFixed(1)}%</b> · ` : "";
-    const fullHtml = !full ? "" : `<div class="th-full">
-        ${P.length === 2 && r.model && r.model.adj ? `<p>Raw value ${fmt(r.model.rawA)} vs ${fmt(r.model.rawB)}. ${r.model.adj.bonus ? `${esc(P[r.model.adj.best === "A" ? 0 : 1].team.name)} gets a ${fmt(r.model.adj.bonus)} best-player bonus. ` : ""}${r.model.adj.spot ? `${esc(P[r.model.adj.more === "A" ? 0 : 1].team.name)} pays ${fmt(r.model.adj.spot)} for taking on extra players. ` : ""}</p>` : ""}
-        ${P.length === 2 && r.a > 0 && r.b > 0 ? `<p>${esc(r.tier.text(P[r.ahead].team.name, P[1 - r.ahead].team.name, r.more.toFixed(1) + "%"))}</p>` : ""}
-        ${r.historical ? `<p><b>With today's values</b> (current AM values): ${P.map(s => `${esc(s.team.name)} ${fmt(s.items.reduce((a, x) => a + (x.now || 0), 0))}`).join(" · ")}</p>` : ""}
-        ${P.length > 2 ? `<p>Each team is judged on what it received against what it sent: ${P.map(s => `${esc(s.team.name)} got ${fmt(s.total)} for ${fmt(s.sent)}`).join("; ")}.</p>` : ""}
-        ${anyPicks ? `<p class="muted">Draft picks aren't valued by AM yet, so they're listed but left out of the totals.</p>` : ""}
-      </div>`;
+    const fullHtml = !full ? "" : tradeHistoryHtml(r);
     return `<article class="th-card">
       <header class="th-head"><span class="th-date">${esc(when)}${t.week ? ` · Week ${t.week}` : ""}${tag}</span>${verdict}</header>
-      ${context}
       <div class="th-sides n${Math.min(P.length, 3)}">${P.map(side).join("")}</div>
-      ${meter}
-      <p class="th-diff">${diff}<span class="th-basis${r.historical ? "" : " current"}">${basis}</span>${anyPicks ? ` · <span class="muted">picks not valued</span>` : ""}</p>
-      <p class="th-note">${esc(tradeNote(r))}</p>
-      <div class="th-actions"><button class="btn link" type="button" data-th-full="${esc(t.id)}" aria-expanded="${full}">${full ? "Hide analysis" : "Full analysis"}</button>
+      ${ages}
+      <p class="th-note">${esc(tradeNote(r))}${anyPicks ? ` <span class="muted">Draft picks are listed but not valued.</span>` : ""}</p>
+      <div class="th-actions"><button class="btn link" type="button" data-th-full="${esc(t.id)}" aria-expanded="${full}">${full ? "Hide trade history" : "View trade history"}</button>
         <button class="btn" type="button" data-th-analyze="${esc(t.id)}"${P.length > 3 ? " disabled" : ""}>Analyze trade</button></div>
       ${fullHtml}
     </article>`;
+  }
+  // the expanded breakdown: each asset at the time (rank, position rank, tier, value) → today, with the change
+  function tradeHistoryHtml(r) {
+    const P = r.parts, t = r.t;
+    const sign = n => (n > 0 ? "+" : n < 0 ? "−" : "±") + fmt(Math.abs(n));
+    const row = x => {
+      if (!x.p && !x.then) return `<li class="thh-row"><span class="thh-name">${esc(x.e.name)} <small>${esc(x.e.pos || "")}</small></span><span class="thh-vals muted">Not valued by AM</span></li>`;
+      const h = x.then, d = h && x.now != null ? x.now - h.v : null;
+      const meta = h ? `#${h.rank} · ${esc(x.e.pos)}${h.pr}${h.tier !== "" && h.tier != null && h.tier < 90 ? ` · Tier ${h.tier}` : h.tier >= 90 ? ` · ${esc(tierLabel(x.e.pos, h.tier))}` : ""} at trade` : "No AM value at the time";
+      const nowMeta = x.p ? `#${x.p.rank} · ${esc(x.p.posRank)} today` : "Off the AM board today";
+      return `<li class="thh-row"><span class="thh-name">${esc(x.e.name)}<small>${meta} · ${nowMeta}</small></span>
+        <span class="thh-vals">${h ? fmt(h.v) : `<span class="muted">–</span>`} <span class="thh-arrow">→</span> ${x.now != null ? fmt(x.now) : "–"}${d != null ? ` <b class="thh-d ${d > 0 ? "up" : d < 0 ? "down" : ""}">${sign(d)}</b>` : ""}</span></li>`;
+    };
+    const side = s => {
+      const thenT = s.items.reduce((a, x) => a + (x.thenV || 0), 0), nowT = s.items.reduce((a, x) => a + (x.now || 0), 0);
+      return `<div class="thh-side"><h4>${esc(s.team.name)} received</h4><ul>${s.items.map(row).join("")}
+        ${s.picks.map(pk => `<li class="thh-row"><span class="thh-name">${esc(pickText(pk, P))}<small>Draft pick</small></span><span class="thh-vals muted">Not valued</span></li>`).join("")}
+        ${s.faab ? `<li class="thh-row"><span class="thh-name">$${s.faab} FAAB</span><span class="thh-vals muted">Not valued</span></li>` : ""}</ul>
+        ${s.items.length ? `<div class="thh-total"><span>Total</span><span class="thh-vals">${r.then ? fmt(thenT) : "–"} <span class="thh-arrow">→</span> ${fmt(nowT)}${r.then ? ` <b class="thh-d ${nowT - thenT > 0 ? "up" : nowT - thenT < 0 ? "down" : ""}">${sign(nowT - thenT)}</b>` : ""}</span></div>` : ""}</div>`;
+    };
+    const adjNote = s => s && s.model && Math.round(s.model.rawA) !== Math.round(s.model.scoreA || s.model.rawA) || (s && s.model && Math.round(s.model.rawB) !== Math.round(s.model.scoreB || s.model.rawB));
+    const verdictLine = (s, label) => P.length === 2 && s && !s.oneSided
+      ? `<p><b>${label}:</b> ${esc(s.tier.title(P[s.ahead].team.name, P[1 - s.ahead].team.name))} · ${fmt(s.a)} vs ${fmt(s.b)}${s.more >= 0.05 ? ` (${s.more.toFixed(1)}%)` : ""}${adjNote(s) ? ` <span class="muted">incl. the package adjustment (raw ${fmt(s.model.rawA)} vs ${fmt(s.model.rawB)})</span>` : ""}</p>`
+      : P.length > 2 && s ? `<p><b>${label}:</b> ${P.map((q, i) => `${esc(q.team.name)} got ${fmt(s.nets[i].got)} for ${fmt(s.nets[i].sent)}`).join("; ")}</p>` : "";
+    const fmtNow = LG.fmtOn && P.length >= 2 && P.flatMap(s => s.items).some(x => x.p && Math.round(x.nowAdj) !== Math.round(x.now));
+    return `<div class="th-full">
+        <p class="thh-basis">${r.then
+          ? `<b>At the time:</b> the latest AM values published at or before the trade (${esc(tsLong(r.basisTs))}; trade completed ${esc(new Date(t.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))}). Never a ranking update from after it.`
+          : r.preSpam ? `<b>No AM value existed at the time of this trade</b>, so only today's values are shown. They say how the trade aged, not whether it was fair when it happened.`
+          : `<b>No complete AM snapshot for this date:</b> some players had no published AM value yet, so there's no at-the-time verdict. Values that did exist are shown.`}</p>
+        <div class="thh-sides">${P.map(side).join("")}</div>
+        ${verdictLine(r.then, "At the time")}
+        ${verdictLine(r.now, "Today")}
+        ${fmtNow ? `<p class="muted">In this league's format today: ${P.map(s => `${esc(s.team.name)} ${fmt(s.items.reduce((a, x) => a + (x.nowAdj || 0), 0))}`).join(" · ")}.</p>` : ""}
+        <p class="muted">Both snapshots use base AM Board values so they compare like for like: Sleeper doesn't keep a league's past settings, so league-adjusted values for a past date can't be rebuilt reliably.${P.some(s => s.picks.length) ? " Draft picks aren't valued; a pick that later becomes a player isn't given that player's value." : ""}</p>
+      </div>`;
   }
   /* Transactions: trades (with the AM trade analysis), waiver claims, free-agent adds and drops, newest first */
   // Filters: All · Trades · Waiver Wire (waiver claims, FAAB claims, free-agent adds, drops, commissioner moves).
@@ -9456,7 +9533,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
     if (error) return head + `<div class="lg-error"><p>Couldn't load transactions for ${esc(d.league.name)} from Sleeper (${esc(error)}).</p><button class="btn primary" type="button" data-th-refresh>Retry</button></div></div>`;
     if (!d.tx) return head + `<p class="empty-note lg-loading">Loading transactions for ${esc(d.league.name)}…</p></div>`;
     const tradeNote = LT.txType === "all" || LT.txType === "trade"
-      ? `<p class="method-note">Trades are judged with AM values from the time of the trade when ranking history covers it. Trades from before AM rankings existed are labeled Pre-AM and evaluated as a retrospective with current values.</p>` : "";
+      ? `<p class="method-note">Each trade shows two separate AM verdicts: <b>at trade</b> (the AM values published at or before it: was it fair when it happened?) and <b>today</b> (the same assets at today's values: how it aged). Trades from before AM values existed show today only.</p>` : "";
     if (!list.length) return head + `<div class="tx-layout"><div class="tx-main"><p class="empty-note">No ${LT.txType === "all" ? "transactions" : (LT.txType === "trade" ? "trades" : "waiver claims, adds or drops")} match these filters.</p></div>${txRail(d)}</div></div>`;
     // grouped by week, newest first; the latest week shows by default and older weeks load on request
     const byWeek = new Map();
