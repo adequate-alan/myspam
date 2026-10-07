@@ -1,11 +1,11 @@
 {
-  "name": "AM Fantasy Rankings",
-  "short_name": "AM",
-  "description": "AM fantasy football rankings, trade calculator and Trade Finder.",
+  "name": "Adequate · Fantasy Football Rankings",
+  "short_name": "Adequate",
+  "description": "Fantasy football rankings, values, trade calculator and Trade Finder.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#08090B",
   "theme_color": "#08090B",
-  "icons": [{ "src": "favicon.svg?v=am2", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "icons": [{ "src": "favicon.svg?v=adq1", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }
