@@ -292,18 +292,26 @@ with sync_playwright() as p:
     projs = card.locator(".mx-proj").all_inner_texts()
     ok(len(projs) == 2 and all(re.search(r"^LIVE PROJ\s+\d+\.\d", t.upper().strip()) for t in projs), f"Live proj under each score before kickoff: {projs}")
     ok(all(t.upper().strip().startswith("LIVE PROJ") for t in pg.locator(".mx-proj").all_inner_texts()) and "APPROX" not in pg.inner_text("#league-body").upper(), "One label everywhere: Live proj")
+    # the projected-matchup bar shows on every card before kickoff (Alan, Oct 10); a partial total (a starter without a
+    # projection) keeps it but mutes it and says how many starters are missing, instead of hiding the comparison
     full_cards = partial_cards = 0
     for c in pg.locator(".mx-card").all():
         pj = c.locator(".mx-proj").all_inner_texts()
-        if c.locator(".mx-bar").count():
-            pcts = [float(t.rstrip('%')) for t in c.locator(".mx-pct").all_inner_texts()]
-            tot = [float(re.search(r"(\d+\.\d)", t).group(1)) for t in pj]
-            ok(abs(sum(pcts) - 100) < 0.2 and abs(pcts[0] - 100 * tot[0] / sum(tot)) < 0.2 and not any("*" in t for t in pj), f"Projected matchup bar = share of the two totals: {pcts} from {tot}")
-            full_cards += 1
-        else:
-            ok(c.locator(".mx-partial").count() == 1 and any("*" in t for t in pj), "A partial projection hides the bar and says so")
+        has_bar = c.locator(".mx-bar").count() == 1
+        pcts = [float(t.rstrip('%')) for t in c.locator(".mx-pct").all_inner_texts()] if has_bar else []
+        tot = [float(re.search(r"(\d+\.\d)", t).group(1)) for t in pj]
+        share_ok = has_bar and abs(sum(pcts) - 100) < 0.2 and abs(pcts[0] - 100 * tot[0] / sum(tot)) < 0.2
+        if any("*" in t for t in pj):
+            lbl = c.locator(".mx-bar-lbl").inner_text().strip()
+            m = re.fullmatch(r"(?i)partial projection · (\d+) starters? missing", lbl)
+            ok(share_ok and c.locator(".mx-bar.partial").count() == 1 and m and int(m.group(1)) >= 1 and "Not projected:" in (c.locator(".mx-bar-lbl").get_attribute("title") or ""),
+               f"A partial projection keeps a muted bar and says what's missing: '{lbl}'")
             partial_cards += 1
-    ok(full_cards >= 1, f"Fully projected matchups show the bar ({full_cards} full, {partial_cards} partial)")
+        else:
+            ok(share_ok and c.locator(".mx-bar.partial").count() == 0 and c.locator(".mx-bar-lbl").inner_text().strip().lower() == "projected matchup",
+               f"Projected matchup bar = share of the two totals: {pcts} from {tot}")
+            full_cards += 1
+    ok(full_cards >= 1 and partial_cards >= 1, f"Both kinds shown: {full_cards} fully projected, {partial_cards} partial")
     ok("WIN PROBABILITY" not in pg.inner_text("#league-body").upper() and "TOP PLAYERS" not in pg.inner_text("#league-body").upper(), "No win probability label and no top-players clutter")
     ok("PROJECTIONS: AM" in pg.inner_text(".mx-source").upper(), "Data source line: Scores Sleeper · Projections AM")
     card.locator(".mx-show").click(); pg.wait_for_timeout(400)
