@@ -184,12 +184,12 @@ with sync_playwright() as p:
         ok(s["A"] == "1" and s["B"] == "2" and any(HUB in c for c in cards[0]) and any(WIL in c for c in cards[1]),
            f"[{mode}] Past trade: sides from the transaction (Alpha gets Hubbard + Kincaid, Beta gets Wilson + Kelce) {cards}")
         ok(not s["warn"], f"[{mode}] Past trade: no wrong-side warning ({s['warn'][:100]})")
-        ok("Current evaluation" in info["text"] and "Rosters rebuilt exactly" in info["text"] and not info["approx"] and not info["bad"],
+        ok("Current evaluation" in info["text"] and "All rebuild checks passed" in info["text"] and not info["approx"] and not info["bad"],
            f"[{mode}] Rebuild exact, every check passes {info['bad']} ({info['text'][:140]})")
         ok("At the time:" in info["text"], f"[{mode}] The transaction's own at-the-time read is shown and labelled")
         ok(hn is not None and abs(hn[0] - net) < 0.05, f"[{mode}] Roster-adjusted read is the one for the rosters at the time (Alpha {hn and hn[0]} vs {net})")
         rep = info["report"]
-        ok("Team Alpha received: Chuba Hubbard, Dalton Kincaid" in rep and "Rebuild: exact" in rep and "!!" not in rep and "starters before:" in rep,
+        ok("Team Alpha received: Chuba Hubbard, Dalton Kincaid" in rep and "Rebuild: all checks passed" in rep and "!!" not in rep and "starters before:" in rep,
            f"[{mode}] Copy report: the record, the checks, the rebuilt rosters and the lineups ({len(rep)} chars)")
         if mode == "simple":
             meta = pg.evaluate("() => ['A', 'B'].map(x => [...document.querySelectorAll('#roster-' + x + ' .tc-pl-meta')].map(e => e.textContent.replace(/\\s+/g, ' ').trim()))")
