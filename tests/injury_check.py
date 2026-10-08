@@ -87,13 +87,10 @@ def serve():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv.server_address[1]
 
-put = []
-def github(route):
-    u, m = route.request.url, route.request.method
-    if m == "PUT": put.append(json.loads(route.request.post_data)); return route.fulfill(status=200, content_type="application/json", body="{}")
-    if "/contents/data/injury_overrides.json" in u: return route.fulfill(status=404, content_type="application/json", body='{"message":"Not Found"}')
-    if u.endswith("/user"): return route.fulfill(status=200, content_type="application/json", body='{"login":"tester"}')
-    return route.fulfill(status=200, content_type="application/json", body='{"permissions":{"push":true}}')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gh_mock import Repo   # an in-memory GitHub repository (Git Data API), so the real publish code runs
+GH = Repo({"index.html": open(os.path.join(ROOT, "index.html"), "rb").read()})   # no injury_overrides.json yet: the first correction creates it
+github = GH.handle
 
 port = serve()
 with sync_playwright() as p:
@@ -153,9 +150,10 @@ with sync_playwright() as p:
     pg.wait_for_timeout(800)
     open_daniels(pg); game_log(pg)
     row(pg, 1).locator(".inj-ov").click(); pg.wait_for_timeout(1200)
-    body = json.loads(__import__("base64").b64decode(put[-1]["content"]).decode()) if put else {}
-    ok(put and put[-1]["message"].startswith("Injury-shortened correction") and body.get("seasons", {}).get("2026", {}).get(DANIELS, {}).get("1", {}).get("short") is True,
-       f"Signed-in editor: published data/injury_overrides.json ({put[-1]['message'] if put else 'no PUT'})")
+    pub = GH.read("data/injury_overrides.json"); body = json.loads(pub) if pub else {}
+    msgs = GH.log()
+    ok(msgs and msgs[-1].startswith("Injury-shortened correction") and body.get("seasons", {}).get("2026", {}).get(DANIELS, {}).get("1", {}).get("short") is True,
+       f"Signed-in editor: published data/injury_overrides.json ({msgs[-1] if msgs else 'no commit'})")
     pg.close()
     ok(not errs, f"No page errors {errs[:3]}")
 

@@ -196,7 +196,7 @@ with sync_playwright() as p:
         mk = pg.inner_text("#tc-mkt") if not pg.locator("#tc-mkt").is_hidden() else ""
         ok("Market comparison" in mk and "AM" in mk and "FantasyCalc" in mk and "Flock" in mk, f"Calculator shows Market comparison beside AM: {mk[:120]!r}")
         lens = pg.eval_on_selector_all("#tc-lens button", "bs => bs.map(b => b.textContent.trim())")
-        ok(lens == ["AM Value", "Roster Fit"], f"Calculator toggle reads AM Value / Roster Fit {lens}")
+        ok(lens == ["AM Value", "Roster Impact"], f"Calculator toggle reads AM Value / Roster Impact {lens}")
     else:
         ok(False, "No Market leverage card to open in the calculator")
     pg.close()

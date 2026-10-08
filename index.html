@@ -476,30 +476,6 @@ function modelValue(pos, posRank, projRank = null, games = 0) {
    ===================================================================== */
 const PACKAGE_POWER = 1.0;
 
-/* Roster-needs adjustment (the trade calculator's position sliders).
-   Each slider says how your team stands at that position, 1 to 5. Every player at that
-   position in the trade (on either side) counts as NEED_MULTIPLIERS[level - 1] x his value,
-   so a position you need helps whichever side receives it, and a position you're set at
-   counts for less. Level 3 (average) changes nothing. Applied after the waiver adjustment. */
-/* Team-specific value (league mode). A player's AM Value never changes, but what he is worth
-   TO A ROSTER depends on whether he'd start there. Incoming players are multiplied by the factor
-   for their role in the new lineup; outgoing players by what losing them costs. Capped 0.60-1.10. */
-const TEAM_FIT = {
-  majorUpgrade: 1.06,   // starts and is a big upgrade at a weak spot (or becomes the QB/TE/RB1/WR1)
-  starter: 1.00,        // starts at QB, RB, WR or TE
-  superflex: 0.98,      // starts at superflex
-  flexMin: 0.93,        // starts at FLEX: 0.93-1.00 depending on how much he adds
-  tePremium: 0.03,      // extra for a starting TE in a TE-premium league
-  nextUp: 0.82,         // bench, first in line at his position
-  noPath: 0.72,         // bench, one better backup ahead of him
-  deep: 0.62,           // bench, buried behind two or more backups
-  qbBackupSuperflex: 0.74, // QB3 in superflex
-  qbBackup1QB: 0.62,    // backup QB in a 1-QB league
-  cut: 0.60,            // no roster spot for him
-  loseStarterHole: 1.05, loseStarter: 1.00, loseFlex: 0.95,   // what giving a player away costs
-  loseNextUp: 0.85, loseNoPath: 0.75, loseDeep: 0.65,
-  min: 0.60, max: 1.10,
-};
 /* League depth. In shallow leagues (few teams and/or few starters, e.g. 10 teams starting 7, or any
    8-team league) good players sit on waivers and every team's lineup is strong, so depth is worth
    less and high-end talent is worth more. Depth = (teams x starting QB/RB/WR/TE/FLEX/SF spots) /
@@ -515,9 +491,6 @@ const TEAM_FIT = {
    Deeper leagues (14+ teams, more starters) get the reverse, capped at `max`. */
 const DEPTH_ADJUST = { baseStarters: 108, power: 0.75, min: 0.55, max: 1.15 };
 let LEAGUE_DEPTH = 1;   // set by the site for the league or settings in use
-
-const NEED_LEVELS = ["Desperately need", "Need", "Average at", "Good at", "Set at"];
-const NEED_MULTIPLIERS = [1.08, 1.04, 1.00, 0.96, 0.92];
 
 function tradeModel(sideA, sideB) {
   const raw = side => side.reduce((sum, p) => sum + p.value, 0);
@@ -544,6 +517,40 @@ function tradeModel(sideA, sideB) {
     + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal; Team ${more}'s ${n} extra player${n > 1 ? "s count" : " counts"} for less next to the best player).`;
   return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: 0, spot } };
 }
+
+/* The value verdict from the raw and the package-adjusted totals (Alan, Oct 11). The package adjustment is a heuristic
+   that hasn't been calibrated against anything outside AM (it over-penalizes extra players who'd start on most rosters:
+   keeps ~43% of their value where AM's lineup model keeps ~60%), so it may temper a verdict but never create or reverse
+   a win on its own, and a "steal" never comes from it alone:
+     plain      even player counts, no adjustment: the gap
+     tempered   both readings favor the same side and the adjustment narrows the gap: the adjusted gap decides
+     widened    both favor the same side and the adjustment only widens it: the raw gap decides
+     split      they favor different sides and both clear the fair line: no single winner (more total value for one
+                team, the better package for the other)
+     sensitive  one reading is about even (under the fair line) and the other shows a clear edge (7%+, the "wins" tier):
+                package-sensitive, not simply "fair"
+     evened     one reading is about even and the other only a slight edge: fair
+   Materiality (Alan, Oct 11): every gap is measured against at least `floor` (an average starter's value, valueFloor),
+   so a 365% gap between two marginal bench players reads as the few hundred points it is. `small` says the floor applied.
+   Works on runModel's { a, b, rawA, rawB, adj } and tradeModel's { scoreA, scoreB, rawA, rawB, adj }.
+   Returns { kind, side: "A" | "B" | null, gap, raw, adj, small, diff, rawDiff } (raw / adj signed %, + = A ahead). */
+const VALUE_FAIR = 3, VALUE_MAJOR = 7;
+function valueRead(m, floor = 0) {
+  const A = m.a ?? m.scoreA, B = m.b ?? m.scoreB, rA = m.rawA ?? A, rB = m.rawB ?? B;
+  const sg = (x, y) => { const base = Math.max(Math.min(x, y), floor); return base > 0 ? 100 * (x - y) / base : x > y ? Infinity : y > x ? -Infinity : 0; };
+  const adj = sg(A, B), raw = sg(rA, rB), side = v => (v >= 0 ? "A" : "B");
+  const out = { small: floor > 0 && Math.min(A, B, rA, rB) < floor, diff: Math.abs(A - B), rawDiff: Math.abs(rA - rB), raw, adj };
+  if (!(m.adj && m.adj.swing)) return { ...out, kind: "plain", side: side(adj), gap: Math.abs(adj), raw: adj };
+  if (raw === 0 || adj === 0 || Math.sign(raw) === Math.sign(adj)) {
+    const widened = Math.abs(adj) > Math.abs(raw), gap = Math.abs(widened ? raw : adj), other = Math.abs(widened ? adj : raw);
+    if (gap < VALUE_FAIR && other >= VALUE_MAJOR) return { ...out, kind: "sensitive", side: side(adj || raw), gap };
+    return { ...out, kind: widened ? "widened" : "tempered", side: side(adj || raw), gap };
+  }
+  if (Math.abs(raw) >= VALUE_FAIR && Math.abs(adj) >= VALUE_FAIR) return { ...out, kind: "split", side: null, gap: 0 };
+  const one = Math.abs(adj) < VALUE_FAIR ? adj : raw, other = Math.abs(adj) < VALUE_FAIR ? raw : adj;
+  return { ...out, kind: Math.abs(other) >= VALUE_MAJOR ? "sensitive" : "evened", side: side(one), gap: Math.abs(one) };
+}
+const verdictTier = gap => TRADE_VERDICTS.find(t => gap < t.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
 
 /* =====================================================================
    TIER NAMES
@@ -679,25 +686,25 @@ const FORMAT_ADJUST = {
 const TRADE_VERDICTS = [
   { upTo: 1,        range: "Fair: under 3%",
     title: (w, l) => "Basically even",
-    text:  (w, l, pct) => `The adjusted values are within ${pct} of each other. This one's a coin flip.` },
+    text:  (w, l, pct) => `The values are within ${pct} of each other. This one's a coin flip.` },
   { upTo: 3,        range: "Fair: under 3%",
     title: (w, l) => "Fair trade",
-    text:  (w, l, pct) => `The adjusted values are within ${pct} of each other. Neither side has a meaningful advantage.` },
+    text:  (w, l, pct) => `The values are within ${pct} of each other. Neither side has a meaningful advantage.` },
   { upTo: 7,        range: "Slight edge: 3–7%",
     title: (w, l) => `Slight edge to ${w}`,
     text:  (w, l, pct) => `This is close, but ${w} comes out about ${pct} ahead. ${l} could take it as is or ask for a small add.` },
   { upTo: 12,       range: "Wins: 7–12%",
     title: (w, l) => `${w} wins the trade`,
-    text:  (w, l, pct) => `${w} gets ${pct} more adjusted value. Not lopsided, but ${l} should ask for a sweetener.` },
+    text:  (w, l, pct) => `${w} gets ${pct} more value. Not lopsided, but ${l} should ask for a sweetener.` },
   { upTo: 20,       range: "Clearly wins: 12–20%",
     title: (w, l) => `${w} clearly wins`,
-    text:  (w, l, pct) => `${w} gets ${pct} more adjusted value. ${l} would need a real piece added to make this fair.` },
+    text:  (w, l, pct) => `${w} gets ${pct} more value. ${l} would need a real piece added to make this fair.` },
   { upTo: 30,       range: "Steal: 20–30%",
     title: (w, l) => `${w} is getting a steal`,
-    text:  (w, l, pct) => `${w} gets ${pct} more adjusted value. ${l} is giving up a lot here and needs a meaningful add to balance it.` },
+    text:  (w, l, pct) => `${w} gets ${pct} more value. ${l} is giving up a lot here and needs a meaningful add to balance it.` },
   { upTo: Infinity, range: "Robbery: 30% and up",
     title: (w, l) => `${l} is getting robbed`,
-    text:  (w, l, pct) => `${w} is robbing ${l}: ${w} gets ${pct} more adjusted value. This would need a major addition to ${l}'s side to become balanced.` },
+    text:  (w, l, pct) => `${w} is robbing ${l}: ${w} gets ${pct} more value. This would need a major addition to ${l}'s side to become balanced.` },
 ];
 </script>
 
@@ -1461,10 +1468,7 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .sum-hint b.win-A { color: var(--side-a); } .sum-hint b.win-B { color: var(--side-b); }
 .tc-more-body { padding: 0 0 18px; }
 .tc-more-body .ri-story { margin-top: 0; }
-.tc-more .needs { background: none; border: 0; padding: 0; margin: 18px 0 0; }
 .tc-more .tc-analysis { border-top: 0; padding-top: 0; }
-.tc-more .tc-analysis + .needs { border-top: 1px solid var(--line-soft); padding-top: 16px; }
-.needs-head { align-items: center; }
 .sub-label { margin: 16px 0 8px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .bd-table { width: 100%; max-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .bd-table th, .bd-table td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); text-align: right; font-size: 0.86rem; }
@@ -1479,25 +1483,6 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .bd-table tr.bd-total th, .bd-table tr.bd-total td { border-bottom: 0; color: var(--cream); font-weight: 750; }
 
 /* ---------- Trade calculator: roster needs ---------- */
-.needs { margin-bottom: 16px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
-.needs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; }
-.needs-hint { flex: 1 1 300px; font-size: 0.8rem; color: var(--muted); }
-.needs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 22px; }
-.need { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.need-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.need-top .pos { min-width: 34px; height: 20px; font-size: 0.64rem; padding: 0 5px; }
-.need-label { flex: 1; min-width: 0; font-size: 0.82rem; font-weight: 650; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.need.on .need-label { color: var(--cream); }
-.need-mult { font-size: 0.76rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.need.on .need-mult { color: var(--gold-bright); }
-.need input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; margin: 0; }
-.need input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--gold) 0%, var(--track) 50%, var(--line) 100%); }
-.need input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--gold) 0%, var(--track) 50%, var(--line) 100%); }
-.need input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%; background: var(--c); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--c); }
-.need input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--c); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--c); }
-.need input[type=range]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
-.need-QB { --c: var(--qb); } .need-RB { --c: var(--rb); } .need-WR { --c: var(--wr); } .need-TE { --c: var(--te); }
-.need-scale { display: flex; justify-content: space-between; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .model-note { white-space: pre-line; }
 
 /* ---------- Trade calculator: league context ---------- */
@@ -1567,6 +1552,24 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .lc-col li.lc-bench::before { background: var(--line); }
 .lc-col li.lc-out::before { background: var(--qb); }
 .lc-col li.lc-in { color: var(--ink); }
+/* Roster impact and trade rationale (Alan, Oct 11): no winner, both sides' gains and sacrifices */
+.ri-nums { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 10px; }
+.ri-nums div { display: flex; flex-direction: column; gap: 1px; }
+.ri-nums dt { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.ri-nums dd { margin: 0; font-size: 0.84rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ri-nums dd b { color: var(--cream); }
+.ri-nums .up, .rat-val .up { color: var(--rb); } .ri-nums .down, .rat-val .down { color: var(--rose); }
+.ri-slots { width: 100%; margin-bottom: 10px; font-size: 0.8rem; }
+.ri-slots th, .ri-slots td { padding: 3px 6px; text-align: left; }
+.ri-slots thead th { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.ri-slots tbody th { width: 52px; font-weight: 600; color: var(--muted); }
+.ri-slots tr.ch td { color: var(--cream); font-weight: 600; background: var(--fill-1, rgba(127,127,127,.06)); }
+.ri-facts { margin-top: 4px !important; }
+.lc-col.rat h4 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lc-col.rat .ctl-label { display: block; margin: 10px 0 5px; }
+.rat-val { margin: 0 0 2px; font-size: 0.84rem; color: var(--ink-2); }
+.lc-col ul.rat-pro li::before { background: var(--rb); }
+.lc-col ul.rat-con li::before { background: var(--qb); }
 .gl-src { white-space: nowrap; color: var(--muted); font-size: 0.78rem; }
 .gl-local { margin-left: 4px; padding: 1px 6px; border-radius: 4px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rose-ink); background: color-mix(in srgb, var(--rose) 14%, transparent); }
 
@@ -3576,8 +3579,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .tf3-grid { grid-template-columns: 1fr; }
   .tf-controls .tf-player { flex: 1 1 100%; }
   .tf-results-head { align-items: flex-start; }
-  .needs { padding: 12px 14px; }
-  .needs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
   .pm-id { gap: 14px; padding-right: 44px; }
   .pm-panel { overflow-y: auto; overscroll-behavior: contain; }
   .pm-body { flex: none; overflow: visible; }
@@ -4480,7 +4481,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         </div>
         <div class="actions">
           <div class="view-toggle tc-lens" id="tc-lens" role="group" aria-label="Value lens" hidden>
-            <button class="chip-btn" type="button" data-lens="am" aria-pressed="true" title="The trade in AM's league-adjusted values for this league's format">AM Value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false" title="What each side is worth to these two rosters: starting lineup impact, positional needs, replacement level, depth, consolidation and the league's format">Roster Fit</button>
+            <button class="chip-btn" type="button" data-lens="am" aria-pressed="true" title="The trade in AM's league-adjusted values for this league's format">AM Value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false" title="What the trade does to each roster: best lineup before and after, starters in and out, positions addressed or weakened, bench depth. No winner: the value verdict is under AM Value.">Roster Impact</button>
           </div>
           <button class="btn balance-btn" id="balance-btn" type="button" aria-expanded="false" aria-controls="balance" hidden>Balance this trade</button>
           <button class="btn link" id="bal-undo" type="button" hidden>Undo</button>
@@ -4499,21 +4500,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <div class="balance-list" id="balance-list"></div>
       </div>
       <div class="tc-more">
-        <details id="tc-why"><summary>Why?</summary><div class="tc-more-body" id="tc-why-body"></div></details>
-        <details id="tc-impact"><summary>Lineup changes &amp; team-specific value <span class="sum-hint" id="tc-impact-hint"></span></summary>
+        <details id="tc-why"><summary id="tc-why-sum">Why?</summary><div class="tc-more-body" id="tc-why-body"></div></details>
+        <details id="tc-impact"><summary>Roster impact <span class="sum-hint" id="tc-impact-hint"></span></summary>
           <div class="tc-more-body">
             <div class="tc-analysis" id="tc-analysis" hidden></div>
           </div>
         </details>
-        <details id="tc-breakdown"><summary>How AM calculated this</summary><div class="tc-more-body"><div id="tc-breakdown-body"></div>
-            <div class="needs">
-              <div class="needs-head">
-                <span class="ctl-label">Your roster needs</span>
-                <button class="info" type="button" aria-label="About roster needs" data-info="Each position's players count ×1.08 (desperately need) down to ×0.92 (set), on both sides of the trade. Average changes nothing.">i</button>
-                <button class="footer-link" id="needs-reset" type="button" hidden>Reset</button>
-              </div>
-              <div class="needs-grid" id="needs-grid"></div>
-            </div></div></details>
+        <details id="tc-breakdown"><summary>How AM calculated this</summary><div class="tc-more-body"><div id="tc-breakdown-body"></div></div></details>
       </div>
     </div>
   </section>
@@ -5252,7 +5245,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-11T04:00Z";
+  const BUILD_ID = "2026-10-11T18:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5837,22 +5830,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const tv = adjOf;
   // where the calculator's values come from, in words
   const tcValuesName = () => (!LG.fmtOn ? "" : LG.active && !usingCustom() ? `${activeData().league.name || "League"}'s settings` : "Your settings");
-  // Roster needs (1 = desperately need … 5 = set); saved in this browser
-  const NEEDS = (() => { try { return { QB: 3, RB: 3, WR: 3, TE: 3, ...JSON.parse(localStorage.getItem("spm_needs") || "{}") }; } catch (e) { return { QB: 3, RB: 3, WR: 3, TE: 3 }; } })();
-  const needMult = pos => (NEEDS[pos] ? NEED_MULTIPLIERS[NEEDS[pos] - 1] ?? 1 : 1);
-  const needsActive = () => EDIT_POS.some(pos => NEEDS[pos] !== 3);
-  function renderNeeds() {
-    $("needs-grid").innerHTML = EDIT_POS.map(pos => {
-      const lv = NEEDS[pos], m = NEED_MULTIPLIERS[lv - 1];
-      return `<label class="need need-${pos}${lv !== 3 ? " on" : ""}">
-        <span class="need-top"><span class="pos ${pos}">${pos}</span><span class="need-label">${esc(NEED_LEVELS[lv - 1])} ${pos}</span><span class="need-mult">×${m.toFixed(2)}</span></span>
-        <input type="range" min="1" max="5" step="1" value="${lv}" data-need="${pos}" aria-label="${pos} situation" aria-valuetext="${esc(NEED_LEVELS[lv - 1])} ${pos}">
-        <span class="need-scale"><span>Need</span><span>Average</span><span>Set</span></span></label>`;
-    }).join("");
-    $("needs-reset").hidden = !needsActive();
-  }
-  let skipNeedsRender = false;   // keep the slider being dragged in place
-  function saveNeeds() { try { localStorage.setItem("spm_needs", JSON.stringify(NEEDS)); } catch (e) {} }
+  // The roster-needs sliders were removed (Alan, Oct 11): the verdict is asset value only, roster effects are shown
+  // separately (Roster Impact). Clear the old saved setting so it can never come back into a calculation.
+  try { localStorage.removeItem("spm_needs"); } catch (e) {}
 
   function matches(q) {
     q = q.toLowerCase();
@@ -5904,7 +5884,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   setupPicker("B");
   setupPicker("C");
 
-  function runModel(aIds, bIds, val = tv, withNeeds = val === tv) {
+  // Asset value of a trade: league-adjusted values (or val) with the package adjustment. Nothing about either roster.
+  function runModel(aIds, bIds, val = tv) {
     try {
       const pick = id => { const p = byId.get(id); return { ...p, value: val(p) }; };
       const A = aIds.map(pick), B = bIds.map(pick);
@@ -5913,17 +5894,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       LEAGUE_DEPTH = adjusted ? LG.depth || 1 : 1;
       const r = tradeModel(A, B) || {};
       if (r.adj) r.adj.depth = LEAGUE_DEPTH;
-      let a = Number(r.scoreA) || 0, b = Number(r.scoreB) || 0;
-      let needSwing = 0, needUsed = [];
-      // roster needs: each position's players count as multiplier x value (both sides)
-      if (withNeeds && A.length && B.length) {
-        const extra = side => side.reduce((sum, p) => sum + p.value * (needMult(p.pos) - 1), 0);
-        const nA = extra(A), nB = extra(B);
-        a += nA; b += nB;
-        needSwing = Math.round(nA - nB);
-        needUsed = uniq(A.concat(B).map(p => p.pos)).filter(pos => needMult(pos) !== 1).map(pos => `${pos} ×${needMult(pos).toFixed(2)}`);
-      }
-      return { a, b, rawA: r.rawA, rawB: r.rawB, adj: r.adj, needA: a - (Number(r.scoreA) || 0), needB: b - (Number(r.scoreB) || 0), needUsed, note: adjustmentNotes(r, needSwing, needUsed) };
+      const a = Number(r.scoreA) || 0, b = Number(r.scoreB) || 0;
+      return { a, b, rawA: r.rawA, rawB: r.rawB, adj: r.adj, note: adjustmentNotes(r) };
     } catch (err) {
       console.error(err);
       return { a: 0, b: 0, note: "The trade model threw an error: " + err.message, error: true };
@@ -5937,13 +5909,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const tcAdjusted = () => LG.fmtOn;
   function renderRoster(side) {
     const ids = sides[side];
-    const X = !TC3.on && TC_UI.ctx ? TC_UI.ctx[side] : null, fitView = X && TC_UI.lens === "fit";
+    const X = !TC3.on && TC_UI.ctx ? TC_UI.ctx[side] : null;
     const team = X ? X.t.name : "";
     $("roster-" + side).innerHTML = ids.length ? ids.map(id => {
       const p = byId.get(id), fe = X ? X.fit.inc.find(e => e.p === p) : null;
-      const value = fe && fitView ? fe.tv : tv(p);
-      const tip = fe ? (fitView ? `${fe.why}. AM value ${fmt(tv(p))}.` : `Worth ${fmt(fe.tv)} to ${team}: ${fe.why}.`) : "";
-      const cls = fe && fitView ? (fe.f < 0.9 ? " low" : fe.f > 1.0 ? " high" : "") : "";
+      const value = tv(p);
+      const tip = fe ? `For ${team}: ${fe.why}.` : "";
+      const cls = "";
       const dot = `<span class="tc-pl-dot" aria-hidden="true">·</span>`;
       const meta = [p.team ? `<span class="pl-team">${esc(p.team)}</span>` : "", TC3.on ? fromMenu(id, side) : tcOwner(p, side)].filter(Boolean).join(dot);
       return `<li class="tc-pl">${face(p.sleeperId, p.name, "sm")}
@@ -5988,7 +5960,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const verb = (side, plural, singular) => (isYouThey(sideName(side)) ? plural : singular);
   const getsLabel = side => (isYouThey(sideName(side)) ? `${sideName(side)} get` : `${sideName(side)} gets`);
   const possessive = side => { const n = sideName(side); return n === "You" ? "your" : n === "They" ? "their" : n + "'s"; };
-  function adjustmentNotes(r, needSwing, needUsed) {
+  function adjustmentNotes(r) {
     const out = [], a = r.adj;
     if (a && a.swing !== 0) {
       const to = a.swing > 0 ? "A" : "B";
@@ -5996,20 +5968,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         + `; ${subj(a.more)} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, who count for less next to the best player`
         + (a.depth && Math.abs(a.depth - 1) > 0.02 ? `; ×${(1 / a.depth).toFixed(2)} for ${depthWord(a.depth) ? "a " + depthWord(a.depth) + " league" : "league depth"}` : "") + `).`);
     } else if (r.note && !a) out.push(r.note);
-    if (needSwing) out.push(`Need adjustment: ${Math.abs(needSwing).toLocaleString("en-US")} toward ${subj(needSwing > 0 ? "A" : "B")} (${needUsed.join(", ")}).`);
     return out.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join("\n");
   }
   // Verdict wording from your point of view (universal mode)
   function youVerdictText(tierIdx, ahead, pct) {
     const you = ahead === "A";
     const T = [
-      [() => "Basically even", () => `The adjusted values are within ${pct} of each other. This one's a coin flip.`],
-      [() => "Fair trade", () => `The adjusted values are within ${pct} of each other. Neither side has a meaningful advantage.`],
+      [() => "Basically even", () => `The values are within ${pct} of each other. This one's a coin flip.`],
+      [() => "Fair trade", () => `The values are within ${pct} of each other. Neither side has a meaningful advantage.`],
       [() => (you ? "Slight edge to you" : "Slight edge to them"), () => `This is close, but ${you ? "you come" : "they come"} out about ${pct} ahead. ${you ? "They" : "You"} could take it as is or ask for a small add.`],
-      [() => (you ? "You win the trade" : "They win the trade"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. Not lopsided, but ${you ? "they" : "you"} should ask for a sweetener.`],
-      [() => (you ? "You clearly win" : "They clearly win"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. ${you ? "They'd" : "You'd"} need a real piece added to make this fair.`],
-      [() => (you ? "You're getting a steal" : "They're getting a steal"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. ${you ? "They're" : "You're"} giving up a lot here and ${you ? "need" : "need"} a meaningful add to balance it.`],
-      [() => (you ? "You're robbing them" : "You're getting robbed"), () => `${you ? "You" : "They"} get ${pct} more adjusted value. This would need a major addition to ${you ? "their" : "your"} side to become balanced.`]];
+      [() => (you ? "You win the trade" : "They win the trade"), () => `${you ? "You" : "They"} get ${pct} more value. Not lopsided, but ${you ? "they" : "you"} should ask for a sweetener.`],
+      [() => (you ? "You clearly win" : "They clearly win"), () => `${you ? "You" : "They"} get ${pct} more value. ${you ? "They'd" : "You'd"} need a real piece added to make this fair.`],
+      [() => (you ? "You're getting a steal" : "They're getting a steal"), () => `${you ? "You" : "They"} get ${pct} more value. ${you ? "They're" : "You're"} giving up a lot here and ${you ? "need" : "need"} a meaningful add to balance it.`],
+      [() => (you ? "You're robbing them" : "You're getting robbed"), () => `${you ? "You" : "They"} get ${pct} more value. This would need a major addition to ${you ? "their" : "your"} side to become balanced.`]];
     const row = T[Math.min(tierIdx, T.length - 1)];
     return { title: row[0](), text: row[1]() };
   }
@@ -6051,9 +6022,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const own = stray.filter(x => x.own), names = list => list.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
       const ownLine = uniq(own.map(x => x.own)).map(t => `${names(own.filter(x => x.own === t))} ${own.filter(x => x.own === t).length === 1 ? "is" : "are"} already on ${esc(t)}'s roster`).join("; ");
       warn.innerHTML = TC.hist
-        ? `<span>This is a past trade: ${names(stray)} ${stray.length === 1 ? "has" : "have"} moved since, and the rosters from the time of the trade couldn't be rebuilt from the transaction log${TC.hist.why ? ` (${esc(TC.hist.why)})` : ""}, so there's no roster-adjusted read. The sides come straight from the transaction.</span>`
+        ? `<span>This is a past trade: ${names(stray)} ${stray.length === 1 ? "has" : "have"} moved since, and the rosters from the time of the trade couldn't be rebuilt from the transaction log${TC.hist.why ? ` (${esc(TC.hist.why)})` : ""}, so there's no roster impact read. The sides come straight from the transaction.</span>`
         : own.length
-        ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster-adjusted analysis is off until the sides are fixed.</span>
+        ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster impact is off until the sides are fixed.</span>
           <span class="tc-warn-acts"><button class="btn primary" type="button" data-tc-flip>Flip players</button> <button class="btn" type="button" data-tc-remove>Remove</button></span>`
         : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
           <button class="btn" type="button" data-tc-remove>Remove</button>`;
@@ -6069,7 +6040,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     f.hidden = !team; f.innerHTML = team ? teamFace(team, "sm") : "";
     t.closest(".side").classList.toggle("has-team", !!team);
   }
-  // One short line under each card's name: manager, then league position needs/strengths (or your roster-needs settings)
+  // One short line under each card's name: manager, then the team's weak and strong positions in the league
   function renderCardNeeds() {
     const ev = tcLeague() ? evaluateTeams() : null;
     (TC3.on ? ["A", "B", "C"] : ["A", "B"]).forEach(s => {
@@ -6080,9 +6051,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         needs = EDIT_POS.filter(pos => x.place[pos] > n - third);
         strong = EDIT_POS.filter(pos => x.place[pos] <= third);
         tip = `From ${t.name}'s position ranks in the league: ${EDIT_POS.map(pos => `${pos} ${ordinal(x.place[pos])}`).join(", ")}.`;
-      } else if (!tcLeague() && s === "A") {
-        needs = EDIT_POS.filter(pos => NEEDS[pos] <= 2); strong = EDIT_POS.filter(pos => NEEDS[pos] >= 4);
-        tip = "From your roster needs (Roster impact, below).";
       }
       const mgr = t && t.manager && t.manager !== t.name ? `Manager: <b>${esc(t.manager)}</b>` : "";
       el.hidden = !mgr && !needs.length && !strong.length;
@@ -6123,18 +6091,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     } else if (!$("team-A").value && LG.myRosterId != null) $("team-A").value = String(LG.myRosterId);
     renderTradeContext(); renderTrade();
   });
-  $("needs-grid").addEventListener("input", e => {
-    const r = e.target.closest("[data-need]"); if (!r) return;
-    NEEDS[r.dataset.need] = Number(r.value); saveNeeds();
-    const lv = NEEDS[r.dataset.need], box = r.closest(".need");   // update the label in place so dragging stays smooth
-    box.classList.toggle("on", lv !== 3);
-    box.querySelector(".need-label").textContent = `${NEED_LEVELS[lv - 1]} ${r.dataset.need}`;
-    box.querySelector(".need-mult").textContent = "×" + NEED_MULTIPLIERS[lv - 1].toFixed(2);
-    r.setAttribute("aria-valuetext", `${NEED_LEVELS[lv - 1]} ${r.dataset.need}`);
-    skipNeedsRender = true; renderTrade(); skipNeedsRender = false;
-    $("needs-reset").hidden = !needsActive();
-  });
-  $("needs-reset").addEventListener("click", () => { EDIT_POS.forEach(pos => { NEEDS[pos] = 3; }); saveNeeds(); renderTrade(); });
   $("tc-warn").addEventListener("click", e => {
     if (e.target.closest("[data-tc-flip]")) { [sides.A, sides.B] = [sides.B, sides.A]; renderTrade(); return; }   // players change sides, teams stay
     if (!e.target.closest("[data-tc-remove]")) return;
@@ -6235,7 +6191,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return { name: X.t.name, before: X.before.starters.map(p => `${lab(X.before, p)} ${p.name}`), after: X.after.starters.map(p => `${lab(X.after, p)} ${p.name}`),
                out: X.before.starters.filter(p => !X.after.starters.includes(p) && !X.outgoing.includes(p)).map(p => p.name),
                in: X.incoming.filter(p => X.after.labels.has(p.id)).map(p => `${p.name} → ${X.after.labels.get(p.id)}`),
-               net: X.fit.net, recv: X.fit.recv, give: X.fit.give, impact: X.impact }; }) : [];
+               line: X.fit.line, depth: X.fit.depth, impact: X.impact }; }) : [];
     const rosters = t.rosters.map(rid => ({ name: teamNameOf(rid), ids: [...(rb.before.get(rid) || [])]
       .map(sid => ({ sid, p: map.get(sid), name: pl(sid) })).sort((a, b) => (b.p ? dv(b.p) : -1) - (a.p ? dv(a.p) : -1)) }));
     const moves = rb.steps.filter(st => !st.trade).map(st => ({ when: when(st.tx.at), type: txKind(st.tx), teams: uniq(st.tx.rosters || []).map(teamNameOf).join(" / "),
@@ -6253,7 +6209,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     R.rosters.forEach(x => L.push(`${x.name} just before the trade (${x.ids.length}): ${x.ids.map(y => y.name).join(", ")}`));
     R.lines.forEach(x => {
       L.push(`${x.name} starters before: ${x.before.join(", ")}`, `${x.name} starters after: ${x.after.join(", ")}`);
-      L.push(`${x.name} new starters: ${x.in.join(", ") || "none"} · moved out of the lineup: ${x.out.join(", ") || "none"} · lineup ${x.impact >= 0 ? "+" : ""}${x.impact.toFixed(1)}% · value to them ${fmt(x.recv)} vs ${fmt(x.give)} given · roster-adjusted ${fmtNet(x.net)}`);
+      L.push(`${x.name} new starters: ${x.in.join(", ") || "none"} · moved out of the lineup: ${x.out.join(", ") || "none"} · starting lineup ${x.line >= 0 ? "+" : ""}${x.line.toFixed(1)}% · bench depth ${x.depth >= 0 ? "+" : "−"}${fmt(Math.abs(x.depth))} · lineup score with bench ${x.impact >= 0 ? "+" : ""}${x.impact.toFixed(1)}%`);
     });
     L.push(`At the time: ${R.then || "—"} (${R.thenWhy})`);
     R.moves.forEach(m => L.push(`Undone: ${m.when} ${m.type} ${m.teams}: ${[...m.adds, ...m.drops].join(", ")}${m.issues.length ? ` !! ${m.issues.join("; ")}` : ""}`));
@@ -6321,66 +6277,90 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       lockUntouched(X.places, posSet(getA.concat(getB)), X.t.name);
       X.changes = lineupChanges(X);
       const pool = X.after.starters.concat(X.after.bench, X.after.cut);
-      X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
-                          without: list => strength(pool.filter(p => !list.includes(p))) });
+      X.fit = teamImpact({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n,
+                           without: list => strength(pool.filter(p => !list.includes(p))) });
     }
-    if (A.fit.net == null || B.fit.net == null) return null;   // one team gives nothing it owns: value verdict only
+    if (!A.fit.ok || !B.fit.ok) return null;   // one team gives or gets nothing it owns: value verdict only
     return { A, B, n: ev.n, league: d.league };
   }
-  // QB, RB1, RB2, WR1… FLEX, SF for each starter
-  // Team-specific value for every player moving in or out of one roster (see TEAM_FIT)
-  function fitValues(o) {   // { before, after, incoming, outgoing, places, n, league, without(list) -> lineup }
-    const F = TEAM_FIT, sc = o.league.scoring_settings || {}, rp = o.league.roster_positions || [];
-    // shallow leagues: a bench player's discount is bigger (waivers are full of comparable players)
-    const D = leagueDepth(o.league), benchF = f => 1 - (1 - f) / D, minF = Math.min(F.min, benchF(F.min));
-    const te = Number(sc.bonus_rec_te) > 0, superflex = rp.includes("SUPER_FLEX") || rp.filter(x => x === "QB").length >= 2;
-    const third = Math.max(1, Math.floor(o.n / 3)), clampF = f => Math.max(minF, Math.min(F.max, f));
+  /* Roster Impact (Alan, Oct 11): what a trade does to one roster, measured on its complete best lineup before and after
+     (the same lineup method as Power Rankings). It never re-values a player and never feeds the value verdict.
+       u     = change in lineup score (starters + bench depth at the league's bench weight), % of before: the single
+               team-utility measure the calculator, Trade Finder, Acceptance Plausibility and Market Leverage share
+       line  = change in starting-lineup strength, %      depth = change in bench depth (value)
+       inc / out = each moved player's role ("Starts at RB2, bumping X", "Would be WR6 and wouldn't start"); `by` = who
+               holds a departing starter's slot afterwards
+     Replaced the per-player roster-fit multipliers (TEAM_FIT: ×0.60–1.10 by role), which re-valued players by need and
+     let a hole-filling trade read as a "win". */
+  function teamImpact(o) {   // { before, after, incoming, outgoing, places, n, without(list) -> lineup }
+    const third = Math.max(1, Math.floor(o.n / 3));
     const all = L => L.starters.concat(L.bench, L.cut || []);
     const depthOf = (L, p) => 1 + all(L).filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
-    const isFlex = r => /FLEX|W\/R|W\/T/.test(r);
+    const holder = (L, role) => { for (const [id, r] of L.labels) if (r === role) return byId.get(id) || null; return null; };
     const inc = o.incoming.map(p => {
-      const L = o.after, role = L.labels.get(p.id), v = dv(p);
-      let f, why;
-      if ((L.cut || []).includes(p)) { f = benchF(F.cut); why = "No roster spot, he'd be cut"; }
+      const L = o.after, role = L.labels.get(p.id), cut = (L.cut || []).includes(p);
+      let why;
+      if (cut) why = "No roster spot, he'd be cut";
       else if (role) {
-        const W = o.without([p]), gain = L.startVal - W.startVal, ratio = v > 0 ? gain / v : 0;
-        const bumped = W.starters.filter(x => !L.starters.includes(x)).sort((a, b) => dv(b) - dv(a))[0];
+        const W = o.without ? o.without([p]) : null;
+        const bumped = W ? W.starters.filter(x => !L.starters.includes(x) && !o.incoming.includes(x)).sort((a, b) => dv(b) - dv(a))[0] : null;
         const weak = o.places[p.pos] && o.places[p.pos][0] > o.n - third;
-        if (isFlex(role)) f = F.flexMin + (1 - F.flexMin) * Math.min(1, Math.max(0, ratio));
-        else if (role === "SF") f = F.superflex + 0.02 * Math.min(1, Math.max(0, ratio));
-        else f = F.starter;
-        if (!isFlex(role) && ratio >= 0.5 && (weak || /^(QB|TE)$|1$/.test(role))) f = F.majorUpgrade;
-        if (te && p.pos === "TE" && !isFlex(role)) f += F.tePremium;
-        why = `Starts at ${role}` + (bumped && !o.incoming.some(q => q !== p && L.starters.includes(q) && W.starters.includes(bumped) === false && q.id < p.id) ? `, bumping ${bumped.name}` : "") + (weak ? `, fills a weak ${p.pos} spot` : "");
+        why = `Starts at ${role}` + (bumped ? `, bumping ${bumped.name}` : "") + (weak ? `, fills a weak ${p.pos} spot` : "");
       } else {
         const ahead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
-        if (p.pos === "QB") f = superflex ? (ahead === 0 ? F.qbBackupSuperflex : F.deep) : F.qbBackup1QB;
-        else f = ahead === 0 ? F.nextUp : ahead === 1 ? F.noPath : F.deep;
-        f = benchF(f);
         why = `Would be ${p.pos}${depthOf(L, p)} and wouldn't start` + (ahead >= 2 ? ", buried on the depth chart" : ahead === 0 && p.pos !== "QB" ? ", first in line" : "");
       }
-      f = clampF(f);
-      return { p, f, tv: Math.round(v * f), why, starts: !!role, role: role || "" };
+      return { p, why, starts: !!role, role: role || "", cut };
     });
     const out = o.outgoing.map(p => {
-      const L = o.before, role = L.labels.get(p.id), v = dv(p);
-      let f, why;
-      if (role) {
-        const hole = o.places[p.pos] && o.places[p.pos][1] > o.n - third && o.places[p.pos][0] <= o.n - third;
-        f = hole ? F.loseStarterHole : (isFlex(role) || role === "SF") ? F.loseFlex : F.loseStarter;
-        why = `Starter (${role})` + (hole ? `, leaves a hole at ${p.pos}` : "");
-      } else {
-        const ahead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
-        f = benchF(ahead === 0 ? F.loseNextUp : ahead === 1 ? F.loseNoPath : F.loseDeep);
-        why = ahead === 0 ? `Top ${p.pos} backup` : "Bench depth";
-      }
-      f = clampF(f);
-      return { p, f, tv: Math.round(v * f), why, starts: !!role, role: role || "" };
+      const L = o.before, role = L.labels.get(p.id);
+      const hole = !!role && !!o.places[p.pos] && o.places[p.pos][1] > o.n - third && o.places[p.pos][0] <= o.n - third;
+      const ahead = L.bench.filter(x => x !== p && x.pos === p.pos && dv(x) > dv(p)).length;
+      return { p, starts: !!role, role: role || "", by: role ? holder(o.after, role) : null, hole,
+               why: role ? `Starter (${role})` + (hole ? `, leaves a hole at ${p.pos}` : "") : ahead === 0 ? `Top ${p.pos} backup` : "Bench depth" };
     });
-    const recv = inc.reduce((a, x) => a + x.tv, 0), give = out.reduce((a, x) => a + x.tv, 0);
-    // a team that gives (or gets) nothing has no roster-adjusted net: null, never a fake 0 ("basically even")
-    return { inc, out, recv, give, net: recv && give ? 100 * (recv - give) / Math.min(recv, give) : null };
+    const B = o.before, A = o.after, pct = (a, b) => (b > 0 ? 100 * (a - b) / b : 0);
+    // the same changes in "average starters" (the team's starting-lineup value ÷ its number of starters): a percentage of
+    // the lineup means more in a 7-starter league than in a 10-starter one, a share of an average starter doesn't
+    const avg = B.starters.length ? B.startVal / B.starters.length : 0;
+    // ok: the team gives and gets something it owns (otherwise there's no two-way roster read, never a fake 0)
+    return { inc, out, d: A.score - B.score, u: pct(A.score, B.score), line: pct(A.startVal, B.startVal), depth: A.depthVal - B.depthVal,
+             su: avg ? (A.score - B.score) / avg : 0, sl: avg ? (A.startVal - B.startVal) / avg : 0, ok: o.incoming.length > 0 && o.outgoing.length > 0 };
   }
+  /* Lineup changes on one 0–1 scale, in average starters (teamImpact.su / .sl): −0.4 of a starter → 0, +0.8 → 1.
+     Checked Oct 11 on 1QB, Superflex, TE premium, a 10-team 7-starter and a 14-team 10-starter league: the 5th–95th
+     percentile of Trade Finder ideas sits inside that range everywhere (a fixed % range didn't: 7-starter lineups ran
+     to +11%, 10-starter ones rarely past +2.5%). In a 9-starter league it equals about −4.4% … +8.9% of the lineup. */
+  const utilScore = units => Math.max(0, Math.min(1, (units + 0.4) / 1.2));
+  /* Acceptance Plausibility (Alan, Oct 11; reworked the same day after the overlap audit): a heuristic read of how
+     realistic it is that a team agrees, judged from that team's side only. Not a calibrated probability. Two parts, each
+     counted once, 50/50:
+       value   how the deal looks in value to them: the average of AM's view and the market's (FantasyCalc / Flock) when
+               every player has a market value, each capped at ±40% so tiny-value deals can't swamp it; AM's alone
+               otherwise. A proxy: no manager is assumed to follow either source. −20% → 0, +20% → 1.
+       lineup  their lineup change in average starters (utilScore of teamImpact.su: starters + bench depth)
+     A filled need, a new starter, depth or losing their best player only explain (Trade rationale): each is already in
+     value or lineup, so none is scored again. Guardrails that value can't buy back: their starting lineup down more than
+     0.45 of an average starter → Low; down more than 0.27, or a value view under −8% → at most Moderate.
+     Replaced (same day) a 5-part score where need and construction paid out together whenever lineup did. */
+  const ACC_NEUTRAL = 0.5 * 0.5 + 0.5 * utilScore(0);
+  function acceptance(a) {   // { val, mkt, su, sl }
+    const c01 = v => Math.max(0, Math.min(1, v)), cap = v => Math.max(-40, Math.min(40, v));
+    const view = a.mkt == null ? a.val : (cap(a.val) + cap(a.mkt)) / 2;
+    const value = c01((view + 20) / 40), lineup = utilScore(a.su);
+    const score = 0.5 * value + 0.5 * lineup;
+    // labels around a neutral trade (an even value view, no lineup change: 0.5 · 0.5 + 0.5 · utilScore(0) ≈ 0.42), which
+    // sits in the middle of Moderate: High ≥ neutral + 0.15, Low < neutral − 0.15
+    let label = score >= ACC_NEUTRAL + 0.15 ? "High" : score >= ACC_NEUTRAL - 0.15 ? "Moderate" : "Low";
+    if (a.sl < -0.45) label = "Low";
+    else if (label === "High" && (a.sl < -0.27 || view < -8)) label = "Moderate";
+    return { score, label, view, value, lineup };
+  }
+  // acceptance() inputs from one team's teamImpact and its position-room places ([before, after] per position)
+  function acceptFor(o) {   // { imp, val, mkt } (pl, n, losesBest are accepted and ignored: they only explain)
+    return acceptance({ val: o.val, mkt: o.mkt, su: o.imp.su, sl: o.imp.sl });
+  }
+
   // Double-check on every trade read: a position that no player in the deal plays keeps every
   // team's grade there. Position rooms already guarantee this; the check catches any regression.
   function lockUntouched(places, movedPos, who) {
@@ -6418,54 +6398,169 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (X.after.filled < X.before.filled) lines.push({ kind: "out", text: `Can't fill every starting spot anymore` });
     return lines;
   }
-  // League-adjusted margin: value first, roster fit refines it (capped so need never overrides value)
-  const FIT_WEIGHT = 0.4, FIT_CAP = 4;
-  // Roster-adjusted verdict: each team's net in team-specific value (what it receives minus what it gives up, valued to that roster)
-  function contextVerdict(res, ctx) {
-    const valueMargin = (res.a >= res.b ? 1 : -1) * pctMore(res.a, res.b);   // + = Team A ahead
-    const fit = (ctx.A.fit.net - ctx.B.fit.net) / 2;
-    const total = fit, more = Math.round(Math.abs(total) * 10) / 10;
-    const ahead = total >= 0 ? "A" : "B", loser = ahead === "A" ? "B" : "A";
-    const tier = TRADE_VERDICTS.find(t => more < t.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
-    return { valueMargin, fit, total, more, ahead, loser, tier, fair: tier.upTo <= 3 };
+  /* Calculator, league mode (Alan, Oct 11): four separate reads that never feed each other.
+       Value verdict    who receives more asset value (league-adjusted values + package adjustment): the headline
+       Roster impact    each team's best lineup before → after; no winner (renderImpact)
+       Trade rationale  why each team might accept: benefits and sacrifices from real roster data (rationaleHtml)
+       Acceptance       how realistic it is that each team agrees (acceptance / acceptFor, shared with Trade Finder) */
+  const pctS = (x, d = 1) => (Math.abs(x) > 100 ? `${x >= 0 ? "+" : "−"}100%+` : `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(d)}%`);
+  const updn = (x, eps = 0.5) => (x >= eps ? "up" : x <= -eps ? "down" : "");
+  // + = this side receives more asset value (adjusted, package adjustment included)
+  // Materiality floor for value gaps (valueRead): an average starter's value in this context, i.e. the mean value of the
+  // top (teams × starting slots) players: the league's (or your settings') format, base AM values with base = true
+  function valueFloor(val = tv, base = false) {
+    const lg = base ? null : valueLeague() || (LG.active ? activeData().league : null);
+    const slots = lg && lg.roster_positions ? leagueSlots(lg).length : 9;
+    const teams = lg ? Number(lg.total_rosters || (lg.settings && lg.settings.num_teams)) || 12 : 12;
+    const vs = players.map(p => (base ? p.value : val(p)) || 0).sort((a, b) => b - a).slice(0, Math.max(1, slots * teams));
+    return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : 0;
   }
-  function contextStory(ctx, cv, names) {
-    const A = ctx.A, B = ctx.B, ord = ordinal, n = ctx.n;
-    const vm = Math.abs(cv.valueMargin), valueAhead = cv.valueMargin >= 0 ? "A" : "B";
-    const diff = A.impact - B.impact, fitW = diff >= 0 ? "A" : "B", fitL = fitW === "A" ? "B" : "A";
-    const X = { A, B }[fitW], Y = { A, B }[fitL];
-    const W = names[fitW], L = names[fitL];
-    let s = vm < 3 ? "This trade is nearly even in value" : `${names[valueAhead]} gets ${vm.toFixed(1)}% more value`;
-    if (Math.abs(diff) < 2) {
-      s += vm < 3 ? ", and it fits both rosters about equally." : ", and roster fit doesn't change the picture much.";
-    } else {
-      s += vm < 3 ? `, but it helps ${W} more` : fitW === valueAhead ? `, and it helps ${W} more on the field too` : `, but it fits ${W}'s roster better`;
-      const star = X.incoming.filter(p => X.after.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
-      if (star) {
-        const pl = X.places[star.pos][0], weak = pl > Math.ceil(n / 2);
-        const consolidate = X.incoming.length < X.outgoing.length;
-        s += weak ? ` because ${W} is weak at ${star.pos} (${ord(pl)} in the league) and ${star.name} immediately becomes their ${X.after.labels.get(star.id)}.`
-          : consolidate ? ` because ${W} consolidates depth into a starter: ${star.name} becomes their ${X.after.labels.get(star.id)}.`
-          : ` because ${star.name} steps right into ${W}'s lineup as their ${X.after.labels.get(star.id)}.`;
-      } else s += ` because ${W} adds depth without weakening its starting lineup.`;
+  // the value verdict's gap from one side (valueRead): + = that side comes out ahead; a split verdict counts as even
+  const vrSide = (vr, s) => (vr.kind === "split" ? 0 : vr.side === s ? vr.gap : -vr.gap);
+  const sideVal = (r, s) => { const a = s === "A" ? r.a : r.b, b = s === "A" ? r.b : r.a; return Math.min(a, b) > 0 ? 100 * (a - b) / Math.min(a, b) : 0; };
+  // The value verdict's numbers, transparent: the adjusted gap, the raw gap, and the package adjustment that moves one to the other
+  function valueGapHtml(res, vr, fair, pct, who) {
+    const a = res.adj;
+    // small values (valueRead's materiality floor): the points, and the plain percentage as a footnote, not a headline
+    const smallNote = vr.small ? `<br><span class="muted">Small values: a ${fmt(vr.diff)}-point difference (${pctMore(res.a, res.b).toFixed(0)}% of the smaller side) is measured against an average starter's value (${fmt(valueFloor())}), so it reads as the minor gap it is.</span>` : "";
+    if (!a || !a.swing) return (fair ? `<b>${pct}</b> apart in value` : `<b>${pct}</b> more value for ${esc(who(vr.side))}`) + smallNote;
+    const txt = v => (Math.abs(v) < 0.05 ? "even" : `${esc(who(v > 0 ? "A" : "B"))} +${Math.abs(v).toFixed(1)}%`);
+    const note = {
+      split: "The package-efficiency adjustment reverses the raw-value advantage.",
+      sensitive: "Package-sensitive: one reading is about even, the other shows a clear edge, so the verdict depends on the package adjustment.",
+      widened: "The verdict uses the raw gap: the package adjustment widens it, and it isn't independently calibrated.",
+      tempered: "The extra player counts for less next to the best one in the deal, which narrows the raw gap.",
+      evened: "One reading is about even and the other only a slight edge, so the trade reads as fair.",
+    }[vr.kind] || "";
+    return `Raw asset value: <b>${txt(vr.raw)}</b> · Package-adjusted: <b>${txt(vr.adj)}</b> ${infoIcon(`Raw = the players' league-adjusted values added up. In an uneven trade the side getting more players counts its ${a.extra} extra player${a.extra > 1 ? "s" : ""} at a share of their value (value ÷ the best player's in the deal): ${fmt(Math.abs(a.swing))} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal) toward ${who(a.swing > 0 ? "A" : "B")}. It's a provisional heuristic (it under-credits extra players who'd start on most rosters), so it can narrow a verdict but never create or reverse a winner by itself. Roster needs never change these numbers.`, "About the package adjustment")}<br><span class="muted">${esc(note)}</span>${smallNote}`;
+  }
+  // the same trade in market / expert consensus values (FantasyCalc + Flock on AM's scale), when every player has one
+  function tcMarketModel() {
+    const all = typeof MK_READY !== "undefined" && MK_READY ? mkAll() : null;
+    if (!all || !all.srcs.length) return null;
+    if (![...sides.A, ...sides.B].every(id => { const p = byId.get(id); return p && mkOf(p); })) return null;
+    const m = runModel(sides.A, sides.B, p => mkOf(p).cv);
+    return m.error || !(m.a > 0 && m.b > 0) ? null : m;
+  }
+  function tcAccept(ctx, res) {
+    const mm = tcMarketModel(), out = {};
+    for (const s of ["A", "B"]) {
+      const X = ctx[s], best = X.before.starters.concat(X.before.bench).slice().sort((a, b) => dv(b) - dv(a))[0];
+      out[s] = acceptFor({ imp: X.fit, val: vrSide(valueRead(res, valueFloor()), s), mkt: mm ? sideVal(mm, s) : null });
     }
-    // the other side
-    const gavePos = new Set(Y.outgoing.map(p => p.pos));   // only a position the team actually gave up can open a hole
-    const hole = EDIT_POS.filter(pos => gavePos.has(pos)).map(pos => ({ pos, b: Y.places[pos][0], a: Y.places[pos][1] })).filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
-    const bestPos = EDIT_POS.map(pos => ({ pos, b: Y.places[pos][0] })).sort((x, y) => x.b - y.b)[0];
-    let t = "";
-    const holeStarter = hole && Y.outgoing.filter(p => p.pos === hole.pos && Y.before.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
-    if (Math.abs(diff) >= 2 && holeStarter && hole.a >= Math.ceil(n * 0.67)) {
-      const strong = bestPos.b <= 3 && bestPos.pos !== hole.pos;
-      t = `${strong ? `${L} already has strong ${bestPos.pos} depth, but losing` : `Losing`} ${holeStarter.name} leaves ${strong ? "them" : L} thin at ${hole.pos} (${hole.pos} room ${ord(hole.b)} → ${ord(hole.a)}).`;
-    } else if (Math.abs(diff) >= 2 && Y.impact < 0) {
-      t = `${L}'s lineup gets ${Y.impact < -5 ? "noticeably" : "a little"} weaker (−${Math.abs(Y.impact).toFixed(1)}% roster impact), so they're paying for the value in lineup strength.`;
-    } else if (Y.impact >= 0 && Math.abs(diff) >= 2) {
-      t = `${L} still comes out fine on the field (${Y.impact >= 0 ? "+" : ""}${Y.impact.toFixed(1)}% roster impact).`;
+    return out;
+  }
+  const slotHolder = (L, role) => { for (const [id, r] of L.labels) if (r === role) return byId.get(id) || null; return null; };
+  // starting-lineup PPG from AM's rest-of-season projections in this scoring, only when every starter has one
+  function projStarters(L) {
+    let R; try { R = projRatios(scoringNow()); } catch (e) { return null; }
+    if (!R || !R.size) return null;
+    let t = 0;
+    for (const p of L.starters) { const b = projPPGOf(p); if (b == null) return null; t += b * (R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1); }
+    return t;
+  }
+  // projected starter points per game before → after, with the slot that moves most (null without full projections)
+  function projSwing(X) {
+    const b = projStarters(X.before), a = b == null ? null : projStarters(X.after);
+    if (a == null) return null;
+    let R; try { R = projRatios(scoringNow()); } catch (e) { return null; }
+    const pts = p => (p ? projPPGOf(p) * (R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1) : 0);
+    const rows = [];
+    [X.before, X.after].forEach(L => L.starters.forEach(p => { const r = L.labels.get(p.id); if (!rows.includes(r)) rows.push(r); }));
+    const ch = rows.map(r => { const pb = slotHolder(X.before, r), pa = slotHolder(X.after, r); return { r, pb, pa, d: pts(pa) - pts(pb) }; })
+      .filter(x => x.pb !== x.pa).sort((x, y) => Math.abs(y.d) - Math.abs(x.d))[0];
+    const big = ch && Math.abs(ch.d) >= 1 ? `${ch.r} ${ch.pb ? ch.pb.name + " " + pts(ch.pb).toFixed(1) : "empty"} → ${ch.pa ? ch.pa.name + " " + pts(ch.pa).toFixed(1) : "empty"}` : "";
+    return { b, a, d: a - b, big, who: ch && ch.pb && ch.pa ? `${ch.pb.name} and ${ch.pa.name}` : "these players" };
+  }
+  // Why each team might accept, and what it gives up: real roster data, both sides, never a winner
+  function rationale(X, n, v, vr, side) {
+    const f = X.fit, low = n - Math.ceil(n / 3), pros = [], cons = [];
+    // two different measures, never interchanged: starting-lineup VALUE (league-adjusted AM values of the best lineup) and
+    // projected POINTS (AM's rest-of-season points per game for those starters, when every starter has a projection)
+    if (f.line >= 0.5) pros.push(`Starting-lineup value rises (${pctS(f.line)})`);
+    else if (f.line <= -0.5) cons.push(`Starting-lineup value falls (${pctS(f.line)})`);
+    const pp = projSwing(X);
+    if (pp && Math.abs(pp.d) >= 1) {
+      const disagree = (f.line >= 0.5 && pp.d < 0) || (f.line <= -0.5 && pp.d > 0);
+      const t = `Projected starter points ${pp.d > 0 ? "rise" : "fall"} ${pp.b.toFixed(1)} → ${pp.a.toFixed(1)} per game${pp.big ? ` (biggest change: ${pp.big})` : ""}` + (disagree ? `, even though starting-lineup value ${f.line > 0 ? "rises" : "falls"}: AM's values and its rest-of-season projections rate ${pp.who} differently` : "");
+      (pp.d > 0 ? pros : cons).push(t);
     }
-    const cut = [A, B].filter(Z => Z.after.cut.some(p => !Z.before.cut.includes(p)));
-    if (cut.length) t += ` ${cut.map(Z => names[Z === A ? "A" : "B"]).join(" and ")} would need to cut a player to make room.`;
-    return (s + " " + t).trim();
+    f.inc.filter(e => e.starts).sort((a, b) => dv(b.p) - dv(a.p)).forEach(e => {
+      const prev = slotHolder(X.before, e.role), swap = prev && X.outgoing.includes(prev);
+      pros.push(swap ? `${e.p.name} (${posLabel(e.p)}) takes over ${e.role} from ${prev.name} (${posLabel(prev)})`
+        : `${e.p.name} starts at ${e.role}` + (prev && prev !== e.p ? `, replacing ${prev.name} (${posLabel(prev)})` : ""));
+    });
+    const mv = EDIT_POS.map(pos => ({ pos, b: X.places[pos][0], a: X.places[pos][1] }));
+    mv.filter(x => x.a < x.b).forEach(x => pros.push(x.b > low ? `Addresses a weak ${x.pos} room (${ordinal(x.b)} → ${ordinal(x.a)} in the league)` : `${x.pos} room ${ordinal(x.b)} → ${ordinal(x.a)}`));
+    if (X.outgoing.length > X.incoming.length && f.inc.some(e => e.starts)) pros.push(`Consolidates ${X.outgoing.length} players into ${X.incoming.length === 1 ? "one" : X.incoming.length}, opening ${X.outgoing.length - X.incoming.length === 1 ? "a roster spot" : X.outgoing.length - X.incoming.length + " roster spots"}`);
+    const benchIn = f.inc.filter(e => !e.starts && !e.cut);
+    if (benchIn.length) pros.push(`Adds depth: ${benchIn.map(e => { const m = e.why.match(/^Would be (\S+)/); return e.p.name + (m ? ` (${m[1]})` : ""); }).join(", ")}`);
+    if (vr && vr.kind === "split") {
+      const mine = (vr.raw > 0) === (side === "A");
+      (mine ? pros : cons).push(mine ? `More total value (raw ${pctS(Math.abs(vr.raw))}), though the package adjustment favors the other side` : `Less total value (raw ${pctS(-Math.abs(vr.raw))}), though the package adjustment favors this side`);
+    }
+    if (v >= 3) pros.push(`Receives ${v.toFixed(1)}% more value`);
+    if (v <= -3) cons.push(`Gives up ${Math.abs(v).toFixed(1)}% more value than it gets back`);
+    // a starter whose slot goes to an incoming player is already the "takes over" line above
+    f.out.filter(e => e.starts && !(e.by && X.incoming.includes(e.by))).forEach(e => cons.push(`Loses ${e.role} ${e.p.name}` + (e.by ? `; ${e.by.name} (${posLabel(e.by)}) takes the spot` : "; the spot can't be filled")));
+    mv.filter(x => x.a > x.b).forEach(x => cons.push(`${x.pos} room ${ordinal(x.b)} → ${ordinal(x.a)}${x.a > low && x.b <= low ? ", into the league's bottom third" : ""}`));
+    const benchOut = f.out.filter(e => !e.starts);
+    if (benchOut.length) cons.push(`Gives up bench depth: ${benchOut.map(e => e.p.name).join(", ")}`);
+    if (f.depth <= -1 && !benchOut.length && X.incoming.length >= X.outgoing.length) cons.push("Bench depth gets thinner");
+    const cuts = X.after.cut.filter(p => !X.before.cut.includes(p));
+    if (cuts.length) cons.push(`Has to cut ${cuts.map(p => p.name).join(", ")} to make room`);
+    if (X.after.filled < X.before.filled) cons.push("Can't fill every starting spot anymore");
+    return { pros, cons };
+  }
+  const ACC_CLS = { High: "hi", Moderate: "mid", Low: "lo" };
+  function rationaleHtml(ctx, res, names) {
+    const acc = tcAccept(ctx, res), mm = tcMarketModel();
+    const col = s => {
+      const vr = valueRead(res, valueFloor()), X = ctx[s], v = vrSide(vr, s), r = rationale(X, ctx.n, v, vr, s), nm = names[s], a = acc[s];
+      const val = vr.kind === "split" ? `split on value (raw ${pctS(s === "A" ? vr.raw : -vr.raw)}, package-adjusted ${pctS(s === "A" ? vr.adj : -vr.adj)})` : Math.abs(v) < 3 ? `about even on value (${pctS(v)})` : v > 0 ? `receives ${v.toFixed(1)}% more value` : `gives up ${Math.abs(v).toFixed(1)}% more value`;
+      return `<div class="lc-col rat side-${s}"><h4>${esc(nm)} <span class="tf-pill conf ${ACC_CLS[a.label]}" title="A heuristic read of how realistic it is that ${esc(nm)} agrees, not a probability: half how the deal looks in value (the average of AM's and the market's view${mm ? "" : "; AM only here, no complete market data"}), half its lineup change. Needs, depth and losing a top player are already inside those two. Separate from the value verdict.">Acceptance: ${a.label}</span></h4>
+        <p class="rat-val">${esc(nm.charAt(0).toUpperCase() + nm.slice(1))} ${esc(val)}${mm ? ` · market ${pctS(sideVal(mm, s))}` : ""}</p>
+        <span class="ctl-label">Why ${esc(nm)} might accept</span>${r.pros.length ? `<ul class="rat-pro">${r.pros.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<p class="pp-note">Nothing on the roster side: no new starter, no room improves.</p>`}
+        <span class="ctl-label">What ${esc(nm)} gives up</span>${r.cons.length ? `<ul class="rat-con">${r.cons.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<p class="pp-note">Nothing that weakens the lineup.</p>`}</div>`;
+    };
+    return `<div class="lc-cols">${col("A")}${col("B")}</div>
+      <p class="pp-note">Benefits and sacrifices come from each team's best lineup before and after the trade. Filling a need explains why a trade can make sense for a team; it doesn't decide who wins. The value verdict above is asset value only.</p>`;
+  }
+  // Roster Impact panel: each team's lineup slot by slot, strength before → after, who comes in and goes out, rooms, depth
+  function renderImpact(ctx, names) {
+    const col = s => {
+      const X = ctx[s], f = X.fit, labels = [];
+      [X.before, X.after].forEach(L => L.starters.forEach(p => { const r = L.labels.get(p.id); if (!labels.includes(r)) labels.push(r); }));
+      const rows = labels.map(r => { const b = slotHolder(X.before, r), a = slotHolder(X.after, r), nm = p => (p ? `${esc(p.name)} <span class="muted">${esc(posLabel(p))}</span>` : `<span class="muted">empty</span>`);
+        return `<tr${b !== a ? ' class="ch"' : ""}><th scope="row">${esc(r)}</th><td>${nm(b)}</td><td>${nm(a)}</td></tr>`; }).join("");
+      const pb = projStarters(X.before), pa = pb == null ? null : projStarters(X.after);
+      const facts = [], n = ctx.n, low = n - Math.ceil(n / 3);
+      const sIn = f.inc.filter(e => e.starts), sOut = f.out.filter(e => e.starts);
+      if (sIn.length) facts.push(["in", `Starters in: ${sIn.map(e => `${e.p.name} (${e.role})`).join(", ")}`]);
+      if (sOut.length) facts.push(["out", `Starters out: ${sOut.map(e => `${e.p.name} (${e.role}${e.by ? ` → ${e.by.name}` : ", unfilled"})`).join(", ")}`]);
+      const moved = X.before.starters.filter(p => !X.outgoing.includes(p) && !X.after.starters.includes(p));
+      if (moved.length) facts.push(["bench", `Moves to the bench: ${moved.map(p => p.name).join(", ")}`]);
+      const mv = EDIT_POS.map(pos => ({ pos, b: X.places[pos][0], a: X.places[pos][1] }));
+      const up = mv.filter(x => x.a < x.b), dn = mv.filter(x => x.a > x.b);
+      if (up.length) facts.push(["in", `Addressed: ${up.map(x => `${x.pos} ${ordinal(x.b)} → ${ordinal(x.a)}${x.b > low ? " (was a weak spot)" : ""}`).join(", ")}`]);
+      if (dn.length) facts.push(["out", `Weakened: ${dn.map(x => `${x.pos} ${ordinal(x.b)} → ${ordinal(x.a)}${x.a > low && x.b <= low ? " (now bottom third)" : ""}`).join(", ")}`]);
+      const bIn = f.inc.filter(e => !e.starts && !e.cut), bOut = f.out.filter(e => !e.starts);
+      if (bIn.length) facts.push(["bench", `Bench in: ${bIn.map(e => e.p.name).join(", ")}`]);
+      if (bOut.length) facts.push(["bench", `Bench out: ${bOut.map(e => e.p.name).join(", ")}`]);
+      const cuts = X.after.cut.filter(p => !X.before.cut.includes(p));
+      if (cuts.length) facts.push(["out", `Has to cut: ${cuts.map(p => p.name).join(", ")}`]);
+      return `<div class="lc-col ri-col side-${s}"><h4>${esc(names[s])}</h4>
+        <dl class="ri-nums"><div><dt title="League-adjusted AM values of the best starting lineup added up: asset value, not points">Starting-lineup value</dt><dd>${fmt(X.before.startVal)} → <b>${fmt(X.after.startVal)}</b> <span class="${updn(f.line)}">${pctS(f.line)}</span></dd></div>
+          <div><dt>Bench depth</dt><dd>${fmt(X.before.depthVal)} → <b>${fmt(X.after.depthVal)}</b> <span class="${updn(f.depth, 1)}">${Math.round(f.depth) === 0 ? "±0" : (f.depth > 0 ? "+" : "−") + fmt(Math.abs(f.depth))}</span></dd></div>
+          ${pa != null ? `<div><dt title="AM's rest-of-season projected points per game for the starters, in this league's scoring">Projected starter points</dt><dd>${pb.toFixed(1)} → <b>${pa.toFixed(1)}</b> per game <span class="${updn(pa - pb, 1)}">${pa - pb >= 0 ? "+" : "−"}${Math.abs(pa - pb).toFixed(1)}</span></dd></div>` : ""}</dl>
+        ${pa != null && ((f.line >= 0.5 && pa - pb <= -1) || (f.line <= -0.5 && pa - pb >= 1)) ? `<p class="pp-note ri-split">Value and projected points disagree here: AM's rankings and its rest-of-season projections rate the players involved differently.</p>` : ""}
+        <table class="fit-table ri-slots"><thead><tr><th scope="col">Slot</th><th scope="col">Before</th><th scope="col">After</th></tr></thead><tbody>${rows}</tbody></table>
+        ${facts.length ? `<ul class="ri-facts">${facts.map(([k, t]) => `<li class="lc-${k}">${esc(t)}</li>`).join("")}</ul>` : `<p class="pp-note">No lineup changes.</p>`}</div>`;
+    };
+    $("tc-analysis").innerHTML = `<div class="lc-cols">${col("A")}${col("B")}</div>
+      <p class="pp-note">Each team's best lineup in this league before and after the trade (the Power Rankings method; other teams unchanged). Starting-lineup value and bench depth add up league-adjusted AM values: asset value, not points${ctx.A && projStarters(ctx.A.before) != null ? ". Projected starter points are AM's rest-of-season points per game for the starters in this league's scoring, a separate measure that can disagree with value" : ""}. Roster impact never changes a player's value or the value verdict.</p>`;
+    $("tc-analysis").hidden = false;
+    $("tc-impact-hint").textContent = `· ${["A", "B"].map(s => `${names[s]} ${pctS(ctx[s].fit.line)}`).join(" · ")} starting-lineup value`;
   }
 
   // Balancing in league mode: players from the roster of the team that's ahead (they owe value),
@@ -6549,6 +6644,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("side-C").hidden = !three; $("add-third").hidden = three;
     $("three-verdicts").hidden = !three;
     ["verdict-title", "verdict-gap", "verdict-sub", "meter-wrap", "swap-btn"].forEach(id => { $(id).hidden = three; });
+    if (!three) $("tc-why-sum").textContent = "Why?";
     if (three) $("tc-lens").hidden = true;
     $("bal-undo").hidden = !(TC_UI.undo && JSON.stringify([sides.A, sides.B, sides.C]) === TC_UI.undo.after);
     if (three) { $("tc-ba").hidden = true; $("tc-mkt").hidden = true; renderTrade3(); return; }
@@ -6567,7 +6663,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("score-A").textContent = sideName("A") + " · " + fmt(res.a);
     $("score-B").textContent = fmt(res.b) + " · " + sideName("B");
     renderTcMarket(res);
-    if (!skipNeedsRender) renderNeeds();
 
     const title = $("verdict-title"), sub = $("verdict-sub"), meter = $("meter"), gapLine = $("verdict-gap");
     $("tc-lens").hidden = true;
@@ -6576,7 +6671,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       $("tc-why-body").innerHTML = `<p class="pp-note">Add players to both sides to see the reasoning.</p>`;
       $("tc-breakdown-body").innerHTML = `<p class="pp-note">Add players to both sides to see the numbers.</p>`;
       $("tc-analysis").hidden = true;
-      $("tc-impact-hint").textContent = needsActive() ? "Needs set" : "";
+      $("tc-impact-hint").textContent = "";
     };
     if (!sides.A.length && !sides.B.length) {
       hide();
@@ -6601,49 +6696,57 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       sub.textContent = isYouThey(l) ? `${l} aren't getting anything back yet.` : `${l} isn't getting anything back yet.`;
       return;
     }
-    const more = pctMore(res.a, res.b);
+    // raw and package-adjusted value read together (valueRead): the adjustment can temper a verdict, never create or flip one
+    const vr = valueRead(res, valueFloor()), split = vr.kind === "split", sens = vr.kind === "sensitive", more = vr.gap;
+    const vAhead = vr.side || ahead, vLoser = vAhead === "A" ? "B" : "A";
     const tierIdx = Math.max(0, TRADE_VERDICTS.findIndex(t => more < t.upTo));
-    const tier = TRADE_VERDICTS[tierIdx] || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
-    const fair = tier.upTo <= 3, pct = more.toFixed(1) + "%";
+    const tier = verdictTier(more);
+    const fair = split || tier.upTo <= 3, pct = more.toFixed(1) + "%";
     const afterFirst = t => { const i = t.indexOf(". "); return i > 0 ? t.slice(i + 2) : t; };
-    let advice;
-    title.className = fair ? "fair" : "win-" + ahead;
-    if (youMode()) { const v = youVerdictText(tierIdx, ahead, pct); title.textContent = v.title; advice = afterFirst(v.text); }
-    else { title.textContent = tier.title(w, l); advice = afterFirst(tier.text(w, l, pct)); }
     const forWhom = side => (youMode() ? (side === "A" ? "you" : "them") : names[side]);
-    gapLine.innerHTML = fair ? `<b>${pct}</b> apart in adjusted value` : `<b>${pct}</b> more adjusted value for ${esc(forWhom(ahead))}`;
+    let advice;
+    if (sens) {
+      const evenRaw = Math.abs(vr.raw) < VALUE_FAIR, big = evenRaw ? vr.adj : vr.raw, bs = big > 0 ? "A" : "B", cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+      title.className = "fair"; title.textContent = "Package-sensitive";
+      advice = evenRaw ? `About even on raw value, but after the package adjustment ${subj(bs)} ${verb(bs, "come", "comes")} out ${Math.abs(big).toFixed(1)}% ahead. The verdict depends on the package adjustment, which isn't independently calibrated.`
+        : `${cap(subj(bs))} ${verb(bs, "get", "gets")} ${Math.abs(big).toFixed(1)}% more total value, but the package adjustment evens it out. The verdict depends on the package adjustment, which isn't independently calibrated.`;
+    } else if (split) {
+      const rs = vr.raw > 0 ? "A" : "B", ps = rs === "A" ? "B" : "A", cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+      title.className = "fair"; title.textContent = "Split verdict";
+      advice = `${cap(subj(rs))} ${verb(rs, "get", "gets")} more total value; ${subj(ps)} ${verb(ps, "get", "gets")} the better package. The two readings disagree, so there's no single winner.`;
+    } else {
+      title.className = fair ? "fair" : "win-" + vAhead;
+      if (youMode()) { const v = youVerdictText(tierIdx, vAhead, pct); title.textContent = v.title; advice = afterFirst(v.text); }
+      else { title.textContent = tier.title(names[vAhead], names[vLoser]); advice = afterFirst(tier.text(names[vAhead], names[vLoser], pct)); }
+    }
+    const approx = histOn() && TC.histApprox ? ` <span class="fit-tag approx">Approximate rosters</span>` : "";
+    gapLine.innerHTML = valueGapHtml(res, vr, fair, pct, forWhom) + approx;
     gapLine.hidden = false;
+    sub.textContent = advice;
 
-    // League mode: does the trade make sense for these two rosters? (team-specific value)
+    // League mode with both teams: the Roster Impact lens (no winner) next to the value verdict
     const ctx = TC_UI.ctx;
-    const lensOn = !!ctx;
-    $("tc-lens").hidden = !lensOn;
+    $("tc-lens").hidden = !ctx;
     $("tc-lens").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lens === TC_UI.lens));
-    if (ctx) {
-      const fh = fitHeadline(ctx, names, fair), fitView = TC_UI.lens === "fit";
-      const cv = contextVerdict(res, ctx), fitLabel = cv.tier.title(names[cv.ahead], names[cv.loser]);
-      if (fitView) { title.textContent = fh.head || fitLabel; title.className = fh.head ? "fair" : cv.fair ? "fair" : "win-" + cv.ahead; }
-      else if (fh.head) { title.textContent = fh.head; title.className = "fair"; }
-      gapLine.innerHTML = `<b>${pct}</b> raw difference · Roster-adjusted: ${esc(names.A)} <b>${fmtNet(ctx.A.fit.net)}</b>, ${esc(names.B)} <b>${fmtNet(ctx.B.fit.net)}</b>${fh.tag ? ` <span class="fit-tag">${esc(fh.tag)}</span>` : ""}${histOn() && TC.histApprox ? ` <span class="fit-tag approx">Approximate rosters</span>` : ""}`;
-      sub.textContent = fitReason(ctx, names) || fitLine(ctx, names) || advice;
-      if (fitView) {
-        const fa = ctx.A.fit.recv, fb = ctx.B.fit.recv, tot = fa + fb;
-        $("meter-a").style.width = (tot > 0 ? (fa / tot) * 100 : 50).toFixed(1) + "%";
-        $("score-A").textContent = `${names.A} · ${fmt(fa)} to them`; $("score-B").textContent = `${fmt(fb)} to them · ${names.B}`;
-        $("total-A").textContent = fmt(fa); $("total-B").textContent = fmt(fb);
-      }
-    } else sub.textContent = advice;
-    $("tc-why-body").innerHTML = `<p class="ri-story">${esc(ctx ? contextStory(ctx, contextVerdict(res, ctx), names) : tradeWhyText(res, names, ahead, pct, fair))}</p>`;
+    if (ctx && TC_UI.lens === "fit") {
+      title.className = ""; title.textContent = "Roster impact";
+      gapLine.innerHTML = ["A", "B"].map(s => { const pp = projSwing(ctx[s]); return `${esc(names[s])} starting-lineup value <b class="${updn(ctx[s].fit.line)}">${pctS(ctx[s].fit.line)}</b>${pp ? ` <span class="muted">(projected ${pp.d >= 0 ? "+" : "−"}${Math.abs(pp.d).toFixed(1)} pts/game)</span>` : ""}`; }).join(" · ") + approx;
+      sub.textContent = "What each lineup gains and gives up; this view has no winner. The value verdict is under AM Value.";
+      $("meter-wrap").hidden = true;
+      $("tc-impact").open = true;
+    }
+    $("tc-why-sum").textContent = ctx ? "Trade rationale" : "Why?";
+    $("tc-why-body").innerHTML = ctx ? rationaleHtml(ctx, res, names) : `<p class="ri-story">${esc(tradeWhyText(res, names, ahead, pct, fair))}</p>`;
     renderBreakdown(res, names, pct, tier);
-    if (ctx) renderContext(res, ctx, names);
+    if (ctx) renderImpact(ctx, names);
     else {
       const box = $("tc-analysis");
       box.hidden = !tcLeague();
       box.innerHTML = tcLeague() ? `<p class="pp-note">Pick both teams above to see how this trade changes each lineup.</p>` : "";
-      $("tc-impact-hint").textContent = tcLeague() ? "Pick both teams" : needsActive() ? "Needs set" : "";
+      $("tc-impact-hint").textContent = tcLeague() ? "Pick both teams" : "";
     }
 
-    // Balance suggestions: computed now, shown only when asked for
+    // Balance suggestions: computed now, shown only when asked for (none for a split verdict: no single winner to balance)
     $("balance-btn").hidden = fair; $("balance").hidden = true;
     if (fair) return;
     let shown = false;
@@ -6775,10 +6878,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       lockUntouched(X.places, posSet(SIDES3.flatMap(r => sides[r].map(id => byId.get(id)))), X.t.name);
       X.changes = lineupChanges(X);
       const pool = X.after.starters.concat(X.after.bench, X.after.cut);
-      X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
-                          without: list => strength(pool.filter(p => !list.includes(p))) });
+      X.fit = teamImpact({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n,
+                           without: list => strength(pool.filter(p => !list.includes(p))) });
     }
-    if (SIDES3.some(x => R[x].fit.net == null)) return null;   // a team gives or gets nothing it owns: no roster-adjusted read
+    if (SIDES3.some(x => !R[x].fit.ok)) return null;   // a team gives or gets nothing it owns: no roster read
     return { R, n: ev.n, league: d.league };
   }
 
@@ -6786,7 +6889,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     SIDES3.forEach(s => renderRoster(s));
     renderTradeContext();
     renderTeamRosters();
-    if (!skipNeedsRender) renderNeeds();
     const names = Object.fromEntries(SIDES3.map(s => [s, sideName(s)]));
     SIDES3.forEach(s => {
       sideHead(s);
@@ -6843,7 +6945,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     } else {
       $("tc-analysis").hidden = !tcLeague();
       $("tc-analysis").innerHTML = tcLeague() ? `<p class="pp-note">Pick all three teams above to see each lineup change.</p>` : "";
-      $("tc-impact-hint").textContent = tcLeague() ? "Pick all three teams" : needsActive() ? "Needs set" : "";
+      $("tc-impact-hint").textContent = tcLeague() ? "Pick all three teams" : "";
     }
     // Value breakdown
     const raw = list => list.reduce((a, id) => a + tv(byId.get(id)), 0);
@@ -6852,7 +6954,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("tc-breakdown-body").innerHTML = `<table class="bd-table three"><thead><tr><th scope="col"></th>${SIDES3.map(s => `<th scope="col">${esc(names[s])}</th>`).join("")}</tr></thead><tbody>
       <tr><th scope="row">Received (raw)</th>${SIDES3.map(s => cell(s, r => fmt(raw(r.recv)))).join("")}</tr>
       <tr><th scope="row">Sent (raw)</th>${SIDES3.map(s => cell(s, r => fmt(raw(r.sent)))).join("")}</tr>
-      <tr><th scope="row">Adjustments ${infoIcon("Best-player bonus and waiver adjustment when a team receives a different number of players than it sends, plus your roster needs.", "About adjustments")}</th>${SIDES3.map(s => cell(s, r => sign((r.m.a - raw(r.recv)) - (r.m.b - raw(r.sent))))).join("")}</tr>
+      <tr><th scope="row">Adjustments ${infoIcon("Package adjustment when a team receives a different number of players than it sends: extra players count at a share of their value next to the best player in the deal.", "About adjustments")}</th>${SIDES3.map(s => cell(s, r => sign((r.m.a - raw(r.recv)) - (r.m.b - raw(r.sent))))).join("")}</tr>
       <tr class="bd-total"><th scope="row">Net</th>${SIDES3.map(s => cell(s, r => (r.recv.length && r.sent.length ? sign(r.m.a - r.m.b) : "–"))).join("")}</tr>
       </tbody></table>`;
     // Balance: help the team that's losing the most, with players from the other two teams
@@ -6887,52 +6989,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
 
   const fmtNet = v => (v == null || !isFinite(v) ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`);
-  // "Fair on value, bad fit for X" when AM value and roster fit disagree
-  function fitHeadline(ctx, names, marketFair) {
-    const n = { A: ctx.A.fit.net, B: ctx.B.fit.net };
-    const bad = ["A", "B"].filter(s => n[s] <= -8), good = ["A", "B"].filter(s => n[s] >= 3);
-    if (marketFair) {
-      if (bad.length === 2) return { head: "Fair on value, bad fit for both", tag: "" };
-      if (bad.length) return { head: `Fair on value, bad fit for ${names[bad[0]]}`, tag: "" };
-      if (good.length === 2) return { head: "Fair trade, good fit for both", tag: "" };
-      return { head: null, tag: "" };
-    }
-    if (bad.length === 2) return { head: null, tag: "Bad fit for both teams" };
-    if (bad.length) return { head: null, tag: `Bad fit for ${names[bad[0]]}` };
-    if (good.length === 2) return { head: null, tag: "Good fit for both teams" };
-    return { head: null, tag: "" };
-  }
-  // The one roster fact that matters most, in a sentence
-  function fitReason(ctx, names) {
-    const sides = ["A", "B"].sort((x, y) => ctx[x].fit.net - ctx[y].fit.net);
-    const worst = sides[0], X = ctx[worst];
-    if (X.fit.net <= -8) {
-      const benchIn = X.fit.inc.filter(e => !e.starts).sort((a, b) => dv(b.p) - dv(a.p))[0];
-      const lostStarter = X.fit.out.find(e => e.starts);
-      if (benchIn) return `${benchIn.p.name} would be ${names[worst]}'s ${benchIn.p.pos}${1 + X.after.starters.concat(X.after.bench).filter(x => x !== benchIn.p && x.pos === benchIn.p.pos && dv(x) > dv(benchIn.p)).length} and wouldn't start, so most of the incoming value would sit on the bench${lostStarter ? `, while ${names[worst]} gives up a starter in ${lostStarter.p.name}` : ""}.`;
-      const lost = X.fit.out.filter(e => e.starts), got = X.fit.inc.filter(e => e.starts);
-      if (lost.length > got.length) return `${names[worst]} gives up ${lost.length} starters (${lost.map(e => e.p.name).join(" and ")}) and gets ${got.length === 1 ? "one" : got.length || "none"} back.`;
-      if (lostStarter) return `${names[worst]} gives up more lineup value than it gets back.`;
-    }
-    const best = sides[1], Y = ctx[best], st = Y.fit.inc.filter(e => e.starts).sort((a, b) => dv(b.p) - dv(a.p))[0];
-    if (st) return `${st.p.name} immediately becomes ${names[best]}'s ${st.role} and improves the starting lineup.`;
-    return "";
-  }
-  function fitLine(ctx, names) {
-    const diff = ctx.A.impact - ctx.B.impact;
-    if (Math.abs(diff) < 2) return "";
-    const W = diff > 0 ? "A" : "B", X = ctx[W];
-    const star = X.incoming.filter(p => X.after.labels.has(p.id)).sort((a, b) => dv(b) - dv(a))[0];
-    return star ? `Fits ${names[W]}'s roster better: ${star.name} becomes their ${X.after.labels.get(star.id)}.` : `Fits ${names[W]}'s roster better.`;
-  }
   // Plain-English reasoning for universal mode
   function tradeWhyText(res, names, ahead, pct, fair) {
     const cap = t => t.charAt(0).toUpperCase() + t.slice(1), a = res.adj, out = [];
     out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in AM Value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
     if (a && a.bonus) out.push(`${cap(subj(a.best))} ${verb(a.best, "land", "lands")} the best player in an uneven trade, worth a small bonus (+${fmt(a.bonus)}).`);
     if (a && a.spot) out.push(`${cap(subj(a.more))} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, who only fill${a.extra > 1 ? "" : "s"} lineup spots next to the best player in the deal, so ${a.extra > 1 ? "they count" : "he counts"} for less (−${fmt(a.spot)}).`);
-    const ns = Math.round((res.needA || 0) - (res.needB || 0));
-    if (ns) out.push(`Your roster needs move ${fmt(Math.abs(ns))} toward ${subj(ns > 0 ? "A" : "B")}.`);
     out.push(fair ? `After adjustments the two sides are within ${pct} of each other.` : `After adjustments, ${subj(ahead)} ${verb(ahead, "come", "comes")} out ${pct} ahead.`);
     return out.join(" ");
   }
@@ -6945,11 +7007,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <tbody>
           ${row("Raw value", fmt(res.rawA), fmt(res.rawB), LG.fmtOn ? `League-adjusted AM values (${tcValuesName()}) for the players each side gets. See Format adjustment below.` : "Base AM values for the players each side gets.")}
           ${row("Package adjustment", sign(spotA), sign(spotB), "In an uneven trade (2-for-1, 3-for-1 …), the side getting more players counts its extra players at a share of their value: their value divided by the best player's in the deal (a 4,000 piece next to an 8,000 star counts about half). Shallow leagues discount extras more.")}
-          ${row("Roster needs", sign(res.needA || 0), sign(res.needB || 0), "Your roster-need sliders: each position counts ×1.08 (desperately need) to ×0.92 (set).")}
           ${row("Adjusted value", fmt(res.a), fmt(res.b), "", "bd-total")}
-          ${TC_UI.ctx ? row("Value to the team", fmt(TC_UI.ctx.A.fit.recv), fmt(TC_UI.ctx.B.fit.recv), "Roster-adjusted: what the players each side receives are worth to that roster (starters near full value, bench players discounted).") +
-            row("Cost of what they give", fmt(TC_UI.ctx.A.fit.give), fmt(TC_UI.ctx.B.fit.give), "Roster-adjusted: losing a starter costs full value, losing bench depth costs less.") +
-            row("Roster-adjusted net", fmtNet(TC_UI.ctx.A.fit.net), fmtNet(TC_UI.ctx.B.fit.net), "", "bd-total") : ""}
         </tbody></table>
       <p class="pp-note">${pct} gap · ${esc(tier.range)}</p>${formatBreakdown(names)}`;
   }
@@ -6966,36 +7024,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       g.ps.map(p => { const f = formatSteps(p); return f ? `<tr><th scope="row">${esc(p.name)}</th><td>${fmt(f.base)}</td>${f.steps.filter(st => cols.includes(st.key)).map(st => `<td>${sign(st.d)}</td>`).join("")}<td><b>${fmt(f.adj)}</b></td></tr>` : ""; }).join("")).join("");
     return `<h4 class="sub-label">Format adjustment ${infoIcon(`Base AM values are the site's format (${formatLabel()}). Each step re-prices them for ${tcValuesName()} (${formatParts(valueLeague()).join(", ")}): its scoring, then its TE premium, then its lineup and league size. The steps add up to the league-adjusted value. Your base rankings never change.`, "About format adjustment")}</h4>
       <div class="bd-scroll"><table class="bd-table bd-fmt"><thead><tr><th scope="col"></th><th scope="col">Base AM Value</th>${head}<th scope="col">League-adjusted Value</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  }
-  function renderContext(res, ctx, names) {
-    const cv = contextVerdict(res, ctx), A = ctx.A, B = ctx.B;
-    const imp = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
-    const word = v => (v >= 0.5 ? "gains" : v <= -0.5 ? "loses" : "holds at");
-    const label = cv.tier.title(names[cv.ahead], names[cv.loser]);
-    $("tc-impact-hint").innerHTML = `· Roster-adjusted: <b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b>`;
-    const maxAbs = Math.max(4, Math.abs(A.impact), Math.abs(B.impact));
-    const bar = v => `<span class="ri-bar"><span class="${v >= 0 ? "ri-up" : "ri-down"}" style="width:${(50 * Math.min(1, Math.abs(v) / maxAbs)).toFixed(1)}%"></span></span>`;
-    const changeList = (X, nm) => `<div class="lc-col"><h4>${esc(nm)}</h4>${X.changes.length
-      ? `<ul>${X.changes.map(c => `<li class="lc-${c.kind}">${esc(c.text)}</li>`).join("")}</ul>` : `<p class="pp-note">No lineup changes.</p>`}</div>`;
-    const box = $("tc-analysis");
-    box.innerHTML = `
-      <div class="ri">
-        ${[["A", A], ["B", B]].map(([s, X]) => `<div class="ri-row"><span class="ri-name side-${s}">${esc(names[s])}</span>
-          <span class="ri-txt">${word(X.impact)} <b>${imp(X.impact)}</b> roster impact</span>${bar(X.impact)}</div>`).join("")}
-      </div>
-      <div class="ri-verdicts">
-        <div><span class="ctl-label">Value verdict</span><b>${esc($("verdict-title").textContent)}</b></div>
-        <div><span class="ctl-label">Roster-adjusted verdict ${infoIcon("Compares what each team receives against what it gives up, with every player valued to that roster: starters near full value, bench players discounted (see TEAM_FIT).", "How roster-adjusted value works")}</span><b class="${cv.fair ? "" : "win-" + cv.ahead}">${esc(label)}</b></div>
-      </div>
-      <h4 class="sub-label">Team-specific value</h4>
-      <div class="lc-cols">${[["A", A], ["B", B]].map(([s, X]) => `<div class="lc-col"><h4>${esc(names[s])} <span class="muted">${fmtNet(X.fit.net)}</span></h4>
-        <table class="fit-table"><tbody>
-          ${X.fit.inc.map(e => `<tr><td>+ ${esc(e.p.name)}</td><td>${fmt(dv(e.p))} → <b>${fmt(e.tv)}</b></td><td class="muted">${esc(e.why)}</td></tr>`).join("")}
-          ${X.fit.out.map(e => `<tr><td>− ${esc(e.p.name)}</td><td>${fmt(dv(e.p))} → <b>${fmt(e.tv)}</b></td><td class="muted">${esc(e.why)}</td></tr>`).join("")}
-        </tbody></table></div>`).join("")}</div>
-      <h4 class="sub-label">Lineup changes</h4>
-      <div class="lc-cols">${changeList(A, names.A)}${changeList(B, names.B)}</div>`;
-    box.hidden = false;
   }
   function lineupText(league) {
     const lu = lineupOf(league), parts = [];
@@ -7803,6 +7831,123 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return btoa(bin);
   }
 
+  /* Reading and writing files in the repo (Alan, Oct 11). index.html passed 1 MB on Oct 7 (commit b6f8346); above 1 MB
+     GitHub's Contents API answers with metadata only ("content": "", "encoding": "none"), so every publish failed with
+     "Couldn't find the rankings data in index.html" while the data was there all along. Files now go through the Git Data
+     API, which handles files up to 100 MB:
+       read   branch ref → its commit → the file's entry in that commit's tree → the blob (base64, size-checked)
+       write  new blob → a tree on the same base → a commit whose parent is the commit that was read → move the branch,
+              not forced, so it only lands if nobody committed in between (otherwise null: re-read, re-merge, retry)
+       check  read the new commit back and compare the file byte for byte before reporting success
+     The branch moves in one step or not at all, so a failed publish never leaves a half-written file. */
+  async function repoEntry(treeSha, path) {
+    let sha = treeSha;
+    const parts = path.split("/");
+    for (let i = 0; i < parts.length; i++) {
+      const t = await gh(`/repos/${REPO}/git/trees/${sha}`);
+      const e = (t.tree || []).find(x => x.path === parts[i]);
+      if (!e) return null;
+      if (i === parts.length - 1) return e.type === "blob" ? e : null;
+      if (e.type !== "tree") return null;
+      sha = e.sha;
+    }
+    return null;
+  }
+  async function repoBlobText(sha, path) {
+    const blob = await gh(`/repos/${REPO}/git/blobs/${sha}`);
+    if (blob.encoding !== "base64" || typeof blob.content !== "string") throw new Error(`GitHub returned ${path} in an unexpected form (encoding "${blob.encoding || "none"}"), so nothing was changed.`);
+    const text = b64decode(blob.content);
+    const n = new TextEncoder().encode(text).length;
+    if (blob.size != null && n !== blob.size) throw new Error(`${path} came back incomplete from GitHub (${n} of ${blob.size} bytes), so nothing was changed.`);
+    return text;
+  }
+  async function repoRead(path) {   // { head, tree, text (null when the file doesn't exist yet), blob }
+    const ref = await gh(`/repos/${REPO}/git/ref/heads/${BRANCH}`), head = ref.object && ref.object.sha;
+    if (!head) throw new Error(`Couldn't read the ${BRANCH} branch of ${REPO}.`);
+    const commit = await gh(`/repos/${REPO}/git/commits/${head}`);
+    const entry = await repoEntry(commit.tree.sha, path);
+    return { head, tree: commit.tree.sha, text: entry ? await repoBlobText(entry.sha, path) : null, blob: entry ? entry.sha : null };
+  }
+  async function repoWrite(base, path, text, message) {   // the new { commit, blob }, or null when the branch moved since base
+    const blob = await gh(`/repos/${REPO}/git/blobs`, { method: "POST", body: JSON.stringify({ content: b64encode(text), encoding: "base64" }) });
+    const tree = await gh(`/repos/${REPO}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: base.tree, tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }] }) });
+    const commit = await gh(`/repos/${REPO}/git/commits`, { method: "POST", body: JSON.stringify({ message, tree: tree.sha, parents: [base.head] }) });
+    try { await gh(`/repos/${REPO}/git/refs/heads/${BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }) }); }
+    catch (err) { if (err.status === 422 || err.status === 409) return null; throw err; }   // not a fast-forward: someone committed first
+    const back = await gh(`/repos/${REPO}/git/commits/${commit.sha}`), entry = await repoEntry(back.tree.sha, path);
+    if (!entry || entry.sha !== blob.sha || (await repoBlobText(entry.sha, path)) !== text)
+      throw new Error(`GitHub accepted the commit, but reading ${path} back didn't match what was sent. Check the latest commit on GitHub before publishing again.`);
+    return { commit: commit.sha, blob: blob.sha };
+  }
+
+  /* The rankings block in index.html: exactly one `const RANKINGS_CSV = \`` … `\n\`;`, replaced by position so nothing
+     outside it can change, and checked before anything is written (Alan, Oct 11). */
+  function extractRankings(text) {
+    if (typeof text !== "string" || !text.length) throw new Error(`${FILE} came back empty from GitHub, so nothing was changed.`);
+    const n = (text.match(new RegExp(CSV_RE.source, "g")) || []).length;
+    if (n !== 1) throw new Error(n ? `${FILE} has ${n} rankings blocks (expected exactly one), so nothing was changed.` : `Couldn't find the rankings block (const RANKINGS_CSV = \`…\`;) in ${FILE}, so nothing was changed.`);
+    const m = text.match(CSV_RE), start = m.index + m[1].length;
+    return { csv: m[2], start, end: start + m[2].length };
+  }
+  function replaceRankings(text, csv) {
+    const r = extractRankings(text);
+    return text.slice(0, r.start) + csv + text.slice(r.end);
+  }
+  // Problems that must stop a publish (empty = fine). With `latest` (the rankings on GitHub the edits were merged onto),
+  // also: the same players as before, none lost or added, and only the editable ranking columns changed.
+  const RANK_COLS = ["player", "pos", "team", "rank", "pos_rank", "tier", "value", "sleeper_id", "source"];
+  function validateRankings(csv, latest) {
+    const errs = [];
+    if (typeof csv !== "string" || !csv.trim()) return ["the rankings are empty"];
+    if (/[`\\]|\$\{/.test(csv)) errs.push("a field contains a backtick, a backslash or ${, which would break index.html");
+    const t = csvToTable(csv), H = t.head, col = c => H.indexOf(c);
+    RANK_COLS.forEach(c => { if (col(c) < 0) errs.push(`the ${c} column is missing`); });
+    if (errs.length) return errs;
+    if (!t.rows.length) return ["there are no players"];
+    const ranks = new Set(), ids = new Map(), keys = new Set(), byPos = {};
+    t.rows.forEach((r, i) => {
+      const nm = (r[col("player")] || "").trim(), who = nm || `row ${i + 2}`, pos = r[col("pos")];
+      if (r.length !== H.length) errs.push(`${who} has ${r.length} fields instead of ${H.length}`);
+      if (!nm) errs.push(`row ${i + 2} has no player name`);
+      if (!pos) errs.push(`${who} has no position`);
+      const rk = Number(r[col("rank")]);
+      if (!Number.isInteger(rk) || rk < 1) errs.push(`${who} has an invalid rank ("${r[col("rank")]}")`);
+      else if (ranks.has(rk)) errs.push(`rank ${rk} is used twice`);
+      else ranks.add(rk);
+      if (!/^\d+$/.test(r[col("tier")] || "")) errs.push(`${who} has an invalid tier ("${r[col("tier")]}")`);
+      const v = r[col("value")];
+      if (v !== "" && v != null && !Number.isFinite(Number(v))) errs.push(`${who} has an invalid value ("${v}")`);
+      if (!/^(manual|auto)$/.test(r[col("source")] || "")) errs.push(`${who} has an invalid source ("${r[col("source")]}")`);
+      const sid = r[col("sleeper_id")];
+      if (sid) { if (ids.has(sid)) errs.push(`Sleeper ID ${sid} appears twice (${ids.get(sid)} and ${who})`); else ids.set(sid, who); }
+      const k = keyOf(t, r);
+      if (keys.has(k)) errs.push(`${who} (${pos}) appears twice`); else keys.add(k);
+      (byPos[pos] = byPos[pos] || []).push(r);
+    });
+    if (ranks.size === t.rows.length && Math.max(...ranks) !== t.rows.length) errs.push(`the overall ranks don't run 1–${t.rows.length} without gaps`);
+    for (const [pos, list] of Object.entries(byPos)) {
+      list.sort((a, b) => Number(a[col("rank")]) - Number(b[col("rank")]));
+      const off = list.findIndex((r, i) => String(r[col("pos_rank")]) !== String(i + 1));
+      if (off >= 0) errs.push(`${pos} position ranks don't follow the overall order (${list[off][col("player")]} is ${pos}${list[off][col("pos_rank")]}, expected ${pos}${off + 1})`);
+    }
+    if (latest != null) {
+      const L = csvToTable(latest), lcol = c => L.head.indexOf(c), lk = new Map(L.rows.map(r => [keyOf(L, r), r]));
+      // rows the merge would quietly pad or cut (tableToCsv writes every row at the header's width)
+      const bad = L.rows.find(r => r.length !== L.head.length);
+      if (bad) errs.push(`the rankings on GitHub are malformed (${bad[lcol("player")] || "a row"} has ${bad.length} fields instead of ${L.head.length})`);
+      const lost = [...lk.keys()].filter(k => !keys.has(k)), added = [...keys].filter(k => !lk.has(k));
+      if (lost.length) errs.push(`${lost.length} player${lost.length === 1 ? "" : "s"} would be lost (${lost.slice(0, 3).join(", ")})`);
+      if (added.length) errs.push(`${added.length} unexpected player${added.length === 1 ? "" : "s"} would be added (${added.slice(0, 3).join(", ")})`);
+      const fixed = L.head.filter(c => !EDIT_COLS.includes(c));
+      for (const r of t.rows) {
+        const l = lk.get(keyOf(t, r)); if (!l) continue;
+        const c = fixed.find(c => col(c) >= 0 && (r[col(c)] ?? "") !== (l[lcol(c)] ?? ""));
+        if (c) { errs.push(`${r[col("player")]}'s ${c} would change, but only rankings fields may`); break; }
+      }
+    }
+    return errs;
+  }
+
   async function verifyToken(token) {
     editor.token = token;
     const repo = await gh(`/repos/${REPO}`);
@@ -7889,32 +8034,25 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   async function publishLive() {
     const count = Object.keys(localEdits).length;
-    if (!count || editor.saving) return;
+    if (editor.saving) return;
+    if (!count) { toast("Nothing to publish: there are no unpublished edits in this browser."); return; }
     if (!editor.token) { openSignin(); return; }
     editor.saving = true; updateEditorBar();
     try {
-      let merged = null;
-      for (let attempt = 0; attempt < 3 && !merged; attempt++) {
-        const file = await gh(`/repos/${REPO}/contents/${FILE}?ref=${BRANCH}`);
-        const text = b64decode(file.content);
-        const m = text.match(CSV_RE);
-        if (!m) throw new Error("Couldn't find the rankings data in index.html.");
-        const csv = mergeInto(m[2]);
-        const newText = text.replace(CSV_RE, (_, a, __, c) => a + csv + c);
-        try {
-          await gh(`/repos/${REPO}/contents/${FILE}`, {
-            method: "PUT",
-            body: JSON.stringify({
-              message: `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count > 1 ? "s" : ""})`,
-              content: b64encode(newText), sha: file.sha, branch: BRANCH
-            })
-          });
-          merged = csv;
-        } catch (err) {
-          if (err.status !== 409) throw err;   // 409: the file changed underneath us, so merge again
-        }
+      let merged = null, same = false;
+      for (let attempt = 0; attempt < 3 && merged == null; attempt++) {
+        const base = await repoRead(FILE);
+        if (base.text == null) throw new Error(`${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
+        const cur = extractRankings(base.text);
+        const csv = mergeInto(cur.csv);
+        const problems = validateRankings(csv, cur.csv);
+        if (problems.length) throw new Error(`the rankings didn't pass the pre-publish checks, so nothing was changed (${problems.slice(0, 3).join("; ")}${problems.length > 3 ? `; +${problems.length - 3} more` : ""}). Your edits are still saved in this browser.`);
+        if (csv === cur.csv) { merged = csv; same = true; break; }   // already live (e.g. published from another tab)
+        const res = await repoWrite(base, FILE, replaceRankings(base.text, csv),
+          `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count > 1 ? "s" : ""})`);
+        if (res) merged = csv;   // null: the branch moved underneath us, so read and merge again
       }
-      if (!merged) throw new Error("The site kept changing while publishing. Try again.");
+      if (merged == null) throw new Error("the site kept changing while publishing. Your edits are still saved in this browser; try again.");
       try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
       publishedCsv = merged; localEdits = {}; savedCsv = merged; draft = csvToTable(merged);
       editor.saving = false;
@@ -7922,7 +8060,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       let snapNote = "";
       try { const n = await saveHistory(); if (n) snapNote = ` Ranking history updated for ${n} player${n === 1 ? "" : "s"}.`; }
       catch (err) { snapNote = " The ranking history wasn't updated (" + err.message + ")."; }
-      toast("Published. The live site updates in about a minute." + snapNote);
+      toast((same ? "Already live: these edits were already in the published rankings." : "Published and confirmed on GitHub. The live site updates in about a minute.") + snapNote);
     } catch (err) {
       editor.saving = false; updateEditorBar();
       toast(err.status === 401 || err.status === 403 || err.status === 404   // GitHub answers "Not Found" when the token can't see the repo
@@ -10134,8 +10272,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const m = tradeModel(parts[0].items.map(x => ({ value: x[key] || 0 })), parts[1].items.map(x => ({ value: x[key] || 0 })));
         LEAGUE_DEPTH = keep;
         if (!(m.scoreA > 0 && m.scoreB > 0)) return { model: m, totals: [got(parts[0]), got(parts[1])], oneSided: true, ahead: m.scoreA >= m.scoreB ? 0 : 1, diff: Math.abs(m.scoreA - m.scoreB) };
-        const more = pctMore(m.scoreA, m.scoreB), tier = TRADE_VERDICTS.find(x => more < x.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
-        return { model: m, totals: [got(parts[0]), got(parts[1])], a: m.scoreA, b: m.scoreB, ahead: m.scoreA >= m.scoreB ? 0 : 1, more, tier, fair: tier.upTo <= 3, diff: Math.abs(m.scoreA - m.scoreB) };
+        const vr = valueRead(m, valueFloor(null, true)), more = vr.gap, rawDecides = vr.kind === "widened" || ((vr.kind === "evened" || vr.kind === "sensitive") && Math.abs(vr.raw) < VALUE_FAIR);
+        if (vr.kind === "split") return { model: m, totals: [got(parts[0]), got(parts[1])], a: m.scoreA, b: m.scoreB, split: true, vr, ahead: vr.raw > 0 ? 0 : 1, more: 0,
+          tier: { upTo: 99, title: () => "Split verdict" }, fair: false, diff: Math.abs(m.rawA - m.rawB) };
+        const tier = vr.kind === "sensitive" ? { upTo: 3, title: () => "Package-sensitive" } : verdictTier(more);
+        return { model: m, totals: [got(parts[0]), got(parts[1])], a: m.scoreA, b: m.scoreB, ahead: vr.side === "A" ? 0 : 1, more, tier, fair: tier.upTo <= 3, vr,
+          diff: rawDecides ? Math.abs(m.rawA - m.rawB) : Math.abs(m.scoreA - m.scoreB) };
       }
       const nets = parts.map(s => ({ got: got(s), sent: sent(s) }));
       nets.forEach(n => { n.net = n.got - n.sent; n.more = pctMore(n.got, n.sent); });
@@ -10169,6 +10311,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!s) return "";
     if (P.length === 2) {
       if (s.oneSided) return `${esc(P[s.ahead].team.name)} +${fmt(s.diff)}`;
+      if (s.split) return `Split <small>(more value: ${esc(P[s.ahead].team.name)} · better package: ${esc(P[1 - s.ahead].team.name)})</small>`;
       return s.fair ? `Basically even${s.diff >= 1 ? ` <small>(${esc(P[s.ahead].team.name)} +${fmt(s.diff)})</small>` : ""}` : `${esc(P[s.ahead].team.name)} +${fmt(s.diff)}`;
     }
     return P.map((q, i) => `${esc(q.team.name)} ${s.nets[i].net >= 0 ? "+" : "−"}${fmt(Math.abs(s.nets[i].net))}`).join(" · ");
@@ -10178,6 +10321,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const P = r.parts, a = r.then, b = r.now;
     if (!a || !b) return "";
     const name = s => P[s.ahead].team.name;
+    if (a.split || b.split) return `${a.split ? "Split verdict at the time" : a.fair ? "Fair at the time" : `${name(a)} won at the time`} · ${b.split ? "split verdict today" : b.fair ? "basically even now" : `${name(b)} ahead today`}`;
     if (a.fair && b.fair) return "Basically even then · basically even now";
     if (a.fair) return `Fair at the time · ${name(b)} ahead today`;
     if (b.fair) return `${name(a)} won at the time · basically even now`;
@@ -10248,7 +10392,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     };
     const adjNote = s => s && s.model && Math.round(s.model.rawA) !== Math.round(s.model.scoreA || s.model.rawA) || (s && s.model && Math.round(s.model.rawB) !== Math.round(s.model.scoreB || s.model.rawB));
     const verdictLine = (s, label) => P.length === 2 && s && !s.oneSided
-      ? `<p><b>${label}:</b> ${esc(s.tier.title(P[s.ahead].team.name, P[1 - s.ahead].team.name))} · ${fmt(s.a)} vs ${fmt(s.b)}${s.more >= 0.05 ? ` (${s.more.toFixed(1)}%)` : ""}${adjNote(s) ? ` <span class="muted">incl. the package adjustment (raw ${fmt(s.model.rawA)} vs ${fmt(s.model.rawB)})</span>` : ""}</p>`
+      ? `<p><b>${label}:</b> ${esc(s.tier.title(P[s.ahead].team.name, P[1 - s.ahead].team.name))} · ${fmt(s.a)} vs ${fmt(s.b)}${s.more >= 0.05 ? ` (${s.more.toFixed(1)}%)` : ""}${adjNote(s) ? ` <span class="muted">package-adjusted (raw ${fmt(s.model.rawA)} vs ${fmt(s.model.rawB)}${s.vr && s.vr.kind !== "tempered" ? `: ${s.vr.kind === "split" ? "the adjustment reverses the raw winner" : "the raw gap decides the verdict"}` : ""})</span>` : ""}</p>`
       : P.length > 2 && s ? `<p><b>${label}:</b> ${P.map((q, i) => `${esc(q.team.name)} got ${fmt(s.nets[i].got)} for ${fmt(s.nets[i].sent)}`).join("; ")}</p>` : "";
     const fmtNow = LG.fmtOn && P.length >= 2 && P.flatMap(s => s.items).some(x => x.p && Math.round(x.nowAdj) !== Math.round(x.now));
     return `<div class="th-full">
@@ -11479,22 +11623,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const loc = injLocal();
     if (!editor.token || !Object.keys(loc).length) return;
     for (let attempt = 0; attempt < 3; attempt++) {
-      let file = null, base = { note: "Manual injury-shortened corrections (AM editors). short: true marks a game the detection missed; false clears a wrong flag.", seasons: {} };
-      try { file = await gh(`/repos/${REPO}/contents/${INJ_OV_FILE}?ref=${BRANCH}`); base = JSON.parse(b64decode(file.content)); base.seasons = base.seasons || {}; }
-      catch (err) { if (err.status !== 404) throw err; }
+      let base = { note: "Manual injury-shortened corrections (AM editors). short: true marks a game the detection missed; false clears a wrong flag.", seasons: {} };
+      const file = await repoRead(INJ_OV_FILE);   // Git Data API: no 1 MB limit (see repoRead)
+      if (file.text != null) { base = JSON.parse(file.text); base.seasons = base.seasons || {}; }
       for (const [y, bySid] of Object.entries(loc)) for (const [sid, byW] of Object.entries(bySid)) for (const [w, v] of Object.entries(byW)) {
         const t = ((base.seasons[y] = base.seasons[y] || {})[sid] = base.seasons[y][sid] || {});
         if (v == null) delete t[w]; else t[w] = { ...v, by: editor.login || "", on: new Date().toISOString().slice(0, 10) };
         if (!Object.keys(t).length) delete base.seasons[y][sid];
       }
-      try {
-        await gh(`/repos/${REPO}/contents/${INJ_OV_FILE}`, { method: "PUT", body: JSON.stringify({
-          message: `Injury-shortened correction${editor.login ? " by @" + editor.login : ""}`,
-          content: b64encode(JSON.stringify(base, null, 1) + "\n"), branch: BRANCH, ...(file ? { sha: file.sha } : {}) }) });
+      if (await repoWrite(file, INJ_OV_FILE, JSON.stringify(base, null, 1) + "\n", `Injury-shortened correction${editor.login ? " by @" + editor.login : ""}`)) {
         INJ_OV = base; INJ_OV_VER++;
         try { localStorage.removeItem(INJ_OV_LOCAL); } catch (e) {}
         return true;
-      } catch (err) { if (err.status !== 409) throw err; }
+      }
     }
     throw new Error("The file kept changing. Try again.");
   }
@@ -13131,7 +13272,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Trade goal: Fair / balanced keeps the classic search (within the max difference, either way);
   // Slight edge / Best value want the starting team ahead by this adjusted-value range (%)
   const GOAL_RANGE = { edge: [3, 10], value: [8, 15] };
-  // Would the other team (T) plausibly accept? `fromT` = what T sends. Uses lineup impact and roster-adjusted value, not raw value.
+  // Fair goal guardrail (Alan, Oct 11): the starting team's starting lineup can't lose more than 0.27 of an average starter,
+  // the same "material lineup loss" line Acceptance Plausibility uses (≈3% of a 9-starter lineup, the Finder's strict limit
+  // for the other team). Tested on 1QB, Superflex, no-TEP, 10-team / 7-starter and 14-team / 10-starter leagues: no
+  // search came back empty, lists shrank by at most ~25% (1QB), and top-5 ideas cutting your lineup 2%+ fell from 15 to ≤ 6.
+  const FAIR_MY_LINE = 0.27;
+  // Would the other team (T) plausibly accept? `fromT` = what T sends. Hard gates only (their reasons to say yes and
+  // lineup damage); how plausible the rest is, is Acceptance Plausibility (acceptFor), which ranks the ideas.
   function plausibleForThem(K, T, fromT, tAfter, dT, fT, pl, goal) {
     const base = K.base.get(T.rosterId), strict = goal === "value";
     const getsStarter = fT.inc.some(e => e.starts);                                     // a new starter for them
@@ -13140,9 +13287,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const drop = base.startVal > 0 ? (base.startVal - tAfter.startVal) / base.startVal : 0;
     if (drop > (strict ? 0.03 : 0.045)) return false;                                   // their starting lineup can't get much worse
     const best = K.tradable(T)[0];
-    if (best && fromT.includes(best) && !(getsStarter && fT.net > -3)) return false;    // their best player only for a real upgrade
+    if (best && fromT.includes(best) && !(getsStarter && dT > 0)) return false;          // their best player only for a real upgrade
     if (fromT.some(p => base.labels.has(p.id)) && !getsStarter) return false;           // a starter out, only bench pieces back
-    if (fT.net < (strict ? -8 : -10)) return false;                                     // roster-adjusted, still close for them
     return true;
   }
   /* Market Leverage (Alan, Oct 8, refined the same day): two perspectives on every idea, kept separate.
@@ -13150,10 +13296,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
                     a boundary, not a realism rule; a big AM Edge counts in the idea's favor when the rest holds up.
        Market Edge  how much the FantasyCalc/Flock consensus prefers T's side (same package adjustment, on AM's scale).
                     An acceptance signal, not a hard rule: down to −8%, and below −3% only with a clear roster gain for T.
-     Acceptance Plausibility is judged from T's side only (market view, roster benefit in market terms, positional need,
-     construction: starters vs filler, losing their best player), never from the size of S's AM Edge. */
+     Acceptance Plausibility is judged from T's side only with the shared acceptFor (value, market view, T's lineup,
+     positional need, construction), never from the size of S's AM Edge. */
   const ML_MAX = 30, ML_LEVELS = ["Small Leverage", "Good Leverage", "Strong Leverage", "Very Strong Leverage"];
-  function mlAssess(K, S, T, give, get, more, tAfter, dT, fT, pl, scale) {
+  function mlAssess(K, S, T, give, get, more, tAfter, dT, fT, pl) {
     const c01 = v => Math.max(0, Math.min(1, v));
     const mm = runModel(get.map(p => p.id), give.map(p => p.id), mkVal, false);
     if (mm.error || !(mm.a > 0 && mm.b > 0)) return null;
@@ -13167,23 +13313,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const drop = base.startVal > 0 ? (base.startVal - tAfter.startVal) / base.startVal : 0;
     if (drop > 0.06) return null;                                                          // their lineup can't get much worse
     if (get.some(p => base.labels.has(p.id)) && !getsStarter) return null;                 // a starter out, only bench pieces back
-    // their side in market terms, weighted by what each piece means to their roster (a starter counts, filler doesn't)
-    const recv = fT.inc.reduce((a, e) => a + e.f * mkVal(e.p), 0), sent = fT.out.reduce((a, e) => a + e.f * mkVal(e.p), 0);
-    const netM = recv > 0 && sent > 0 ? 100 * (recv - sent) / Math.min(recv, sent) : 0;
-    if (netM < -12) return null;
-    if (them < -3 && !(netM >= 2 || weakFix)) return null;                                 // market slightly against them: needs a roster reason
+    if (them < -3 && !(fT.su >= 0.1 || weakFix)) return null;                             // market slightly against them: needs a roster reason
     const best = K.tradable(T)[0], losesBest = !!best && get.includes(best);
-    if (losesBest && !(getsStarter && netM > -5)) return null;                             // their best player only for a real upgrade
+    if (losesBest && !(getsStarter && dT > 0)) return null;                                // their best player only for a real upgrade
     // filler never bridges an elite gap: T's best outgoing piece needs a real piece back, or two starters
     const topOut = Math.max(...get.map(dv)), topIn = Math.max(...give.map(dv));
-    const filler = fT.inc.filter(e => !e.starts && dv(e.p) < 0.25 * Math.max(topOut, topIn)).length;
     if (topIn < 0.55 * topOut && nStart < 2) return null;
     const holes = EDIT_POS.filter(pos => pl && pl[pos] && pl[pos][0] <= low && pl[pos][1] > low);   // a room drops into the bottom third
-    const mktT = c01((them + 8) / 16);
-    const theirs = 0.6 * c01((netM + 10) / 25) + 0.4 * c01((dT / scale + 0.02) / 0.1);
-    const need = weakFix ? 1 : roomUp ? 0.7 : getsStarter ? 0.5 : 0.2;
-    const constr = c01(0.5 + 0.5 * nStart / Math.max(1, give.length) - 0.3 * Math.min(1, filler) - (losesBest ? 0.25 : 0));
-    const acc = 0.35 * mktT + 0.3 * theirs + 0.2 * need + 0.15 * constr - (holes.length ? 0.15 : 0);
+    const A = acceptFor({ imp: fT, val: -more, mkt: them }), acc = A.score;
     // Market Confidence for the deal: each player's, weighted by his market value (no market data counts as Low)
     let cw = 0, cs = 0;
     give.concat(get).forEach(p => { const r = mkOf(p), w = Math.max(1, mkVal(p)); cw += w; cs += w * (r ? { High: 2, Moderate: 1, Low: 0 }[r.mconf] : 0); });
@@ -13193,12 +13330,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (them < -3) lvl--;
     if (mconf === "Low") lvl--;
     lvl = Math.max(0, Math.min(3, lvl));
-    // their roster depletion caps it (never anything about S's roster): a weaker lineup, a new hole, or value that would sit
-    let accLabel = acc >= 0.6 ? "High" : acc >= 0.4 ? "Moderate" : "Low";
-    const capMod = holes.length || drop > 0.03 || nStart === 0, capLow = drop > 0.05 || (losesBest && nStart < 2 && netM < 0);
-    if (capLow) accLabel = "Low"; else if (capMod && accLabel === "High") accLabel = "Moderate";
-    return { am: more, them, mm, netM, acc, accLabel, theirLine: -100 * drop, theirs, mconf, lvl, label: ML_LEVELS[lvl],
-      nStart, filler, losesBest, weakFix, holes, lev: more + them };
+    return { am: more, them, mm, acc, accLabel: A.label, theirLine: -100 * drop, theirU: fT.u, mconf, lvl, label: ML_LEVELS[lvl],
+      nStart, losesBest, weakFix, holes, lev: more + them };
   }
   // What kind of win it is for S (several can apply): asset value and immediate lineup strength are different things
   function mlTypes(give, get, myLine, more, fS) {
@@ -13242,9 +13375,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (it.mk.holes.length) { const h = out.pop(); return out.slice(0, 2).concat(h).join(" "); }
     return out.slice(0, 3).join(" ");
   }
+  // the market's view of a deal for the team receiving `toT` (+ = it gets more), package adjustment included; null without data
+  function mktFor(fromT, toT) {
+    if (!(typeof MK_READY !== "undefined" && MK_READY && mkAll().srcs.length)) return null;
+    if (!fromT.concat(toT).every(p => mkOf(p))) return null;
+    const m = runModel(fromT.map(p => p.id), toT.map(p => p.id), mkVal);
+    return m.error || !(m.a > 0 && m.b > 0) ? null : 100 * (m.b - m.a) / Math.min(m.a, m.b);
+  }
   // target: one player, or a 2-player package from the same roster (shopped together)
   function findTrades(target, mode, S, opts) {
-    const K = leagueKit(), V = K.V, byVal = K.byVal, sum = list => list.reduce((a, p) => a + V(p), 0);
+    const K = leagueKit(), V = K.V, byVal = K.byVal, sum = list => list.reduce((a, p) => a + V(p), 0), VF = valueFloor(dv);
     const pkg = Array.isArray(target) ? target : null;
     if (pkg) target = pkg[0];
     const xv = pkg ? sum(pkg) : V(target), sPool = K.tradable(S).filter(p => !pkg || !pkg.includes(p)), owner = LG.ownerOf.get(target.id);
@@ -13342,52 +13482,74 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         }
         const m = runModel(get.map(p => p.id), give.map(p => p.id), dv);   // A = what S receives, B = what T receives
         if (m.error || !(m.a > 0 && m.b > 0)) continue;
-        const more = Math.round(1000 * Math.abs(m.a - m.b) / Math.min(m.a, m.b)) / 10;
-        if (more > opts.gap) continue;
+        // raw and package-adjusted value read together (valueRead). Describing a trade uses the more cautious reading
+        // (more); searching weighs the two readings equally, since neither is authoritative: fair goals use the midpoint of
+        // the raw and the package-adjusted gap (an uneven package with more total value one way and the better package the
+        // other can net out fair), and edge goals need both readings to favor S, so the adjustment never creates an edge
+        const vr = valueRead(m, VF), more = Math.round(10 * vr.gap) / 10, sAheadV = vr.side === "A";
+        const mid = Math.round(5 * Math.abs(vr.raw + vr.adj)) / 10;
+        const edgeGoal = opts.goal === "market" || !!GOAL_RANGE[opts.goal];
+        if (edgeGoal ? !(vr.raw > 0 && vr.adj > 0) || more > opts.gap : mid > opts.gap) continue;
         const sAfter = K.after(S, give, get, get.map(() => T)), tAfter = K.after(T, get, give, give.map(() => S));
         const dS = sAfter.score - K.base.get(S.rosterId).score, dT = tAfter.score - K.base.get(T.rosterId).score;
         const scale = Math.max(1000, xv), clamp = v => Math.max(-1, Math.min(1, v));
         const fit = 0.5 * clamp((dS + dT) / scale) + 0.5 * clamp(Math.min(dS, dT) / scale);   // both teams better = best
         const places = K.placeMoves(new Map([[S.rosterId, sAfter], [T.rosterId, tAfter]]), give.concat(get));
-        // team-specific value: what each side gets is worth less if it would sit on that bench
-        const fitOf = (team, L, inc, out) => {
+        // roster impact for each team (teamImpact: the same lineup measure as dS / dT, plus each player's role)
+        const impOf = (team, L, inc, out) => {
           const pool = L.starters.concat(L.bench, L.cut);
-          return fitValues({ before: K.base.get(team.rosterId), after: L, incoming: inc, outgoing: out, places: places[team.rosterId], n: LG.teams.length, league: K.d.league,
-                             without: list => K.strength(pool.filter(p => !list.includes(p))) });
+          return teamImpact({ before: K.base.get(team.rosterId), after: L, incoming: inc, outgoing: out, places: places[team.rosterId], n: LG.teams.length,
+                              without: list => K.strength(pool.filter(p => !list.includes(p))) });
         };
-        const fS = fitOf(S, sAfter, get, give), fT = fitOf(T, tAfter, give, get), fitMin = Math.min(fS.net, fT.net);
-        // fair on paper but no practical sense for one of the teams (Market leverage judges their side by the market instead)
-        if (opts.goal !== "market" && fitMin < -20) continue;
-        if (opts.goal === "market" && fS.net < -20) continue;
+        const fS = impOf(S, sAfter, get, give), fT = impOf(T, tAfter, give, get);
+        // fair on paper but no practical sense for one of the teams: its lineup drops more than about half an average starter
+        // (Market leverage judges S's lineup in steps instead, below)
+        if (opts.goal !== "market" && Math.min(fS.su, fT.su) < -0.55) continue;   // ≈ −6% of a 9-starter lineup
+        // Fair guardrail on the starting team's own starting lineup, in average starters (FAIR_MY_LINE)
+        if (!edgeGoal && opts.goal !== "any" && fS.sl < -(opts.myFloor ?? FAIR_MY_LINE)) continue;
         const size = give.length + get.length - 2, c01 = v => Math.max(0, Math.min(1, v));
         let score, mkInfo = null;
         const edge = GOAL_RANGE[opts.goal];
         if (opts.goal === "market") {
           // Market leverage (Alan, Oct 8): AM prefers what S receives while the market / expert consensus prefers (or calls
           // about even) what T receives: sell market strength, buy AM conviction. See mlAssess.
-          if (!(m.a > m.b) || more < 2 || more > ML_MAX) continue;
+          if (!sAheadV || vr.gap < 2 || vr.gap > ML_MAX) continue;
           // My Roster Impact (Alan, Oct 8): S's starting-lineup change is shown and penalised in steps, never a tight cutoff;
           // only extreme damage is dropped (−20% or worse, or −15% for under 5% AM Edge); a −14% lineup for +4% stays, ranked low
           const sBase = K.base.get(S.rosterId).startVal, myLine = sBase > 0 ? 100 * (sAfter.startVal - sBase) / sBase : 0;
           if (myLine <= -20 || (myLine <= -15 && more < 5)) continue;
-          mkInfo = mlAssess(K, S, T, give, get, more, tAfter, dT, fT, places[T.rosterId], scale);
+          mkInfo = mlAssess(K, S, T, give, get, more, tAfter, dT, fT, places[T.rosterId]);
           if (!mkInfo) continue;
           const dec = -myLine, linePen = dec <= 0 ? 0 : dec < 3 ? 0.03 : dec < 6 ? 0.08 : dec < 10 ? 0.16 : 0.28;
-          const mineT = 0.6 * c01((fS.net + 5) / 30) + 0.4 * c01((myLine + 2) / 8);
+          const sB = K.base.get(S.rosterId), myUnits = sB.starters.length ? (sAfter.startVal - sBase) / (sBase / sB.starters.length) : 0;
+          const mineT = utilScore(myUnits);
           Object.assign(mkInfo, { mine: mineT, myLine, linePen, types: mlTypes(give, get, myLine, more, fS) });
-          score = 0.25 * c01(more / 20) + 0.15 * c01((mkInfo.them + 8) / 20) + 0.15 * mineT + 0.1 * mkInfo.theirs + 0.3 * mkInfo.acc + 0.05 * Math.max(0, 1 - 0.2 * size) - linePen;
+          // opportunity score (Alan, Oct 11): benefit to me × their Acceptance Plausibility, not an expected return (acceptance
+          // isn't a calibrated probability). Benefit = AM Edge (0 → 20%) and my starting lineup (average starters), equal
+          // weights: across 1QB / Superflex / TE premium / 10- and 14-team leagues their spreads over the candidates match
+          // (sd ≈ 0.2 each on these scales). Guardrails unchanged: the lineup cut-offs above, the step penalty, mlAssess's gates.
+          mkInfo.benefit = 0.5 * c01(more / 20) + 0.5 * mineT;
+          score = mkInfo.benefit * mkInfo.acc + 0.05 * Math.max(0, 1 - 0.2 * size) - linePen;
         } else if (edge) {
           // Slight edge / Best value (Alan, Oct 4): S comes out ahead by the goal's range in adjusted value, and the deal
           // still has to make roster sense for the other team (never just the biggest value gap)
-          if (!(m.a > m.b) || more < edge[0] || more > edge[1]) continue;
+          if (!sAheadV || vr.gap < edge[0] || vr.gap > edge[1]) continue;   // unrounded: a 2.96% gap is under the 3% line
           if (!plausibleForThem(K, T, get, tAfter, dT, fT, places[T.rosterId], opts.goal)) continue;
-          score = 0.4 * c01((fS.net + 5) / 25) + 0.45 * c01((fT.net + 12) / 20) + 0.15 * (fit + 1) / 2 - 0.05 * size;
+          // your lineup gain, then how plausible it is for them (value, market, their lineup, needs, construction)
+          const acc = acceptFor({ imp: fT, val: -more, mkt: mktFor(get, give) });
+          score = 0.4 * utilScore(fS.su) + 0.6 * acc.score - 0.05 * size;   // your lineup, their acceptance
         } else {
-          const fair = more < 3 ? 1 : 1 - (more - 3) / Math.max(opts.gap - 3, 1);   // inside the fair range every trade is equally fair
-          const fitScore = c01((fitMin + 15) / 25);
-          score = 0.35 * fair + 0.45 * fitScore + 0.2 * (fit + 1) / 2 - 0.05 * size;
+          // fairness by each reading, averaged: when the raw and package-adjusted gaps disagree, the trade is only as fair as
+          // their mean (+25% raw / −25% package-adjusted nets out at 0 for the search, but scores 0 here, not 1)
+          const fairOf = g => (g < 3 ? 1 : Math.max(0, 1 - (g - 3) / Math.max(opts.gap - 3, 1)));
+          const fair = (fairOf(Math.abs(vr.raw)) + fairOf(Math.abs(vr.adj))) / 2;
+          // mutual suitability on the shared lineup scale: mostly the weaker team's lineup change, some of the two teams'
+          // average (the Fair goal's original emphasis, 0.45 weaker team : 0.20 both, kept), so a big gain for one side can't
+          // carry a trade that weakens the other
+          const both = (0.45 * utilScore(Math.min(fS.su, fT.su)) + 0.2 * utilScore((fS.su + fT.su) / 2)) / 0.65;
+          score = 0.4 * fair + 0.6 * both - 0.05 * size;
         }
-        ideas.push({ team: T, S, give, get, m, more, dS, dT, sAfter, tAfter, places, fS, fT, score, scale, goal: mkInfo ? "market" : edge ? opts.goal : "", mk: mkInfo });
+        ideas.push({ team: T, S, give, get, m, vr, sAhead: sAheadV, more, mid, dS, dT, sAfter, tAfter, places, fS, fT, score, scale, fit, goal: mkInfo ? "market" : edge ? opts.goal : "", mk: mkInfo });
       }
     }
     ideas.sort((a, b) => b.score - a.score);
@@ -13450,30 +13612,34 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const moveList = (places, rid) => EDIT_POS.map(pos => ({ pos, b: places[rid][pos][0], a: places[rid][pos][1] }));
   const bestUp = list => list.filter(x => x.a < x.b).sort((x, y) => (y.b - y.a) - (x.b - x.a))[0];
   const worstDown = list => list.filter(x => x.a > x.b).sort((x, y) => (y.a - y.b) - (x.a - x.b))[0];
-  // Card headline, kept punchy: value verdict + lineup fit ("Fair + good fit", "Slight edge to you")
+  // Card headline, kept punchy: value verdict + what it does to both lineups ("Fair + helps both lineups")
+  // (lineup utility: teamImpact.u, the lineup score change; ≥ +1% helps, ≤ −3% hurts)
+  const helps = f => f.su >= 0.1, hurts = f => f.su <= -0.27;   // ≈ +1% / −3% of a 9-starter lineup
   function fitBadge0(it, v) {   // the long form, shown as a tooltip
-    const S = it.S, sN = S.mine ? "you" : S.name, bad = [];
-    if (it.fS.net <= -8) bad.push(sN);
-    if (it.fT.net <= -8) bad.push(it.team.name);
-    if (!bad.length) return v.fair && it.fS.net >= 3 && it.fT.net >= 3 ? `${v.label}, good fit for both` : v.label;
-    return `${v.fair ? "Fair on value" : v.label}, bad fit for ${bad.length === 2 ? "both" : bad[0]}`;
+    const S = it.S, sN = S.mine ? "your" : possOf(S), bad = [];
+    if (hurts(it.fS)) bad.push(sN);
+    if (hurts(it.fT)) bad.push(possOf(it.team));
+    if (!bad.length) return helps(it.fS) && helps(it.fT) ? `${v.label}, and it helps both lineups` : v.label;
+    return `${v.fair ? "Fair on value" : v.label}, but it weakens ${bad.length === 2 ? "both teams'" : bad[0]} lineup${bad.length === 2 ? "s" : ""}`;
   }
   const SHORT_VERDICT = ["Even", "Fair", "Slight edge", "Wins", "Clear win", "Steal", "Robbery"];
   function fitBadge(it, v) {
-    const S = it.S, sN = S.mine ? "you" : S.name, sAhead = it.m.a >= it.m.b;
+    const S = it.S, sN = S.mine ? "you" : S.name, sAhead = it.sAhead;
+    if (it.vr && it.vr.kind === "sensitive") return `Package-sensitive: fair on one value reading, not the other`;
+    if (it.vr && it.vr.kind === "split") return `Split: ${it.vr.raw > 0 ? (S.mine ? "you get" : sN + " gets") + " more value, they get" : "they get more value, " + (S.mine ? "you get" : sN + " gets")} the better package`;
     if (it.goal === "market" && it.mk) return `Market leverage: AM +${it.mk.am.toFixed(0)}% for ${sN} · market ${it.mk.them >= 0 ? "+" : "−"}${Math.abs(it.mk.them).toFixed(0)}% for them`;
     if (it.goal && sAhead) {   // Trade goal ideas: say it's an edge, and that it still works for them (never "steal")
-      const both = it.fS.net >= 3 && it.fT.net >= 3;
-      return it.goal === "edge" ? `Slight edge to ${sN} + ${both ? "good fit for both" : "makes sense for them"}` : `Good value for ${sN} + still makes sense for them`;
+      const both = helps(it.fS) && helps(it.fT);
+      return it.goal === "edge" ? `Slight edge to ${sN} + ${both ? "helps both lineups" : "makes sense for them"}` : `Good value for ${sN} + still makes sense for them`;
     }
     const i = Math.max(0, TRADE_VERDICTS.findIndex(t => it.more < t.upTo)), word = SHORT_VERDICT[Math.min(i, SHORT_VERDICT.length - 1)];
     const who = sAhead ? sN : "them";
     const base = i <= 1 ? word : i === 2 ? `${word} to ${who}` : i === 3 ? `${who === "you" ? "You" : who === "them" ? "They" : who} ${who === "you" || who === "them" ? "win" : "wins"}` : `${word} for ${who}`;
     const bad = [];
-    if (it.fS.net <= -8) bad.push(S.mine ? "you" : S.name);
-    if (it.fT.net <= -8) bad.push("them");
-    if (bad.length) return `${base} + bad fit for ${bad.length === 2 ? "both" : bad[0]}`;
-    if (it.fS.net >= 3 && it.fT.net >= 3) return `${base} + good fit`;
+    if (hurts(it.fS)) bad.push(S.mine ? "your" : possOf(S));
+    if (hurts(it.fT)) bad.push("their");
+    if (bad.length) return `${base} + weakens ${bad.length === 2 ? "both" : bad[0]} lineup${bad.length === 2 ? "s" : ""}`;
+    if (helps(it.fS) && helps(it.fT)) return `${base} + helps both lineups`;
     return base;
   }
   // Optional one-line roster insight under a card: why the deal makes sense, never what it is.
@@ -13483,17 +13649,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function shortWhy(it, fair) {
     const S = it.S, T = it.team, sm = moveList(it.places, S.rosterId), tm = moveList(it.places, T.rosterId);
     const sUp = bestUp(sm), sDown = worstDown(sm), tUp = bestUp(tm);
-    // 1. One side would mostly bench what it gets
-    const bad = it.fS.net <= it.fT.net ? { f: it.fS, t: S } : { f: it.fT, t: T };
-    if (bad.f.net <= -8) {
+    // 1. One side's lineup gets weaker while what it gets would sit on the bench
+    const bad = it.fS.su <= it.fT.su ? { f: it.fS, t: S } : { f: it.fT, t: T };
+    if (hurts(bad.f)) {
       const b = bad.f.inc.filter(e => !e.starts).sort((x, y) => dv(y.p) - dv(x.p))[0], slot = b && b.why.match(/^Would be (\w+?\d+)/);
-      if (slot) return `${fair ? "Fair on value, but " : ""}${b.p.name} would only be ${possOf(bad.t)} ${slot[1]}, so most of his value would sit on the bench.`;
+      if (slot) return `${fair ? "Fair on value, but " : ""}${b.p.name} would only be ${possOf(bad.t)} ${slot[1]}, so ${possOf(bad.t)} lineup gets weaker (${bad.f.u.toFixed(1)}%).`;
     }
     // 2. Both teams fix a weak room
     if (weakRoom(sUp) && weakRoom(tUp)) return `Fills a weak spot for both teams: ${possOf(S)} ${sUp.pos} room and ${possOf(T)} ${tUp.pos} room.`;
-    // 3. Even on value, uneven on fit
-    if (fair && Math.abs(it.fS.net - it.fT.net) >= 8) {
-      const w = it.fS.net > it.fT.net ? { t: S, up: sUp } : { t: T, up: tUp };
+    // 3. Even on value, uneven on the lineups
+    if (fair && Math.abs(it.fS.su - it.fT.su) >= 0.27) {
+      const w = it.fS.su > it.fT.su ? { t: S, up: sUp } : { t: T, up: tUp };
       if (w.up) return `Fair on value, but it does more for ${possOf(w.t)} lineup: it ${weakRoom(w.up) ? "fills a weak" : "strengthens the"} ${w.up.pos} ${weakRoom(w.up) ? "spot" : "room"}.`;
     }
     // 4. The starting team's rooms
@@ -13512,8 +13678,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const lines = [];
     lines.push(mu ? `${SPoss} ${mu.pos} room goes ${arrow(mu)}${md ? `, while ${sPoss} ${md.pos} room goes ${arrow(md)}` : ""}.` : it.dS > 0 ? `${SPoss} starting lineup gets stronger.` : `${SPoss} lineup stays about level.`);
     lines.push(tu ? `${TPoss} ${tu.pos} room goes ${arrow(tu)}${td ? ` and its ${td.pos} room ${arrow(td)}` : ""}.` : it.dT > 0 ? `${TPoss} lineup gets stronger.` : `${T} gets the value but not a lineup upgrade, so they may need convincing.`);
-    it.fS.inc.forEach(e => lines.push(`${e.p.name}: ${fmt(dv(e.p))} AM Value, worth ${fmt(e.tv)} to ${sN} (${e.why.toLowerCase()}).`));
-    it.fT.inc.forEach(e => lines.push(`${e.p.name}: worth ${fmt(e.tv)} to ${T} (${e.why.toLowerCase()}).`));
+    it.fS.inc.forEach(e => lines.push(`${e.p.name} (${fmt(dv(e.p))}) for ${sN}: ${e.why.charAt(0).toLowerCase() + e.why.slice(1)}.`));
+    it.fT.inc.forEach(e => lines.push(`${e.p.name} (${fmt(dv(e.p))}) for ${T}: ${e.why.charAt(0).toLowerCase() + e.why.slice(1)}.`));
+    lines.push(`Lineup score with bench: ${sN} ${it.fS.u >= 0 ? "+" : "−"}${Math.abs(it.fS.u).toFixed(1)}%, ${T} ${it.fT.u >= 0 ? "+" : "−"}${Math.abs(it.fT.u).toFixed(1)}%.`);
     if (it.give.length > it.get.length) lines.push(`${you ? "You consolidate" : S.name + " consolidates"} into one stronger piece and ${you ? "open" : "opens"} a roster spot.`);
     else if (it.get.length > it.give.length) lines.push(`Taking ${it.get.length} players costs ${sPoss} bench a spot.`);
     return lines;
@@ -13949,13 +14116,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const amG = sum(it.get, dv), amO = sum(it.give, dv);
     it.leverage = mg != null && mo != null && amG / mg - 1 >= 0.08 && mo / amO - 1 >= 0.08;
     const n = LG.teams.length, low = n - Math.ceil(n / 3), pl = it.places[it.team.rosterId][X.pos];
-    const hole = pl && pl[1] > low && pl[0] <= low;   // taking him opens a hole for them
-    const c01 = v => Math.max(0, Math.min(1, v));
-    const theyMkt = it.mktDiff == null ? 0.5 : c01((-it.mktDiff + 10) / 20);   // they gain on the market they'll check
-    it.real = it.score + 0.12 * theyMkt + (it.leverage ? 0.06 : 0) - (hole ? 0.15 : 0);
-    it.hole = hole;
-    const likely = it.fT.net >= 3 && !hole && (it.mktDiff == null || it.mktDiff <= 3);
-    it.conf = likely ? "Likely" : it.fT.net >= -4 && !hole ? "Plausible" : "Long shot";
+    it.hole = !!pl && pl[1] > low && pl[0] <= low;   // taking him opens a hole for them
+    // Acceptance Plausibility from their side (shared with the calculator and Market Leverage): value, market, their lineup,
+    // needs, construction; realism = your lineup gain + their acceptance, never the size of your edge
+    const best = K.tradable(it.team)[0];
+    it.acc = acceptFor({ imp: it.fT, val: vrSide(it.vr, "B"), mkt: it.mktDiff == null ? null : -it.mktDiff });
+    it.real = 0.4 * utilScore(it.fS.su) + 0.6 * it.acc.score;
+    it.conf = { High: "Likely", Moderate: "Plausible", Low: "Long shot" }[it.acc.label];
     return it;
   }
   // Market Leverage card (Alan, Oct 8): both perspectives side by side, then why each manager does it; detail stays collapsed
@@ -13968,7 +14135,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const detail = full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
         <table class="ml-tbl"><thead><tr><th>Player</th><th>Goes to</th><th>AM</th><th>Market</th><th>FantasyCalc</th><th>Flock</th><th>Market confidence</th></tr></thead><tbody>${it.give.map(p => [p, it.team.name]).concat(it.get.map(p => [p, you ? "You" : it.S.name])).map(([p, to]) => { const r = mkOf(p);
           return `<tr><td>${esc(p.name)}</td><td>${esc(to)}</td><td>${esc(posLabel(p))} · ${fmt(dv(p))}</td><td>${r ? `${p.pos}${r.cRank} · ${fmt(r.cv)}` : "—"}</td><td>${r && r.per.fc ? p.pos + r.per.fc.pr : "—"}</td><td>${r && r.per.fl ? p.pos + r.per.fl.pr : "—"}</td><td>${r ? r.mconf : "No data"}</td></tr>`; }).join("")}</tbody></table>
-        <p class="pp-note">Their side in market terms, weighted by what each piece means to their roster: ${fmtNet(mk.netM)}. Market values are FantasyCalc and Flock on AM's scale (each source's position rank priced on AM's curve, FantasyCalc also by its own value gaps), weighted by source type, format match and freshness: ${esc(mkAll().srcs.map(s => `${s.name} — ${s.fmt}`).join(" · "))}.</p>
+        <p class="pp-note">Their lineup score with bench: ${fmtNet(mk.theirU)}. Market values are FantasyCalc and Flock on AM's scale (each source's position rank priced on AM's curve, FantasyCalc also by its own value gaps), weighted by source type, format match and freshness: ${esc(mkAll().srcs.map(s => `${s.name} — ${s.fmt}`).join(" · "))}.</p>
         <dl class="tf-nums"><div><dt>AM raw · send vs receive</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
         <div><dt>Market raw · they receive vs send</dt><dd>${fmt(mk.mm.rawB ?? 0)} <span>vs</span> ${fmt(mk.mm.rawA ?? 0)}</dd></div></dl></div>` : "";
     return `<article class="tf-card tf-tcard ml-card${mk.accLabel === "High" ? " good-fit" : ""}">
@@ -13985,7 +14152,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <p class="ml-say"><b>${esc(mk.label.replace(" Leverage", " asset leverage"))} · ${esc(mlLinePhrase(mk.myLine))}</b> · ${mk.them >= 0 ? "AM prefers your side while market consensus prefers theirs." : "AM prefers your side; the market sees theirs as only slightly behind."}</p>
       <p class="ml-line"><span title="${esc(you ? "Your" : it.S.name + "'s")} best starting lineup by AM, before → after: the main measure; power rank is context (ranks can be tightly packed)">${you ? "My" : esc(it.S.name + "'s")} starting lineup <b class="${mk.myLine >= 0.5 ? "up" : mk.myLine <= -0.5 ? "down" : ""}">${signPct(mk.myLine)}</b> · PR #${pm(it.S.rosterId)[0]} → #${pm(it.S.rosterId)[1]}</span><span>Their starting lineup <b class="${mk.theirLine >= 0.5 ? "up" : mk.theirLine <= -0.5 ? "down" : ""}">${signPct(mk.theirLine)}</b> · PR #${pm(it.team.rosterId)[0]} → #${pm(it.team.rosterId)[1]}</span></p>
       ${mk.types.length ? `<p class="ml-types">${mk.types.map(t => `<span>${esc(t)}</span>`).join("")}</p>` : ""}
-      <p class="ml-meta"><span class="tf-pill conf ${accCls[mk.accLabel]}" title="How plausible it is that the other manager accepts: the market's view, what it does for their roster and needs, starters vs filler, and whether they lose their best player. Capped when it depletes their roster. Never about your roster or the size of your AM Edge.">Acceptance Plausibility: ${mk.accLabel}</span><span class="tf-pill conf ${accCls[mk.mconf]}" title="How sure the outside market is about these players: FantasyCalc/Flock agreement, freshness, format match and missing data">Market Confidence: ${mk.mconf}</span></p>
+      <p class="ml-meta"><span class="tf-pill conf ${accCls[mk.accLabel]}" title="How plausible it is that the other manager accepts: value they receive vs give, the market's view, their lineup before → after, their needs, starters vs filler, and whether they lose their best player. Capped when it depletes their roster. Never about your roster or the size of your AM Edge.">Acceptance Plausibility: ${mk.accLabel}</span><span class="tf-pill conf ${accCls[mk.mconf]}" title="How sure the outside market is about these players: FantasyCalc/Flock agreement, freshness, format match and missing data">Market Confidence: ${mk.mconf}</span></p>
       <p class="tf-why2"><b>Why ${you ? "you" : esc(it.S.name)} do it:</b> ${esc(mlWhyYou(it))}</p>
       <p class="tf-why2"><b>Why they may do it:</b> ${esc(mlWhyThem(it, K))}</p>
       <div class="tf-impact"><div><span class="ctl-label">${you ? "Your team" : esc(it.S.name)}</span>${impactLine(it, it.S.rosterId, pm)}</div><div><span class="ctl-label">${esc(it.team.name)}</span>${impactLine(it, it.team.rosterId, pm)}</div></div>
@@ -13994,7 +14161,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     </article>`;
   }
   function targetVerdict(it) {
-    const ahead = it.m.a >= it.m.b, d = it.more;
+    if (it.vr && it.vr.kind === "split") return { label: it.vr.raw > 0 ? "Split: more value for you, better package for them" : "Split: more value for them, better package for you", cls: "fair" };
+    if (it.vr && it.vr.kind === "sensitive") return { label: "Package-sensitive", cls: "fair" };
+    const ahead = it.sAhead, d = it.more;
     if (d < 3) return { label: "Basically even", cls: "fair" };
     if (ahead) return { label: d < 7 ? "Slight edge for you" : d < 12 ? "Good value for you" : d < 20 ? "Strong value for you" : "Lopsided for you", cls: "you" };
     return { label: d < 7 ? "You pay a slight premium" : "You overpay", cls: "them" };
@@ -14003,11 +14172,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const pm = powerMoves(it, K), v = targetVerdict(it), full = TF.openFull.has(i), fw = fullWhy(it);
     const meW = shortWhy(it, v.cls === "fair") || (() => { const fe = it.fS.inc.find(e => e.p === X); return fe && fe.starts ? `${X.name} would start at ${fe.role} for you.` : `You add ${X.name} without weakening your starters.`; })();
     const row = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
-    const nums = [`<span title="Raw totals of base AM Board values, no package adjustment">AM raw ${signPct(it.amDiff)}</span>`, `<b title="League-adjusted values with the package adjustment: an extra piece counts less next to the best player in the deal. This decides the verdict.">League-adjusted ${signPct(it.adjDiff)}</b>`]
+    const nums = [`<span title="Raw totals of base AM Board values, no package adjustment">AM raw ${signPct(it.amDiff)}</span>`, `<b title="League-adjusted values with the package adjustment: an extra piece counts less next to the best player in the deal. It can narrow the verdict, never create or reverse a winner on its own.">Package-adjusted ${signPct(it.adjDiff)}</b>`]
       .concat(it.mktDiff == null ? [] : [`<span title="Raw totals of the market / expert consensus (FantasyCalc + Flock) on AM's scale, no package adjustment">Market raw ${signPct(it.mktDiff)}</span>`]);
     return `<article class="tf-card tf-tcard${v.cls === "them" ? " bad-fit" : it.conf === "Likely" ? " good-fit" : ""}">
       <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div>
-        <span class="tf-pills">${it.leverage ? `<span class="tf-pill lev" title="The market values what you send more than AM does, and AM values what you get more than the market">Market leverage</span>` : ""}<span class="tf-pill conf ${it.conf === "Likely" ? "hi" : it.conf === "Plausible" ? "mid" : "lo"}" title="How likely the other manager is to consider it: their roster fit, whether it opens a hole for them, and the market">${esc(it.conf)}</span><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></span></header>
+        <span class="tf-pills">${it.leverage ? `<span class="tf-pill lev" title="The market values what you send more than AM does, and AM values what you get more than the market">Market leverage</span>` : ""}<span class="tf-pill conf ${it.conf === "Likely" ? "hi" : it.conf === "Plausible" ? "mid" : "lo"}" title="Acceptance Plausibility: value they receive vs give, the market's view, their lineup before → after, positional needs and roster construction (starters vs filler, losing their best player, opening a hole)">${esc(it.conf)}</span><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></span></header>
       <div class="tf-vline"><span class="tf-verdict-big ${v.cls}">${esc(v.label)}</span><span class="tf-nums3">${nums.join("")}</span></div>
       <div class="tf-sides">
         <div class="tf-side"><h4>You receive</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return row(p, fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
@@ -14157,8 +14326,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     let ideas = findTrades(pkg || X, mode, S, opts);
     const sortKey = {
       best: (a, b) => b.score - a.score,
-      fair: (a, b) => a.more - b.more || b.score - a.score,
-      start: (a, b) => b.fS.net - a.fS.net,
+      fair: (a, b) => (a.mid ?? a.more) - (b.mid ?? b.more) || b.score - a.score,
+      start: (a, b) => sideVal(b.m, "A") - sideVal(a.m, "A") || b.dS - a.dS,   // best for S: its asset-value edge
       roster: (a, b) => b.dS - a.dS,
       oneone: (a, b) => (a.give.length + a.get.length) - (b.give.length + b.get.length) || b.score - a.score,
       fewest: (a, b) => (a.give.length + a.get.length) - (b.give.length + b.get.length) || a.more - b.more,
@@ -14183,12 +14352,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const cards = ideas.slice(0, TF.show).map((it, i) => {
       if (mlOn && it.mk) return mlCard(it, i, MK);
       if (tgt) return targetCard(it, i, TK, X);
-      const sAhead = it.m.a >= it.m.b, v = finderVerdict(it.more, sAhead, S, it.team);
+      const sAhead = it.sAhead, v = it.vr && it.vr.kind === "split" ? { label: "Split verdict", fair: true } : it.vr && it.vr.kind === "sensitive" ? { label: "Package-sensitive", fair: true } : finderVerdict(it.more, sAhead, S, it.team);
       const full = TF.openFull.has(i), fw = fullWhy(it);
-      const badFit = it.fS.net <= -8 || it.fT.net <= -8, goodFit = !badFit && it.fS.net >= 3 && it.fT.net >= 3;
+      const badFit = hurts(it.fS) || hurts(it.fT), goodFit = !badFit && helps(it.fS) && helps(it.fT);
       return `<article class="tf-card${badFit ? " bad-fit" : goodFit ? " good-fit" : ""}">
         <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></header>
-        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}" title="${esc(fitBadge0(it, v))}">${esc(fitBadge(it, v))}</span><span class="tf-diff">${it.more.toFixed(1)}% raw difference · ${fmtNet(it.fS.net)} fit for ${esc(S.mine ? "you" : S.name)} · ${fmtNet(it.fT.net)} fit for them</span></div>
+        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}" title="${esc(fitBadge0(it, v))}">${esc(fitBadge(it, v))}</span><span class="tf-diff" title="Value difference: league-adjusted values with the package adjustment. Lineup: each team's best lineup score (starters + bench depth) before → after.">${it.more.toFixed(1)}% value difference · ${esc(S.mine ? "your" : possOf(S))} lineup ${fmtNet(it.fS.u)} · their lineup ${fmtNet(it.fT.u)}</span></div>
         <div class="tf-sides">
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => crow(p, "")).join("")}</ul></div>
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "get" : "gets"}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return crow(p, fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
@@ -14379,25 +14548,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Publish to live site: queued saves, then anything else that changed, into the shared file
   async function saveHistory() {
     for (let attempt = 0; attempt < 3; attempt++) {
-      let file = null, hist = { version: 2, players: {} };
-      try { file = await gh(`/repos/${REPO}/contents/${HISTORY_FILE}?ref=${BRANCH}`); hist = normalizeHistory(JSON.parse(b64decode(file.content))); }
-      catch (err) { if (err.status !== 404) throw err; }
+      let hist = { version: 2, players: {} };
+      const file = await repoRead(HISTORY_FILE);   // Git Data API: the history file grows with every publish (see repoRead)
+      if (file.text != null) hist = normalizeHistory(JSON.parse(file.text));
       let added = 0;
       readPending().sort((a, b) => a.ts.localeCompare(b.ts)).forEach(c => Object.entries(c.entries).forEach(([sid, e]) => { if (addEntry(hist, sid, e.slice(0, 6))) added++; }));
       added += addSnapshot(hist, rankingSnapshot(), new Date().toISOString(), "M");
       if (!added) { writePending([]); rankHistory = hist; return 0; }
-      try {
-        await gh(`/repos/${REPO}/contents/${HISTORY_FILE}`, {
-          method: "PUT",
-          body: JSON.stringify({ message: `Ranking history: ${added} change${added === 1 ? "" : "s"}`, content: b64encode(historyText(hist)), branch: BRANCH, ...(file ? { sha: file.sha } : {}) })
-        });
+      if (await repoWrite(file, HISTORY_FILE, historyText(hist), `Ranking history: ${added} change${added === 1 ? "" : "s"}`)) {
         writePending([]); rankHistory = hist;
         return added;
-      } catch (err) { if (err.status !== 409) throw err; }
+      }
     }
     throw new Error("the history file kept changing");
   }
-  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck };   // helpers for the scheduled snapshot and tests
+  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings };   // helpers for the scheduled snapshot and tests
 
   // Start-up: restore a saved connection
   sl = readSl();

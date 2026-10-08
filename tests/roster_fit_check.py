@@ -1,14 +1,18 @@
-"""Trade Calculator roster-fit check (Oct 10: a trade entered with the sides reversed read "+0.0% roster-adjusted,
+"""Trade Calculator roster check (Oct 10: a trade entered with the sides reversed read "+0.0% roster-adjusted,
 basically even": each team "received" players it already owned, gave nothing it owned, and fitValues forced the net to 0).
+Since Oct 11 the calculator keeps four reads apart: the value verdict (asset value + package adjustment, no roster needs),
+Roster Impact (each lineup before -> after, no winner), Trade rationale and Acceptance Plausibility.
 
 Synthetic 12-team Superflex league (Full PPR, TE premium +0.5); Team Alpha owns Hubbard + Kincaid, Team Beta owns
 Wilson + Kelce. Checks:
   1. reversed entry (Alpha "gets" its own Hubbard + Kincaid): a clear warning naming the players and the roster they're
-     already on, a Flip players button, and NO roster-adjusted read (never a fake "+0.0%")
-  2. Flip players: the warning goes, the teams stay, the roster-adjusted read comes back with real numbers
-  3. a team that gives nothing it owns (a hypothetical add): no roster-adjusted read
-  4. filling real lineup holes is credited: a team with a weak RB2 and a weak TE that receives Hubbard + Kincaid gets
-     a clearly positive roster-adjusted net, with "fills a weak RB spot"
+     already on, a Flip players button, and NO roster impact read (never a fake "+0.0%")
+  2. Flip players: the warning goes, the teams stay, the roster impact read comes back with real numbers
+  3. a team that gives nothing it owns (a hypothetical add): no roster impact read
+  4. filling real lineup holes is explained, not scored as a win: a team with a weak RB2 and a weak TE that receives
+     Hubbard + Kincaid gets a value-only verdict, a Roster Impact view with no winner, the slot-by-slot lineup, and a
+     rationale crediting the weak RB room, with an Acceptance read for both teams; no roster-needs sliders, and an old
+     saved spm_needs setting changes nothing; an uneven trade shows the raw gap and the package adjustment
   5. a past trade opened from League > Transactions > Analyze trade, on three logs: simple (a later free-agent move), busy
      (Kelce traded on twice more incl. a 3-team trade, a waiver drop + commissioner add at the same moment, an unrelated
      move at the trade's own timestamp) and broken (a later trade missing from the log): exact rebuilds pass every check
@@ -93,7 +97,8 @@ with sync_playwright() as p:
     kw = {"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}
     br = p.chromium.launch(**kw); errs = []
 
-    def page(holes, history=False, hash="#trade"):
+    NEEDS_JS = "localStorage.setItem('spm_needs', JSON.stringify({ QB: 5, RB: 1, WR: 5, TE: 1 }));"
+    def page(holes, history=False, hash="#trade", needs=False):
         league, users, rosters, tx = league_data(holes, history)
         SL = {"source": "sleeper", "username": "mgr1", "userId": "u1", "displayName": "mgr1", "season": "2026",
               "leagues": [{"id": "L1", "name": "Synthetic League", "season": "2026", "status": "in_season", "format": ""}],
@@ -109,7 +114,7 @@ with sync_playwright() as p:
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
         pg.route("**/data/market/flock.json", lambda r: r.abort())
-        pg.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); localStorage.clear(); localStorage.setItem('spm_sleeper', {json.dumps(json.dumps(SL))}); localStorage.setItem('spm_tc_mode', 'league'); }}")
+        pg.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); localStorage.clear(); localStorage.setItem('spm_sleeper', {json.dumps(json.dumps(SL))}); localStorage.setItem('spm_tc_mode', 'league'); {NEEDS_JS if needs else ''} }}")
         pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/{hash}"); pg.wait_for_timeout(3000)
         if history: return pg
         pg.evaluate("""() => { const set = (id, v) => { const s = document.getElementById(id); s.value = v; s.dispatchEvent(new Event('change', { bubbles: true })); };
@@ -125,6 +130,8 @@ with sync_playwright() as p:
         return pg.evaluate("""() => { const w = document.getElementById('tc-warn'), g = document.getElementById('verdict-gap');
           return { warn: w.hidden ? '' : w.textContent.replace(/\\s+/g, ' ').trim(), flip: !w.hidden && !!w.querySelector('[data-tc-flip]'),
                    gap: g.hidden ? '' : g.textContent.replace(/\\s+/g, ' ').trim(), A: document.getElementById('team-A').value, B: document.getElementById('team-B').value,
+                   lens: !document.getElementById('tc-lens').hidden, hint: document.getElementById('tc-impact-hint').textContent.replace(/\\s+/g, ' ').trim(),
+                   title: document.getElementById('verdict-title').textContent.trim(),
                    page: document.getElementById('panel-trade') ? document.getElementById('panel-trade').textContent : document.body.textContent }; }""")
 
     # 1. reversed entry: Alpha "gets" Hubbard + Kincaid (its own), Beta "gets" Wilson + Kelce (its own)
@@ -135,30 +142,81 @@ with sync_playwright() as p:
     ok("already on Team Alpha's roster" in s["warn"] and "Chuba Hubbard" in s["warn"] and "already on Team Beta's roster" in s["warn"],
        f"Reversed sides: the warning names the players and the roster they're already on ({s['warn'][:150]})")
     ok(s["flip"], "Reversed sides: a Flip players button")
-    ok("Roster-adjusted" not in s["gap"] and "+0.0%" not in s["gap"], f"Reversed sides: no roster-adjusted read, never a fake +0.0% ({s['gap'][:120]})")
+    ok(not s["lens"] and "starting-lineup value" not in s["hint"] and "+0.0%" not in s["gap"], f"Reversed sides: no roster impact read, never a fake +0.0% ({s['gap'][:120]} | {s['hint']})")
     # 2. Flip players: teams stay, players change sides, the analysis comes back
     pg.click("#tc-warn [data-tc-flip]"); pg.wait_for_timeout(600)
     s = state(pg)
-    nets = re.findall(r"([+−]\d+\.\d)%", s["gap"].split("Roster-adjusted:")[-1]) if "Roster-adjusted" in s["gap"] else []
+    nets = re.findall(r"([+−]\d+\.\d)%", s["hint"]) if "starting-lineup value" in s["hint"] else []
     ok(not s["warn"] and s["A"] == "1" and s["B"] == "2", "Flip players: the warning goes and the team pickers stay")
-    ok(len(nets) == 2 and not all(n in ("+0.0", "−0.0") for n in nets), f"Flip players: a real roster-adjusted read for both teams ({s['gap'][:140]})")
+    ok(len(nets) == 2 and not all(n in ("+0.0", "−0.0") for n in nets), f"Flip players: a real roster impact read for both teams ({s['hint']})")
     pg.close()
     # 3. a team that gives nothing it owns (hypothetical add): no roster-adjusted read
     pg = page(False)
     add(pg, "A", WIL)
     s = state(pg)
-    ok("+0.0%" not in s["gap"] and "Roster-adjusted" not in s["gap"], f"One-sided trade (Alpha gives nothing): no fake roster-adjusted net ({s['gap'][:120]})")
+    ok("+0.0%" not in s["gap"] and not s["lens"] and "starting-lineup value" not in s["hint"], f"One-sided trade (Alpha gives nothing): no fake roster impact read ({s['gap'][:120]})")
     pg.close()
-    # 4. real lineup holes: Alpha (weak RB2 + TE) receives Hubbard + Kincaid for Wilson + Kelce
-    pg = page(True)
+    # 4. real lineup holes: Alpha (weak RB2 + TE) receives Hubbard + Kincaid for Wilson + Kelce. An old saved roster-needs
+    # setting ("desperately need RB", "set at WR") is in this browser and must change nothing.
+    pg = page(True, needs=True)
     for n in (HUB, KIN): add(pg, "A", n)
     for n in (WIL, KEL): add(pg, "B", n)
     s = state(pg)
-    m = re.search(r"Team Alpha ([+−]\d+\.\d)%", s["gap"])
-    net = float(m.group(1).replace("−", "-")) if m else None
     ok(not s["warn"], "Hole-filling trade: entered the right way round, no warning")
-    ok(net is not None and net >= 5, f"Hole-filling trade: Team Alpha's roster-adjusted net is clearly positive ({net})")
-    ok("fills a weak RB spot" in s["page"], "Hole-filling trade: Hubbard is credited with filling a weak RB spot")
+    ok(pg.evaluate("() => localStorage.getItem('spm_needs')") is None and not pg.locator("#needs-grid").count(), "Roster-needs sliders are gone and the old saved setting is cleared")
+    gap_needs = s["gap"]
+    ok(s["title"] in ("Fair trade", "Basically even") and "apart in value" in s["gap"] and "fit" not in s["gap"].lower(),
+       f"Hole-filling trade: the verdict is asset value only ({s['title']} | {s['gap'][:120]})")
+    m = re.search(r"Team Alpha ([+−]\d+\.\d)% · Team Beta ([+−]\d+\.\d)% starting-lineup value", s["hint"])
+    net = float(m.group(1).replace("−", "-")) if m else None
+    ok(net is not None, f"Roster impact summary for both teams ({s['hint']})")
+    pg.click("#tc-lens [data-lens=fit]"); pg.wait_for_timeout(400)
+    v = state(pg)
+    ok(v["title"] == "Roster impact" and not re.search(r"wins|steal|robb|edge to|fair trade", v["gap"] + v["title"], re.I) and pg.evaluate("() => document.getElementById('meter-wrap').hidden"),
+       f"Roster Impact view: no winner, no meter ({v['title']} | {v['gap'][:120]})")
+    imp = pg.evaluate("() => document.getElementById('tc-analysis').textContent.replace(/\\s+/g, ' ')")
+    ok("Starting-lineup value" in imp and "Bench depth" in imp and "Starters in: Chuba Hubbard (RB2)" in imp and "Addressed: RB" in imp and "SlotBeforeAfter" in imp.replace(" ", ""),
+       f"Roster Impact panel: strength before → after, slot table, starters in, rooms addressed ({imp[:200]})")
+    why = pg.evaluate("() => document.getElementById('tc-why-body').textContent.replace(/\\s+/g, ' ')")
+    ok("Addresses a weak RB room" in why and "Chuba Hubbard starts at RB2" in why and why.count("Acceptance:") == 2 and "What Team Alpha gives up" in why and "Why Team Beta might accept" in why,
+       f"Trade rationale: benefits and sacrifices for both teams, Acceptance for both ({why[:220]})")
+    ok("Roster-adjusted" not in s["page"] and "Roster needs" not in pg.evaluate("() => document.getElementById('tc-breakdown-body').textContent"),
+       "No roster-adjusted net or roster-needs row anywhere")
+    pg.click("#tc-lens [data-lens=am]"); pg.wait_for_timeout(300)
+    pg.close()
+    pg = page(True)
+    for n in (HUB, KIN): add(pg, "A", n)
+    for n in (WIL, KEL): add(pg, "B", n)
+    ok(state(pg)["gap"] == gap_needs, "An old saved roster-needs setting doesn't change the value verdict")
+    pg.close()
+    # an uneven trade: the raw gap and the package adjustment are both shown
+    pg = page(True)
+    add(pg, "A", "Ashton Jeanty")
+    for n in (WIL, "Tetairoa McMillan"): add(pg, "B", n)
+    g = state(pg)["gap"]
+    ok("Raw asset value:" in g and "Package-adjusted:" in g, f"Uneven trade: raw gap and package-adjusted gap shown ({g[:160]})")
+    pg.close()
+    # the package adjustment reverses the raw winner: a split verdict, never a "steal"
+    pg = page(True)
+    for n in (HUB, KIN): add(pg, "A", n)
+    add(pg, "B", "Chris Olave")
+    s = state(pg)
+    ok(s["title"] == "Split verdict" and "reverses the raw-value advantage" in s["gap"] and "steal" not in (s["title"] + s["gap"]).lower(),
+       f"Package reversal: split verdict, both readings shown ({s['title']} | {s['gap'][:160]})")
+    pg.close()
+    # tiny values: a bench-for-bench swap reads as the small gap it is, with the points shown, never extreme winner language
+    pg = page(True)
+    add(pg, "A", "Dontayvion Wicks"); add(pg, "B", "Tyler Higbee")
+    s = state(pg)
+    ok("Small values" in s["gap"] and not re.search(r"wins|steal|robb|clearly", s["title"], re.I), f"Tiny-value trade: proportionate verdict ({s['title']} | {s['gap'][:140]})")
+    # the verdict rules themselves (valueRead): reversal = split, one even + one major = package-sensitive, widened = raw decides
+    k = pg.evaluate("""() => [
+      valueRead({ a: 5500, b: 6800, rawA: 7200, rawB: 6800, adj: { swing: -1700 } }).kind,
+      valueRead({ a: 7400, b: 6800, rawA: 6900, rawB: 6800, adj: { swing: 500 } }).kind,
+      valueRead({ a: 7600, b: 5450, rawA: 7600, rawB: 7300, adj: { swing: 1800 } }),
+      valueRead({ a: 300, b: 65, rawA: 300, rawB: 65, adj: null }, 4000).gap]""")
+    ok(k[0] == "split" and k[1] == "sensitive" and k[2]["kind"] == "widened" and abs(k[2]["gap"] - 4.1) < 0.1 and k[3] < 6,
+       f"valueRead: split, package-sensitive, widened decided by the raw gap, materiality floor {k}")
     pg.close()
     # 5. the same trade from the league's transaction log: a simple log, a busy one, and one with a move missing
     def open_past(mode):
@@ -179,7 +237,7 @@ with sync_playwright() as p:
         pg, info = open_past(mode)
         s = state(pg)
         cards = pg.evaluate("() => ['A', 'B'].map(x => [...document.querySelectorAll('#roster-' + x + ' .tc-pl .tc-pl-name')].map(e => e.textContent.trim()))")
-        m = re.search(r"Team Alpha ([+−]\d+\.\d)%.*Team Beta ([+−]\d+\.\d)%", s["gap"])
+        m = re.search(r"Team Alpha ([+−]\d+\.\d)% · Team Beta ([+−]\d+\.\d)% starting-lineup value", s["hint"])
         hn = [float(x.replace("−", "-")) for x in m.groups()] if m else None
         ok(s["A"] == "1" and s["B"] == "2" and any(HUB in c for c in cards[0]) and any(WIL in c for c in cards[1]),
            f"[{mode}] Past trade: sides from the transaction (Alpha gets Hubbard + Kincaid, Beta gets Wilson + Kelce) {cards}")
@@ -187,7 +245,7 @@ with sync_playwright() as p:
         ok("Current evaluation" in info["text"] and "All rebuild checks passed" in info["text"] and not info["approx"] and not info["bad"],
            f"[{mode}] Rebuild exact, every check passes {info['bad']} ({info['text'][:140]})")
         ok("At the time:" in info["text"], f"[{mode}] The transaction's own at-the-time read is shown and labelled")
-        ok(hn is not None and abs(hn[0] - net) < 0.05, f"[{mode}] Roster-adjusted read is the one for the rosters at the time (Alpha {hn and hn[0]} vs {net})")
+        ok(hn is not None and abs(hn[0] - net) < 0.05, f"[{mode}] Roster impact is the one for the rosters at the time (Alpha {hn and hn[0]} vs {net})")
         rep = info["report"]
         ok("Team Alpha received: Chuba Hubbard, Dalton Kincaid" in rep and "Rebuild: all checks passed" in rep and "!!" not in rep and "starters before:" in rep,
            f"[{mode}] Copy report: the record, the checks, the rebuilt rosters and the lineups ({len(rep)} chars)")
@@ -196,7 +254,7 @@ with sync_playwright() as p:
             strip = pg.evaluate("() => document.getElementById('teamroster-A').textContent")
             ok(all("From Team Beta" in m for m in meta[0]) and all("From your team" in m for m in meta[1]), f"Past trade: each card says who sent the player, not today's owner {meta}")
             ok("Hubbard" in strip and "G. Wilson" not in strip, "Past trade: the partner's roster strip is Team Beta's roster at the time")
-            ok("fills a weak RB spot" in s["page"], "Past trade: Hubbard fills Alpha's weak RB spot")
+            ok("Addresses a weak RB room" in s["page"], "Past trade: the rationale credits Alpha's weak RB room")
             if os.environ.get("SHOTS"): pg.locator("#tc-hist").screenshot(path=os.path.join(os.environ["SHOTS"], "past_trade_check.png"))
             pg.locator("#roster-B .tc-pl", has_text=KEL).locator("button").first.click(); pg.wait_for_timeout(600)   # remove Kelce: now a manual trade
             ok(pg.evaluate("() => document.getElementById('tc-hist').hidden"), "Editing the past trade ends the historical view")
@@ -207,7 +265,7 @@ with sync_playwright() as p:
     ok(info["approx"] and "Approximate rebuild" in info["text"] and any("where the transaction says" in b for b in info["bad"]),
        f"[broken] A missing move is caught: approximate, with the failing check named {info['bad']}")
     ok("Rebuild: approximate" in info["report"] and "!!" in info["report"], "[broken] The copied report says approximate and marks the problem")
-    ok("Approximate rosters" in state(pg)["gap"], "[broken] The roster-adjusted line itself is tagged Approximate rosters")
+    ok("Approximate rosters" in state(pg)["gap"], "[broken] The verdict line is tagged Approximate rosters")
     if os.environ.get("SHOTS"): pg.locator("#tc-hist").screenshot(path=os.path.join(os.environ["SHOTS"], "past_trade_broken.png"))
     pg.close()
     ok(not errs, f"No page errors {errs}")
