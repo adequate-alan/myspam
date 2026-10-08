@@ -2277,7 +2277,9 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-bar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--line-soft); }
 .mx-bar-a { background: var(--accent-primary); }
 .mx-bar-b { flex: 1; background: color-mix(in srgb, var(--gold) 70%, transparent); margin-left: 2px; }
-.mx-partial { margin: 2px 20px 0; text-align: center; font-size: 0.68rem; color: var(--muted); }
+.mx-bar-lbl.mx-partial { color: var(--warn); cursor: help; }   /* partial: the bar stays, muted and striped, and says what's missing */
+.mx-bar.partial .mx-bar-a, .mx-bar.partial .mx-bar-b { opacity: .5; background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--surface) 55%, transparent) 4px 7px); }
+.mx-bar-row.partial .mx-pct { color: var(--muted); font-weight: 600; }
 .mx-bar-lbl { text-align: center; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
 .mx-left-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 28px 10px; font-size: 0.7rem; color: var(--muted); }
 .mx-show { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 9px; border-top: 1px solid var(--line-soft); font-size: 0.76rem; font-weight: 700; color: var(--accent-primary); cursor: pointer; transition: background 0.12s; }
@@ -5225,7 +5227,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T11:00Z";
+  const BUILD_ID = "2026-10-10T12:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -10235,6 +10237,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const x = ev.byRoster.get(String(m.roster_id));
       return { m, team, starters, pts: Number(m.custom_points ?? m.points ?? 0), power: x ? x.power : null,
         proj: starters.reduce((a, s) => a + (s.proj.est || 0), 0), partial: starters.some(s => s.proj.missing),
+        missing: starters.filter(s => s.proj.missing).map(s => (s.e && s.e.name) || "a starter"),
         done: count("final"), playing: count("live"), toPlay: count("upcoming"), off: count("bye") + count("none") };
     };
     const cards = [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([mid, ms]) => {
@@ -10251,14 +10254,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           ${state === "final" ? (win === which ? `<span class="mx-res win">Win</span>` : win === "T" ? `<span class="mx-res">Tie</span>` : `<span class="mx-res">Final</span>`)
             : `<span class="mx-proj${s.partial ? " partial" : ""}" title="${s.partial ? "Partial: one or more starters could not be projected. " : ""}${esc(LIVE_PROJ_TIP)}">Live proj <b>${fp(s.proj)}${s.partial ? "*" : ""}</b></span>`}</div>`;
       const mid2 = `<span class="mx-mid"><span class="mx-state ${state}">${state === "final" ? "Final" : state === "live" ? "Live" : "Upcoming"}</span><span class="mx-vs">vs</span></span>`;
-      // projected share of the two totals; only when both lineups are fully projected (a partial total would mislead)
-      const tot = A.proj + B.proj, partial = A.partial || B.partial, showBar = state !== "final" && tot > 0 && !partial;
+      // projected share of the two totals (Alan, Oct 10: shown even when a starter can't be projected, as a muted,
+      // striped bar labelled "Partial projection · N starters missing", instead of hiding the comparison)
+      const tot = A.proj + B.proj, partial = A.partial || B.partial, showBar = state !== "final" && tot > 0;
+      const miss = A.missing.concat(B.missing), missTip = partial ? `Not projected: ${[A, B].filter(s => s.missing.length).map(s => `${s.team.name}: ${s.missing.join(", ")}`).join(" · ")}. The share uses the starters that could be projected.` : "";
       const shareA = showBar ? Math.round(1000 * A.proj / tot) / 10 : 0;
       const left = s => state === "upcoming" ? `${s.toPlay} to play` : `${s.done} played · ${s.playing} active · ${s.toPlay} remaining`;
-      const bar = showBar ? `<div class="mx-bar-row"><span class="mx-pct A">${shareA.toFixed(1)}%</span>
-          <div class="mx-bar" role="img" aria-label="Projected matchup: ${shareA.toFixed(1)}% to ${(100 - shareA).toFixed(1)}%"><span class="mx-bar-a" style="width:${shareA}%"></span><span class="mx-bar-b"></span></div>
-          <span class="mx-pct B">${(100 - shareA).toFixed(1)}%</span></div><div class="mx-bar-lbl">Projected matchup</div>`
-        : state !== "final" && partial ? `<p class="mx-partial">Partial projection · one or more starters could not be projected</p>` : "";
+      const bar = showBar ? `<div class="mx-bar-row${partial ? " partial" : ""}"${partial ? ` title="${esc(missTip)}"` : ""}><span class="mx-pct A">${shareA.toFixed(1)}%</span>
+          <div class="mx-bar${partial ? " partial" : ""}" role="img" aria-label="${partial ? "Partial projection" : "Projected matchup"}: ${shareA.toFixed(1)}% to ${(100 - shareA).toFixed(1)}%"><span class="mx-bar-a" style="width:${shareA}%"></span><span class="mx-bar-b"></span></div>
+          <span class="mx-pct B">${(100 - shareA).toFixed(1)}%</span></div>${partial
+            ? `<div class="mx-bar-lbl mx-partial" title="${esc(missTip)}">Partial projection · ${miss.length} starter${miss.length === 1 ? "" : "s"} missing</div>`
+            : `<div class="mx-bar-lbl">Projected matchup</div>`}`
+        : "";
       // Expanded lineups: compact rows, final points or live points + projection, or the projection alone
       const ptsCell = x => {
         const P = x.proj;
