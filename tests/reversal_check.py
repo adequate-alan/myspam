@@ -32,7 +32,7 @@ LIB = r"""
 window.__R = (() => {
   const S = SPM.edit;   // the editor's own functions (values as state), under the names this suite uses
   const E = { overall: S.moveOverall, position: S.movePlayer, tier: S.tierAction, draft: S.draft, unsaved: S.unsaved, reset: S.reset,
-    touched: S.touched, values: () => S.board().map(p => [p.id, p.rank, p.pos, p.posNum, p.tier, p.value, p.source]),
+    touched: S.touched, recalcAuto: S.recalcAuto, values: () => S.board().map(p => [p.id, p.rank, p.pos, p.posNum, p.tier, p.value, p.source]),
     // a value edit that fits his spot (40% of the way to the player ranked ahead), or back to a given value
     value: (id, v) => { if (v == null) { const L = S.board().sort((a, b) => a.rank - b.rank), i = L.findIndex(p => p.id === id), me = L[i], up = L[i - 1];
       v = up ? me.value + Math.max(1, Math.round((up.value - me.value) * 0.4)) : me.value + 50; } S.setValue(id, v); return v; } };
@@ -202,6 +202,16 @@ with sync_playwright() as p:
     bad = [f"seed {i + 1}: {o['diff']}" for i, o in enumerate(r5b) if not o["ok"]]
     ok(not bad and all(o["kept"] > 0 for o in r5b), f"10 boards with earlier moves across tiers kept: a 40-move mixed session on top, undone, leaves them exactly as they were {bad[:3]}")
     ok(pg.evaluate("() => SPM.edit.unsaved()") == 0, "Cancel brings back the saved board")
+    # Recalculate Auto players keeps every Auto player Auto (as before the reversible editor), through later moves and their undo
+    r6 = pg.evaluate("""() => { const R = __R, E = R.E, autos = () => R.rows().filter(r => r.source === "auto").length;
+      const a0 = autos(), n = E.recalcAuto(), ref = R.state(), a1 = autos(), B = R.byRank(), out = [];
+      for (const [k, d] of [[30, 5], [120, -4], [B.length - 20, 3]]) {   // a Manual player, then an Auto player, moved and back
+        const r = B[k]; E.overall(r.id, r.rank + d); out.push(autos()); E.overall(r.id, r.rank);
+      }
+      const same = R.same(ref), diff = same ? "" : R.diff(ref); E.reset();
+      return { a0, n, a1, mid: out, same, diff }; }""")
+    ok(r6["n"] > 0 and r6["a0"] == r6["a1"] and r6["mid"][:2] == [r6["a0"]] * 2 and r6["mid"][2] == r6["a0"] - 1 and r6["same"],
+       f"Recalculate Auto players: {r6['n']} values change, all {r6['a0']} Auto players stay Auto through unrelated moves (an Auto player moved is Manual only while his move stands), and undoing the moves restores the recalculated board exactly {r6['mid']} {r6['diff']}")
 
     # 6. the UI path: arrow clicks in the All view and a WR tab, and a real drag, each undone with the arrows
     ref = pg.evaluate("() => __R.state()")

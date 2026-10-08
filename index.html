@@ -5207,7 +5207,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T12:00Z";
+  const BUILD_ID = "2026-10-13T14:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7311,7 +7311,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const textId = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + ":" + t.length; };
   const SESSION_MAPS = ["touch", "memo", "drops", "moves", "base"];
   function packSession(S) {
-    const o = { pub: textId(S.pub), saved: textId(savedCsv), seq: S.seq, pinned: [...S.pinned], kept: [...S.kept] };
+    const o = { pub: textId(S.pub), saved: textId(savedCsv), seq: S.seq, pinned: [...S.pinned], kept: [...S.kept], autoRecalc: [...S.autoRecalc] };
     SESSION_MAPS.forEach(k => { o[k] = [...S[k]]; });
     return o;
   }
@@ -7321,14 +7321,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const base0 = new Map(draft.rows.map((r, id) => { const x = refRow.get(id); return [id, String((x ? x[colOf(ref, "tier")] : r[iT]) ?? "")]; }));
     const base = new Map(draft.rows.map((r, id) => [id, String(r[iT] ?? "")]));
     const kept = new Set(draft.rows.map((r, id) => id).filter(id => { const x = refRow.get(id); return !x || ["rank", "pos_rank", "tier"].some(c => (draft.rows[id][colOf(draft, c)] ?? "") !== (x[colOf(ref, c)] ?? "")); }));
-    return { pub: publishedCsv, seq: 0, touch: new Map(), memo: new Map(), drops: new Map(), moves: new Map(),
+    // an Auto player with a value edit that kept his auto source got it from Recalculate Auto players (explicit edits make
+    // him Manual): it isn't an edit of his own
+    const iSrc = colOf(draft, "source"), autoRecalc = new Set(players.filter(p => valueEdited(p) && String(draft.rows[p.id] && draft.rows[p.id][iSrc] || "").toLowerCase() === "auto").map(p => p.id));
+    return { pub: publishedCsv, seq: 0, touch: new Map(), memo: new Map(), drops: new Map(), moves: new Map(), autoRecalc,
       pinned: new Set([...base].filter(([id, t]) => t !== base0.get(id)).map(([id]) => id)), kept, refTable: ref, refRow, base, base0 };
   }
   function unpackSession(o) {   // the saved bookkeeping, when it belongs to this published board and these saved edits
     if (!o || o.pub !== textId(publishedCsv) || o.saved !== textId(savedCsv) || tableToCsv(draft) !== savedCsv) return null;
     const S = freshSession();
     SESSION_MAPS.forEach(k => { S[k] = new Map(o[k] || []); });
-    S.seq = o.seq || 0; S.pinned = new Set(o.pinned || []); S.kept = new Set(o.kept || []);
+    S.seq = o.seq || 0; S.pinned = new Set(o.pinned || []); S.kept = new Set(o.kept || []); S.autoRecalc = new Set(o.autoRecalc || S.autoRecalc);
     return S;
   }
   function editSession() {
@@ -7395,9 +7398,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // an edit of his own still standing: a move not undone, a deliberate tier, a value edit, or an edit saved before this
   // bookkeeping existed
   const valueEdited = p => { const t = touchDraft.get(valueKey(p)); return !!(t && t.edit); };
-  function ownEdit(id) {
+  function ownEdit(id) {   // a value from Recalculate Auto players isn't his own edit: Auto players keep their auto source
     const S = editSession(), p = byId.get(id) || players.find(q => q.id === id);
-    return (S.moves.get(id) || []).length > 0 || S.pinned.has(id) || S.kept.has(id) || (!!p && valueEdited(p)) || !S.refRow.get(id);
+    return (S.moves.get(id) || []).length > 0 || S.pinned.has(id) || S.kept.has(id) || (!!p && valueEdited(p) && !S.autoRecalc.has(id)) || !S.refRow.get(id);
   }
   /* Touched players (values as state): only players with a standing edit of their own. A move undone releases him (his
      stored value comes back exactly); a value set back to his published value at his published spot is no edit. */
@@ -7620,7 +7623,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     applyValue(me, v);
   }
   function applyValue(me, v) {
-    editSession();
+    editSession().autoRecalc.delete(me.id);
     const was = me.value;
     anchorValue(me, v); pruneTouched(); makeManual(); hideEdWarn(); REVALUED.delete(me.id); RECALC_TAG.delete(me.id);
     rebuild();
@@ -7635,7 +7638,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function recalcPlayer(id) {
     const me = byId.get(id); if (!me) return;
     const was = me.value, v = recalcLevel(me);
-    editSession(); anchorValue(me, v); pruneTouched(); makeManual(); hideEdWarn(); REVALUED.add(me.id); RECALC_TAG.add(me.id);
+    editSession().autoRecalc.delete(me.id); anchorValue(me, v); pruneTouched(); makeManual(); hideEdWarn(); REVALUED.add(me.id); RECALC_TAG.add(me.id);
     rebuild();
     const now = byId.get(id);
     toast(`${now.name} recalculated from the model: ${fmt(was)} → ${fmt(now.value)}.`);
@@ -7661,6 +7664,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (prevAt[p.pos] != null) v = Math.min(v, prevAt[p.pos] * 0.995);
       prevAt[p.pos] = v;
       touchDraft.set(valueKey(p), { v: Math.round(v), pv: p.curve, edit: true });
+      editSession().autoRecalc.add(p.id);
     });
     let n = 0;
     const before = new Map(auto.map(p => [p.id, p.value]));
