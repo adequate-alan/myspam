@@ -338,25 +338,38 @@ with sync_playwright() as p:
                 good = good and vt.startswith(word) and "STEAL" not in vt and lo - 0.05 <= df <= hi + 0.05
         ok(seen > 0 and good, f"Trade goal '{goal}': {seen} ideas, all {lo}-{hi}% in your favor and labelled '{word.title()}'")
     pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
-    # Trade types: 1-for-1, 1-for-2, 2-for-1, 3-for-1s (3-for-1 and 1-for-3), 2-for-4s (2-for-4 and 4-for-2), All packages
-    # (counted from the starting team's side; the two bigger types only when picked, never under All packages)
-    labels = pg.locator("#tf-size button").all_inner_texts()
-    ok(labels == ["1-for-1", "1-for-2", "2-for-1", "3-for-1s", "2-for-4s", "All packages"], f"Trade type buttons: {labels}")
-    def shapes(kind):
-        pg.click(f"#tf-size [data-size='{kind}']"); pg.wait_for_timeout(250)
+    # Package filter (Alan, Oct 10): You send / You receive counts, always directional (from the starting team's side);
+    # Any · Any is the default search (1-2 players a side); 1→3, 3→1, 2→4 and 4→2 only when picked; no grouped buckets
+    ok(pg.locator("#tf-size").count() == 0 and pg.inner_text("#tf-pkg").strip() == "Any package", "Package filter replaces the trade-type tab row: 'Any package'")
+    def pick_pkg(send, recv):
+        if pg.locator("#tf-pkg-pop").is_hidden(): pg.click("#tf-pkg"); pg.wait_for_timeout(150)
+        for side, v in (("send", "any"), ("recv", "any"), ("send", send), ("recv", recv)):
+            pg.click(f"#tf-pkg-pop [data-pkg='{side}'][data-v='{v}']"); pg.wait_for_timeout(150)
+    def shapes(send, recv):
+        pick_pkg(send, recv)
+        label = pg.inner_text("#tf-pkg").strip()
         out = set()
         for v in pv[:4]:
             pg.evaluate(f"() => {{ const s = document.getElementById('tf-player'); s.value = '{v}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(250)
-            out |= set(t.strip().lower() for t in pg.locator(".tf-card:not(.tf3) .tf-size").all_inner_texts())
-        return out
-    for kind, want in (("11", {"1-for-1"}), ("12", {"1-for-2"}), ("21", {"2-for-1"})):
-        got = shapes(kind)
-        ok(got == want, f"Trade type {want.pop()}: only that shape ({got})")
-    for kind, allowed in (("31", {"3-for-1", "1-for-3"}), ("24", {"2-for-4", "4-for-2"})):
-        got = shapes(kind)
-        ok(got and got <= allowed, f"Trade type {' / '.join(sorted(allowed))}: only those shapes ({got})")
-    got = shapes("all")
-    ok(len(got) >= 2 and got <= {"1-for-1", "1-for-2", "2-for-1", "2-for-2"}, f"All packages mixes shapes ({got})")
+            out |= set(t.strip() for t in pg.eval_on_selector_all(".tf-card:not(.tf3) .tf-size", "bs => bs.map(b => b.title)"))
+        return out, label
+    for send, recv in ((1, 1), (1, 2), (2, 1), (2, 2), (1, 3), (3, 1), (2, 4), (4, 2)):
+        got, label = shapes(send, recv)
+        ok(got == {f"{send}-for-{recv}"} and label == f"Send {send} · Get {recv}", f"Send {send} · Get {recv}: only that direction ({got}), control reads '{label}'")
+    got, label = shapes(1, "any")
+    ok(got and got <= {"1-for-1", "1-for-2", "1-for-3"} and label == "Send 1 · Get any", f"Send 1 · Get any: every shape sends 1 ({got})")
+    got, label = shapes("any", 4)
+    ok(got == {"2-for-4"}, f"Send any · Get 4: only 2-for-4, never 4-for-2 ({got})")
+    pick_pkg(3, "any")
+    dis = pg.eval_on_selector_all("#tf-pkg-pop [data-pkg='recv']", "bs => bs.filter(b => b.disabled).map(b => b.dataset.v)")
+    ok(set(dis) == {"2", "3", "4"}, f"With Send 3, only Get 1 (or any) can be picked: disabled {dis}")
+    badge = pg.eval_on_selector(".tf-card:not(.tf3) .tf-size", "b => b.textContent") if pg.locator(".tf-card:not(.tf3) .tf-size").count() else ""
+    ok(badge.startswith("Send 3 · Get "), f"Cards say who sends what: '{badge}'")
+    got, label = shapes("any", "any")
+    ok(len(got) >= 2 and got <= {"1-for-1", "1-for-2", "2-for-1", "2-for-2"} and label == "Any package", f"Any package keeps the default mix ({got})")
+    pg.keyboard.press("Escape") if not pg.locator("#tf-pkg-pop").is_hidden() else None
+    pg.click("#tf-pkg"); pg.wait_for_timeout(150); pg.keyboard.press("Escape"); pg.wait_for_timeout(150)
+    ok(pg.locator("#tf-pkg-pop").is_hidden() and pg.eval_on_selector("#tf-pkg", "b => b.getAttribute('aria-expanded')") == "false", "Escape closes the package popover")
     pg.click("#tab-league"); pg.wait_for_timeout(500)
 
     # Rosters: team picker, header, week nav, dense table by section, season schedule

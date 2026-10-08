@@ -63,7 +63,7 @@ with sync_playwright() as p:
     for c in cards:
         recv = c.locator(".tf-side").nth(0).inner_text(); send_ids = c.evaluate("e => [...e.querySelectorAll('.tf-side')[1].querySelectorAll('[data-player]')].map(x => x.dataset.player)")
         verdict = c.locator(".tf-verdict-big").inner_text().upper()
-        size = c.locator(".tf-size").inner_text().strip().lower()
+        size = c.locator(".tf-size").get_attribute("title").strip().lower()   # badge reads "Send 3 · Get 2"; the title keeps "3-for-2"
         if size == "3-for-2": n32 += 1
         if size.startswith("3-") and size != "3-for-2": bad.append(size)
         cond = (tname in recv and set(send_ids) <= mine and ("EDGE FOR YOU" in verdict or "VALUE FOR YOU" in verdict) and "STEAL" not in verdict
