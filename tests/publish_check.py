@@ -10,7 +10,7 @@ Checks:
 1. The failure Alan hit: index.html is over 1 MB, so GitHub's Contents API returns it without content; the site never
    calls the Contents API.
 2. Move up, move down, a tier change and a typed value, each saved and published in a row on one page: one rankings
-   commit each (+ the ranking-history commit), only the edited ranking fields change, every rank runs 1..N, Sleeper IDs
+   commit each (index.html, the ranking history and the exact snapshot together), only the edited ranking fields change, every rank runs 1..N, Sleeper IDs
    stay unique, everything outside the rankings block is byte-identical, local edits are cleared, and the success
    message only appears after the commit is confirmed.
 3. Reopening the editor (reload, served from the repository) shows the published board with nothing pending, and a
@@ -138,7 +138,10 @@ with sync_playwright() as p:
         ch, fixed = changes(block(before)[1], block(after)[1])
         new = repo.log()[n0:]
         ok("Published and confirmed" in msg and repo.head != head0, f"{label}: published and confirmed ({msg[:90]!r})")
-        ok(any(m.startswith("Rankings edit by @tester") for m in new) and any(m.startswith("Ranking history") for m in new), f"{label}: commits {new}")
+        ok(len(new) == 1 and new[0].startswith("Rankings edit by @tester") and "\n\nRanking history: " in new[0], f"{label}: one commit, rankings + history {[m.splitlines()[0] for m in new]}")
+        parent = repo.commits[repo.head]["parents"][0]
+        ok(all(repo.read(f, parent) != repo.read(f) for f in ("index.html", "data/rank_history.json")) and repo.read(f"data/rank_snapshots/{json.loads(repo.read('data/rank_history.json'))['events'][-1]['ts'][:7]}.json") is not None,
+           f"{label}: index.html, the ranking history and the exact snapshot are in that one commit")
         ok(outside(before) == outside(after), f"{label}: everything outside the rankings block is byte-identical")
         ok(not fixed and sound(block(after)[1]), f"{label}: only ranking fields changed, ranks 1..N, unique IDs, position ranks in order {fixed[:3]}")
         ok(expect(ch), f"{label}: the intended fields changed {json.dumps({k: v for k, v in list(ch.items())[:4]})}")

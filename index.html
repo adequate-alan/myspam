@@ -5255,7 +5255,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T04:00Z";
+  const BUILD_ID = "2026-10-12T06:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7975,7 +7975,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const tree = await gh(`/repos/${REPO}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: base.tree, tree: files.map((f, i) => ({ path: f.path, mode: "100644", type: "blob", sha: blobs[i] })) }) });
     const commit = await gh(`/repos/${REPO}/git/commits`, { method: "POST", body: JSON.stringify({ message, tree: tree.sha, parents: [base.head] }) });
     try { await gh(`/repos/${REPO}/git/refs/heads/${BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }) }); }
-    catch (err) { if (err.status === 422 || err.status === 409) return null; throw err; }   // not a fast-forward: someone committed first
+    catch (err) {
+      if (err.status === 422 || err.status === 409) return null;   // not a fast-forward: someone committed first
+      // any other error: the answer may have been lost after GitHub moved the branch (Oct 11), so look before
+      // reporting a failure; only a branch that really points at this commit counts as written (then read back below)
+      let now = null;
+      try { const ref = await gh(`/repos/${REPO}/git/ref/heads/${BRANCH}`); now = ref.object && ref.object.sha; } catch (e) {}
+      if (now !== commit.sha) throw err;
+    }
     const back = await gh(`/repos/${REPO}/git/commits/${commit.sha}`);
     for (let i = 0; i < files.length; i++) {
       const entry = await repoEntry(back.tree.sha, files[i].path);
@@ -8144,29 +8151,51 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!editor.token) { openSignin(); return; }
     editor.saving = true; updateEditorBar();
     try {
-      let merged = null, same = false, manualMap = null;
+      /* One commit (Alan, Oct 11): the rankings (index.html), the ranking history and the exact board snapshot are read
+         from the same commit and written together, so the live rankings never exist without their history and snapshot.
+         The snapshot is the merged board itself (loadPlayers on the rankings being published). A branch that moved
+         underneath us means re-read, re-merge and retry, up to 3 times. */
+      let merged = null, same = false, ev = null;
       for (let attempt = 0; attempt < 3 && merged == null; attempt++) {
-        const base = await repoRead(FILE);
-        if (base.text == null) throw new Error(`${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
-        const cur = extractRankings(base.text);
+        const ts = new Date().toISOString(), month = snapMonth(ts), spath = snapPath(month);
+        const base = await repoReadMany([FILE, HISTORY_FILE, spath]);
+        const text = base.texts[FILE];
+        if (text == null) throw new Error(`${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
+        const cur = extractRankings(text);
         const csv = mergeInto(cur.csv);
         const problems = validateRankings(csv, cur.csv);
         if (problems.length) throw new Error(`the rankings didn't pass the pre-publish checks, so nothing was changed (${problems.slice(0, 3).join("; ")}${problems.length > 3 ? `; +${problems.length - 3} more` : ""}). Your edits are still saved in this browser.`);
-        manualMap = typedDiff(cur.csv, csv);   // typed values this publish adds, changes or clears (ranking history)
-        if (csv === cur.csv) { merged = csv; same = true; break; }   // already live (e.g. published from another tab)
-        const res = await repoWrite(base, FILE, replaceRankings(base.text, csv),
-          `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count > 1 ? "s" : ""})`);
-        if (res) merged = csv;   // null: the branch moved underneath us, so read and merge again
+        let hist, snapFile;
+        try {
+          hist = normalizeHistory(base.texts[HISTORY_FILE] != null ? JSON.parse(base.texts[HISTORY_FILE]) : null);
+          snapFile = base.texts[spath] != null ? JSON.parse(base.texts[spath]) : { version: 1, snapshots: [] };
+        } catch (e) { throw new Error(`${HISTORY_FILE} or ${spath} on GitHub isn't valid JSON, so nothing was changed. Your edits are still saved in this browser.`); }
+        if (!Array.isArray(snapFile.snapshots)) snapFile.snapshots = [];
+        const prevSnap = snapFile.snapshots[snapFile.snapshots.length - 1] || await previousSnapshot(hist, month);
+        const r = recordPublish(hist, snapFile, prevSnap, rankingSnapshot(loadPlayers(csv)), ts, "M", editor.login, typedDiff(cur.csv, csv));
+        const rankings = csv !== cur.csv;
+        if (!rankings && !r.changed) { merged = csv; same = true; rankHistory = hist; break; }   // already live, history already has it
+        const files = [];
+        if (rankings) files.push({ path: FILE, text: replaceRankings(text, csv) });
+        if (r.changed) {
+          files.push({ path: HISTORY_FILE, text: historyText(hist) });
+          if (r.snapshot) files.push({ path: spath, text: boardSnapText(snapFile) });
+        }
+        const head = rankings ? `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count > 1 ? "s" : ""})` : historyMessage(r.ev);
+        const res = await repoWriteMany(base, files, rankings && r.changed ? `${head}\n\n${historyMessage(r.ev)}` : head);
+        if (res) {   // null: the branch moved underneath us, so read and merge again
+          merged = csv; same = !rankings; ev = r.changed ? r.ev : null;
+          rankHistory = hist; if (r.snapshot) SNAPS[month] = snapFile;
+        }
       }
       if (merged == null) throw new Error("the site kept changing while publishing. Your edits are still saved in this browser; try again.");
       try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
+      writePending([]);
       publishedCsv = merged; localEdits = {}; savedCsv = merged; draft = csvToTable(merged);
       editor.saving = false;
       rebuild();
-      let snapNote = "";
-      try { const ev = await saveHistory(manualMap); const s = ev && historySummary(ev); if (s) snapNote = ` Ranking history: ${s}.`; }
-      catch (err) { snapNote = " The ranking history wasn't updated (" + err.message + ")."; }
-      toast((same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote);
+      const s = ev && historySummary(ev);
+      toast((same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + (s ? ` Ranking history: ${s}.` : ""));
     } catch (err) {
       editor.saving = false; updateEditorBar();
       toast(err.status === 401 || err.status === 403 || err.status === 404   // GitHub answers "Not Found" when the token can't see the repo
@@ -14677,9 +14706,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const HISTORY_SOURCE = { M: "Manual edit", S: "Scheduled update", P: "Published update", B: "Baseline snapshot" };
   const snapMonth = ts => String(ts).slice(0, 7);
   const snapPath = month => `${SNAP_DIR}${month}.json`;
-  function rankingSnapshot() {
+  function rankingSnapshot(list = players) {
     const out = {};
-    players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && p.rank != null)
+    list.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && p.rank != null)
       .forEach(p => { out[p.sleeperId] = [p.rank, p.posNum, p.tier === "" || p.tier == null ? "" : Number(p.tier), Math.round(p.value), p.custom ? 1 : 0]; });
     return out;
   }
@@ -14788,26 +14817,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const f = await repoRead(snapPath(ev.snap));
     const list = f.text != null ? (JSON.parse(f.text).snapshots || []) : [];
     return list[list.length - 1] || null;
-  }
-  // Publish to live site: the published board itself (entries, the event and the exact snapshot) in one commit
-  async function saveHistory(manualMap = null) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const ts = new Date().toISOString(), month = snapMonth(ts), path = snapPath(month);
-      const base = await repoReadMany([HISTORY_FILE, path]);   // Git Data API: both files from one commit
-      const hist = normalizeHistory(base.texts[HISTORY_FILE] != null ? JSON.parse(base.texts[HISTORY_FILE]) : null);
-      const snapFile = base.texts[path] != null ? JSON.parse(base.texts[path]) : { version: 1, snapshots: [] };
-      if (!Array.isArray(snapFile.snapshots)) snapFile.snapshots = [];
-      const prevSnap = snapFile.snapshots[snapFile.snapshots.length - 1] || await previousSnapshot(hist, month);
-      const r = recordPublish(hist, snapFile, prevSnap, rankingSnapshot(), ts, "M", editor.login, manualMap);
-      if (!r.changed) { writePending([]); rankHistory = hist; return r.ev; }
-      const files = [{ path: HISTORY_FILE, text: historyText(hist) }];
-      if (r.snapshot) files.push({ path, text: boardSnapText(snapFile) });
-      if (await repoWriteMany(base, files, historyMessage(r.ev))) {
-        writePending([]); rankHistory = hist; SNAPS[month] = snapFile;
-        return r.ev;
-      }
-    }
-    throw new Error("the history file kept changing");
   }
   window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings };   // helpers for the scheduled snapshot and tests
 
