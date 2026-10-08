@@ -9,7 +9,10 @@ Wilson + Kelce. Checks:
   3. a team that gives nothing it owns (a hypothetical add): no roster-adjusted read
   4. filling real lineup holes is credited: a team with a weak RB2 and a weak TE that receives Hubbard + Kincaid gets
      a clearly positive roster-adjusted net, with "fills a weak RB spot"
-  5. a past trade opened from League > Transactions > Analyze trade: today's rosters already reflect the trade and a later
+  5. a past trade opened from League > Transactions > Analyze trade, on three logs: simple (a later free-agent move), busy
+     (Kelce traded on twice more incl. a 3-team trade, a waiver drop + commissioner add at the same moment, an unrelated
+     move at the trade's own timestamp) and broken (a later trade missing from the log): exact rebuilds pass every check
+     and give exactly case 4's read; the broken one is flagged approximate with the failing check named. Also: today's rosters already reflect the trade and a later
      free-agent move. The sides come from the transaction (Alpha received Hubbard + Kincaid), no wrong-side warning, the
      rosters are rebuilt to just before the trade (later moves undone, earlier ones kept), and the roster-adjusted read is
      exactly the one for those rosters (case 4); editing the trade leaves the historical view
@@ -39,16 +42,35 @@ def league_data(holes, history=False):
     rest = [r["player"] for r in rows if r["sleeper_id"] and r["player"] not in used][:150]
     teams = [a, b] + [rest[i::10] for i in range(10)]
     tx = {}
-    if history:   # the trade, then Alpha drops Chris Bell for a free agent; today's rosters show both
+    if history:
+        # pre-trade rosters (above) + the log; today's rosters = the log played forward. "busy" adds the cases the
+        # rebuild has to get right: Kelce moving on twice more (a 2-team and a 3-team trade), a waiver drop and a
+        # commissioner add at the same moment, and an unrelated move at the trade's own timestamp. "broken" serves the
+        # same log minus one later trade, so today's rosters don't line up with it.
         fa = rest[-1]; teams[9] = [n for n in teams[9] if n != fa]
-        trade = {"transaction_id": "t1", "type": "trade", "status": "complete", "roster_ids": [1, 2], "leg": 3, "status_updated": T_TRADE,
-                 "adds": {sid[HUB]: 1, sid[KIN]: 1, sid[WIL]: 2, sid[KEL]: 2}, "drops": {sid[HUB]: 2, sid[KIN]: 2, sid[WIL]: 1, sid[KEL]: 1}, "draft_picks": [], "waiver_budget": []}
-        later = {"transaction_id": "f1", "type": "free_agent", "status": "complete", "roster_ids": [1], "leg": 4, "status_updated": T_TRADE + 86400e3,
-                 "adds": {sid[fa]: 1}, "drops": {sid["Chris Bell"]: 1}, "draft_picks": [], "waiver_budget": []}
-        earlier = {"transaction_id": "e1", "type": "free_agent", "status": "complete", "roster_ids": [2], "leg": 2, "status_updated": T_TRADE - 86400e3,
-                   "adds": {sid[b[-1]]: 2}, "drops": {}, "draft_picks": [], "waiver_budget": []}   # before the trade: stays
-        tx = {2: [earlier], 3: [trade], 4: [later]}
-        a = [n for n in a if n not in (WIL, KEL, "Chris Bell")] + [HUB, KIN, fa]; b = [n for n in b if n not in (HUB, KIN)] + [WIL, KEL]
+        T3, T4, T5, T6, T7 = teams[2], teams[3], teams[4], teams[5], teams[6]
+        D = 86400e3
+        def mv(i, typ, at, adds, drops, rids):
+            return {"transaction_id": i, "type": typ, "status": "complete", "roster_ids": rids, "leg": 3 + int((at - T_TRADE) // D), "status_updated": at,
+                    "adds": {sid[n]: r for n, r in adds.items()}, "drops": {sid[n]: r for n, r in drops.items()}, "draft_picks": [], "waiver_budget": []}
+        log = [mv("990", "free_agent", T_TRADE - D, {}, {}, [2]),
+               mv("1000", "trade", T_TRADE, {HUB: 1, KIN: 1, WIL: 2, KEL: 2}, {HUB: 2, KIN: 2, WIL: 1, KEL: 1}, [1, 2]),
+               mv("1010", "free_agent", T_TRADE + D, {fa: 1}, {"Chris Bell": 1}, [1])]
+        if history in ("busy", "broken"):
+            log += [mv("1003", "free_agent", T_TRADE, {}, {T7[-1]: 7}, [7]),
+                    mv("1020", "trade", T_TRADE + 2 * D, {KEL: 3, T3[0]: 2}, {KEL: 2, T3[0]: 3}, [2, 3]),
+                    mv("1030", "trade", T_TRADE + 3 * D, {KEL: 4, T4[0]: 5, T5[0]: 3}, {KEL: 3, T4[0]: 4, T5[0]: 5}, [3, 4, 5]),
+                    mv("1040", "waiver", T_TRADE + 4 * D, {}, {KEL: 4}, [4]),
+                    mv("1041", "commissioner", T_TRADE + 4 * D, {KEL: 6}, {}, [6])]
+        rid = {n: k + 1 for k, team in enumerate([a, b] + teams[2:]) for n in team}
+        cur = {k + 1: list(team) for k, team in enumerate([a, b] + teams[2:])}
+        for x in sorted(log[1:], key=lambda x: (x["status_updated"], len(x["transaction_id"]), x["transaction_id"])):   # play the log forward
+            name = {sid[n]: n for n in sid}
+            for s_, r in x["drops"].items(): cur[r] = [n for n in cur[r] if sid.get(n) != s_]
+            for s_, r in x["adds"].items(): cur[r].append(name[s_])
+        a, b = cur[1], cur[2]; teams[2:] = [cur[k] for k in range(3, 13)]
+        served = [x for x in log if not (history == "broken" and x["transaction_id"] == "1020")]
+        for x in served: tx.setdefault(x["leg"], []).append(x)
         teams[0], teams[1] = a, b
     names = ["Team Alpha", "Team Beta"] + [f"Team {i}" for i in range(3, 13)]
     rosters = [{"roster_id": i + 1, "owner_id": f"u{i+1}", "co_owners": [], "players": [sid[n] for n in t], "starters": [], "reserve": [], "taxi": [],
@@ -138,33 +160,55 @@ with sync_playwright() as p:
     ok(net is not None and net >= 5, f"Hole-filling trade: Team Alpha's roster-adjusted net is clearly positive ({net})")
     ok("fills a weak RB spot" in s["page"], "Hole-filling trade: Hubbard is credited with filling a weak RB spot")
     pg.close()
-    # 5. the same trade from the league's transaction log
-    pg = page(False, history=True, hash="#league")
-    pg.click("#tab-league"); pg.wait_for_timeout(600); pg.click("[data-lsub=tx]"); pg.wait_for_timeout(2500)
-    pg.click("[data-tx-type=trade]"); pg.wait_for_timeout(300)
-    while pg.locator("[data-tx-older]").count(): pg.click("[data-tx-older]"); pg.wait_for_timeout(300)
-    if not pg.locator("[data-th-analyze]").count() and pg.locator("[data-th-full]").count(): pg.locator("[data-th-full]").first.click(); pg.wait_for_timeout(300)
-    ok(pg.locator("[data-th-analyze]").count() == 1, "Transactions: the trade shows with Analyze trade")
-    pg.locator("[data-th-analyze]").first.click(); pg.wait_for_timeout(1500)
-    s = state(pg)
-    cards = pg.evaluate("() => ['A', 'B'].map(x => [...document.querySelectorAll('#roster-' + x + ' .tc-pl .pl-name, #roster-' + x + ' .tc-pl-name')].map(e => e.textContent.trim()))")
-    hist = pg.evaluate("() => { const h = document.getElementById('tc-hist'); return h.hidden ? '' : h.textContent.replace(/\\s+/g, ' ').trim(); }")
-    m = re.search(r"Team Alpha ([+−]\d+\.\d)%.*Team Beta ([+−]\d+\.\d)%", s["gap"])
-    hn = [float(x.replace("−", "-")) for x in m.groups()] if m else None
-    ok(s["A"] == "1" and s["B"] == "2" and any(HUB in c for c in cards[0]) and any(WIL in c for c in cards[1]),
-       f"Past trade: sides from the transaction (Team Alpha gets Hubbard + Kincaid, Team Beta gets Wilson + Kelce) {cards}")
-    meta = pg.evaluate("() => ['A', 'B'].map(x => [...document.querySelectorAll('#roster-' + x + ' .tc-pl-meta')].map(e => e.textContent.replace(/\\s+/g, ' ').trim()))")
-    strip = pg.evaluate("() => document.getElementById('teamroster-A').textContent")
-    ok(all("From Team Beta" in m for m in meta[0]) and all("From your team" in m for m in meta[1]) and not any("My team" in m for m in meta[0]),
-       f"Past trade: each card says who sent the player, not today's owner {meta}")
-    ok("Hubbard" in strip and "G. Wilson" not in strip and "Garrett Wilson" not in strip, "Past trade: the partner's roster strip is Team Beta's roster at the time (Hubbard still there, no Wilson yet)")
-    ok(not s["warn"], f"Past trade: no wrong-side warning ({s['warn'][:100]})")
-    ok("Trade from" in hist and "1 later move undone" in hist and "match today's rosters" not in hist, f"Past trade: rosters rebuilt to just before it ({hist[:160]})")
-    ok(hn is not None and abs(hn[0] - net) < 0.05, f"Past trade: roster-adjusted read is the one for the rosters at the time (Alpha {hn and hn[0]} vs {net} with those rosters live)")
-    ok("fills a weak RB spot" in s["page"] and "Chris Bell" not in " ".join(re.findall(r"[^.]*would be cut[^.]*", s["page"])),
-       "Past trade: Hubbard fills Alpha's weak RB spot; nobody is cut (the later drop is undone)")
-    pg.locator("#roster-B .tc-pl", has_text=KEL).locator("button").first.click(); pg.wait_for_timeout(600)   # remove Kelce: now a manual trade
-    ok(pg.evaluate("() => document.getElementById('tc-hist').hidden"), "Editing the past trade ends the historical view")
+    # 5. the same trade from the league's transaction log: a simple log, a busy one, and one with a move missing
+    def open_past(mode):
+        pg = page(False, history=mode, hash="#league")
+        pg.click("#tab-league"); pg.wait_for_timeout(600); pg.click("[data-lsub=tx]"); pg.wait_for_timeout(2500)
+        pg.click("[data-tx-type=trade]"); pg.wait_for_timeout(300)
+        while pg.locator("[data-tx-older]").count(): pg.click("[data-tx-older]"); pg.wait_for_timeout(300)
+        btn = pg.locator(".th-card", has_text="Team Alpha").locator("[data-th-analyze]")
+        if not btn.count(): pg.locator(".th-card", has_text="Team Alpha").locator("[data-th-full]").first.click(); pg.wait_for_timeout(300)
+        btn.first.click(); pg.wait_for_timeout(1500)
+        pg.evaluate("() => { const d = document.querySelector('#tc-hist details'); if (d) d.open = true; }"); pg.wait_for_timeout(200)
+        pg.evaluate("() => { const b = document.querySelector('[data-th-copy]'); b && b.click(); }"); pg.wait_for_timeout(300)
+        info = pg.evaluate("""() => { const h = document.getElementById('tc-hist');
+          return { text: h.hidden ? '' : h.textContent.replace(/\\s+/g, ' ').trim(), approx: h.classList.contains('approx'),
+                   bad: [...h.querySelectorAll('.th-checks .bad')].map(e => e.textContent.trim()), report: window.__thReport || '' }; }""")
+        return pg, info
+    for mode in ("simple", "busy"):
+        pg, info = open_past(mode)
+        s = state(pg)
+        cards = pg.evaluate("() => ['A', 'B'].map(x => [...document.querySelectorAll('#roster-' + x + ' .tc-pl .tc-pl-name')].map(e => e.textContent.trim()))")
+        m = re.search(r"Team Alpha ([+−]\d+\.\d)%.*Team Beta ([+−]\d+\.\d)%", s["gap"])
+        hn = [float(x.replace("−", "-")) for x in m.groups()] if m else None
+        ok(s["A"] == "1" and s["B"] == "2" and any(HUB in c for c in cards[0]) and any(WIL in c for c in cards[1]),
+           f"[{mode}] Past trade: sides from the transaction (Alpha gets Hubbard + Kincaid, Beta gets Wilson + Kelce) {cards}")
+        ok(not s["warn"], f"[{mode}] Past trade: no wrong-side warning ({s['warn'][:100]})")
+        ok("Current evaluation" in info["text"] and "Rosters rebuilt exactly" in info["text"] and not info["approx"] and not info["bad"],
+           f"[{mode}] Rebuild exact, every check passes {info['bad']} ({info['text'][:140]})")
+        ok("At the time:" in info["text"], f"[{mode}] The transaction's own at-the-time read is shown and labelled")
+        ok(hn is not None and abs(hn[0] - net) < 0.05, f"[{mode}] Roster-adjusted read is the one for the rosters at the time (Alpha {hn and hn[0]} vs {net})")
+        rep = info["report"]
+        ok("Team Alpha received: Chuba Hubbard, Dalton Kincaid" in rep and "Rebuild: exact" in rep and "!!" not in rep and "starters before:" in rep,
+           f"[{mode}] Copy report: the record, the checks, the rebuilt rosters and the lineups ({len(rep)} chars)")
+        if mode == "simple":
+            meta = pg.evaluate("() => ['A', 'B'].map(x => [...document.querySelectorAll('#roster-' + x + ' .tc-pl-meta')].map(e => e.textContent.replace(/\\s+/g, ' ').trim()))")
+            strip = pg.evaluate("() => document.getElementById('teamroster-A').textContent")
+            ok(all("From Team Beta" in m for m in meta[0]) and all("From your team" in m for m in meta[1]), f"Past trade: each card says who sent the player, not today's owner {meta}")
+            ok("Hubbard" in strip and "G. Wilson" not in strip, "Past trade: the partner's roster strip is Team Beta's roster at the time")
+            ok("fills a weak RB spot" in s["page"], "Past trade: Hubbard fills Alpha's weak RB spot")
+            if os.environ.get("SHOTS"): pg.locator("#tc-hist").screenshot(path=os.path.join(os.environ["SHOTS"], "past_trade_check.png"))
+            pg.locator("#roster-B .tc-pl", has_text=KEL).locator("button").first.click(); pg.wait_for_timeout(600)   # remove Kelce: now a manual trade
+            ok(pg.evaluate("() => document.getElementById('tc-hist').hidden"), "Editing the past trade ends the historical view")
+        else:
+            ok("Undone:" in rep and rep.count("Undone:") == 6, f"[busy] All six later moves listed as undone ({rep.count('Undone:')})")
+        pg.close()
+    pg, info = open_past("broken")
+    ok(info["approx"] and "Approximate rebuild" in info["text"] and any("where the transaction says" in b for b in info["bad"]),
+       f"[broken] A missing move is caught: approximate, with the failing check named {info['bad']}")
+    ok("Rebuild: approximate" in info["report"] and "!!" in info["report"], "[broken] The copied report says approximate and marks the problem")
+    ok("Approximate rosters" in state(pg)["gap"], "[broken] The roster-adjusted line itself is tagged Approximate rosters")
+    if os.environ.get("SHOTS"): pg.locator("#tc-hist").screenshot(path=os.path.join(os.environ["SHOTS"], "past_trade_broken.png"))
     pg.close()
     ok(not errs, f"No page errors {errs}")
     br.close()
