@@ -5252,7 +5252,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-11T03:00Z";
+  const BUILD_ID = "2026-10-11T04:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6248,7 +6248,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function histText(R) {   // the same check as plain text, for "Copy report"
     const L = [`Adequate — past trade check`, `Trade: ${R.when} · transaction ${R.t.id}`];
     R.rec.forEach(x => L.push(`${x.name} received: ${x.got.map(R.nm).join(", ") || "nothing"} · sent: ${x.sent.map(R.nm).join(", ") || "nothing"}`));
-    L.push(`Rebuild: ${R.rb.exact ? "exact" : "approximate"} · ${R.rb.undone} later move${R.rb.undone === 1 ? "" : "s"} undone`);
+    L.push(`Rebuild: ${R.rb.exact && R.checks.every(c => c[0]) ? "all checks passed (consistent with Sleeper's log; a move Sleeper never returned can't be detected)" : "approximate"} · ${R.rb.undone} later move${R.rb.undone === 1 ? "" : "s"} undone`);
     R.checks.forEach(([ok, txt]) => L.push(`${ok ? "OK " : "!! "} ${txt}`));
     R.rosters.forEach(x => L.push(`${x.name} just before the trade (${x.ids.length}): ${x.ids.map(y => y.name).join(", ")}`));
     R.lines.forEach(x => {
@@ -6268,7 +6268,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     TC.histApprox = !R.rb.exact || bad > 0;
     hn.classList.toggle("approx", !R.rb.exact || bad > 0);
     hn.innerHTML = `<div class="th-row"><span><b>Current evaluation of the ${esc(R.when)} trade</b> · sides from Sleeper's transaction · rosters as they were just before it · today's AM values</span>
-        <span class="th-state">${R.rb.exact && !bad ? "Rosters rebuilt exactly" : `Approximate rebuild · ${bad} check${bad === 1 ? "" : "s"} to look at`}</span></div>
+        <span class="th-state">${R.rb.exact && !bad ? "All rebuild checks passed" : `Approximate rebuild · ${bad} check${bad === 1 ? "" : "s"} to look at`}</span></div>
       <div class="th-row th-then"><span><b>At the time:</b> ${R.then ? esc(R.then) : "—"} <span class="muted">· ${esc(R.thenWhy)}</span></span></div>
       <details class="th-diag"${TC.histOpen ? " open" : ""}><summary>Check the rebuild</summary>
         <div class="th-sec"><h4>Sleeper's record</h4><ul>${R.rec.map(x => `<li><b>${esc(x.name)}</b> received ${esc(x.got.map(R.nm).join(", ") || "nothing")} · sent ${esc(x.sent.map(R.nm).join(", ") || "nothing")}</li>`).join("")}</ul></div>
@@ -6277,7 +6277,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <p>New starters: ${esc(x.in.join(", ") || "none")} · out of the lineup: ${esc(x.out.join(", ") || "none")}</p></div>`).join("")}</div>` : ""}
         <div class="th-sec th-cols">${R.rosters.map(x => `<div><h4>${esc(x.name)} just before the trade · ${x.ids.length}</h4><ul class="th-roster">${li(x.ids.map(y => y.name))}</ul></div>`).join("")}</div>
         <div class="th-sec"><h4>Later moves undone, newest first · ${R.moves.length}</h4>${R.moves.length ? `<ul class="th-moves">${R.moves.map(m => `<li${m.issues.length ? ' class="bad"' : ""}><span class="muted">${esc(m.when)} · ${esc(m.type)} · ${esc(m.teams)}</span> ${esc([...m.adds, ...m.drops].join(", "))}${m.issues.length ? ` <b>! ${esc(m.issues.join("; "))}</b>` : ""}</li>`).join("")}</ul>` : `<p class="muted">None: the trade is the latest move on these rosters.</p>`}</div>
-        <p class="muted">IR and taxi at the time aren't in Sleeper's log, so every rostered player counts. Editing the trade switches to today's rosters.</p>
+        <p class="muted">What the checks prove: Sleeper's log and today's rosters agree with each other. They can't catch a move Sleeper never returned if everything else still lines up, so compare the rosters above with what you remember. IR and taxi at the time aren't in Sleeper's log, so every rostered player counts. Editing the trade switches to today's rosters.</p>
         <button class="btn" type="button" data-th-copy>Copy report</button>
       </details>`;
   }
