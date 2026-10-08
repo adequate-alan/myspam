@@ -1,0 +1,23 @@
+{
+  "note": "Read by tests/run_ci.py. A suite fails CI when it prints a FAIL line not listed here, or exits non-zero without one (a crash). Entries match the start of a check's message exactly as the suite prints it after 'FAIL '. Keep this list short and specific: never add a pattern that could hide a new regression.",
+  "known_failures": {
+    "value_curve_check": {
+      "No one-player tiers below Tier 1": "Baseline since Oct 11 (CLAUDE.md §11): QB Tier 2 holds only Lamar Jackson. A ranking decision for Alan, not a code defect; don't change rankings to make it pass. Remove this entry once the tier is regrouped."
+    }
+  },
+  "advisory": {
+    "_why": "Timing measurements: they depend on the machine's speed and load (they fail when 15 browsers share 4 CPUs and pass alone). Reported in the summary, never block a deploy. The correctness checks in the same suites (landings, ranks 1..N, stale rows, scrolling stops at 0px, listeners, node counts) stay blocking.",
+    "drag_check": ["Grab restyles only the drag elements", "No long tasks", "First frame after the drop", "A further drag lifts the row right away"],
+    "drag_repeat_check": ["Drops don't get slower", "Script time per drop", "A drop redraws only the rows that changed"],
+    "drag_scroll_check": ["Holding near the bottom edge scrolls", "Five drags in a row scroll at the same speed", "Long drag from #9", "The top edge scrolls up", "Drawer open: edge scroll"]
+  },
+  "suites": {
+    "fast": ["static_check", "ci_pipeline_check", "smoke_check"],
+    "full": ["publish_check", "publish_safety_check", "history_check", "xss_check", "editor_check", "drag_check", "drag_repeat_check", "drag_scroll_check",
+             "drawer_check", "format_check", "value_curve_check", "injury_check", "league_hub_check", "market_edge_check",
+             "production_check", "roster_fit_check", "trade_history_check", "trade_target_check"],
+    "weights": {"league_hub_check": 180, "drag_repeat_check": 160, "publish_check": 150, "publish_safety_check": 150, "history_check": 90, "market_edge_check": 120,
+                "production_check": 115, "roster_fit_check": 115, "drag_scroll_check": 100, "drawer_check": 75, "editor_check": 70,
+                "format_check": 70, "injury_check": 65, "drag_check": 60, "xss_check": 40, "trade_history_check": 55, "trade_target_check": 45, "value_curve_check": 20}
+  }
+}

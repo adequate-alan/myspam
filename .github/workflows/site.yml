@@ -3,6 +3,9 @@ name: Build and deploy site
 on:
   push:
     branches: [main]
+  # pull requests run the same checks, never deploy
+  pull_request:
+    branches: [main]
   schedule:
     # Weekly full refresh: Tuesdays 14:00 UTC = 10 AM Eastern (9 AM once clocks fall back), after Monday Night Football.
     # Projections (RANKINGS_CSV proj columns + data/projections.json), Sleeper IDs, stats and the ranking-history
@@ -35,28 +38,39 @@ on:
         type: boolean
         default: false
 
+# Least privilege per job (Phase 1): only the data refresh can push, only the deploy can publish Pages.
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
-  group: pages
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
   cancel-in-progress: false
 
+# Release flow (Phase 1 reliability):
+#   refresh (scheduled / manual only)  pipeline jobs → static checks on the result (rankings must not change) → commit
+#   verify                              static checks + browser smoke test on the exact commit being released, then
+#                                       decides whether the full suite is needed: it is, unless this code (everything
+#                                       but data/ and the rankings block, tests/release_fingerprint.py) already passed it
+#   full (3 shards, when needed)        the whole regression suite; logs uploaded as an artifact, pass or fail
+#   build → deploy                      only after the checks above succeeded; pull requests never deploy
+# So a rankings publish (data only) deploys after ~2 minutes of checks, and a code change only after the full suite.
+# Known baseline failures and advisory timing checks are listed in tests/ci_policy.json.
 jobs:
-  build:
+  refresh:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.done.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
-        if: github.event_name != 'push'
         with:
           python-version: "3.12"
 
       - name: Pick refresh type
-        if: github.event_name != 'push'
         id: mode
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "20 */8 * * *" ]; then echo "stats=market" >> "$GITHUB_OUTPUT";
@@ -65,7 +79,7 @@ jobs:
           else echo "stats=false" >> "$GITHUB_OUTPUT"; fi
 
       - name: Refresh player stats only (after game days / editor refresh)
-        if: github.event_name != 'push' && steps.mode.outputs.stats == 'true'
+        if: steps.mode.outputs.stats == 'true'
         working-directory: pipeline
         run: |
           pip install pandas numpy
@@ -74,12 +88,12 @@ jobs:
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
       - name: Refresh FantasyCalc market values only (every 8 hours)
-        if: github.event_name != 'push' && steps.mode.outputs.stats == 'market'
+        if: steps.mode.outputs.stats == 'market'
         working-directory: pipeline
         run: python build_market.py || echo "Market values not refreshed (kept the last file)"
 
       - name: Refresh projections and stats (weekly / manual runs only)
-        if: github.event_name != 'push' && steps.mode.outputs.stats == 'false'
+        if: steps.mode.outputs.stats == 'false'
         working-directory: pipeline
         run: |
           pip install pandas numpy
@@ -92,15 +106,20 @@ jobs:
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
       - name: Scheduled ranking-history snapshot (weekly / manual runs only)
-        if: github.event_name != 'push' && steps.mode.outputs.stats == 'false'
+        if: steps.mode.outputs.stats == 'false'
         working-directory: pipeline
         run: |
-          pip install playwright
+          pip install -r ../tests/requirements-ci.txt
           python -m playwright install --with-deps chromium
           python snapshot_history.py
 
+      # Nothing scheduled may change a rank, tier, value or source, drop a player or rewrite history (CLAUDE.md §2, §8).
+      # A failure here stops before the commit, so nothing is committed or deployed.
+      - name: Check the refreshed data before committing
+        run: python tests/static_check.py --base HEAD --frozen-rankings
+
       - name: Commit refreshed site
-        if: github.event_name != 'push'
+        id: done
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -111,16 +130,130 @@ jobs:
           if [ -f data/market/redraft.json ]; then git add data/market/redraft.json; fi
           git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'market' && 'Market values refresh' || steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
           git pull --rebase origin main && git push
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+  verify:
+    needs: refresh
+    if: always() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.ref.outputs.sha }}
+      full: ${{ steps.verified.outputs.cache-hit != 'true' }}
+      fingerprint: ${{ steps.fp.outputs.fp }}
+    steps:
+      - id: ref
+        run: echo "sha=${{ needs.refresh.outputs.sha || github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.sha }}
+          fetch-depth: 50   # enough to reach the previous push (falls back to the parent commit)
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install the test browser (pinned Playwright + its Chromium)
+        run: |
+          pip install -r tests/requirements-ci.txt
+          python -m playwright install --with-deps chromium
+      - name: Pick the comparison commit
+        id: base
+        run: |
+          before="${{ github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha || '' }}"
+          if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then echo "args=--base $before" >> "$GITHUB_OUTPUT";
+          elif git cat-file -e HEAD~1 2>/dev/null; then echo "args=--base HEAD~1" >> "$GITHUB_OUTPUT"; fi
+      - name: Static checks and smoke test
+        run: python tests/run_ci.py fast --logs "$RUNNER_TEMP/ci-logs" --static-args "${{ steps.base.outputs.args }}"
+      - name: Code fingerprint
+        id: fp
+        run: echo "fp=$(python tests/release_fingerprint.py)" >> "$GITHUB_OUTPUT"
+      - name: Was this code already verified?
+        id: verified
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/verified
+          key: verified-${{ steps.fp.outputs.fp }}
+          lookup-only: true
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-fast
+          path: ${{ runner.temp }}/ci-logs
+          retention-days: 14
+
+  # always(): GitHub skips a job without a status function whenever ANY upstream job was skipped, and `refresh` is
+  # skipped on every push and pull request (PR #1's first run skipped the full suite that way).
+  full:
+    needs: verify
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install the test browser (pinned Playwright + its Chromium)
+        run: |
+          pip install -r tests/requirements-ci.txt
+          python -m playwright install --with-deps chromium
+      - name: Full regression suite (shard ${{ matrix.shard }} of 3)
+        run: python tests/run_ci.py full --shard ${{ matrix.shard }}/3 --logs "$RUNNER_TEMP/ci-logs"
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-full-${{ matrix.shard }}
+          path: ${{ runner.temp }}/ci-logs
+          retention-days: 14
+
+  # Only after every shard passed: this exact code is verified, so later rankings-only publishes on it run the fast checks.
+  mark-verified:
+    needs: [verify, full]
+    if: always() && needs.full.result == 'success' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - run: mkdir -p "$RUNNER_TEMP/verified" && echo "${{ needs.verify.outputs.sha }}" > "$RUNNER_TEMP/verified/sha"
+      - uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/verified
+          key: verified-${{ needs.verify.outputs.fingerprint }}
+
+  build:
+    needs: [verify, full]
+    # deploy only after the full suite passed, or when verify said this exact code already passed it: a full suite that
+    # was skipped for any other reason never lets code through
+    if: always() && github.event_name != 'pull_request' && needs.verify.result == 'success' && (needs.full.result == 'success' || (needs.full.result == 'skipped' && needs.verify.outputs.full == 'false'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
       - uses: actions/configure-pages@v5
-
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
   deploy:
     needs: build
+    if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
