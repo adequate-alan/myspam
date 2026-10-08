@@ -1,10 +1,6 @@
 {
   "note": "Read by tests/run_ci.py. A suite fails CI when it prints a FAIL line not listed here, or exits non-zero without one (a crash). Entries match the start of a check's message exactly as the suite prints it after 'FAIL '. Keep this list short and specific: never add a pattern that could hide a new regression.",
-  "known_failures": {
-    "value_curve_check": {
-      "No one-player tiers below Tier 1": "Baseline since Oct 11 (CLAUDE.md §11): QB Tier 2 holds only Lamar Jackson. A ranking decision for Alan, not a code defect; don't change rankings to make it pass. Remove this entry once the tier is regrouped."
-    }
-  },
+  "known_failures": {},
   "advisory": {
     "_why": "Timing measurements: they depend on the machine's speed and load (they fail when 15 browsers share 4 CPUs and pass alone). Reported in the summary, never block a deploy. The correctness checks in the same suites (landings, ranks 1..N, stale rows, scrolling stops at 0px, listeners, node counts) stay blocking.",
     "drag_check": ["Grab restyles only the drag elements", "No long tasks", "First frame after the drop", "A further drag lifts the row right away"],
