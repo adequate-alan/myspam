@@ -105,6 +105,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html data/sleeper_players.json data/platform_ids.json data/stats/2026.json data/rank_history.json
+          if [ -d data/rank_snapshots ]; then git add data/rank_snapshots; fi
           if [ -f data/depth_charts.json ]; then git add data/depth_charts.json; fi
           if [ -f data/projections.json ]; then git add data/projections.json; fi
           if [ -f data/market/redraft.json ]; then git add data/market/redraft.json; fi

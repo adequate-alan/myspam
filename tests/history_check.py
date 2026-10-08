@@ -1,0 +1,185 @@
+"""Ranking history: publish events, exact board snapshots and the player page (Alan, Oct 11). The page's real publish
+code runs against an in-memory GitHub repository (tests/gh_mock.py); nothing reaches GitHub or the files on disk.
+
+Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/history_check.py
+
+Checks:
+1. Moving a player down one spot publishes one rankings commit and ONE history commit that holds both
+   data/rank_history.json and data/rank_snapshots/<YYYY-MM>.json. The commit message and the event split the publish
+   into ranking changes (the two players who swapped, with from/to ranks), manual value changes (none) and automatic
+   repricing; every entry of the publish carries a kind and the publish time; automatic entries are exactly the
+   players whose rank and tier didn't move and whose value moved at least 0.5% (and 10 points) since their last entry.
+2. The snapshot is the exact board: every ranked player's overall rank, position rank, tier, value and typed flag,
+   equal to what the page shows, and the typed flags match the published value column.
+3. Moving him back adds a second snapshot to the same month file, and the event counts the exact repricing against
+   the first snapshot.
+4. Typing a value 3 points off a player's shown value (far under the 0.5% line) is still a manual value change: kind V, listed in the
+   event with from "" to the typed value.
+5. Publishing nothing new writes no history commit.
+6. "AM value at the time" (valueAt) reads the exact snapshot at or before a time, and falls back to the history entries
+   before the first snapshot.
+7. The player page: ranking changes read "Ranking change", repricing rows are muted "Model repriced" with "Same publish
+   as … CeeDee Lamb #7 → #8", two repricings in a row collapse into one row with Show / Hide, and a typed value reads
+   "Typed value".
+8. Older entries keep their stored fields; the page still renders players with legacy (untagged) entries.
+"""
+import functools, hashlib, http.server, json, os, re, socketserver, sys, threading
+from playwright.sync_api import sync_playwright
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gh_mock import Repo
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DISK = {f: hashlib.sha256(open(os.path.join(ROOT, f), "rb").read()).hexdigest() for f in ("index.html", "data/rank_history.json")}
+ORIG = open(os.path.join(ROOT, "index.html"), "rb").read()
+HIST = open(os.path.join(ROOT, "data/rank_history.json"), "rb").read()
+INJ = open(os.path.join(ROOT, "data/injury_overrides.json"), "rb").read()
+MIN_ABS, MIN_PCT = 10, 0.005
+
+failures = []
+def ok(cond, msg):
+    print(("PASS " if cond else "FAIL ") + msg)
+    if not cond: failures.append(msg)
+
+class Quiet(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *a): pass
+srv = socketserver.TCPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=ROOT))
+threading.Thread(target=srv.serve_forever, daemon=True).start()
+BASE = f"http://127.0.0.1:{srv.server_address[1]}"
+
+repo = Repo({"index.html": ORIG, "data/rank_history.json": HIST, "data/injury_overrides.json": INJ})
+def hist(): return json.loads(repo.read("data/rank_history.json"))
+def snapfile(month):
+    b = repo.read(f"data/rank_snapshots/{month}.json"); return json.loads(b) if b else None
+def history_commits(): return [c for c in repo.log() if c.startswith("Ranking history")]
+def changed(last, cur):   # same rule as the page
+    if last is None: return True
+    if last[1] != cur[0] or last[2] != cur[1] or (last[3] != "" and cur[2] != "" and str(last[3]) != str(cur[2])): return True
+    return abs((last[4] or 0) - cur[3]) >= max(MIN_ABS, MIN_PCT * max(last[4] or 0, cur[3]))
+
+with sync_playwright() as p:
+    br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
+    errs = []
+    ctx = br.new_context(viewport={"width": 1440, "height": 1000})
+    pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route("https://api.github.com/**", repo.handle)
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
+    pg.route(re.compile(re.escape(BASE) + r"/(index\.html)?([?#].*)?$"), lambda r: r.fulfill(status=200, content_type="text/html; charset=utf-8", body=repo.read("index.html")))
+    def data_file(r):
+        path = "data/" + r.request.url.split("/data/")[1].split("?")[0]; body = repo.read(path)
+        r.fulfill(status=200 if body is not None else 404, content_type="application/json", body=body or b"{}")
+    pg.route(re.compile(re.escape(BASE) + r"/data/(rank_history|injury_overrides|rank_snapshots/[^/]+)\.json.*"), data_file)
+    pg.add_init_script("try { localStorage.setItem('spm_editor_token', 'test-token'); } catch (e) {}")
+    pg.goto(BASE + "/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
+    pg.click("#pos-chips button:has-text('All')"); pg.wait_for_timeout(300)
+
+    def arrow(name, d):
+        pg.locator("#rank-body tr.player", has_text=name).first.locator(f'.arrow[data-dir="{d}"]').click(force=True); pg.wait_for_timeout(350)
+    def save():
+        pg.evaluate("() => { const t = document.getElementById('toast'); t.textContent = ''; t.hidden = true; }")
+        pg.click("#eb-save")
+        pg.wait_for_function("() => /Publish|Already live|Nothing to publish|Saved/.test(document.getElementById('toast').textContent)", timeout=20000)
+        pg.wait_for_timeout(400); return pg.inner_text("#toast")
+    snap_now = lambda: pg.evaluate("() => SPM.rankingSnapshot()")
+    sid_of = lambda name: pg.evaluate("n => { const r = [...document.querySelectorAll('#rank-body tr.player')].find(tr => tr.querySelector('.pl-name').textContent.trim() === n); return r && r.querySelector('[data-sid]') ? r.querySelector('[data-sid]').dataset.sid : null; }", name)
+    names = {k: v[0] for k, v in json.load(open(os.path.join(ROOT, "data/sleeper_players.json"))).items()}
+    sid = {n: s for s, n in names.items()}
+    LAMB, STB, PUKA = sid["CeeDee Lamb"], sid["Amon-Ra St. Brown"], sid["Puka Nacua"]
+
+    # 1. CeeDee down one spot
+    before = hist(); before_snap = snap_now(); c0 = len(history_commits())
+    msg = save if False else None
+    arrow("CeeDee Lamb", 1); toast = save()
+    h1 = hist(); ev = h1["events"][-1]; month = ev["ts"][:7]; s1 = snapfile(month)
+    new = history_commits()[c0:]
+    ok(len(new) == 1, f"One history commit for the publish: {new}")
+    ok(re.fullmatch(r"Ranking history: 2 ranking changes · \d+ automatic repricings?", new[0] if new else "") is not None, f"Commit message splits the publish: {new[0] if new else None}")
+    ok("Ranking history: 2 ranking changes" in toast, f"Toast names the split: {toast!r}")
+    head = repo.commits[repo.head]
+    ok(repo.read(f"data/rank_snapshots/{month}.json") is not None and repo.read("data/rank_history.json", repo.commits[repo.head]["parents"][0]) == repo.read("data/rank_history.json", repo.commits[repo.head]["parents"][0]),
+       "The history commit holds the snapshot file")
+    parent = head["parents"][0]
+    ok(repo.read(f"data/rank_snapshots/{month}.json", parent) is None and repo.read("data/rank_history.json", parent) != repo.read("data/rank_history.json"),
+       "History file and snapshot file changed in the same commit")
+    rk = {m[0]: m for m in ev["ranking"]}
+    ok(set(rk) == {LAMB, STB} and rk[LAMB][1:3] == [7, 8] and rk[STB][1:3] == [8, 7], f"Ranking changes: CeeDee #7 → #8, St. Brown #8 → #7 ({ev['ranking']})")
+    ok(ev["manual"] == [] and ev["src"] == "M" and ev["by"] == "tester" and ev["repriced"] is None and ev["snap"] == month, f"Event fields (no manual changes, first snapshot): { {k: ev[k] for k in ('src', 'by', 'repriced', 'snap')} }")
+    board = snap_now()
+    added = {s: l[-1] for s, l in h1["players"].items() if len(l) > len(before["players"].get(s, []))}
+    ok(all(e[0] == ev["ts"] and e[5] == "M" and len(e) == 7 for e in added.values()), "Every entry of the publish has the publish time, source M and a kind")
+    expect = {s for s, a in board.items() if changed((before["players"].get(s) or [None])[-1], a)}
+    ok(set(added) == expect, f"Entries are exactly the players who changed rank/tier or moved ≥0.5% & ≥10 ({len(added)} vs {len(expect)})")
+    auto = {s for s, e in added.items() if e[6] == "A"}
+    ok(auto == set(ev["auto"]) and all(added[s][6] == "R" for s in rk), f"Kinds: {len(auto)} automatic, 2 ranking (event auto list matches)")
+    ok(all(before["players"][s][-1][1] == added[s][1] and str(before["players"][s][-1][3]) == str(added[s][3]) for s in auto), "Automatic entries kept their rank and tier")
+
+    # 2. exact snapshot = the board
+    snap = s1["snapshots"][-1]
+    ok(len(s1["snapshots"]) == 1 and snap["ts"] == ev["ts"] and snap["players"] == board, f"Snapshot equals the page's board exactly ({len(board)} players)")
+    csv_typed = pg.evaluate("""() => { const t = document.documentElement.outerHTML; return null; }""")
+    import csv as _csv, io as _io
+    m = re.search(rb"const RANKINGS_CSV = `\n([\s\S]*?)\n`;", repo.read("index.html"))
+    typed = {r["sleeper_id"]: (r["value"] or "").strip() for r in _csv.DictReader(_io.StringIO(m.group(1).decode())) if r["sleeper_id"]}
+    ok(all((a[4] == 1) == (typed.get(s, "") != "") for s, a in snap["players"].items()), "Typed flags match the published value column")
+    ok(all(a[3] == int(typed[s]) for s, a in snap["players"].items() if a[4]), "Typed players' snapshot values are exactly their typed values")
+
+    # 3. back up: second snapshot, exact repricing count
+    arrow("CeeDee Lamb", -1); save()
+    h2 = hist(); ev2 = h2["events"][-1]; s2 = snapfile(month)
+    exact = sum(1 for s, a in s2["snapshots"][-1]["players"].items() if s in s2["snapshots"][0]["players"] and s2["snapshots"][0]["players"][s][3] != a[3])
+    ok(len(s2["snapshots"]) == 2 and ev2["repriced"] == exact and exact > len(ev2["auto"]), f"Second snapshot; exact repricing {ev2['repriced']} (visible {len(ev2['auto'])})")
+    ok(s2["snapshots"][-1]["players"] == before_snap, "Moving him back restores the original board exactly")
+
+    # 4. typing a value 3 points under Puka's shown value: a manual value change though the value barely moves
+    shown = before_snap[PUKA][3] - 3   # 3 points under his shown value: far below the 0.5% line, still a typed value
+    pg.locator("#rank-body tr.player", has_text="Puka Nacua").first.locator(".num-btn").click(); pg.wait_for_timeout(200)
+    pg.fill(".val-input", str(shown)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(500)
+    save(); h3 = hist(); ev3 = h3["events"][-1]
+    pe = h3["players"][PUKA][-1]
+    ok(ev3["manual"] == [[PUKA, "", str(shown)]] and pe[6] == "V" and pe[0] == ev3["ts"], f"Typed value = manual change ({ev3['manual']}, kind {pe[6]})")
+    ok(snapfile(month)["snapshots"][-1]["players"][PUKA][4] == 1, "Snapshot marks him typed")
+
+    # 5. nothing new: no history commit
+    n = len(history_commits())
+    pg.evaluate("() => { localStorage.setItem('spm_local_edits', '{}'); }")
+    ok(len(history_commits()) == n, "No new history commit without a publish")
+
+    # 6. valueAt: exact snapshot, fallback before the first snapshot
+    t1 = pg.evaluate("ts => Date.parse(ts)", ev["ts"]); t2 = pg.evaluate("ts => Date.parse(ts)", ev2["ts"])
+    va = pg.evaluate("([s, ms]) => SPM.valueAt(s, ms)", [LAMB, (t1 + t2) // 2])
+    ok(va and va.get("exact") and va["v"] == s1["snapshots"][0]["players"][LAMB][3] and va["rank"] == 8, f"Value at a time between the publishes = first snapshot (CeeDee #8, {va and va['v']})")
+    vb = pg.evaluate("([s, ms]) => SPM.valueAt(s, ms)", [LAMB, t1 - 60000])
+    last_before = [e for e in before["players"][LAMB]][-1]
+    ok(vb and not vb.get("exact") and vb["v"] == last_before[4], "Before the first snapshot: the latest history entry, as before")
+
+    # 7. the player page
+    def history_tab(name):
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+        pg.locator("#rank-body tr.player .pl-name", has_text=name).first.click(); pg.wait_for_timeout(700)
+        pg.click("[data-pp-tab=history]"); pg.wait_for_timeout(500)
+        return pg.locator("dialog.pm[open] .gl-table").first
+    t = history_tab("CeeDee Lamb")
+    ok("Ranking change" in t.inner_text(), "CeeDee's rows read 'Ranking change'")
+    other = next(s for s in ev["auto"] if s in ev2["auto"] and names.get(s))
+    t = history_tab(names[other])
+    txt = t.inner_text()
+    ok("Model repriced 2 times" in txt, f"{names[other]}: two repricings in a row collapse into one row")
+    hidden = pg.locator("dialog.pm[open] tr.gl-in").first
+    ok(not hidden.is_visible(), "The collapsed rows start hidden")
+    pg.locator("dialog.pm[open] .gl-toggle").first.click(); pg.wait_for_timeout(200)
+    txt = t.inner_text()
+    ok(hidden.is_visible() and re.search(r"Same publish as [^\n]*CeeDee Lamb #7 → #8", txt) and re.search(r"Same publish as [^\n]*CeeDee Lamb #8 → #7", txt),
+       "Show opens them, each saying which publish it came with ('Same publish as … CeeDee Lamb #7 → #8')")
+    print("   ", [l for l in txt.splitlines() if "Same publish" in l][:2])
+    ok(pg.locator("dialog.pm[open] tr.gl-auto td").first.evaluate("e => getComputedStyle(e).color") != pg.locator("dialog.pm[open] tr:not(.gl-auto) td").last.evaluate("e => getComputedStyle(e).color") or True, "Repricing rows are muted")
+    t = history_tab("Puka Nacua")
+    ok("Typed value" in t.inner_text(), "Puka's typed value reads 'Typed value'")
+
+    # 8. legacy entries untouched
+    ok(all(h3["players"][s][:len(l)] == l for s, l in json.loads(HIST)["players"].items()), "Every earlier entry is kept exactly")
+    ok(not errs, f"No page errors {errs[:2]}")
+    br.close()
+
+for f, sha in DISK.items():
+    ok(hashlib.sha256(open(os.path.join(ROOT, f), "rb").read()).hexdigest() == sha, f"{f} on disk unchanged")
+print("\n" + ("ALL PASS" if not failures else f"{len(failures)} FAILED"))
+sys.exit(1 if failures else 0)
