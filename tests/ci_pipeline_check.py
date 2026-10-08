@@ -148,6 +148,9 @@ try:
     fake = os.path.join(tmp, "repo"); os.makedirs(os.path.join(fake, "tests"))
     shutil.copy(os.path.join(ROOT, "tests/run_ci.py"), os.path.join(fake, "tests/run_ci.py"))
     policy = json.load(open(os.path.join(ROOT, "tests/ci_policy.json")))
+    # a synthetic known failure, so run_ci's known-failure handling is tested whether or not the real policy lists one
+    # (none since Oct 12: one-player tiers became information)
+    policy["known_failures"]["value_curve_check"] = {"Synthetic baseline failure": "test only"}
     def suite(name, lines, rc):
         open(os.path.join(fake, "tests", name + ".py"), "w").write("import sys\n" + "".join(f"print({l!r})\n" for l in lines) + f"sys.exit({rc})\n")
     def ci(suites_lines):
@@ -156,9 +159,9 @@ try:
         for n, (lines, rc) in suites_lines.items(): suite(n, lines, rc)
         r = subprocess.run([sys.executable, "tests/run_ci.py", "fast", "--logs", os.path.join(tmp, "logs")], cwd=fake, capture_output=True, text=True)
         return r.returncode, r.stdout
-    rc, o = ci({"value_curve_check": (["PASS a", "FAIL No one-player tiers below Tier 1"], 1)})
+    rc, o = ci({"value_curve_check": (["PASS a", "FAIL Synthetic baseline failure"], 1)})
     ok(rc == 0 and "known baseline failure" in o, "run_ci: the known baseline failure alone doesn't block")
-    rc, o = ci({"value_curve_check": (["PASS a", "FAIL No one-player tiers below Tier 1", "FAIL Model value worth more than someone ahead"], 1)})
+    rc, o = ci({"value_curve_check": (["PASS a", "FAIL Synthetic baseline failure", "FAIL Model value worth more than someone ahead"], 1)})
     ok(rc == 1 and "NEW FAILURE: Model value" in o, "run_ci: a new failure in the same suite blocks")
     rc, o = ci({"drag_check": (["PASS a", "FAIL No long tasks while grabbing and moving: [140]"], 1)})
     ok(rc == 0 and "advisory" in o, "run_ci: an advisory timing check doesn't block")
@@ -166,7 +169,7 @@ try:
     ok(rc == 1, "run_ci: a correctness failure in a drag suite blocks")
     rc, o = ci({"smoke_check": (["PASS a", "Traceback (most recent call last):"], 1)})
     ok(rc == 1 and "crashed" in o, "run_ci: a crash without a FAIL line blocks")
-    rc, o = ci({"value_curve_check": (["PASS a", "PASS No one-player tiers below Tier 1"], 0)})
+    rc, o = ci({"value_curve_check": (["PASS a", "PASS Synthetic baseline failure"], 0)})
     ok(rc == 0 and "no longer fails" in o, "run_ci: a known failure that now passes is reported")
 
     # 4. static_check.py on broken copies of the repo
