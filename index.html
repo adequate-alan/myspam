@@ -1200,7 +1200,10 @@ tr.dragging .handle { color: var(--gold-bright); }
 tr.dragging .pl-name { color: var(--cream); }
 tr.drop-before td { box-shadow: inset 0 2px 0 var(--gold-bright); }
 tr.drop-after td { box-shadow: inset 0 -2px 0 var(--gold-bright); }
-body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+/* while dragging, a transparent full-screen shield carries the grabbing cursor and keeps hover styles off the rows below.
+   No class on <body>: a `body.is-dragging *` rule made the grab and the drop restyle all ~9,300 elements (~70ms each).
+   Text selection is already prevented by preventDefault on the handle's pointerdown. */
+.drag-shield { position: fixed; inset: 0; z-index: 29; cursor: grabbing; }
 
 /* Value editing */
 .num-btn {
@@ -3988,9 +3991,6 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body tr.player:hover .handle { opacity: .9; color: var(--ink); }
 #panel-rankings .handle:active { cursor: grabbing; }
 /* drag and drop: a floating copy of the row, a faded placeholder, a thin red insertion line, a live rank preview */
-#rank-body tr.player { transition: transform .14s cubic-bezier(.2, 0, 0, 1); }
-#rank-body tr.nudge-up { transform: translateY(-5px); }
-#rank-body tr.nudge-down { transform: translateY(5px); }
 #rank-body img { -webkit-user-drag: none; user-drag: none; }
 #panel-rankings .handle { position: relative; }
 #panel-rankings .handle::after { content: ""; position: absolute; inset: -6px -4px; }   /* a larger hit target, same icon */
@@ -4009,7 +4009,11 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .drag-rk { position: absolute; top: 50%; transform: translate(-50%, -50%); padding: 3px 5px; border-radius: 4px; white-space: nowrap;
   font: 700 0.7rem/1 var(--font-display); font-variant-numeric: tabular-nums; color: var(--text-strong); background: var(--fill-2); }
 .drag-rk.moved { background: color-mix(in srgb, var(--accent-primary) 16%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary) 45%, transparent); }
-.drop-line { position: fixed; z-index: 31; height: 2px; border-radius: 2px; background: var(--accent-primary); pointer-events: none; }
+/* the line sits at top: 0 and moves only by transform on its own layer (no layout); it glides between slots, while
+   the dragged row itself never eases. (Oct 10: the rows beside it used to ease 5px apart, but a transform transition
+   on table rows re-laid-out the table at every slot change: 12–25 dropped frames on a 10-row drag.) */
+.drop-line { position: fixed; top: 0; z-index: 31; height: 2px; border-radius: 2px; background: var(--accent-primary); pointer-events: none; will-change: transform; transition: transform .09s cubic-bezier(.2, 0, 0, 1); }
+.drop-line.jump { transition: none; }
 .drop-line::before { content: ""; position: absolute; left: 0; top: -3px; width: 4px; height: 8px; border-radius: 2px; background: var(--accent-primary); }
 .drop-line[hidden] { display: none; }#panel-rankings .handle:hover:not(:disabled), #panel-rankings .handle:focus-visible, tr.dragging .handle { opacity: 1; background: var(--fill-2); }
 /* rank: a strong tabular number, movement since the last update under it; the top 3 a touch larger */
@@ -5195,7 +5199,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T04:40Z";
+  const BUILD_ID = "2026-10-10T06:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5424,17 +5428,24 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // De'Von Achane and Kaleb Johnson's Oct 5 moves only corrected a misranking, so they're skipped while the
   // comparison reaches back before that day.
   const RAIL_SKIP = { "9226": "2026-10-05", "12504": "2026-10-05" };
+  // Memoized per board build and history state: a render calls it for the rows and again for the rail, and a drag or
+  // a scroll must never recompute it.
+  let movesMemo = null;
   function boardMoves() {
     const out = new Map(); let h;
     try { h = rankHistory; } catch (e) { return out; }   // first render runs before the history state exists
     if (!h || !h.players) return out;
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+    let pend = ""; try { pend = localStorage.getItem(PENDING_KEY) || ""; } catch (e) {}
+    if (movesMemo && movesMemo.players === players && movesMemo.h === h && movesMemo.pend === pend && movesMemo.today === today) return movesMemo.out;
+    const all = historyWithPending();
     players.forEach(p => {
       if (p.pos === "PICK" || p.rank == null || !p.sleeperId) return;
-      const prev = historyOf(p.sleeperId).filter(x => x.date < today && x.rank != null).pop();
+      const prev = historyOf(p.sleeperId, all).filter(x => x.date < today && x.rank != null).pop();
       if (!prev || (RAIL_SKIP[p.sleeperId] && prev.date < RAIL_SKIP[p.sleeperId])) return;
       out.set(p.id, { d: prev.rank - p.rank, dp: prev.posRank != null && p.posNum != null ? prev.posRank - p.posNum : 0, since: prev.date });
     });
+    movesMemo = { players, h, pend, today, out };
     return out;
   }
   const sinceText = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -7363,7 +7374,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      Where he lands is computed exactly as before (endDrag; the chip uses the same numbers). */
   let drag = null, dragPending = null;
   const DRAG_START_PX = 4, DRAG_HYST = 6;
-  const clearMarks = () => $("rank-body").querySelectorAll(".drop-before, .drop-after, .nudge-up, .nudge-down").forEach(r => r.classList.remove("drop-before", "drop-after", "nudge-up", "nudge-down"));
+  const clearMarks = () => $("rank-body").querySelectorAll(".drop-before, .drop-after").forEach(r => r.classList.remove("drop-before", "drop-after"));
   function dragFloat(tr, r) {
     // a copy of the row in its own one-row table, inside the board so the board's row styles apply
     // (the copy's tbody reuses the id rank-body; it comes after the real one, so $("rank-body") still finds the board)
@@ -7371,7 +7382,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     wrap.className = "drag-float";
     wrap.innerHTML = `<table><tbody id="rank-body"></tbody></table><span class="drag-rk"></span>`;
     const copy = tr.cloneNode(true);
-    copy.classList.remove("pp-current", "flash", "nudge-up", "nudge-down");
+    copy.classList.remove("pp-current", "flash");
     [...tr.children].forEach((td, i) => { const w = td.getBoundingClientRect().width; copy.children[i].style.width = copy.children[i].style.minWidth = copy.children[i].style.maxWidth = w + "px"; });
     copy.style.height = r.height + "px";
     wrap.querySelector("tbody").append(copy);
@@ -7411,14 +7422,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const line = document.createElement("div"); line.className = "drop-line"; line.hidden = true;
     line.style.left = t.left + "px"; line.style.width = t.width + "px"; document.body.append(line);
     const me = byId.get(p.id), all = posFilter === "ALL";
-    drag = { id: p.id, tr, rows, tiers, line, downY: p.y, y: p.y, slot: -1, tierRow: null, target: null, after: false, edgeDoc: null,
+    // the page's scroll position, cached: reading window.scrollY in every pointermove forced a style/layout flush right
+    // after the transform write (one forced recalc per move); it changes only by our auto-scroll or a scroll event
+    drag = { id: p.id, tr, rows, tiers, line, lineY: null, scrolling: false, sy, downY: p.y, y: p.y, slot: -1, tierRow: null, target: null, after: false, edgeDoc: null,
       float: dragFloat(tr, r), headBottom: head ? head.getBoundingClientRect().bottom : 0, raf: 0,
       from: me ? (all ? me.rank : me.posNum) : null, lab: v => all ? "#" + v : (me ? me.pos : "") + v };
     // the slot he starts in: right where he is, so nothing moves until the pointer does
     drag.slot = rows.filter(g => g.mid < r.top + r.height / 2 + sy).length;
     drag.pill = drag.float.querySelector(".drag-rk");
-    tr.classList.add("drag-origin"); document.body.classList.add("is-dragging");
+    tr.classList.add("drag-origin");
+    drag.shield = document.createElement("div"); drag.shield.className = "drag-shield"; document.body.append(drag.shield);
     document.addEventListener("keydown", dragKey);
+    window.addEventListener("scroll", dragScroll, { passive: true });
     applySlot();
     dragMove();
     drag.raf = requestAnimationFrame(dragLoop);
@@ -7431,17 +7446,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const R = drag.rows, k = drag.slot, n = R.length;
       drag.target = k < n ? R[k].tr : R[n - 1].tr; drag.after = k >= n;
       drag.edgeDoc = k < n ? R[k].top : R[n - 1].bot;
-      if (k > 0) R[k - 1].tr.classList.add("nudge-up");
-      if (k < n) R[k].tr.classList.add("nudge-down");
     }
     const n = dropNum(), moved = n != null && n !== drag.from;
-    if (!moved) { clearMarks(); drag.edgeDoc = null; }   // dropping back where he was: no line, nothing eases apart
+    if (!moved) { clearMarks(); drag.edgeDoc = null; }   // dropping back where he was: no line
     if (drag.from != null) drag.pill.textContent = moved ? `${drag.lab(drag.from)} → ${drag.lab(n)}` : drag.lab(drag.from);
     drag.pill.classList.toggle("moved", moved);
   }
   // every pointer move or scroll frame: the transform (1:1, vertical only), the slot (with hysteresis), the line position
   function dragMove() {
-    const yDoc = drag.y + window.scrollY;
+    const yDoc = drag.y + drag.sy;
     drag.float.style.transform = `translate3d(0, ${drag.y - drag.downY}px, 0)`;
     const tierRow = drag.tiers.find(g => yDoc >= g.top && yDoc < g.bot) || null;
     let changed = tierRow !== drag.tierRow;
@@ -7454,8 +7467,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (k !== cur) { drag.slot = k; changed = true; }
     }
     if (changed) applySlot();
-    if (drag.edgeDoc != null) { drag.line.style.top = (drag.edgeDoc - window.scrollY - 1) + "px"; drag.line.hidden = false; }
-    else drag.line.hidden = true;
+    // the line: transform only, written only when its spot on screen changes; it appears in place, then glides
+    const ly = drag.edgeDoc != null ? Math.round(drag.edgeDoc - drag.sy - 1) : null;
+    if (ly !== drag.lineY) {
+      if (ly == null) drag.line.hidden = true;
+      else {
+        const show = drag.line.hidden;
+        drag.line.classList.toggle("jump", show || drag.scrolling);
+        drag.line.style.transform = `translate3d(0, ${ly}px, 0)`;
+        if (show) drag.line.hidden = false;
+      }
+      drag.lineY = ly;
+    }
   }
   // smooth auto-scroll near the top (under the sticky column guide) or bottom of the screen, faster closer to the edge;
   // the float is viewport-fixed, so it stays under the pointer while the page moves
@@ -7465,19 +7488,43 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     let v = 0;
     if (drag.y < top + zone) v = -Math.ceil(18 * Math.min(1, (top + zone - drag.y) / zone));
     else if (drag.y > window.innerHeight - zone) v = Math.ceil(18 * Math.min(1, (drag.y - (window.innerHeight - zone)) / zone));
-    if (v) { const before = window.scrollY; window.scrollBy(0, v); if (window.scrollY !== before) dragMove(); }
+    if (v) { window.scrollBy(0, v); const sy = window.scrollY; if (sy !== drag.sy) { drag.sy = sy; drag.scrolling = true; dragMove(); drag.scrolling = false; } }
     drag.raf = requestAnimationFrame(dragLoop);
   }
   const dragKey = e => { if (e.key === "Escape" && drag) { e.preventDefault(); endDrag(false); } };
+  const dragScroll = () => { if (drag && window.scrollY !== drag.sy) { drag.sy = window.scrollY; dragMove(); } };   // wheel / keyboard scrolling mid-drag
+  // Drop, in two steps (Oct 10): first the board shows the result (his row moves into the slot and the rank numbers
+  // in between shift by one), and that frame is painted; then, on the next frame, the real move runs (values,
+  // tiers, history, a full re-render). Doing both in one task froze the floating row on screen for ~0.25s and then
+  // jumped. No new drag starts until the commit has run.
+  let dropCommit = 0;
+  function showDrop(tr, target, after, n, from) {
+    if (target.classList.contains("player")) (after ? target.after(tr) : target.before(tr));
+    else { let at = target; if (at.nextElementSibling && at.nextElementSibling.classList.contains("tier-drop")) at = at.nextElementSibling; at.after(tr); }
+    const all = posFilter === "ALL", key = p => all ? p.rank : p.posNum;
+    const lo = Math.min(from, n), hi = Math.max(from, n), shift = n > from ? -1 : 1;
+    const setNum = (row, v) => { const c = row.querySelector("td.rk"), t = c && c.firstChild; if (t && t.nodeType === 3 && /^\d+$/.test(t.nodeValue)) t.nodeValue = String(v); };
+    $("rank-body").querySelectorAll("tr.player").forEach(row => {
+      if (row === tr) return setNum(row, n);
+      const p = byId.get(Number(row.dataset.id)), k = p && key(p);
+      if (k != null && k >= lo && k <= hi) setNum(row, k + shift);
+    });
+  }
   function endDrag(commit) {
     dragPending = null;
     if (!drag) return;
-    const { id, target, after, tr } = drag, moved = drag.pill.classList.contains("moved");
-    cancelAnimationFrame(drag.raf); drag.float.remove(); drag.line.remove();
+    const { id, target, after, tr, from } = drag, moved = drag.pill.classList.contains("moved");
+    const n = commit && target && moved ? dropNum() : null;
+    cancelAnimationFrame(drag.raf); drag.float.remove(); drag.line.remove(); drag.shield.remove();
     drag = null;
-    document.removeEventListener("keydown", dragKey);
-    clearMarks(); tr.classList.remove("dragging", "drag-origin"); document.body.classList.remove("is-dragging");
+    document.removeEventListener("keydown", dragKey); window.removeEventListener("scroll", dragScroll);
+    clearMarks(); tr.classList.remove("dragging", "drag-origin");
     if (!commit || !target || !moved) return;
+    if (n != null && from != null) showDrop(tr, target, after, n, from);
+    const ticket = ++dropCommit;
+    requestAnimationFrame(() => setTimeout(() => { if (ticket === dropCommit) { dropCommit = 0; commitDrop(id, target, after); } }, 0));
+  }
+  function commitDrop(id, target, after) {
     const me = byId.get(id);
     if (!me) return;
     if (target.dataset.tier != null && !target.classList.contains("player")) {   // a tier header or an empty tier
@@ -7499,7 +7546,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   $("rank-body").addEventListener("pointerdown", e => {
     const h = e.target.closest(".handle");
-    if (!h || h.disabled || !editor.on || drag) return;
+    if (!h || h.disabled || !editor.on || drag || dropCommit) return;
     e.preventDefault();
     h.setPointerCapture(e.pointerId);
     const tr = h.closest("tr.player");
@@ -12218,8 +12265,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const weekText = g => (g ? `${g.season} wk ${g.w} ${oppLabel(g.season, g).opp}` : "");
 
   /* Ranking history (committed ranking changes plus scheduled snapshots; see the Ranking history section) */
-  function historyOf(sid) {
-    const h = historyWithPending(), list = h.players[sid] || [];
+  function historyOf(sid, h = historyWithPending()) {   // pass h when looking up many players (building it is the slow part)
+    const list = h.players[sid] || [];
     return list.map(e => ({ ts: e[0], date: localDay(e[0]), rank: e[1], posRank: e[2], tier: e[3], value: e[4], src: e[5], local: !!e.local }));
   }
   function ppHistory(info) {
@@ -12254,7 +12301,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const whenDate = ts => (hasTime(ts) ? new Date(ts) : new Date(ts + "T12:00:00"));
   const longWhen = ts => (hasTime(ts) ? whenDate(ts).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).replace(/, (\d+:\d\d)/, " at $1") : longDate(ts));
   const shortWhen = ts => whenDate(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const localDay = ts => (hasTime(ts) ? whenDate(ts).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) : ts);
+  // ET calendar day of a timestamp: one shared formatter and a cache (a new toLocaleDateString per entry made the board's
+  // movement column cost ~1.7s per render once history grew)
+  const ET_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }), DAY_CACHE = new Map();
+  const localDay = ts => {
+    if (!hasTime(ts)) return ts;
+    let d = DAY_CACHE.get(ts);
+    if (d === undefined) { d = ET_DAY.format(whenDate(ts)); DAY_CACHE.set(ts, d); }
+    return d;
+  };
   const longDate = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const moveTag = d => (d === 0 ? `<span class="mv">–</span>` : `<span class="mv ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"} ${Math.abs(d)}</span>`);
   const valueMove = d => (Math.round(d) === 0 ? `<span class="mv">–</span>` : `<span class="mv ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : "−"}${fmt(Math.abs(d))}</span>`);
