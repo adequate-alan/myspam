@@ -5,7 +5,10 @@ Needs Playwright for Python and a Chromium (set CHROMIUM=/path/to/chromium if Pl
 
 1. Runs SPM.formatCheck() in the page: Kittle rises with TE premium (none → + → ++), Josh Allen is worth far
    more in Superflex than 1QB, WR36 rises with more WR starters, RB30 rises with league size and FLEX spots,
-   WR1 rises with points per catch, a league in the base format gives exactly the base values.
+   WR1 rises with points per catch, a league in the base format gives exactly the base values, and (Oct 12) league
+   size: for 5 format families x 8/10/12/14 teams, replacement PPG never rises, points over replacement and the
+   cross-league scarcity index never fall (before normalization), and no displayed value drops more than 3% from one
+   league size to the next (displayed values are normalized per league, so tiny reversals are allowed).
 2. Connects a mock 12-team Superflex league with NO TE premium and checks the Trade Calculator uses its
    league-adjusted value for Kittle in both "No league" and league mode (never the base SPAM value),
    shows the Format adjustment table, and that a Custom format with TE Premium ++ raises his value.
