@@ -233,9 +233,9 @@ with sync_playwright() as p:
     def drawer_ranks(pg, sid):
         pg.evaluate(f"() => document.querySelector('#rank-body [data-player=\"{sid}\"]').click()"); pg.wait_for_timeout(700)
         # stacked items (Oct 9): the player's number in <b>, his position rank under it in .pr-sub
-        r = pg.evaluate("""() => { const q = c => { const e = document.querySelector('.pm-prodrk .pr-item.' + c); return e ? { v: e.querySelector('b').textContent.trim(), sub: e.querySelector('.pr-sub').textContent.trim() } : null; };
+        r = pg.evaluate("""() => { const q = c => { const e = document.querySelector('.pm-prodrk .pd-item.' + c); return e ? { v: e.querySelector('b').textContent.trim(), sub: e.querySelector('.pr-sub').textContent.trim() } : null; };
           const d = document.querySelector('.pm-prodrk .pr-diff'), n = document.querySelector('.pm-prodrk .pr-note');
-          const first = document.querySelector('.pm-prodrk .pr-item');
+          const first = document.querySelector('.pm-prodrk .pd-item');
           return { am: q('am'), fp: q('fp'), ppg: q('ppg'), diff: d ? d.textContent : '', note: n ? n.textContent : '', firstAm: !!first && first.classList.contains('am') }; }""")
         pg.keyboard.press("Escape"); pg.wait_for_timeout(250)
         return r

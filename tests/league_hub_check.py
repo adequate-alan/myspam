@@ -97,6 +97,33 @@ def serve():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv.server_address[1]
 
+# Deterministic NFL calendar (Oct 10): the site reads game status (upcoming / live / final) from data/stats/<season>.json,
+# which the pipeline keeps current, so tests that assumed "Week 4 is in progress" broke once Week 4 was played. Every
+# page here gets a frozen clock plus a fixture copy of that file frozen at the same moment: Week 4 with only its
+# Thursday game played (scores and player lines kept) and every later game unplayed.
+FIX_WEEK = 4
+def stats_fixture():
+    d = json.load(open(os.path.join(ROOT, "data/stats/2026.json")))
+    date_i = d["schedule_cols"].index("date")
+    w_rows = [r for rows in d["schedule"].values() for r in rows if r[0] == FIX_WEEK]
+    first = min(r[date_i] for r in w_rows)
+    played = {t for t, rows in d["schedule"].items() if any(r[0] == FIX_WEEK and r[date_i] == first for r in rows)}
+    for t, rows in d["schedule"].items():
+        for r in rows:
+            if r[0] > FIX_WEEK or (r[0] == FIX_WEEK and t not in played): r[4] = r[5] = None
+    for pl in d["players"].values():
+        pl["g"] = [g for g in pl["g"] if g[0] < FIX_WEEK or (g[0] == FIX_WEEK and g[1] in played)]
+    d["short"] = {k: [x for x in v if x[0] < FIX_WEEK] for k, v in d["short"].items()}
+    d["through_week"] = FIX_WEEK
+    if isinstance(d.get("injuries"), dict): d["injuries"]["week"] = FIX_WEEK
+    return d, sorted(played)
+STATS_FIX, FIX_PLAYED = stats_fixture()
+FRIDAY = "2026-10-02T16:00:00Z"     # Friday noon ET of Week 4: Thursday's game final, Sunday's still to come
+SUNDAY = "2026-10-04T18:30:00Z"     # Sunday 2:30 PM ET of Week 4: the 1:00 PM games in progress
+def freeze(page, when):
+    page.clock.install(time=when)
+    page.route("**/data/stats/2026.json", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(STATS_FIX)))
+
 failures = []
 def ok(cond, msg):
     print(("PASS " if cond else "FAIL ") + msg)
@@ -108,6 +135,7 @@ with sync_playwright() as p:
     br = p.chromium.launch(**kw)
     errs = []
     pg = br.new_page(viewport={"width": 1440, "height": 1000})
+    freeze(pg, FRIDAY)
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route("https://api.sleeper.app/**", sleeper)
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com)/.*"), lambda r: r.abort())
@@ -470,7 +498,9 @@ with sync_playwright() as p:
     ok(head == ["RK", "PLAYER", "POS", "WK 4", "RECENT FORM", "MATCHUP", "SZN RK", "FPTS", "PPG", "FIT"], f"Waiver Wire columns: {head}")
     ok(pg.locator("#fa-body .val, #fa-body .valbar").count() == 0, "No AM value column or value bar on Waiver Wire")
     projs = [t.strip().split("\n")[0] for t in pg.locator("#fa-body td.fa-proj").all_inner_texts()]
-    ok(all(re.fullmatch(r"\d+\.\d|—|Bye|Out|DNP", t) for t in projs) and "0.0" not in projs[:5] and sum(bool(re.fullmatch(r"\d+\.\d", t)) for t in projs) > 10, f"Weekly projections shown (— when missing, never a fake zero): {projs[:8]}")
+    odd = [t for t in projs if not re.fullmatch(r"\d+\.\d|—|Bye|Out|DNP", t)]
+    numeric = sum(bool(re.fullmatch(r"\d+\.\d", t)) for t in projs)
+    ok(not odd and "0.0" not in projs[:5] and numeric > 10, f"Weekly projections shown (— when missing, never a fake zero): {projs[:8]} | other cells {odd[:6]} | {numeric} numeric of {len(projs)}")
     ranks = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
     ok(ranks == sorted(ranks), "Sorted by AM rank by default")
     fw = pg.evaluate("() => document.getElementById('fa-wrap').getBoundingClientRect().width")
@@ -482,9 +512,7 @@ with sync_playwright() as p:
     pv = [float(t.split("\n")[0]) for t in pg.locator("#fa-body td.fa-proj").all_inner_texts() if re.fullmatch(r"\d+\.\d", t.strip().split("\n")[0])]
     ok(pv == sorted(pv, reverse=True), "Projection sort is highest first")
     # a player whose team already played this week (Thursday) shows Final + his points, never Bye
-    import json as _j
-    stats = _j.load(open(os.path.join(ROOT, "data/stats/2026.json")))
-    played = sorted(t for t, rows in stats["schedule"].items() if any(r[0] == stats["through_week"] and r[4] is not None for r in rows))
+    played = FIX_PLAYED   # the teams whose Week 4 game (Thursday) is final in the fixture
     early = next((r for r in pg.locator("#fa-body tr.player").all() if r.locator(".pl-head").inner_text().split()[-1] in played), None)
     if early is None:
         print("   (no available player from a team that already played this week; skipped)")
@@ -516,7 +544,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(2000)
     ok("beta league" in pg.inner_text(".lg-eyebrow").lower(), "Switching leagues updates the League hub without a reload")
     pg.click("[data-lsub=power]"); pg.wait_for_timeout(400)
-    ok(pg.locator(".pr-item").count() == 10, "Power Rankings now show the other league's 10 teams")
+    ok(pg.locator("#league-body .pr-item").count() == 10, "Power Rankings now show the other league's 10 teams")
     pg.click("[data-lsub=tx]"); pg.wait_for_timeout(1500)
     ok("Beta League Team" in pg.inner_text("#league-body"), "Transactions now come from the other league")
     pg.reload(); pg.wait_for_timeout(2000)
@@ -527,7 +555,7 @@ with sync_playwright() as p:
     saved = pg.evaluate("() => localStorage.getItem('spm_sleeper')")
     pg2 = br.new_page(viewport={"width": 1440, "height": 1000})
     pg2.on("pageerror", lambda e: errs.append(str(e)))
-    pg2.clock.install(time="2026-10-04T18:30:00Z")
+    freeze(pg2, SUNDAY)
     pg2.route("https://api.sleeper.app/**", sleeper)
     pg2.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com)/.*"), lambda r: r.abort())
     pg2.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); localStorage.setItem('spm_sleeper', {json.dumps(saved)}); }}")
@@ -535,13 +563,17 @@ with sync_playwright() as p:
     pg2.evaluate("() => { const x = document.createElement('button'); x.dataset.league = 'L1'; document.getElementById('league-menu').append(x); x.click(); }"); pg2.wait_for_timeout(2000)
     pg2.click("#tab-league"); pg2.wait_for_timeout(300); pg2.click("[data-lsub=matchups]"); pg2.wait_for_timeout(1800)
     ok(pg2.locator(".mx-card.live").count() >= 1 and pg2.locator(".mx-state.live").count() >= 1, f"Sunday afternoon: matchups are live ({pg2.locator('.mx-card.live').count()})")
-    lp = pg2.locator(".mx-card.live .mx-proj").first.inner_text().upper()
-    ok(lp.strip().startswith("LIVE PROJ") and "approximate" not in lp.lower(), f"During games the total still reads Live proj: {lp}")
-    tip = pg2.locator(".mx-card.live .mx-proj").first.get_attribute("title") or ""
-    ok("estimate" in tip.lower(), "Its tooltip explains it's an estimate")
-    ok(re.search(r"\d+ played · \d+ active · \d+ remaining", pg2.inner_text(".mx-card.live .mx-left-row")) is not None, "Players played / active / remaining")
-    pg2.locator(".mx-card.live .mx-show").first.click(); pg2.wait_for_timeout(400)
-    ok(pg2.locator(".mx-card.open .mx-pts.live").count() >= 1 and pg2.locator(".mx-card.open .mx-livetag").count() >= 1, "Live starters show LIVE points with their projection")
+    # the live-card checks only run when there is a live card, so one failed assertion can't crash the rest of the suite
+    if pg2.locator(".mx-card.live").count():
+        lp = pg2.locator(".mx-card.live .mx-proj").first.inner_text().upper()
+        ok(lp.strip().startswith("LIVE PROJ") and "approximate" not in lp.lower(), f"During games the total still reads Live proj: {lp}")
+        tip = pg2.locator(".mx-card.live .mx-proj").first.get_attribute("title") or ""
+        ok("estimate" in tip.lower(), "Its tooltip explains it's an estimate")
+        ok(re.search(r"\d+ played · \d+ active · \d+ remaining", pg2.inner_text(".mx-card.live .mx-left-row")) is not None, "Players played / active / remaining")
+        pg2.locator(".mx-card.live .mx-show").first.click(); pg2.wait_for_timeout(400)
+        ok(pg2.locator(".mx-card.open .mx-pts.live").count() >= 1 and pg2.locator(".mx-card.open .mx-livetag").count() >= 1, "Live starters show LIVE points with their projection")
+    else:
+        ok(False, "Live-matchup details (Live proj, tooltip, played/active/remaining, LIVE points): skipped, no live matchup")
     if SHOTS: pg2.screenshot(path=f"{SHOTS}/hub_matchups_live.png", full_page=True)
     # phones (Steven, Oct 4): nothing in a matchup card, incl. the open lineups' points and projections, is cut off
     for w in (360, 320):
