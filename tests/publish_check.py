@@ -9,7 +9,7 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/publish_check.
 Checks:
 1. The failure Alan hit: index.html is over 1 MB, so GitHub's Contents API returns it without content; the site never
    calls the Contents API.
-2. Move up, move down, a tier change and a typed value, each saved and published in a row on one page: exactly one
+2. Move up, move down, a tier change and a value edit, each saved and published in a row on one page: exactly one
    commit each, carrying the rankings, data/rank_history.json and data/rank_snapshots/<YYYY-MM>.json together (Phase 1:
    one atomic commit; was a rankings commit and then a history commit), verified in Python to describe the same
    publication (same_publication), every earlier entry, event and snapshot kept as it was, only the edited ranking fields change, every rank runs 1..N, Sleeper IDs
@@ -105,9 +105,9 @@ def same_publication(repo, before, after):
     for r in rows:
         sid = r[c("sleeper_id")]; a = snap["players"].get(sid)
         if a is None: continue
-        typed = r[c("value")].strip() != ""
-        if [a[0], a[1], str(a[2])] != [int(r[c("rank")]), int(r[c("pos_rank")]), r[c("tier")]] or a[4] != (1 if typed else 0) or (typed and a[3] != round(float(r[c("value")]))):
-            errs.append(f"{r[c('player')]}: index.html {r[c('rank')]}/{r[c('pos_rank')]}/T{r[c('tier')]}/{r[c('value')] or 'model'} vs snapshot {a}"); break
+        # values are stored (Oct 12): 4 fields, every value exactly the published value column, no typed flag
+        if len(a) != 4 or [a[0], a[1], str(a[2]), a[3]] != [int(r[c("rank")]), int(r[c("pos_rank")]), r[c("tier")], int(r[c("value")])]:
+            errs.append(f"{r[c('player')]}: index.html {r[c('rank')]}/{r[c('pos_rank')]}/T{r[c('tier')]}/{r[c('value')]} vs snapshot {a}"); break
     new_entries = {sid: l[-1] for sid, l in ha["players"].items() if len(l) > len(hb["players"].get(sid, []))}
     for sid, e in new_entries.items():
         a = snap["players"].get(sid)

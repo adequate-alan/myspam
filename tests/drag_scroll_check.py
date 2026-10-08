@@ -115,7 +115,9 @@ with sync_playwright() as p:
       o.observe(document.getElementById('rank-count'), { childList: true }); window.__ro = o; }"""
     renders = lambda: pg.evaluate("() => { window.__ro.takeRecords().forEach(() => window.__renders++); return window.__renders; }")
     pg.evaluate(COUNT)
-    x, y = grab(8); y = glide(x, y, y + 3.4 * 59, 8)
+    # (the pointer stays out of the auto-scroll zone here: the page scrolling on after the chip is read made the landing
+    # spot a race, Oct 12; auto-scroll is checked on its own above and below)
+    x, y = grab(8, top=True); y = glide(x, y, y + 3.4 * 59, 8)
     for _ in range(3): pg.evaluate("document.getElementById('rank-search').dispatchEvent(new Event('input'))")
     pg.wait_for_timeout(200)
     during = renders(); c = chip(); want = int(re.search(r"→\s*#(\d+)", c).group(1))
