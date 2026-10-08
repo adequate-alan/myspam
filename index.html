@@ -4368,7 +4368,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <div class="tf-more-row">
           <label class="tf-check"><input type="checkbox" id="tf-three"> Include 3-team trades</label>
           <label class="tf-field"><span class="ctl-label">Max value difference</span><select class="select" id="tf-gap">
-            <option value="5">5%</option><option value="10" selected>10%</option><option value="15">15%</option><option value="20">20%</option></select></label>
+            <option value="5">5%</option><option value="10" selected>10%</option><option value="15">15%</option><option value="20">20%</option><option value="25">25%</option><option value="30">30%</option><option value="35">35%</option><option value="40">40%</option></select></label>
           <label class="tf-check"><input type="checkbox" id="tf-fair"> Fair trades only</label>
         </div>
       </details>
@@ -5223,7 +5223,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T09:00Z";
+  const BUILD_ID = "2026-10-10T09:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
