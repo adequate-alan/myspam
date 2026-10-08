@@ -5245,7 +5245,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-11T18:00Z";
+  const BUILD_ID = "2026-10-11T22:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5287,7 +5287,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   /* ---------- Tabs ---------- */
   const tabs = { rankings: $("tab-rankings"), myteam: $("tab-myteam"), league: $("tab-league"), finder: $("tab-finder"), trade: $("tab-trade") };
-  let currentTab = "rankings";
+  let currentTab = "rankings", tradeStale = false;
   function showTab(name) {
     if (name === "fa") { name = "league"; try { LT.sub = "fa"; } catch (e) { window.spmWantFA = true; } }   // Free Agents lives in League now (old #fa links; LT may not exist yet at start-up)
     if (!tabs[name] || tabs[name].hidden) name = "rankings";
@@ -5309,6 +5309,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if ($("player-modal").open) renderPlayer();
       } catch (e) { console.warn("tab redraw", e); }
     }
+    if (name === "trade" && tradeStale && !flip) renderTrade();
     if (name === "finder" && typeof renderFinder === "function") renderFinder();
   }
   for (const [k, btn] of Object.entries(tabs)) {
@@ -5494,7 +5495,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     movesMemo = { players, h, pend, today, out };
     return out;
   }
-  const sinceText = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // one shared formatter, cached per day (Oct 11): a new Date + toLocaleDateString per moved row grew with every unsaved
+  // move (more rows move), and it ran on every render
+  const SINCE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }), SINCE_MEMO = new Map();
+  const sinceText = d => { let t = SINCE_MEMO.get(d); if (t == null) { t = SINCE_FMT.format(new Date(d + "T12:00:00")); SINCE_MEMO.set(d, t); } return t; };
   function rankMove(m, pos) {
     const d = m && (pos ? m.dp : m.d); if (!d) return "";
     return `<span class="rk-mv ${d > 0 ? "up" : "down"}" title="${d > 0 ? "Up" : "Down"} ${Math.abs(d)} ${pos ? "at his position " : ""}since ${esc(sinceText(m.since))}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>`;
@@ -5502,6 +5506,39 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // drag handle: a 2×3 dot grip (SVG, so it renders the same in every font)
   const GRIP_SVG = `<svg viewBox="0 0 10 16" aria-hidden="true" fill="currentColor"><circle cx="2.5" cy="3" r="1.3"/><circle cx="7.5" cy="3" r="1.3"/><circle cx="2.5" cy="8" r="1.3"/><circle cx="7.5" cy="8" r="1.3"/><circle cx="2.5" cy="13" r="1.3"/><circle cx="7.5" cy="13" r="1.3"/></svg>`;
   const posLabel = p => (leagueView() && LG.adjPos.has(p.id) ? p.pos + LG.adjPos.get(p.id) : p.posRank);
+  /* The board is patched, not rebuilt (Oct 11, repeated-drag freeze): every edit re-rendered all ~259 rows (~8,300
+     elements: ~150ms of parsing and ~400ms of style and layout on a laptop-speed CPU), and a drop did it twice. Each row
+     is keyed by its own HTML: a row whose HTML is unchanged keeps its element, only new or changed rows are parsed, and
+     the rows are put in order with the fewest moves. A row changed in place since it was drawn (the drop preview moving
+     it or renumbering it, a value being typed, a highlight) is never reused: a MutationObserver marks it. */
+  function patchRows(tb, html) {
+    const chunks = html.split(/(?=<tr[\s>])/).filter(c => c.trim());
+    const top = n => { while (n && n.parentNode !== tb) n = n.parentNode; return n; };
+    // records are marked as they arrive (the observer's callback runs after each task) and any still queued now
+    const mark = recs => { for (const r of recs) { const t = top(r.target); if (t) t._dirty = true; r.addedNodes.forEach(n => { if (n.parentNode === tb) n._dirty = true; }); } };
+    if (!tb._mo) {
+      tb._mo = new MutationObserver(mark);
+      tb._mo.observe(tb, { childList: true, subtree: true, characterData: true, attributes: true });
+    }
+    mark(tb._mo.takeRecords());
+    const pool = new Map();
+    for (const el of tb.children) if (el._h != null && !el._dirty) { const l = pool.get(el._h); l ? l.push(el) : pool.set(el._h, [el]); }
+    const want = chunks.map(h => { const l = pool.get(h); return l && l.length ? l.shift() : null; });
+    const missing = chunks.filter((h, i) => !want[i]);
+    if (missing.length) {
+      const tpl = document.createElement("template"); tpl.innerHTML = missing.join("");
+      const made = [...tpl.content.children];
+      if (made.length !== missing.length) { tb.innerHTML = html; [...tb.children].forEach(el => { el._h = null; }); tb._mo.takeRecords(); return; }
+      let j = 0; want.forEach((el, i) => { if (!el) { want[i] = made[j++]; want[i]._h = chunks[i]; } });
+    }
+    // stale rows go first, so each kept row is compared with its real neighbour and only moved rows are moved
+    const keep = new Set(want);
+    for (const el of [...tb.children]) if (!keep.has(el)) el.remove();
+    let cur = tb.firstElementChild;
+    for (const el of want) { if (el === cur) cur = cur.nextElementSibling; else tb.insertBefore(el, cur); }
+    for (const el of want) el._dirty = false;
+    tb._mo.takeRecords();   // our own moves don't count as changes
+  }
   function renderRankings() {
     $("rk-sort-wrap").hidden = posFilter === "PICK";
     $("mk-bar").hidden = !mkOn();
@@ -5604,8 +5641,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const label = tierLabel(posFilter, OUT_TIER);
       out.push(tierEdit ? tierHead(OUT_TIER, label, true) : tierBand(label) + `<tr class="tier-none"><td colspan="${cols}">No players out for the season</td></tr>`);
     }
-    $("rank-body").innerHTML = out.length ? out.join("") :
-      `<tr><td class="empty" colspan="${cols}">${query ? `No players match “${esc(query)}”.` : "No ranked players here."}</td></tr>`;
+    patchRows($("rank-body"), out.length ? out.join("") :
+      `<tr><td class="empty" colspan="${cols}">${query ? `No players match “${esc(query)}”.` : "No ranked players here."}</td></tr>`);
     $("rank-count").textContent = list.length + (posFilter === "PICK" ? " picks" : " players");
     updateEditorBar();
     queueRail();
@@ -6639,6 +6676,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     el.hidden = false;
   }
   function renderTrade() {
+    tradeStale = false;
     const three = TC3.on;
     document.querySelector(".trade-grid").classList.toggle("three", three);
     $("side-C").hidden = !three; $("add-third").hidden = three;
@@ -7100,7 +7138,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     maxValue = Math.max(1, ...players.map(p => p.value));
     leagueRecalc();
     renderRankings();
-    renderTrade();
+    // the calculator redraws only when it's on screen; otherwise it's marked stale and redrawn when its tab opens
+    // (Oct 11: ~10–50ms of every board edit went to a hidden calculator)
+    if (currentTab === "trade") renderTrade(); else tradeStale = true;
     if (typeof renderPlayer === "function" && $("player-modal").open) renderPlayer();
   }
 
@@ -7338,11 +7378,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const iVal = colOf(draft, "value"), had = draft.rows[me.id][iVal], moved = tierChanged || Number(draft.rows[me.id][iRank]) !== me.rank;
     const before = new Map(players.map(p => [p.id, p.value])), oldVal = me.value;
     makeManual(me.id);
+    // the "Revalued from tier" tag is decided before the rebuild, so the board renders once per move (Oct 11: it
+    // rendered twice, ~0.5s each on a laptop-speed CPU)
+    const typed = had !== "" && had != null, tag = moved && !(opts && opts.quiet) && !typed;
+    if (tag) REVALUED.add(me.id);
     rebuild();
     const now = byId.get(me.id);
-    if (!moved || !now || (opts && opts.quiet)) return;
-    if (had !== "" && had != null) { typedMoveNotice(me.id, Number(had), before); return; }
-    REVALUED.add(me.id); renderRankings();
+    if (!now) { REVALUED.delete(me.id); return; }
+    if (!moved || (opts && opts.quiet)) return;
+    if (typed) { typedMoveNotice(me.id, Number(had), before); return; }
     if (opts && opts.revalue) toast(`${now.name} revalued from tier: ${fmt(oldVal)} → ${fmt(now.value)} · #${now.rank} overall, ${now.posRank}.`);
   }
   function typedMoveNotice(id, typed, before) {
@@ -7476,7 +7520,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (e.target.closest("[data-bend-undo]")) { hideBendWarn(); draft.rows[id][colOf(draft, "value")] = box.dataset.prev || ""; rebuild(); return; }
     if (e.target.closest("[data-bend-recalc]")) {   // drop the typed value: the model values him for his tier and spot
       hideBendWarn(); const was = byId.get(id).value;
-      draft.rows[id][colOf(draft, "value")] = ""; rebuild(); REVALUED.add(id); renderRankings();
+      draft.rows[id][colOf(draft, "value")] = ""; REVALUED.add(id); rebuild();
       const me = byId.get(id); toast(`${me.name} recalculated from tier: ${fmt(was)} → ${fmt(me.value)}.`);
       return;
     }
@@ -8060,7 +8104,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       let snapNote = "";
       try { const n = await saveHistory(); if (n) snapNote = ` Ranking history updated for ${n} player${n === 1 ? "" : "s"}.`; }
       catch (err) { snapNote = " The ranking history wasn't updated (" + err.message + ")."; }
-      toast((same ? "Already live: these edits were already in the published rankings." : "Published and confirmed on GitHub. The live site updates in about a minute.") + snapNote);
+      toast((same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote);
     } catch (err) {
       editor.saving = false; updateEditorBar();
       toast(err.status === 401 || err.status === 403 || err.status === 404   // GitHub answers "Not Found" when the token can't see the repo
