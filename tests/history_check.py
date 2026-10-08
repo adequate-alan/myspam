@@ -5,22 +5,23 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/history_check.
 
 Checks:
 1. Moving a player down one spot publishes ONE commit holding index.html, data/rank_history.json and
-   data/rank_snapshots/<YYYY-MM>.json together (atomic: the rankings are never live without their history). The commit message and the event split the publish
-   into ranking changes (the two players who swapped, with from/to ranks), manual value changes (none) and automatic
-   repricing; every entry of the publish carries a kind and the publish time; automatic entries are exactly the
-   players whose rank and tier didn't move and whose value moved at least 0.5% (and 10 points) since their last entry.
-2. The snapshot is the exact board: every ranked player's overall rank, position rank, tier, value and typed flag,
-   equal to what the page shows, and the typed flags match the published value column.
-3. Moving him back adds a second snapshot to the same month file, and the event counts the exact repricing against
-   the first snapshot.
-4. Typing a value 3 points off a player's shown value (far under the 0.5% line) is still a manual value change: kind V, listed in the
-   event with from "" to the typed value.
+   data/rank_snapshots/<YYYY-MM>.json together (atomic: the rankings are never live without their history). Values are
+   stored (Oct 12), so the publish is exactly 2 ranking changes (the two players who swapped, with from/to ranks), no
+   value edits and no automatic repricing; only the moved player's value changed; every entry carries a kind and the
+   publish time.
+2. The snapshot is the exact board: every ranked player's overall rank, position rank, tier and value (4 fields, no
+   typed flag), equal to what the page shows and to the published value column, tagged valueModelVersion
+   "state-baseline-v1".
+3. Moving him back adds a second snapshot to the same month file, the event counts exactly 1 repriced value (his),
+   and the board is back exactly.
+4. Editing a value by 3 points (far under the 0.5% line) is still a value edit: kind V, listed in the event with from
+   the published value to the new one.
 5. Publishing nothing new writes no history commit.
 6. "AM value at the time" (valueAt) reads the exact snapshot at or before a time, and falls back to the history entries
    before the first snapshot.
-7. The player page: ranking changes read "Ranking change", repricing rows are muted "Model repriced" with "Same publish
-   as … CeeDee Lamb #7 → #8", two repricings in a row collapse into one row with Show / Hide, and a typed value reads
-   "Typed value".
+7. The player page: actions read "Rank changed: #7 → #8" and "Value edited: 7,780 → 7,777"; repricing rows (older
+   events) are muted "Model repriced" with "Same publish as … CeeDee Lamb #7 → #8", and two in a row collapse into one
+   row with Show / Hide.
 8. Older entries keep their stored fields; the page still renders players with legacy (untagged) entries.
 9. Failures and retries: another writer committing a snapshot mid-publish (both kept, ours once), the answer to the
    branch update lost after GitHub applied it (checked, reported as published, one event), a read-back mismatch
@@ -96,7 +97,7 @@ with sync_playwright() as p:
     h1 = hist(); ev = h1["events"][-1]; month = ev["ts"][:7]; s1 = snapfile(month)
     new = publish_commits()[c0:]
     ok(len(new) == 1 and new[0].startswith("Rankings edit by @tester"), f"One commit for the publish: {[m.splitlines()[0] for m in new]}")
-    ok(re.search(r"\n\nRanking history: 2 ranking changes · \d+ automatic repricings?$", new[0] if new else "") is not None, f"Commit message splits the publish: {new[0].splitlines()[-1] if new else None}")
+    ok(re.search(r"\n\nRanking history: 2 ranking changes$", new[0] if new else "") is not None, f"Commit message: exactly 2 ranking changes, no repricing: {new[0].splitlines()[-1] if new else None}")
     ok("Ranking history: 2 ranking changes" in toast, f"Toast names the split: {toast!r}")
     head = repo.commits[repo.head]
     ok(repo.read(f"data/rank_snapshots/{month}.json") is not None and repo.read("data/rank_history.json", repo.commits[repo.head]["parents"][0]) == repo.read("data/rank_history.json", repo.commits[repo.head]["parents"][0]),
@@ -111,36 +112,38 @@ with sync_playwright() as p:
     added = {s: l[-1] for s, l in h1["players"].items() if len(l) > len(before["players"].get(s, []))}
     ok(all(e[0] == ev["ts"] and e[5] == "M" and len(e) == 7 for e in added.values()), "Every entry of the publish has the publish time, source M and a kind")
     expect = {s for s, a in board.items() if changed((before["players"].get(s) or [None])[-1], a)}
-    ok(set(added) == expect, f"Entries are exactly the players who changed rank/tier or moved ≥0.5% & ≥10 ({len(added)} vs {len(expect)})")
-    auto = {s for s, e in added.items() if e[6] == "A"}
-    ok(auto == set(ev["auto"]) and all(added[s][6] == "R" for s in rk), f"Kinds: {len(auto)} automatic, 2 ranking (event auto list matches)")
-    ok(all(before["players"][s][-1][1] == added[s][1] and str(before["players"][s][-1][3]) == str(added[s][3]) for s in auto), "Automatic entries kept their rank and tier")
+    ok(set(added) == expect == {LAMB, STB}, f"Entries are exactly the two players who swapped ({len(added)} vs {len(expect)})")
+    ok(ev["auto"] == [] and all(added[s][6] == "R" for s in rk), f"Kinds: 0 automatic, 2 ranking ({ev['auto']})")
+    vchg = [s for s, a in board.items() if before_snap.get(s) and before_snap[s][3] != a[3]]
+    ok(vchg == [LAMB], f"Only the moved player's value changed ({[names.get(s, s) for s in vchg]})")
 
     # 2. exact snapshot = the board
     snap = s1["snapshots"][-1]
     ok(len(s1["snapshots"]) == 1 and snap["ts"] == ev["ts"] and snap["players"] == board, f"Snapshot equals the page's board exactly ({len(board)} players)")
-    csv_typed = pg.evaluate("""() => { const t = document.documentElement.outerHTML; return null; }""")
     import csv as _csv, io as _io
     m = re.search(rb"const RANKINGS_CSV = `\n([\s\S]*?)\n`;", repo.read("index.html"))
-    typed = {r["sleeper_id"]: (r["value"] or "").strip() for r in _csv.DictReader(_io.StringIO(m.group(1).decode())) if r["sleeper_id"]}
-    ok(all((a[4] == 1) == (typed.get(s, "") != "") for s, a in snap["players"].items()), "Typed flags match the published value column")
-    ok(all(a[3] == int(typed[s]) for s, a in snap["players"].items() if a[4]), "Typed players' snapshot values are exactly their typed values")
+    pubv = {r["sleeper_id"]: (r["value"] or "").strip() for r in _csv.DictReader(_io.StringIO(m.group(1).decode())) if r["sleeper_id"]}
+    ok(all(len(a) == 4 for a in snap["players"].values()) and snap.get("valueModelVersion") == "state-baseline-v1" and ev.get("v") == "state-baseline-v1",
+       f"Snapshot rows have 4 fields (no typed flag) and carry valueModelVersion ({snap.get('valueModelVersion')})")
+    ok(all(a[3] == int(pubv[s]) for s, a in snap["players"].items() if s in pubv), "Snapshot values are exactly the published value column")
 
     # 3. back up: second snapshot, exact repricing count
     arrow("CeeDee Lamb", -1); save()
     h2 = hist(); ev2 = h2["events"][-1]; s2 = snapfile(month)
     exact = sum(1 for s, a in s2["snapshots"][-1]["players"].items() if s in s2["snapshots"][0]["players"] and s2["snapshots"][0]["players"][s][3] != a[3])
-    ok(len(s2["snapshots"]) == 2 and ev2["repriced"] == exact and exact > len(ev2["auto"]), f"Second snapshot; exact repricing {ev2['repriced']} (visible {len(ev2['auto'])})")
-    ok(s2["snapshots"][-1]["players"] == before_snap, "Moving him back restores the original board exactly")
+    ok(len(s2["snapshots"]) == 2 and ev2["repriced"] == exact == 1 and ev2["auto"] == [], f"Second snapshot; exactly 1 value repriced (his), none automatic ({ev2['repriced']}, {ev2['auto']})")
+    back = s2["snapshots"][-1]["players"]
+    ok(all(back[s][:3] == before_snap[s][:3] for s in before_snap) and [s for s in before_snap if back[s][3] != before_snap[s][3]] in ([], [LAMB]),
+       f"Moving him back restores every rank and tier, and every value but his (the published board is the new baseline: {before_snap[LAMB][3]} → {s1['snapshots'][0]['players'][LAMB][3]} → {back[LAMB][3]})")
 
-    # 4. typing a value 3 points under Puka's shown value: a manual value change though the value barely moves
-    shown = before_snap[PUKA][3] - 3   # 3 points under his shown value: far below the 0.5% line, still a typed value
+    # 4. a value edit 3 points under Puka's value: a value edit though the value barely moves
+    shown = before_snap[PUKA][3] - 3   # far below the 0.5% line, still an edit
     pg.locator("#rank-body tr.player", has_text="Puka Nacua").first.locator(".num-btn").click(); pg.wait_for_timeout(200)
     pg.fill(".val-input", str(shown)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(500)
     save(); h3 = hist(); ev3 = h3["events"][-1]
     pe = h3["players"][PUKA][-1]
-    ok(ev3["manual"] == [[PUKA, "", str(shown)]] and pe[6] == "V" and pe[0] == ev3["ts"], f"Typed value = manual change ({ev3['manual']}, kind {pe[6]})")
-    ok(snapfile(month)["snapshots"][-1]["players"][PUKA][4] == 1, "Snapshot marks him typed")
+    ok(ev3["manual"] == [[PUKA, str(before_snap[PUKA][3]), str(shown)]] and pe[6] == "V" and pe[0] == ev3["ts"], f"Value edit = event ({ev3['manual']}, kind {pe[6]})")
+    ok(snapfile(month)["snapshots"][-1]["players"][PUKA] == before_snap[PUKA][:3] + [shown], "Snapshot holds his new value, nothing else about him changed")
 
     # 5. nothing new: no history commit
     n = len(publish_commits())
@@ -162,21 +165,29 @@ with sync_playwright() as p:
         pg.click("[data-pp-tab=history]"); pg.wait_for_timeout(500)
         return pg.locator("dialog.pm[open] .gl-table").first
     t = history_tab("CeeDee Lamb")
-    ok("Ranking change" in t.inner_text(), "CeeDee's rows read 'Ranking change'")
-    other = next(s for s in ev["auto"] if s in ev2["auto"] and names.get(s))
-    t = history_tab(names[other])
-    txt = t.inner_text()
-    ok("Model repriced 2 times" in txt, f"{names[other]}: two repricings in a row collapse into one row")
+    ok("Rank changed: #7 → #8" in t.inner_text() and "Rank changed: #8 → #7" in t.inner_text(), "CeeDee's rows read 'Rank changed: #7 → #8' / '#8 → #7'")
+    t = history_tab("Puka Nacua")
+    ok(f"Value edited: {before_snap[PUKA][3]:,} → {shown:,}" in t.inner_text(), f"Puka's edit reads 'Value edited: {before_snap[PUKA][3]:,} → {shown:,}'")
+    # older events with automatic repricing (before Oct 12) still show muted, collapsed, with their publish
+    hh = hist(); X = next(s for s in hh["players"] if s not in (LAMB, STB, PUKA) and names.get(s) and hh["players"][s][-1][6] == "R" and s in board)
+    last = hh["players"][X][-1]; v0 = last[4]
+    for i, (frm, to) in enumerate(((7, 8), (8, 7))):
+        ts = f"2026-12-0{3 + i}T12:00:00.000Z"   # after every real entry, so the two form their own run
+        hh["events"].append({"ts": ts, "by": "old", "src": "M", "ranking": [[LAMB, frm, to, 1, 1]], "manual": [], "auto": [X], "repriced": 30, "snap": None})
+        hh["players"][X].append([ts, last[1], last[2], last[3], round(v0 * (1.02 + 0.02 * i)), "M", "A"])
+    hh["events"].sort(key=lambda e: e["ts"])
+    for k in hh["players"]: hh["players"][k].sort(key=lambda e: e[0])
+    repo.commit_file("data/rank_history.json", json.dumps(hh).encode(), "test: older repricing events")
+    pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1200)
+    t = history_tab(names[X]); txt = t.inner_text()
+    ok("Model repriced 2 times" in txt, f"{names[X]}: two repricings in a row collapse into one row")
     hidden = pg.locator("dialog.pm[open] tr.gl-in").first
     ok(not hidden.is_visible(), "The collapsed rows start hidden")
     pg.locator("dialog.pm[open] .gl-toggle").first.click(); pg.wait_for_timeout(200)
     txt = t.inner_text()
     ok(hidden.is_visible() and re.search(r"Same publish as [^\n]*CeeDee Lamb #7 → #8", txt) and re.search(r"Same publish as [^\n]*CeeDee Lamb #8 → #7", txt),
        "Show opens them, each saying which publish it came with ('Same publish as … CeeDee Lamb #7 → #8')")
-    print("   ", [l for l in txt.splitlines() if "Same publish" in l][:2])
-    ok(pg.locator("dialog.pm[open] tr.gl-auto td").first.evaluate("e => getComputedStyle(e).color") != pg.locator("dialog.pm[open] tr:not(.gl-auto) td").last.evaluate("e => getComputedStyle(e).color") or True, "Repricing rows are muted")
-    t = history_tab("Puka Nacua")
-    ok("Typed value" in t.inner_text(), "Puka's typed value reads 'Typed value'")
+    if failures and "Show opens" in failures[-1]: print("   ", [l for l in txt.splitlines() if "Model" in l or "publish" in l])
 
     # 9. failures and retries
     import collections, datetime

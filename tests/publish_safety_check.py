@@ -153,11 +153,15 @@ with sync_playwright() as p:
     def case_4():
         repo = new_repo(); pg = open_page(repo, token=None); n0 = len(repo.log())
         nm = name_at(pg, 70); v = pg.evaluate(f"() => Number([...document.querySelectorAll('#rank-body tr.player')][70].querySelector('.val .num, .val .num-btn').textContent.replace(/\\D/g, ''))")
-        type_value(pg, nm, v + 7); msg = save(pg)   # no token: saved in this browser only
+        # a value that fits his rank (values are state since Oct 12: one that doesn't fit asks first and saves nothing)
+        up, dn = pg.evaluate("() => [69, 71].map(i => Number([...document.querySelectorAll('#rank-body tr.player')][i].querySelector('.val .num, .val .num-btn').textContent.replace(/\\D/g, '')))")
+        nv = v + 1 if up - v >= 2 else v - 1
+        assert dn < nv < up, (dn, nv, up)
+        type_value(pg, nm, nv); msg = save(pg)   # no token: saved in this browser only
         ok("Saved in this browser" in msg and local_edits(pg), "Conflict setup: a typed value saved in this browser")
         h, rows = csv_rows(repo)   # someone else publishes a different value for the same player
         for r in rows:
-            if r[h.index("player")] == nm: r[h.index("value")] = str(v + 99)
+            if r[h.index("player")] == nm: r[h.index("value")] = str(v + 99 if nv > v else v - 99)
         import csv as _csv, io as _io
         out = _io.StringIO(); _csv.writer(out, lineterminator="\n").writerows([h] + rows)
         html = repo.read("index.html"); m = CSV_RE.search(html)
@@ -168,7 +172,7 @@ with sync_playwright() as p:
         ok(msg.startswith("Publish stopped") and nm in msg and repo.head == head0 and local_edits(pg),
            f"Conflict after a reload: stopped, names {nm}, nothing written, edits kept ({msg[:110]!r})")
         h, rows = csv_rows(repo)
-        ok(next(r for r in rows if r[h.index("player")] == nm)[h.index("value")] == str(v + 99), "Conflict: the other editor's published value is untouched")
+        ok(next(r for r in rows if r[h.index("player")] == nm)[h.index("value")] == str(v + 99 if nv > v else v - 99), "Conflict: the other editor's published value is untouched")
         pg.context.close()
     run_case(4, case_4)
 
