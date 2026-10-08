@@ -2911,18 +2911,20 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .pm-stats { display: flex; flex-wrap: wrap; row-gap: 12px; margin-top: 18px; }
 /* AM rank vs this season's production ranks (Alan, Oct 8): one quiet line; AM leads, FPTS and PPG are secondary */
 .pm-prodrk { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-top: 10px; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
-.pm-prodrk .pr-item { display: inline-flex; align-items: baseline; gap: 5px; cursor: help; }
+/* drawer production / market items: their own class (.pd-item), not Power Rankings' .pr-item, whose row border and
+   rank colours were leaking into the drawer (Oct 10) */
+.pm-prodrk .pd-item { display: inline-flex; align-items: baseline; gap: 5px; cursor: help; }
 /* the production line (AM rank · FPTS · PPG): stacked like the stat cards, the player's number first, his rank under it */
 .pm-prodrk:not(.pm-mkt .pm-prodrk) { align-items: flex-start; gap: 6px 28px; margin-top: 14px; }
-.pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-item { display: inline-grid; gap: 3px; min-width: 64px; border-bottom: 0; }
-.pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-item b { font: 700 1.05rem/1.1 var(--font-display); color: var(--text-primary); }
-.pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-item.am b { font-size: 1.05rem; }
+.pm-prodrk:not(.pm-mkt .pm-prodrk) .pd-item { display: inline-grid; gap: 3px; min-width: 64px; border-bottom: 0; }
+.pm-prodrk:not(.pm-mkt .pm-prodrk) .pd-item b { font: 700 1.05rem/1.1 var(--font-display); color: var(--text-primary); }
+.pm-prodrk:not(.pm-mkt .pm-prodrk) .pd-item.am b { font-size: 1.05rem; }
 .pm-prodrk .pr-sub { font: 600 0.72rem/1.2 var(--font-display); color: var(--text-secondary); opacity: .85; }
 .pm-prodrk:not(.pm-mkt .pm-prodrk) .pr-diff { align-self: center; }
 .pm-prodrk .pr-k { font: 600 0.62rem/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
-.pm-prodrk .pr-item b { font-family: var(--font-display); font-weight: 600; color: var(--text-secondary); }
-.pm-prodrk .pr-item.am b { color: var(--text-primary); font-weight: 700; font-size: 0.92rem; }
-.pm-prodrk .pr-item.nr b { font-weight: 500; color: var(--text-muted); }
+.pm-prodrk .pd-item b { font-family: var(--font-display); font-weight: 600; color: var(--text-secondary); }
+.pm-prodrk .pd-item.am b { color: var(--text-primary); font-weight: 700; font-size: 0.92rem; }
+.pm-prodrk .pd-item.nr b { font-weight: 500; color: var(--text-muted); }
 .pm-prodrk .pr-diff { font-size: 0.68rem; font-weight: 600; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; cursor: help; }
 .pm-prodrk .pr-note { flex-basis: 100%; font-size: 0.7rem; color: var(--text-muted); }
 /* Market edge (Alan, Oct 8): AM vs FantasyCalc / Flock. Quiet: AM stays the primary signal */
@@ -5223,7 +5225,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T09:30Z";
+  const BUILD_ID = "2026-10-10T11:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -10705,8 +10707,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (r.stats) return { pts: gamePoints(r.stats, e.pos, sc), source: prov.id, fallback: false };
       if (r.basePts != null) { const R = projRatios(sc); return { pts: r.basePts * ((e.p && R.get(e.p.id)) ?? R.get("pos:" + e.pos) ?? 1), source: prov.id, fallback: false }; }
     }
+    // the season-PPG stand-in never goes below zero (Oct 10: a newly added QB with one bad snap projected −1.0 and pulled
+    // a lineup's projected total down); Sleeper's K/DEF numbers above can still be negative, as defenses really can
     const ppg = e.sid ? seasonPpg(e.sid, e.pos, sc) : null;
-    return ppg != null ? { pts: ppg, source: "season", fallback: true } : null;
+    return ppg != null ? { pts: Math.max(0, ppg), source: "season", fallback: true } : null;
   }
   /* Weekly calibration (projections only; never rankings, values, tiers or history):
      1. Vegas: his team's implied total this week vs its average over the games the rest-of-season projection
@@ -11369,7 +11373,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const P = r ? r.pos : pos, scName = activeData() ? "league scoring" : "AM default scoring";
     const nth = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
     // stacked items (Alan, Oct 9): small label · the player's own number (primary) · his position rank under it (secondary)
-    const item = (cls, k, v, sub, tip) => `<span class="pr-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b><span class="pr-sub">${sub}</span></span>`;
+    const item = (cls, k, v, sub, tip) => `<span class="pd-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b><span class="pr-sub">${sub}</span></span>`;
     const out = [];
     if (am) out.push(item("am", "AM rank", esc(am), "Rest of season", `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
     if (!r) out.push(item("fp", "FPTS", "—", "No games", "No games played this season"), item("ppg", "PPG", "—", "No games", "No games played this season"));
@@ -13524,7 +13528,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!p || !EDIT_POS.includes(p.pos)) return "";
     const all = mkAll(), r = all.map.get(p.sleeperId);
     if (!r) return all.srcs.length ? "" : "";
-    const it = (k, v, tip, cls = "") => `<span class="pr-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b></span>`;
+    const it = (k, v, tip, cls = "") => `<span class="pd-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b></span>`;
     const parts = [it("AM", `${p.pos}${r.ap}`, `AM rest-of-season rank in this format: ${p.pos}${r.ap}, #${r.amOv} overall`, "am")];
     Object.values(r.per).forEach(x => parts.push(it(x.id === "fc" ? "FantasyCalc" : "Flock", `${p.pos}${x.pr}`, `${x.name}: ${p.pos}${x.pr}, #${x.ov} overall${x.tier ? ` · Flock tier ${x.tier}` : ""} (ranked over the players AM ranks)${x.approx ? " · approximate format" : ""}`)));
     if (r.srcN > 1) parts.push(it("Consensus", `${p.pos}${r.cRank}`, `FantasyCalc + Flock combined (geometric mean of their position ranks); AM never counts in it`));
