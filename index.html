@@ -5267,7 +5267,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T12:00Z";
+  const BUILD_ID = "2026-10-12T18:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7360,42 +7360,166 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("eb-publish").disabled = $("eb-discard").disabled = editor.saving || n > 0 || local === 0;
     $("eb-publish").title = n > 0 ? "Save or cancel your changes first" : "";
     $("eb-signout").hidden = !editor.token;
+    // published (no browser edits left): the editor bookkeeping saved with them goes too
+    if (local === 0 && !editor.saving && SESSION_AT_SAVE) { SESSION_AT_SAVE = null; try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
   }
 
-  /* Moving players. The overall order (rank) is the source of truth and every
-     position rank is derived from it. A player who lands in a new position spot
-     takes the tier of the player who held that spot, so tiers stay in one piece. */
+  /* Moving players. The overall order (rank) is the source of truth and every position rank is derived from it.
+     Reversible tiers (Alan, Oct 12): the same order, tiers, typed values and settings always give the same board,
+     whatever sequence of moves led there, and a move that's undone (or a whole session of moves undone) puts the
+     board back exactly: ranks, tiers, tier names, Auto/Manual and every value. Each player has a base tier: his saved
+     tier, or the tier he was deliberately given this session (dropped into a tier band or onto a tier header in a
+     position tab, a tier deleted into its neighbour, tiers renumbered). After every move a position's tiers are
+     derived from its order: the largest set of players whose base tiers still run in order keep them (players nobody
+     moved first, then earlier moves before the latest one), and everyone else takes the tier his kept neighbours allow
+     that's closest to his base (inside a tier he joins it; on a boundary he keeps his base tier if it borders). With
+     the order back where it was, every base tier runs in order again, so every tier comes back. (Before: the mover
+     took the tier of the player who held his new slot, so moving down 5 and back left him a tier lower, and the board
+     around him repriced.) */
   const isPlayerRow = p => p.pos !== "PICK";
-
-  function tierFor(me, newPosOrder, oldPosOrder) {
-    const tagFrom = Number(VALUE_MODEL.tagTierFrom) || Infinity;
-    const isTag = t => t !== "" && Number(t) >= tagFrom;
-    if (isTag(me.tier)) return me.tier;
-    const to = newPosOrder.indexOf(me), from = oldPosOrder.indexOf(me);
-    if (to === from) return me.tier;
-    let tier = oldPosOrder[to] ? oldPosOrder[to].tier : me.tier;
-    if (tier === "" || isTag(tier)) {
-      const near = [];
-      for (let d = 1; d < newPosOrder.length; d++) near.push(newPosOrder[to - d], newPosOrder[to + d]);
-      const pick = near.find(p => p && p !== me && p.tier !== "" && !isTag(p.tier));
-      tier = pick ? pick.tier : me.tier;
+  /* The edit session is measured against the live (published) board, so an edit saved in this browser and undone after a
+     reload, or in a later session, still comes back exactly. Its bookkeeping is saved with the browser edits
+     (spm_edit_session, tied to the published and saved boards it belongs to) and Cancel goes back to it. */
+  var SESSION_KEY = "spm_edit_session";   // var: the editor bar reads these during start-up
+  var EDIT_SESSION = null, SESSION_AT_SAVE = null;
+  const textId = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + ":" + t.length; };
+  const SESSION_MAPS = ["touch", "memo", "drops", "moves", "base"];
+  function packSession(S) {
+    const o = { pub: textId(S.pub), saved: textId(savedCsv), seq: S.seq, pinned: [...S.pinned], kept: [...S.kept] };
+    SESSION_MAPS.forEach(k => { o[k] = [...S[k]]; });
+    return o;
+  }
+  function freshSession() {   // a session from the board as it is now: edits it has no record of count as deliberate
+    const iT = colOf(draft, "tier"), ref = csvToTable(publishedCsv), rm = new Map(ref.rows.map(r => [keyOf(ref, r), r]));
+    const refRow = new Map(draft.rows.map((r, id) => [id, rm.get(keyOf(draft, r)) || null]));
+    const base0 = new Map(draft.rows.map((r, id) => { const x = refRow.get(id); return [id, String((x ? x[colOf(ref, "tier")] : r[iT]) ?? "")]; }));
+    const base = new Map(draft.rows.map((r, id) => [id, String(r[iT] ?? "")]));
+    const kept = new Set(draft.rows.map((r, id) => id).filter(id => { const x = refRow.get(id); return !x || EDIT_COLS.some(c => (draft.rows[id][colOf(draft, c)] ?? "") !== (x[colOf(ref, c)] ?? "")); }));
+    return { pub: publishedCsv, seq: 0, touch: new Map(), memo: new Map(), drops: new Map(), moves: new Map(),
+      pinned: new Set([...base].filter(([id, t]) => t !== base0.get(id)).map(([id]) => id)), kept, refTable: ref, refRow, base, base0 };
+  }
+  function unpackSession(o) {   // the saved bookkeeping, when it belongs to this published board and these saved edits
+    if (!o || o.pub !== textId(publishedCsv) || o.saved !== textId(savedCsv) || tableToCsv(draft) !== savedCsv) return null;
+    const S = freshSession();
+    SESSION_MAPS.forEach(k => { S[k] = new Map(o[k] || []); });
+    S.seq = o.seq || 0; S.pinned = new Set(o.pinned || []); S.kept = new Set(o.kept || []);
+    return S;
+  }
+  function editSession() {
+    if (EDIT_SESSION && EDIT_SESSION.pub === publishedCsv) return EDIT_SESSION;
+    if (SESSION_AT_SAVE == null) { try { SESSION_AT_SAVE = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch (e) { SESSION_AT_SAVE = null; } }
+    EDIT_SESSION = unpackSession(SESSION_AT_SAVE);
+    if (!EDIT_SESSION) {
+      if (SESSION_AT_SAVE && SESSION_AT_SAVE.pub !== textId(publishedCsv)) resetEditSession(true);   // published since: it's settled
+      EDIT_SESSION = freshSession();
     }
-    return tier;
+    return EDIT_SESSION;
+  }
+  function storeSession() {   // on Save: the bookkeeping that goes with the saved edits
+    const has = Object.keys(localEdits).length > 0;
+    if (!has) EDIT_SESSION = null;
+    SESSION_AT_SAVE = has ? packSession(editSession()) : null;
+    try { if (has) localStorage.setItem(SESSION_KEY, JSON.stringify(SESSION_AT_SAVE)); else localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  }
+  function resetEditSession(forget) {   // Cancel: back to the bookkeeping of the last save; Discard (forget): none
+    if (forget) { SESSION_AT_SAVE = null; try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
+    EDIT_SESSION = null;
+  }
+  // tiers for one position's players in a new order (Map id -> tier); tag tiers (Hurt, Out for season) aren't derived
+  function deriveTiers(group, me, forced) {
+    const S = editSession(), out = new Map();
+    const L = group.filter(p => { const b = S.base.get(p.id); return b !== "" && b != null && !isTagTier(b); });
+    const b = L.map(p => Number(S.base.get(p.id)));
+    // who keeps his base tier when the order can't keep everyone's: this drop's deliberate tier, then earlier deliberate
+    // tiers, then players with no move of their own still standing (a move undone leaves no trace), then the oldest
+    // standing moves; the player just moved (by order alone) gives way first
+    const first = p => { const mv = S.moves.get(p.id); return mv && mv.length ? mv[0].seq : null; };
+    const age = q => Math.min(998, S.seq - q);
+    const w = L.map(p => p === me ? (forced ? 1e12 : 1) : S.pinned.has(p.id) ? 1e10 - age(S.touch.get(p.id) || 0) : first(p) == null ? 1e9 : 1e3 - age(first(p)));
+    const best = [], prev = [];
+    for (let i = 0; i < L.length; i++) {   // heaviest set whose base tiers run in order (n is a position, <= ~100)
+      best[i] = w[i]; prev[i] = -1;
+      for (let j = 0; j < i; j++) if (b[j] <= b[i] && best[j] + w[i] > best[i]) { best[i] = best[j] + w[i]; prev[i] = j; }
+    }
+    const keep = new Array(L.length).fill(false);
+    let e = -1; best.forEach((v, i) => { if (e < 0 || v > best[e]) e = i; });
+    for (let i = e; i >= 0; i = prev[i]) keep[i] = true;
+    for (let i = 0; i < L.length; i++) {
+      if (keep[i]) { out.set(L[i].id, String(b[i])); continue; }
+      let lo = -Infinity, hi = Infinity;
+      for (let j = i - 1; j >= 0; j--) if (keep[j]) { lo = b[j]; break; }
+      for (let j = i + 1; j < L.length; j++) if (keep[j]) { hi = b[j]; break; }
+      out.set(L[i].id, String(Math.min(Math.max(b[i], lo), hi)));
+    }
+    return out;
+  }
+  // a player's tier name after his tier changed: the tier's name as its other players carry it; his own saved name
+  // when he's back in his saved tier (so an undone move restores the row exactly)
+  function tierNameAfter(id, pos, t, stale) {   // stale: players whose tier changed and whose name isn't set yet
+    const S = editSession(), iT = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
+    const mates = players.filter(q => q.pos === pos && q.id !== id && String(draft.rows[q.id][iT]) === t);
+    const named = q => draft.rows[q.id][iN];
+    const carrier = mates.find(q => !stale.has(q.id) && named(q));
+    const empty = (TIER_EMPTY[pos] || []).find(x => String(x.tier) === t);
+    const carried = carrier ? named(carrier) : empty && empty.name ? empty.name : "";
+    const s = S.refRow.get(id), st = S.refTable;
+    if (s && String(s[colOf(st, "tier")] ?? "") === t) {   // back in his saved tier (alone in it, or with its name unchanged)
+      const sn = s[colOf(st, "tier_name")] ?? "";
+      if (sn === "" || carried === "" || sn === carried) return sn;
+    }
+    return carried;
   }
 
-  // Write an overall order: rank 1..N, every position rank re-derived, mover's tier
+  // Write an overall order: rank 1..N, every position rank re-derived, the position's tiers re-derived
   function writeOrder(order, me, forceTier, opts) {
-    const iRank = colOf(draft, "rank"), iPos = colOf(draft, "pos_rank"), iTier = colOf(draft, "tier");
-    const oldPos = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
-    const newPos = order.filter(p => p.pos === me.pos);
-    const newTier = forceTier != null ? String(forceTier) : tierFor(me, newPos, oldPos);
-    if (newTier !== String(me.tier)) {   // joining a tier: take its name too
-      materializeTierNames(me.pos);
-      draft.rows[me.id][colOf(draft, "tier_name")] = tierNameOf(me.pos, newTier) || "";
-      if (TIER_EMPTY[me.pos]) TIER_EMPTY[me.pos] = TIER_EMPTY[me.pos].filter(e => String(e.tier) !== newTier);
+    const iRank = colOf(draft, "rank"), iPos = colOf(draft, "pos_rank"), iTier = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
+    const S = editSession(), newPos = order.filter(p => p.pos === me.pos);
+    /* A tier the player was dropped into is a deliberate choice only when his new spot wouldn't give it to him anyway.
+       Dropped where his starting tier gives exactly that band (e.g. back where he was), he's back on his starting tier;
+       so undoing a drop, even into a band he was only shown in because of someone else's drop, stays exact. */
+    let forced = false;
+    if (forceTier != null) {
+      const F = String(forceTier), at = (b, pin) => {
+        const b1 = S.base.get(me.id), p1 = S.pinned.has(me.id);
+        S.base.set(me.id, b); if (pin) S.pinned.add(me.id); else S.pinned.delete(me.id);
+        const d = deriveTiers(newPos, me, false).get(me.id);
+        S.base.set(me.id, b1); if (p1) S.pinned.add(me.id); else S.pinned.delete(me.id);
+        return d;
+      };
+      // dropped back between the two players he was dropped away from: exactly the tier state he had there
+      const oldPos = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
+      const i0 = oldPos.indexOf(me), i1 = newPos.indexOf(me), nb = (L, i) => [L[i - 1] ? L[i - 1].id : null, L[i + 1] ? L[i + 1].id : null];
+      const stack = S.drops.get(me.id) || [], top = stack[stack.length - 1], [na, nz] = nb(newPos, i1);
+      if (top && top.above === na && top.below === nz) {
+        stack.pop(); S.base.set(me.id, top.base);
+        if (top.pinned) S.pinned.add(me.id); else S.pinned.delete(me.id);
+        forced = top.pinned && at(top.base, true) !== F;
+      } else {
+        const [oa, oz] = nb(oldPos, i0);
+        stack.push({ above: oa, below: oz, base: S.base.get(me.id), pinned: S.pinned.has(me.id) }); S.drops.set(me.id, stack.slice(-50));
+        if (!isTagTier(F) && at(S.base0.get(me.id), false) === F) { S.base.set(me.id, S.base0.get(me.id)); S.pinned.delete(me.id); }
+        else if (isTagTier(F) || at(S.base.get(me.id), S.pinned.has(me.id)) !== F) { S.base.set(me.id, F); S.pinned.add(me.id); forced = true; }
+      }
     }
+    const tiers = deriveTiers(newPos, me, forced);
+    S.touch.set(me.id, ++S.seq);
+    const newTier = tiers.get(me.id) ?? (forceTier != null ? String(forceTier) : String(me.tier));
     const tierChanged = newTier !== String(me.tier);
-    draft.rows[me.id][iTier] = newTier;
+    const changed = new Map();
+    newPos.forEach(p => { const t = p === me ? newTier : tiers.get(p.id); if (t != null && t !== String(draft.rows[p.id][iTier] ?? "")) changed.set(p.id, t); });
+    changed.forEach((t, id) => { draft.rows[id][iTier] = t; });
+    // names: players back in their saved tier first (their saved name is exact), then the rest from their tiermates
+    const stale = new Set(changed.keys()), back = id => { const r = S.refRow.get(id); return r && String(r[colOf(S.refTable, "tier")] ?? "") === changed.get(id); };
+    [...changed.keys()].sort((a, b) => back(b) - back(a)).forEach(id => { draft.rows[id][iN] = tierNameAfter(id, me.pos, changed.get(id), stale); stale.delete(id); });
+    if (tierChanged && TIER_EMPTY[me.pos]) TIER_EMPTY[me.pos] = TIER_EMPTY[me.pos].filter(e => String(e.tier) !== newTier);
+    // his own moves: the overall slot (the players either side) he left each time; moving back to one of those slots
+    // undoes the moves made since (an Auto player is Manual only while a move of his own is still standing)
+    const was = overallOrder(), wi = was.indexOf(me), ni = order.indexOf(me), side = (L, i) => (L[i - 1] ? L[i - 1].id : -1) + ":" + (L[i + 1] ? L[i + 1].id : -1);
+    if (wi >= 0 && ni >= 0) {
+      const mv = S.moves.get(me.id) || [], back = mv.findLastIndex(m => m.at === side(order, ni));
+      if (back >= 0) mv.length = back; else if (side(was, wi) !== side(order, ni)) mv.push({ at: side(was, wi), seq: S.seq });
+      S.moves.set(me.id, mv);
+    }
     const counts = {};
     order.forEach((p, k) => {
       counts[p.pos] = (counts[p.pos] || 0) + 1;
@@ -7408,9 +7532,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const before = new Map(players.map(p => [p.id, p.value])), oldVal = me.value;
     makeManual(me.id);
     // the "Revalued from tier" tag is decided before the rebuild, so the board renders once per move (Oct 11: it
-    // rendered twice, ~0.5s each on a laptop-speed CPU)
+    // rendered twice, ~0.5s each on a laptop-speed CPU); a player whose row is back to the saved one loses it
     const typed = had !== "" && had != null, tag = moved && !(opts && opts.quiet) && !typed;
     if (tag) REVALUED.add(me.id);
+    pruneRevalued();
     rebuild();
     const now = byId.get(me.id);
     if (!now) { REVALUED.delete(me.id); return; }
@@ -7418,6 +7543,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (typed) { typedMoveNotice(me.id, Number(had), before); return; }
     if (opts && opts.revalue) toast(`${now.name} revalued from tier: ${fmt(oldVal)} → ${fmt(now.value)} · #${now.rank} overall, ${now.posRank}.`);
   }
+  // the tag goes once nothing of his own is standing: no move, no deliberate tier, his saved value
+  const ownEdit = id => { const S = editSession(), s = S.refRow.get(id), iVal = colOf(draft, "value");
+    return (S.moves.get(id) || []).length > 0 || S.pinned.has(id) || S.kept.has(id) || !s || (draft.rows[id][iVal] ?? "") !== (s[colOf(S.refTable, "value")] ?? ""); };
+  function pruneRevalued() { [...REVALUED].forEach(id => { if (!ownEdit(id)) REVALUED.delete(id); }); }
   function typedMoveNotice(id, typed, before) {
     const me = byId.get(id); if (!me) return;
     const bent = players.filter(p => p.id !== id && isPlayerRow(p) && before.get(p.id) > 0 && !(p.pos === me.pos && String(p.tier) === String(me.tier))
@@ -7428,18 +7557,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     box.dataset.id = id; box.hidden = false;
   }
 
-  /* Ranking source. Auto players were added under your rankings; the one you move or
-     give a value becomes yours ("manual") when you save. Players who only shift because
-     someone else moved stay auto, and an auto player put back exactly where he was
-     stays auto. */
-  function makeManual(id) {
-    const iSrc = colOf(draft, "source");
-    if (String(draft.rows[id][iSrc] || "").toLowerCase() === "auto") draft.rows[id][iSrc] = "manual";
-    const base = csvToTable(savedCsv), bm = new Map(base.rows.map(r => [keyOf(base, r), r]));
-    draft.rows.forEach(r => {
-      const b = bm.get(keyOf(draft, r));
-      if (b && String(b[colOf(base, "source")] || "").toLowerCase() === "auto" && r[iSrc] === "manual"
-          && ["rank", "pos_rank", "tier", "value"].every(c => (r[colOf(draft, c)] ?? "") === (b[colOf(base, c)] ?? ""))) r[iSrc] = "auto";
+  /* Ranking source. Auto players were added under your rankings; one you move, give a value or put in a tier yourself
+     becomes yours ("manual") when you save. Players who only shift because someone else moved stay auto, and so does
+     an auto player whose own moves, typed value and tier choice have all been undone (Oct 12: decided per player from
+     what he still has standing, not from whether his whole row matches, which a renamed or added tier elsewhere breaks). */
+  function makeManual() {
+    const S = editSession(), iSrc = colOf(draft, "source"), st = S.refTable;
+    S.refRow.forEach((s, id) => {
+      if (!s || String(s[colOf(st, "source")] || "").toLowerCase() !== "auto") return;
+      draft.rows[id][iSrc] = ownEdit(id) ? "manual" : s[colOf(st, "source")];
     });
   }
 
@@ -7447,6 +7573,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   // All view: move a player to overall rank targetRank
   function moveOverall(id, targetRank, opts) {
+    editSession();
     const me = byId.get(id);
     if (!me || me.rank == null) return;
     const order = overallOrder();
@@ -7485,6 +7612,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     toast(`${me.name} is out for the season: #${now ? now.rank : order.length} overall, ${now ? now.posRank : ""}, value 0.`);
   }
   function movePlayer(id, targetNum, forceTier) {
+    editSession();
     const me = byId.get(id);
     if (!me || me.posNum == null) return;
     if (forceTier != null && String(forceTier) === String(OUT_TIER)) { if (String(me.tier) !== String(OUT_TIER)) sendOut(me); return; }
@@ -7492,7 +7620,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const from = group.indexOf(me), to = Math.max(0, Math.min(group.length - 1, targetNum - 1));
     if (from === to && (forceTier == null || String(forceTier) === String(me.tier))) return;
     const newGroup = group.filter(p => p !== me); newGroup.splice(to, 0, me);
-    const tier = forceTier != null ? String(forceTier) : String(tierFor(me, newGroup, group));
+    const tier = forceTier != null ? String(forceTier)
+      : isTagTier(me.tier) ? String(me.tier) : (deriveTiers(newGroup, me, false).get(me.id) ?? String(me.tier));
     const iVal = colOf(draft, "value"), typed = draft.rows[me.id][iVal];
     const hasTyped = typed !== "" && typed != null;
     const target = hasTyped ? Number(typed) : tierTarget(newGroup[to - 1], newGroup[to + 1], tier);
@@ -7501,17 +7630,31 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const slots = order.map((p, k) => p.pos === me.pos ? k : -1).filter(k => k >= 0);
       if (slots.length !== newGroup.length) return;
       slots.forEach((k, n) => { order[k] = newGroup[n]; });
-      writeOrder(order, me, tier);
+      writeOrder(order, me, forceTier != null ? tier : null);   // a dropped-into tier is deliberate; an arrow move's tier is derived
       return;
     }
     const others = overallOrder().filter(p => p !== me), above = newGroup[to - 1], below = newGroup[to + 1];
     const lo = above ? others.indexOf(above) + 1 : 0, hi = below ? others.indexOf(below) : others.length;
-    let k = lo; while (k < hi && others[k].value >= target) k++;
+    /* Straight back (Oct 12): moving him back between the same two players at his position puts him back on the same
+       overall spot he left (the value fit could pick another spot among the other positions in between). */
+    const S = editSession(), memo = S.memo.get(me.id) || [], last = memo[memo.length - 1];
+    let k = null;
+    if (last && last.above === (above ? above.id : null) && last.below === (below ? below.id : null)) {
+      const j = last.over == null ? 0 : others.findIndex(p => p.id === last.over) + 1;
+      if ((last.over == null || j > 0) && j >= lo && j <= hi) { k = j; memo.pop(); }
+    }
+    if (k == null) {
+      const cur = overallOrder(), i = cur.indexOf(me);
+      memo.push({ above: from > 0 ? group[from - 1].id : null, below: from < group.length - 1 ? group[from + 1].id : null, over: i > 0 ? cur[i - 1].id : null });
+      S.memo.set(me.id, memo.slice(-50));
+      k = lo; while (k < hi && others[k].value >= target) k++;
+    }
     others.splice(k, 0, me);
-    writeOrder(others, me, tier, { revalue: !hasTyped });
+    writeOrder(others, me, forceTier != null ? tier : null, { revalue: !hasTyped });
   }
 
   function setValue(id, v) {
+    editSession();
     const before = new Map(players.map(p => [p.id, p.value])), iVal = colOf(draft, "value"), prevTyped = draft.rows[id][iVal];
     draft.rows[id][iVal] = v == null ? "" : String(Math.round(v));
     makeManual(id);
@@ -7570,14 +7713,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     players.filter(p => p.pos === pos && p.tier !== "").forEach(p => { if (!draft.rows[p.id][iN]) draft.rows[p.id][iN] = tierNameOf(pos, p.tier) || ""; });
   }
   function shiftTiers(pos, from, delta) {   // every (non-tag) tier >= from moves by delta (reads the draft, so earlier edits count)
-    const iT = colOf(draft, "tier");
+    const iT = colOf(draft, "tier"), base = editSession().base;
     players.filter(p => p.pos === pos).forEach(p => {
-      const cur = draft.rows[p.id][iT];
+      const cur = draft.rows[p.id][iT], b = base.get(p.id);
       if (cur !== "" && cur != null && !isTagTier(cur) && Number(cur) >= from) draft.rows[p.id][iT] = String(Number(cur) + delta);
+      if (b !== "" && b != null && !isTagTier(b) && Number(b) >= from) base.set(p.id, String(Number(b) + delta));
     });
     (TIER_EMPTY[pos] || []).forEach(e => { if (e.tier >= from) e.tier += delta; });
   }
   function tierAction(act, pos, tier, value) {
+    editSession();
     const t = Number(tier), iT = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
     const members = players.filter(p => p.pos === pos && String(p.tier) === String(tier));
     if (act === "rename") {
@@ -7607,7 +7752,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (target == null) return;
       materializeTierNames(pos);
       const name = tierNameOf(pos, target) || "";
-      members.forEach(p => { draft.rows[p.id][iT] = String(target); draft.rows[p.id][iN] = name; makeManual(p.id); });
+      members.forEach(p => { draft.rows[p.id][iT] = String(target); draft.rows[p.id][iN] = name; editSession().base.set(p.id, String(target)); editSession().pinned.add(p.id); makeManual(p.id); });
       TIER_EMPTY[pos] = (TIER_EMPTY[pos] || []).filter(e => e.tier !== target);
       shiftTiers(pos, t + 1, -1);
       TIER_DEL = null; rebuild(); toast(`Tier deleted. ${members.length} player${members.length > 1 ? "s" : ""} moved to the tier ${act === "del-up" ? "above" : "below"}.`);
@@ -8176,7 +8321,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         localStorage.setItem(LOCAL_KEY, JSON.stringify(edits));
       } else { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); }
     } catch (e) { toast("Couldn't save: this browser is blocking site storage. Your changes are still on screen, unsaved.", 12000); return; }
-    localEdits = edits; savedCsv = tableToCsv(draft);
+    localEdits = edits; savedCsv = tableToCsv(draft); storeSession();
     updateEditorBar();
     // one ranking-history update per changed player, then (when this browser is connected to GitHub)
     // straight to the live site: a save becomes the new master rankings for everyone
@@ -8196,7 +8341,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     discardArmed = false; $("eb-discard").textContent = "Discard browser edits";
     try { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); localStorage.removeItem(PUBLISH_KEY); } catch (e) {}
     writePending([]);   // their ranking-history updates go too
-    localEdits = {}; savedCsv = publishedCsv; draft = csvToTable(savedCsv);
+    localEdits = {}; savedCsv = publishedCsv; draft = csvToTable(savedCsv); resetEditSession(true);
     rebuild(); toast("Browser edits discarded. Showing the live rankings.");
   }
 
@@ -8408,7 +8553,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   $("eb-cancel").addEventListener("click", () => {
     for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k];
     TIER_DEL = TIER_REN = null;
-    REVALUED.clear(); hideBendWarn();
+    REVALUED.clear(); hideBendWarn(); resetEditSession();
     draft = csvToTable(savedCsv); rebuild(); toast("Changes discarded.");
   });
   $("eb-publish").addEventListener("click", publishLive);
@@ -15011,6 +15156,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const historyText = h => `{"note":"AM ranking history: visible changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source M=publish S=scheduled update P=older published update, kind R=ranking change V=manual value change A=automatic repricing (none = legacy, unclassified)], ...]} and one event per publish. The exact board at every publish is in data/rank_snapshots/.","version":2,"events":[\n${(h.events || []).map(e => JSON.stringify(e)).join(",\n")}\n],"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 7)))}`).join(",\n")}\n}}\n`;
   window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, snapshotOf: csv => rankingSnapshot(loadPlayers(csv)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
+  /* Test hook (tests/reversal_check.py): the editor's own move functions, only when a test sets window.__SPM_TEST_HOOKS
+     before the page loads. Never on for visitors; it can only change this browser's unsaved draft, like the arrows. */
+  if (window.__SPM_TEST_HOOKS === true) SPM.edit = { overall: moveOverall, position: movePlayer, value: setValue, tier: tierAction, draft: () => tableToCsv(draft),
+    saved: () => savedCsv, unsaved: () => changedRows().length,
+    reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); hideBendWarn(); resetEditSession(); draft = csvToTable(savedCsv); rebuild(); },
+    values: () => players.filter(isPlayerRow).map(p => [p.id, p.rank, p.pos, p.posNum, String(p.tier), p.value, p.source || ""]) };
 
   // Start-up: restore a saved connection
   sl = readSl();
