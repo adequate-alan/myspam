@@ -1753,7 +1753,6 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 .vt-btn[aria-pressed="true"] { background: var(--accent-primary); color: var(--bg); }
 .vt-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .vt-btn:disabled { opacity: 0.4; cursor: default; }
-#tf-size { flex-wrap: wrap; }
 .owner-filter { display: inline-flex; align-items: center; gap: 10px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .select {
   appearance: none; -webkit-appearance: none;
@@ -3728,6 +3727,26 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .tf-controls[data-mode="discover"] > :not(.tf-player) { display: none; }
 #panel-finder:has(.tf-controls[data-mode="discover"]) .tf-sort { display: none; }
 .tf-src .chip-btn { white-space: nowrap; }
+.tf-src { flex-wrap: wrap; max-width: 100%; }   /* phones: the four modes wrap to a second row instead of running off the screen */
+/* Trade Finder package filter (Alan, Oct 10): You send / You receive counts in a small popover, replacing the
+   1-for-2 / 2-for-1 / 3-for-1s / 2-for-4s tab row; collapsed it reads "Send 1 · Get 2" */
+.tf-pkg { position: relative; }
+.tf-pkg-btn { min-width: 168px; }
+.tf-pkg-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 300px; max-width: calc(100vw - 32px); padding: 12px;
+  background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 22px 44px -18px var(--shadow-color), 0 2px 6px -2px var(--shadow-soft); animation: dd-in 0.12s ease-out; }
+.tf-pkg-pop[hidden] { display: none; }
+.tf-pkg-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tf-pkg-h { display: block; margin: 0 0 6px 4px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.tf-pkg-opts { display: flex; flex-direction: column; gap: 2px; }
+.tf-pkg-opt { display: block; width: 100%; padding: 7px 10px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text-primary);
+  font: 500 0.84rem/1.25 var(--font-body); text-align: left; cursor: pointer; }
+.tf-pkg-opt:hover:not(:disabled) { background: var(--hover-bg); }
+.tf-pkg-opt[aria-checked="true"] { background: color-mix(in srgb, var(--accent-primary) 16%, transparent); color: var(--text-strong); font-weight: 650; }
+.tf-pkg-opt:disabled { color: var(--text-muted); opacity: .45; cursor: default; }
+.tf-pkg-opt:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+.tf-pkg-note { margin: 10px 4px 0; font-size: 0.72rem; line-height: 1.4; color: var(--text-muted); }
+@media (max-width: 760px) { .tf-pkg-btn { min-width: 0; width: 100%; } .tf-pkg-pop { width: min(300px, calc(100vw - 32px)); } }
 .tf-intel { display: grid; gap: 12px; width: 100%; padding: 14px 16px; margin-bottom: 6px; background: var(--surface); border: 1px solid var(--line-soft); border-left: 3px solid var(--navy-ink, var(--line)); border-radius: var(--r-lg, 12px); box-shadow: var(--lift, none); }
 .tfi-id { display: flex; align-items: center; gap: 14px; }
 .tfi-name { font-size: 1.15rem; }
@@ -3757,7 +3776,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .tf-why2 { margin: 8px 0 0; font-size: 0.82rem; color: var(--ink-2); line-height: 1.45; }
 .tf-why2 b { color: var(--text-strong); font-weight: 650; }
 .tf-why2.lev { color: var(--navy-ink); }
-.tf-disc { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; margin-top: 8px; }
+.tf-disc { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 10px; margin-top: 8px; }
 .tf-dcard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-lg, 12px); box-shadow: var(--lift, none); }
 .tf-dmain .pl-head { gap: 8px; align-items: center; flex-wrap: wrap; }
 .tf-dsub { margin: 3px 0 0; display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--muted); }
@@ -4334,9 +4353,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <label class="tf-field"><span class="ctl-label" id="tf-pos-label">Position wanted</span><select class="select" id="tf-pos">
         <option value="ANY">Any position</option><option>QB</option><option>RB</option><option>WR</option><option>TE</option></select></label>
       <label class="tf-field"><span class="ctl-label">Trade goal</span><select class="select" id="tf-goal" aria-label="Trade goal"></select></label>
-      <div class="tf-field tf-type"><span class="sr-only">Trade type</span>
-        <div class="view-toggle" id="tf-size" role="group" aria-label="Trade type">
-          <button class="vt-btn" type="button" data-size="11" aria-pressed="false">1-for-1</button><button class="vt-btn" type="button" data-size="12" aria-pressed="false">1-for-2</button><button class="vt-btn" type="button" data-size="21" aria-pressed="false">2-for-1</button><button class="vt-btn" type="button" data-size="31" aria-pressed="false">3-for-1s</button><button class="vt-btn" type="button" data-size="24" aria-pressed="false">2-for-4s</button><button class="vt-btn" type="button" data-size="all" aria-pressed="true">All packages</button>
+      <div class="tf-field tf-pkg"><span class="ctl-label" id="tf-pkg-label">Package</span>
+        <button class="select dd-btn tf-pkg-btn" id="tf-pkg" type="button" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="tf-pkg-label tf-pkg"><span class="dd-label">Any package</span></button>
+        <div class="tf-pkg-pop" id="tf-pkg-pop" role="dialog" aria-label="Package size" hidden>
+          <div class="tf-pkg-cols">
+            <div class="tf-pkg-col"><span class="tf-pkg-h" id="tf-pkg-send-h">You send</span><div class="tf-pkg-opts" data-side="send" role="radiogroup" aria-labelledby="tf-pkg-send-h"></div></div>
+            <div class="tf-pkg-col"><span class="tf-pkg-h" id="tf-pkg-recv-h">You receive</span><div class="tf-pkg-opts" data-side="recv" role="radiogroup" aria-labelledby="tf-pkg-recv-h"></div></div>
+          </div>
+          <p class="tf-pkg-note" id="tf-pkg-note"></p>
         </div>
       </div>
       <details class="tf-more">
@@ -5199,7 +5223,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T07:30Z";
+  const BUILD_ID = "2026-10-10T09:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -12751,16 +12775,30 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      premium via league values, bench depth, roster spots) ranks the value-matched ideas.
      Optional 3-team ideas only appear when every team improves its lineup and the direct
      2-team swap wouldn't work for the partner. */
-  const TF = { goalSet: false, src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", size: "all", three: false,
+  const TF = { goalSet: false, src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", send: "any", recv: "any", three: false,
                gap: 10, fair: false, goal: "fair", sort: "best", disc: "buy", q: "", ideas: [], ideas3: [], openFull: new Set(), show: 10, showKey: "" };
   const TF_PAGE = 10;   // ideas shown at first; "Show more" adds this many
   // Trade types (Steven, Oct 4): 1-for-1, 1-for-2, 2-for-1 or All packages (incl. 2-for-2), counted from the starting team's side.
   // A 2-player package already fixes one side at 2: shopping it (give) allows 2-for-1, getting it allows 1-for-2.
-  // trade types, counted from the starting team's side ([gives, gets]); 3-for-1s and 2-for-4s search both ways round
-  const TF_SHAPES = { "11": [[1, 1]], "12": [[1, 2]], "21": [[2, 1]], "31": [[3, 1], [1, 3]], "24": [[2, 4], [4, 2]], all: null };
-  // a 2-player package fixes one side at 2: shopped → shapes where the starting team gives 2, wanted → where it gets 2
-  const tfSizeOk = (k, pkg, mode) => k === "all" || !pkg || TF_SHAPES[k].some(([a, b]) => (mode === "give" ? a : b) === 2);
-  const tfSize = (pkg, mode) => (tfSizeOk(TF.size, pkg, mode) ? TF.size : "all");
+  // Package size, always directional (Alan, Oct 10): [players the starting team sends, players it gets]. These are the
+  // shapes the generator in findTrades actually builds; 3→2 only exists in Target a player (three pieces for a pair).
+  // A 2-player package pins its own side at 2. Any · Any = the default search (1–2 players a side, plus Target's 3→2),
+  // exactly the old "All packages"; the bigger shapes (1→3, 3→1, 2→4, 4→2) are searched only when picked.
+  const TF_COMBOS = [[1, 1], [1, 2], [2, 1], [2, 2], [1, 3], [3, 1], [2, 4], [4, 2]];
+  function tfCombos(pkg, mode, tgt) {
+    if (pkg) return mode === "give" ? [[2, 1], [2, 2], [2, 4]] : [[1, 2], [2, 2], [4, 2]];
+    return tgt ? TF_COMBOS.concat([[3, 2]]) : TF_COMBOS;
+  }
+  // the shapes the current Send / Receive choice asks for (null = the default search), keeping the choice valid
+  function tfShapes(pkg, mode, tgt) {
+    const all = tfCombos(pkg, mode, tgt), n = v => (v === "any" ? null : Number(v));
+    if (n(TF.send) != null && !all.some(([a]) => a === n(TF.send))) TF.send = "any";
+    if (n(TF.recv) != null && !all.some(([a, b]) => b === n(TF.recv) && (n(TF.send) == null || a === n(TF.send)))) TF.recv = "any";
+    const s = n(TF.send), r = n(TF.recv);
+    if (s == null && r == null) return null;
+    return all.filter(([a, b]) => (s == null || a === s) && (r == null || b === r));
+  }
+  const pkgText = (s, r) => (s === "any" && r === "any" ? "Any package" : `Send ${s === "any" ? "any" : s} · Get ${r === "any" ? "any" : r}`);
   function openFinder(sid) {
     TF.sid = String(sid); TF.sid2 = ""; TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
     const p = bySleeper().get(TF.sid), o = p ? LG.ownerOf.get(p.id) : null;
@@ -12989,7 +13027,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const singles = (pool, lo, hi) => pool.filter(p => V(p) >= lo && V(p) <= hi).map(p => [p]);
         const want = (a, b) => opts.shapes.some(x => x[0] === a && x[1] === b);
         const pv = pkg ? Math.max(...pkg.map(V)) : xv, sOthers = sPool.filter(p => p !== target), tOthers = tPool.filter(p => p !== target);
-        giveSets = []; getSets = [];
+        // added to the standard sets (a choice like Send 1 · Get any mixes 1→2 with 1→3); duplicates removed below
         const add = (g, t) => { giveSets.push(...g); getSets.push(...t); };
         if (pkg) {   // a 2-player package is the "2": shopped (2-for-4) or wanted (4-for-2)
           if (mode === "give" && want(2, 4)) add([pkg], combos(top(tPool, 0.12 * pv, 1.1 * pv, 9), 4));
@@ -13005,6 +13043,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           if (want(2, 4)) add(pairs(sPool, null, 2.5 * xv), combos(top(tOthers, 0.12 * xv, 1.1 * xv, 8), 4, target));
           if (want(4, 2)) add(combos(top(sPool, 0.12 * xv, 1.1 * xv, 9), 4), pairs(tPool, target));
         }
+      }
+      if (big) {
+        const uniq = sets => { const seen = new Set(); return sets.filter(x => { const k = x.map(p => p.id).sort().join(","); return seen.has(k) ? false : seen.add(k); }); };
+        giveSets = uniq(giveSets); getSets = uniq(getSets);
       }
       // the same package adjustment the trade model applies (extra players next to the best one count for less): the
       // 3-for-1 / 2-for-4 pre-filter compares these, since their raw totals are far apart even when the trade is fair
@@ -13659,7 +13701,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <div><dt>Market raw · they receive vs send</dt><dd>${fmt(mk.mm.rawB ?? 0)} <span>vs</span> ${fmt(mk.mm.rawA ?? 0)}</dd></div></dl></div>` : "";
     return `<article class="tf-card tf-tcard ml-card${mk.accLabel === "High" ? " good-fit" : ""}">
       <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div>
-        <span class="tf-pills"><span class="tf-pill lev ${lvCls}" title="AM Edge for ${esc(sN)} plus whether the market's view of their side supports it">${esc(mk.label)}</span><span class="tf-size">${it.give.length}-for-${it.get.length}</span></span></header>
+        <span class="tf-pills"><span class="tf-pill lev ${lvCls}" title="AM Edge for ${esc(sN)} plus whether the market's view of their side supports it">${esc(mk.label)}</span><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></span></header>
       <div class="tf-sides">
         <div class="tf-side"><h4>${esc(recv)}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return row(p, K.outSet(it.team).has(String(p.sleeperId)) ? "on IR: no help to your lineup yet" : fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
         <div class="tf-side"><h4>${esc(send)}</h4><ul>${it.give.map(p => { const fe = it.fT.inc.find(e => e.p === p); return row(p, K.outSet(it.S).has(String(p.sleeperId)) ? "on IR" : fe && fe.starts ? "would start for them at " + fe.role : ""); }).join("")}</ul></div>
@@ -13693,7 +13735,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       .concat(it.mktDiff == null ? [] : [`<span title="Raw totals of the market / expert consensus (FantasyCalc + Flock) on AM's scale, no package adjustment">Market raw ${signPct(it.mktDiff)}</span>`]);
     return `<article class="tf-card tf-tcard${v.cls === "them" ? " bad-fit" : it.conf === "Likely" ? " good-fit" : ""}">
       <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div>
-        <span class="tf-pills">${it.leverage ? `<span class="tf-pill lev" title="The market values what you send more than AM does, and AM values what you get more than the market">Market leverage</span>` : ""}<span class="tf-pill conf ${it.conf === "Likely" ? "hi" : it.conf === "Plausible" ? "mid" : "lo"}" title="How likely the other manager is to consider it: their roster fit, whether it opens a hole for them, and the market">${esc(it.conf)}</span><span class="tf-size">${it.give.length}-for-${it.get.length}</span></span></header>
+        <span class="tf-pills">${it.leverage ? `<span class="tf-pill lev" title="The market values what you send more than AM does, and AM values what you get more than the market">Market leverage</span>` : ""}<span class="tf-pill conf ${it.conf === "Likely" ? "hi" : it.conf === "Plausible" ? "mid" : "lo"}" title="How likely the other manager is to consider it: their roster fit, whether it opens a hole for them, and the market">${esc(it.conf)}</span><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></span></header>
       <div class="tf-vline"><span class="tf-verdict-big ${v.cls}">${esc(v.label)}</span><span class="tf-nums3">${nums.join("")}</span></div>
       <div class="tf-sides">
         <div class="tf-side"><h4>You receive</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return row(p, fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
@@ -13805,18 +13847,22 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("tf-gap").value = String(TF.gap); $("tf-gap").disabled = TF.fair || goalOn;
     $("tf-fair").disabled = goalOn;
     $("tf-fair").checked = TF.fair; $("tf-three").checked = TF.three;
-    // Trade type, from the starting team's side: 1-for-2 = it gives 1 player and gets 2. A 2-player package fixes one side at 2.
-    const size = tfSize(pkg, mode), sWho = S && !S.mine ? S.name : "you";
-    $("tf-size").querySelectorAll("button").forEach(b => {
-      const k = b.dataset.size, ok = tfSizeOk(k, pkg, mode);
-      b.setAttribute("aria-pressed", k === size); b.disabled = !ok;
-      const gv = sWho === "you" ? "give" : "gives", gt = sWho === "you" ? "get" : "gets", Who = sWho === "you" ? "You" : sWho;
-      b.title = k === "all" ? "1-for-1, 1-for-2, 2-for-1 and 2-for-2 (pick 3-for-1s or 2-for-4s to search those)"
-        : ok && k === "31" ? `3-for-1 and 1-for-3: ${Who} ${gv} 3 players and ${gt} 1, or ${gv} 1 and ${gt} 3`
-        : ok && k === "24" ? (pkg ? `${Who} ${mode === "give" ? gv + " the 2 and " + gt + " 4" : gt + " the 2 for 4"}` : `2-for-4 and 4-for-2: ${Who} ${gv} 2 players and ${gt} 4, or ${gv} 4 and ${gt} 2`)
-        : !ok ? `Not possible with a 2-player package (${mode === "give" ? sWho + " give" + (sWho === "you" ? "" : "s") + " 2" : sWho + " get" + (sWho === "you" ? "" : "s") + " 2"})`
-        : `${sWho === "you" ? "You give" : sWho + " gives"} ${k[0]} player${k[0] === "1" ? "" : "s"}, ${sWho === "you" ? "get" : "gets"} ${k[1]}`;
-    });
+    // Package: You send / You receive, from the starting team's side
+    const tgtMode = TF.src === "target" && mode === "get" && !pkg;
+    const shapes = tfShapes(pkg, mode, tgtMode), combos = tfCombos(pkg, mode, tgtMode);
+    const sWho = S && !S.mine ? S.name : "you", nm = v => (v === "any" ? null : Number(v));
+    $("tf-pkg").querySelector(".dd-label").textContent = pkgText(TF.send, TF.recv);
+    $("tf-pkg-send-h").textContent = sWho === "you" ? "You send" : `${sWho} sends`;
+    $("tf-pkg-recv-h").textContent = sWho === "you" ? "You receive" : `${sWho} receives`;
+    const optHtml = side => ["any", 1, 2, 3, 4].filter(v => v === "any" || combos.some(c => c[side === "send" ? 0 : 1] === v)).map(v => {
+      const cur = String(TF[side]) === String(v), other = nm(TF[side === "send" ? "recv" : "send"]);
+      const ok = v === "any" || other == null || combos.some(([a, b]) => side === "send" ? a === v && b === other : b === v && a === other);
+      return `<button class="tf-pkg-opt" type="button" role="radio" data-pkg="${side}" data-v="${v}" aria-checked="${cur}"${ok ? "" : ` disabled title="Not a package the Trade Finder builds with ${side === "send" ? "Get " + other : "Send " + other}"`}>${v === "any" ? "Any" : v + (v === 1 ? " player" : " players")}</button>`;
+    }).join("");
+    $("tf-pkg-pop").querySelector('[data-side="send"]').innerHTML = optHtml("send");
+    $("tf-pkg-pop").querySelector('[data-side="recv"]').innerHTML = optHtml("recv");
+    $("tf-pkg-note").textContent = pkg ? `${pkg.length} players are already chosen, so ${mode === "give" ? (sWho === "you" ? "you send" : sWho + " sends") : (sWho === "you" ? "you receive" : sWho + " receives")} 2.`
+      : "Any · Any searches 1–2 players a side" + (tgtMode ? " (and 3 for 2)" : "") + ". Pick 3 or 4 players for bigger packages.";
     const sName = S ? (S.mine ? "me" : S.name) : "starting team";
     $("tf-sort").innerHTML = [["best", "Best match"], ["fair", "Fairest"], ["start", `Best for ${sName}`], ["roster", "Biggest roster improvement"], ["oneone", "1-for-1 first"], ["fewest", "Fewest players"]]
       .map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
@@ -13834,7 +13880,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     if (mode === "get" && !owner) { body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent, so there's no one to trade with. ${esc(S.mine ? "You" : S.name)} can pick him up off waivers.</p>`; return; }
     const gap = TF.goal === "edge" ? 10 : TF.goal === "value" ? 15 : TF.goal === "market" ? ML_MAX : TF.goal === "any" ? Math.max(TF.gap, 15) : TF.fair ? 2.99 : TF.gap;
-    const opts = { pos: TF.pos, against: TF.against, gap, packages: tfSize(pkg, mode) !== "11", shapes: TF_SHAPES[tfSize(pkg, mode)] || null, goal: TF.goal, triples: !!tgt };
+    const opts = { pos: TF.pos, against: TF.against, gap, packages: !(shapes && shapes.every(([a, b]) => a === 1 && b === 1)), shapes, goal: TF.goal, triples: !!tgt };
     const within = TF.goal === "market" ? `where AM favors ${S.mine ? "you" : S.name} (2–${ML_MAX}% AM Edge) and the market sees their side as fair or better` : TF.goal === "edge" ? `with a ${GOAL_RANGE.edge.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "value" ? `with a ${GOAL_RANGE.value.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "any" ? `within ${gap}%` : TF.fair ? "within the fair range" : `within ${TF.gap}%`;
     let ideas = findTrades(pkg || X, mode, S, opts);
     const sortKey = {
@@ -13859,7 +13905,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // compact row: photo · name · value, then "RB2 · starts at RB1"
     const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     // scan order: partner → verdict → players → fit; first TF_PAGE ideas, then "Show more"
-    const showKey = [TF.src, TF.sid, TF.sid2, TF.from, TF.against, TF.pos, TF.size, TF.gap, TF.fair, TF.goal, TF.sort, TF.srcTeam].join("|");
+    const showKey = [TF.src, TF.sid, TF.sid2, TF.from, TF.against, TF.pos, TF.send, TF.recv, TF.gap, TF.fair, TF.goal, TF.sort, TF.srcTeam].join("|");
     if (TF.showKey !== showKey) { TF.showKey = showKey; TF.show = TF_PAGE; }
     const MK = mlOn ? TK || leagueKit() : null;
     const cards = ideas.slice(0, TF.show).map((it, i) => {
@@ -13869,7 +13915,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const full = TF.openFull.has(i), fw = fullWhy(it);
       const badFit = it.fS.net <= -8 || it.fT.net <= -8, goodFit = !badFit && it.fS.net >= 3 && it.fT.net >= 3;
       return `<article class="tf-card${badFit ? " bad-fit" : goodFit ? " good-fit" : ""}">
-        <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size">${it.give.length}-for-${it.get.length}</span></header>
+        <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></header>
         <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}" title="${esc(fitBadge0(it, v))}">${esc(fitBadge(it, v))}</span><span class="tf-diff">${it.more.toFixed(1)}% raw difference · ${fmtNet(it.fS.net)} fit for ${esc(S.mine ? "you" : S.name)} · ${fmtNet(it.fT.net)} fit for them</span></div>
         <div class="tf-sides">
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => crow(p, "")).join("")}</ul></div>
@@ -13900,8 +13946,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const more = ideas.length - Math.min(TF.show, ideas.length);
     body.innerHTML = (ideas.length ? `<div class="tf-list">${cards}</div>${more > 0 ? `<div class="tf-more-wrap"><button class="btn" type="button" data-tf-more>Show ${Math.min(TF_PAGE, more)} more idea${Math.min(TF_PAGE, more) === 1 ? "" : "s"} <span class="muted">(${more} left)</span></button></div>` : ""}`
         : mlOn ? `<p class="empty-note">No Market Leverage trades for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}: none where AM favors ${esc(S.mine ? "you" : S.name)} while the market and their roster give the other team a reason to say yes.${mkAll().srcs.length ? "" : " No market source is loaded."} Try All packages or another player.</p>`
-        : GOAL_RANGE[TF.goal] ? `<p class="empty-note">No realistic trades ${esc(within)} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}: every one that favors ${esc(S.mine ? "you" : S.name)} by that much doesn't make enough sense for the other team. Try ${TF.goal === "value" ? "Slight edge" : "Fair / balanced"}${tfSize(pkg, mode) !== "all" ? " or All packages" : ""}.</p>`
-        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${tfSize(pkg, mode) !== "all" ? " or All packages" : ""}.</p>`) +
+        : GOAL_RANGE[TF.goal] ? `<p class="empty-note">No realistic trades ${esc(within)} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}: every one that favors ${esc(S.mine ? "you" : S.name)} by that much doesn't make enough sense for the other team. Try ${TF.goal === "value" ? "Slight edge" : "Fair / balanced"}${shapes ? " or Any package" : ""}.</p>`
+        : `<p class="empty-note">No trades within ${TF.fair ? "the fair range" : TF.gap + "%"} for ${esc(pkg ? X.name + " + " + Y.name : X.name)}${TF.pos !== "ANY" ? " at " + TF.pos : ""}. Try a bigger value difference${shapes ? " or Any package" : ""}.</p>`) +
       (TF.three && !pkg ? `<h3 class="section-label">3-team ideas</h3>` + (cards3 ? `<div class="tf-list">${cards3}</div>` : `<p class="pp-note">No 3-team deal solves something a 2-team trade can't here.</p>`) : "");
   }
   $("tf-src").addEventListener("click", e => {
@@ -13939,7 +13985,23 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   $("tf-fair").addEventListener("change", e => { TF.fair = e.target.checked; renderFinder(); });
   $("tf-three").addEventListener("change", e => { TF.three = e.target.checked; renderFinder(); });
   $("tf-sort").addEventListener("change", e => { TF.sort = e.target.value; TF.openFull = new Set(); renderFinder(); });
-  $("tf-size").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { TF.size = b.dataset.size; renderFinder(); } });
+  // Package popover: opens under its button; a choice applies at once and it stays open for the other side; Escape or a
+  // click outside closes it
+  const pkgPop = $("tf-pkg-pop"), pkgBtn = $("tf-pkg");
+  const pkgOpen = on => { pkgPop.hidden = !on; pkgBtn.setAttribute("aria-expanded", on); if (on) (pkgPop.querySelector('[aria-checked="true"]') || pkgPop.querySelector("button")).focus(); };
+  pkgBtn.addEventListener("click", () => pkgOpen(pkgPop.hidden));
+  pkgPop.addEventListener("click", e => {
+    const b = e.target.closest("[data-pkg]"); if (!b || b.disabled) return;
+    TF[b.dataset.pkg] = b.dataset.v; renderFinder();
+    const again = pkgPop.querySelector(`[data-pkg="${b.dataset.pkg}"][data-v="${b.dataset.v}"]`); if (again) again.focus();
+  });
+  pkgPop.addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); pkgOpen(false); pkgBtn.focus(); return; }
+    if (!["ArrowDown", "ArrowUp"].includes(e.key)) return;
+    const list = [...e.target.closest(".tf-pkg-opts").querySelectorAll("button:not(:disabled)")], i = list.indexOf(e.target);
+    if (i < 0) return; e.preventDefault(); list[(i + (e.key === "ArrowDown" ? 1 : list.length - 1)) % list.length].focus();
+  });
+  document.addEventListener("pointerdown", e => { if (!pkgPop.hidden && !e.target.closest(".tf-pkg")) pkgOpen(false); });
   $("tf-lead").addEventListener("click", e => {
     const g = e.target.closest("[data-tf-goal]"); if (!g) return;
     TF.goal = g.dataset.tfGoal; TF.goalSet = true; TF.openFull = new Set(); renderFinder();
