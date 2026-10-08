@@ -184,9 +184,11 @@ jobs:
           path: ${{ runner.temp }}/ci-logs
           retention-days: 14
 
+  # always(): GitHub skips a job without a status function whenever ANY upstream job was skipped, and `refresh` is
+  # skipped on every push and pull request (PR #1's first run skipped the full suite that way).
   full:
     needs: verify
-    if: needs.verify.outputs.full == 'true'
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.full == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -220,7 +222,7 @@ jobs:
   # Only after every shard passed: this exact code is verified, so later rankings-only publishes on it run the fast checks.
   mark-verified:
     needs: [verify, full]
-    if: needs.full.result == 'success' && github.event_name != 'pull_request'
+    if: always() && needs.full.result == 'success' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - run: mkdir -p "$RUNNER_TEMP/verified" && echo "${{ needs.verify.outputs.sha }}" > "$RUNNER_TEMP/verified/sha"
@@ -231,7 +233,9 @@ jobs:
 
   build:
     needs: [verify, full]
-    if: always() && github.event_name != 'pull_request' && needs.verify.result == 'success' && (needs.full.result == 'success' || needs.full.result == 'skipped')
+    # deploy only after the full suite passed, or when verify said this exact code already passed it: a full suite that
+    # was skipped for any other reason never lets code through
+    if: always() && github.event_name != 'pull_request' && needs.verify.result == 'success' && (needs.full.result == 'success' || (needs.full.result == 'skipped' && needs.verify.outputs.full == 'false'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

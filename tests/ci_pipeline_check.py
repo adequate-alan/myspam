@@ -59,14 +59,23 @@ def evaluate(expr, ctx):
     e = e.replace("&&", " and ").replace("||", " or ").replace("!=", " != ")
     return bool(eval(e, {}))
 
+def ancestors(j, seen=None):
+    seen = set() if seen is None else seen
+    for d in need(j):
+        if d not in seen: seen.add(d); ancestors(d, seen)
+    return seen
+
 def run(event, refresh="skipped", verify="success", full_needed=True, full="success", build="success"):
     """Walk the graph like Actions: a job runs when its `if` is true (jobs without one need every dependency to succeed)."""
     res, out = {}, {}
     def go(j, actual):
         cond = jobs[j].get("if")
         ctx = {"result": res, "outputs": out, "event": event}
-        runs = evaluate(cond, ctx) if cond else all(res.get(d) == "success" for d in need(j))
-        if cond and "always()" not in cond and not all(res.get(d) in ("success",) for d in need(j)): runs = False   # implicit success()
+        # GitHub's rule: a job whose `if` has no status function gets an implicit success(), which needs EVERY job
+        # upstream of it (direct or not) to have succeeded; a skipped ancestor skips it (PR #1's first run: refresh
+        # skipped on a pull request → full skipped although verify asked for it)
+        ok_up = all(res.get(a) == "success" for a in ancestors(j))
+        runs = (evaluate(cond, ctx) if cond else True) and (ok_up or (cond is not None and re.search(r"always\(\)|failure\(\)|cancelled\(\)", cond) is not None))
         res[j] = actual if runs else "skipped"
     go("refresh", refresh) if event in ("schedule", "workflow_dispatch") else res.__setitem__("refresh", "skipped")
     go("verify", verify)
@@ -85,9 +94,18 @@ cases = [
     ("scheduled refresh fails its data check", dict(event="schedule", refresh="failure"), False),
     ("pull request, everything passes", dict(event="pull_request"), False),
 ]
+for ev in ("push", "pull_request"):
+    got, res = run(event=ev, full_needed=True)
+    ok(res["full"] == "success", f"Gate: on a {ev} that needs the full suite, the full suite runs ({res})")
+bc = jobs["build"]["if"]
+ok(not evaluate(bc, {"result": {"verify": "success", "full": "skipped"}, "outputs": {"verify": {"full": "true"}}, "event": "push"}),
+   "Gate: a full suite that was needed but skipped (for any reason) never deploys")
+ok(evaluate(bc, {"result": {"verify": "success", "full": "skipped"}, "outputs": {"verify": {"full": "false"}}, "event": "push"}),
+   "Gate: the fast path deploys only when verify said this exact code already passed the full suite")
 for label, kw, want in cases:
     got, res = run(**kw)
     ok(got == want, f"Gate: {label} → {'deploys' if got else 'no deploy'} {res}")
+ok("always()" in jobs["mark-verified"]["if"] and "always()" in jobs["full"]["if"], "full and mark-verified can't be skipped by a skipped upstream job")
 mv = jobs["mark-verified"]["if"]
 ok(evaluate(mv, {"result": {"full": "success"}, "outputs": {}, "event": "push"}) and not evaluate(mv, {"result": {"full": "failure"}, "outputs": {}, "event": "push"})
    and not evaluate(mv, {"result": {"full": "skipped"}, "outputs": {}, "event": "push"}) and not evaluate(mv, {"result": {"full": "success"}, "outputs": {}, "event": "pull_request"}),
