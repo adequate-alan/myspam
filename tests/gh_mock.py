@@ -11,11 +11,17 @@ It answers the endpoints the site uses, the way GitHub does:
   GET   /repos/{repo}/git/blobs/{sha}       base64 in 60-character lines, with size
   POST  /repos/{repo}/git/blobs | trees | commits   (trees accept nested paths on a base_tree, like GitHub)
   PATCH /repos/{repo}/git/refs/heads/main   fast-forward only: 422 "Update is not a fast forward" otherwise
+  GET   /repos/{repo}/compare/{sha}...main   status identical / ahead / diverged (is the commit on the branch?)
   GET   /repos/{repo}/contents/{path}       like GitHub: files over 1 MB come back with "content": "" and
                                             "encoding": "none" (the cause of the Oct 11 publishing failure)
 Every request is logged in `calls`. `faults` injects failures: {"patch": status}, {"post_blob": status},
 {"concurrent": fn(repo)} (runs once, just before the next PATCH), {"readback": True} (a new commit reads back wrong),
 {"truncate": True} (blobs come back short).
+Phase 1 additions: {"respond": fn(method, rest) -> None | "abort" | (status, body[, headers])} answers any request first
+(network failures, 401/403/429, rate limits, tokens echoed in messages); {"patch_lost": True} moves the branch and then
+drops the answer (the commit landed but the browser never heard); {"offline_after_patch": True} drops every request after
+the next branch move, until cleared; {"bad_commit": True} returns a commit with no tree (an unexpected response shape).
+`delay` = seconds to hold each request (a slow GitHub). `token_seen` records the Authorization headers.
 """
 import base64, hashlib, itertools, json, re
 
@@ -28,6 +34,7 @@ class Repo:
         self.repo, self.branch, self.login = repo, branch, login
         self.blobs, self.trees, self.commits = {}, {}, {}
         self.calls, self.faults = [], {}
+        self.delay, self.token_seen = 0, set()
         tree = self._tree_from({p: self._put_blob(b) for p, b in files.items()})
         self.head = self._commit(tree, [], "initial")
         self.initial = self.head
@@ -94,8 +101,18 @@ class Repo:
         url, method = req.url.split("?")[0], req.method
         path = url.replace("https://api.github.com", "")
         self.calls.append((method, path))
-        def send(status, body):
-            return route.fulfill(status=status, content_type="application/json", body=json.dumps(body))
+        auth = req.headers.get("authorization")
+        if auth: self.token_seen.add(auth)
+        if self.delay:
+            import time; time.sleep(self.delay)
+        def send(status, body, headers=None):
+            return route.fulfill(status=status, content_type="application/json", body=json.dumps(body), headers=headers or {})
+        if self.faults.get("offline"): return route.abort()
+        fn = self.faults.get("respond")
+        if fn:
+            r = fn(method, path.replace(f"/repos/{self.repo}", "", 1))
+            if r == "abort": return route.abort()
+            if r: return send(*r)
         R = f"/repos/{self.repo}"
         if path == R: return send(200, {"full_name": self.repo, "permissions": {"push": True}})
         if path == "/user": return send(200, {"login": self.login})
@@ -107,6 +124,7 @@ class Repo:
         if method == "GET" and m:
             c = self.commits.get(m[1])
             if not c: return send(404, {"message": "Not Found"})
+            if self.faults.get("bad_commit"): return send(200, {"sha": m[1], "parents": []})
             return send(200, {"sha": m[1], "tree": {"sha": c["tree"]}, "parents": [{"sha": s} for s in c["parents"]], "message": c["message"]})
         m = re.fullmatch(r"/git/trees/([0-9a-f]+)", rest)
         if method == "GET" and m:
@@ -145,7 +163,18 @@ class Repo:
             if not c: return send(422, {"message": "Object does not exist"})
             if not b.get("force") and self.head not in c["parents"]: return send(422, {"message": "Update is not a fast forward"})
             self.head = b["sha"]
+            if self.faults.pop("patch_lost", None): return route.abort()
+            if self.faults.pop("offline_after_patch", None): self.faults["offline"] = True; return route.abort()
             return send(200, {"ref": f"refs/heads/{self.branch}", "object": {"sha": self.head}})
+        m = re.fullmatch(r"/compare/([0-9a-f]+)\.\.\.(\w+)", rest)   # is base an ancestor of the branch? (status only)
+        if method == "GET" and m:
+            if m[1] not in self.commits: return send(404, {"message": "Not Found"})
+            seen, todo = set(), [self.head]
+            while todo:
+                c = todo.pop()
+                if c in seen: continue
+                seen.add(c); todo += self.commits[c]["parents"]
+            return send(200, {"status": "identical" if m[1] == self.head else "ahead" if m[1] in seen else "diverged"})
         m = re.fullmatch(r"/contents/(.+)", rest)
         if method == "GET" and m:
             data = self.read(m[1])
