@@ -4336,7 +4336,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <label class="tf-field"><span class="ctl-label">Trade goal</span><select class="select" id="tf-goal" aria-label="Trade goal"></select></label>
       <div class="tf-field tf-type"><span class="sr-only">Trade type</span>
         <div class="view-toggle" id="tf-size" role="group" aria-label="Trade type">
-          <button class="vt-btn" type="button" data-size="11" aria-pressed="false">1-for-1</button><button class="vt-btn" type="button" data-size="12" aria-pressed="false">1-for-2</button><button class="vt-btn" type="button" data-size="21" aria-pressed="false">2-for-1</button><button class="vt-btn" type="button" data-size="all" aria-pressed="true">All packages</button>
+          <button class="vt-btn" type="button" data-size="11" aria-pressed="false">1-for-1</button><button class="vt-btn" type="button" data-size="12" aria-pressed="false">1-for-2</button><button class="vt-btn" type="button" data-size="21" aria-pressed="false">2-for-1</button><button class="vt-btn" type="button" data-size="31" aria-pressed="false">3-for-1s</button><button class="vt-btn" type="button" data-size="24" aria-pressed="false">2-for-4s</button><button class="vt-btn" type="button" data-size="all" aria-pressed="true">All packages</button>
         </div>
       </div>
       <details class="tf-more">
@@ -5199,7 +5199,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T06:30Z";
+  const BUILD_ID = "2026-10-10T07:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -12756,7 +12756,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const TF_PAGE = 10;   // ideas shown at first; "Show more" adds this many
   // Trade types (Steven, Oct 4): 1-for-1, 1-for-2, 2-for-1 or All packages (incl. 2-for-2), counted from the starting team's side.
   // A 2-player package already fixes one side at 2: shopping it (give) allows 2-for-1, getting it allows 1-for-2.
-  const tfSizeOk = (k, pkg, mode) => k === "all" || !pkg || (mode === "give" ? k[0] === "2" : k[1] === "2");
+  // trade types, counted from the starting team's side ([gives, gets]); 3-for-1s and 2-for-4s search both ways round
+  const TF_SHAPES = { "11": [[1, 1]], "12": [[1, 2]], "21": [[2, 1]], "31": [[3, 1], [1, 3]], "24": [[2, 4], [4, 2]], all: null };
+  // a 2-player package fixes one side at 2: shopped → shapes where the starting team gives 2, wanted → where it gets 2
+  const tfSizeOk = (k, pkg, mode) => k === "all" || !pkg || TF_SHAPES[k].some(([a, b]) => (mode === "give" ? a : b) === 2);
   const tfSize = (pkg, mode) => (tfSizeOk(TF.size, pkg, mode) ? TF.size : "all");
   function openFinder(sid) {
     TF.sid = String(sid); TF.sid2 = ""; TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
@@ -12967,10 +12970,56 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
             if (V(top[k]) >= 0.2 * V(top[i])) giveSets.push([top[i], top[j], top[k]]);
         }
       }
+      // 3-for-1s and 2-for-4s (Alan, Oct 10; only when that trade type is picked, never under All packages), both ways
+      // round, counted from S's side: 3-for-1 (S consolidates three into one better player), 1-for-3 (S splits one into
+      // three), 2-for-4 and 4-for-2. Every piece is real (at least 15% of the biggest piece on its side), and the pools
+      // are capped so the search stays quick.
+      const big = !!(opts.shapes && opts.shapes.some(([a, b]) => a + b === 4 && a !== 2 || a + b === 6));
+      if (big) {
+        const real = set => V(set[set.length - 1]) >= 0.15 * V(set[0]);
+        const combos = (pool, k, anchor) => {   // k-player sets from the pool (sorted by value), optionally always with anchor
+          const out = [], pick = (from, cur) => {
+            if (cur.length === k) { const set = cur.slice().sort(byVal); if (real(set)) out.push(set); return; }
+            for (let i = from; i < pool.length; i++) pick(i + 1, cur.concat([pool[i]]));
+          };
+          pick(0, anchor ? [anchor] : []);
+          return out;
+        };
+        const top = (pool, lo, hi, n) => pool.filter(p => V(p) >= lo && V(p) <= hi).slice(0, n);
+        const singles = (pool, lo, hi) => pool.filter(p => V(p) >= lo && V(p) <= hi).map(p => [p]);
+        const want = (a, b) => opts.shapes.some(x => x[0] === a && x[1] === b);
+        const pv = pkg ? Math.max(...pkg.map(V)) : xv, sOthers = sPool.filter(p => p !== target), tOthers = tPool.filter(p => p !== target);
+        giveSets = []; getSets = [];
+        const add = (g, t) => { giveSets.push(...g); getSets.push(...t); };
+        if (pkg) {   // a 2-player package is the "2": shopped (2-for-4) or wanted (4-for-2)
+          if (mode === "give" && want(2, 4)) add([pkg], combos(top(tPool, 0.12 * pv, 1.1 * pv, 9), 4));
+          if (mode === "get" && want(4, 2)) add(combos(top(sPool, 0.12 * pv, 1.1 * pv, 9), 4), [pkg]);
+        } else if (mode === "give") {   // shopping X
+          if (want(3, 1)) add(combos(top(sOthers, 0.15 * xv, 1.2 * xv, 9), 3, target), singles(tPool, 0.9 * xv, 3 * xv));
+          if (want(1, 3)) add([[target]], combos(top(tPool, 0.12 * xv, 0.95 * xv, 10), 3));
+          if (want(2, 4)) add(pairs(sPool, target), combos(top(tPool, 0.12 * xv, 1.1 * xv, 9), 4));
+          if (want(4, 2)) add(combos(top(sOthers, 0.12 * xv, 1.1 * xv, 8), 4, target), pairs(tPool, null, 2.5 * xv));
+        } else {                        // getting X
+          if (want(3, 1)) add(combos(top(sPool, 0.12 * xv, 0.95 * xv, 10), 3), [[target]]);
+          if (want(1, 3)) add(singles(sPool, 0.9 * xv, 3 * xv), combos(top(tOthers, 0.15 * xv, 1.2 * xv, 9), 3, target));
+          if (want(2, 4)) add(pairs(sPool, null, 2.5 * xv), combos(top(tOthers, 0.12 * xv, 1.1 * xv, 8), 4, target));
+          if (want(4, 2)) add(combos(top(sPool, 0.12 * xv, 1.1 * xv, 9), 4), pairs(tPool, target));
+        }
+      }
+      // the same package adjustment the trade model applies (extra players next to the best one count for less): the
+      // 3-for-1 / 2-for-4 pre-filter compares these, since their raw totals are far apart even when the trade is fair
+      const depth = LEAGUE_DEPTH > 0 ? LEAGUE_DEPTH : 1;
+      const adjSums = (a, b) => {
+        const star = Math.max(1, ...a.map(V), ...b.map(V)), n = a.length - b.length, more = n > 0 ? a : b;
+        const extras = more.map(V).sort((x, y) => y - x).slice(more.length - Math.abs(n));
+        const spot = extras.reduce((t, v) => t + v * (1 - Math.pow(Math.min(1, Math.max(0, v) / star), PACKAGE_POWER / depth)), 0);
+        return n > 0 ? [sum(a) - spot, sum(b)] : [sum(a), sum(b) - spot];
+      };
       for (const give of giveSets) for (const get of getSets) {
-        if (opts.shape && (give.length !== opts.shape[0] || get.length !== opts.shape[1])) continue;   // trade type: S gives n, gets m
-        if (give.length === 3 && get.length !== 2) continue;   // three pieces only as a 3-for-2
-        const rawGive = sum(give), rawGet = sum(get), lo = Math.min(rawGive, rawGet), hi = Math.max(rawGive, rawGet);
+        if (opts.shapes && !opts.shapes.some(([a, b]) => give.length === a && get.length === b)) continue;   // trade type: S gives a, gets b
+        if (give.length === 3 && get.length !== 2 && !big) continue;   // three pieces only as a 3-for-2 (or a picked 3-for-1)
+        if (give.some(p => get.includes(p))) continue;
+        const [rawGive, rawGet] = big ? adjSums(give, get) : [sum(give), sum(get)], lo = Math.min(rawGive, rawGet), hi = Math.max(rawGive, rawGet);
         if (lo <= 0 || (hi - lo) / lo * 100 > opts.gap + 9) continue;   // the roster adjustment is capped well under 9%
         if (give.length === 2 && get.length === 2 && Math.min(V(give[1]), V(get[1])) < 0.3 * Math.min(V(give[0]), V(get[0]))) continue;
         if (opts.pos !== "ANY") {
@@ -13761,7 +13810,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("tf-size").querySelectorAll("button").forEach(b => {
       const k = b.dataset.size, ok = tfSizeOk(k, pkg, mode);
       b.setAttribute("aria-pressed", k === size); b.disabled = !ok;
-      b.title = k === "all" ? "Every shape: 1-for-1, 1-for-2, 2-for-1 and 2-for-2"
+      const gv = sWho === "you" ? "give" : "gives", gt = sWho === "you" ? "get" : "gets", Who = sWho === "you" ? "You" : sWho;
+      b.title = k === "all" ? "1-for-1, 1-for-2, 2-for-1 and 2-for-2 (pick 3-for-1s or 2-for-4s to search those)"
+        : ok && k === "31" ? `3-for-1 and 1-for-3: ${Who} ${gv} 3 players and ${gt} 1, or ${gv} 1 and ${gt} 3`
+        : ok && k === "24" ? (pkg ? `${Who} ${mode === "give" ? gv + " the 2 and " + gt + " 4" : gt + " the 2 for 4"}` : `2-for-4 and 4-for-2: ${Who} ${gv} 2 players and ${gt} 4, or ${gv} 4 and ${gt} 2`)
         : !ok ? `Not possible with a 2-player package (${mode === "give" ? sWho + " give" + (sWho === "you" ? "" : "s") + " 2" : sWho + " get" + (sWho === "you" ? "" : "s") + " 2"})`
         : `${sWho === "you" ? "You give" : sWho + " gives"} ${k[0]} player${k[0] === "1" ? "" : "s"}, ${sWho === "you" ? "get" : "gets"} ${k[1]}`;
     });
@@ -13782,7 +13834,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     if (mode === "get" && !owner) { body.innerHTML = `<p class="empty-note">${esc(X.name)} is a free agent, so there's no one to trade with. ${esc(S.mine ? "You" : S.name)} can pick him up off waivers.</p>`; return; }
     const gap = TF.goal === "edge" ? 10 : TF.goal === "value" ? 15 : TF.goal === "market" ? ML_MAX : TF.goal === "any" ? Math.max(TF.gap, 15) : TF.fair ? 2.99 : TF.gap;
-    const opts = { pos: TF.pos, against: TF.against, gap, packages: tfSize(pkg, mode) !== "11", shape: tfSize(pkg, mode) === "all" ? null : tfSize(pkg, mode).split("").map(Number), goal: TF.goal, triples: !!tgt };
+    const opts = { pos: TF.pos, against: TF.against, gap, packages: tfSize(pkg, mode) !== "11", shapes: TF_SHAPES[tfSize(pkg, mode)] || null, goal: TF.goal, triples: !!tgt };
     const within = TF.goal === "market" ? `where AM favors ${S.mine ? "you" : S.name} (2–${ML_MAX}% AM Edge) and the market sees their side as fair or better` : TF.goal === "edge" ? `with a ${GOAL_RANGE.edge.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "value" ? `with a ${GOAL_RANGE.value.join("–")}% edge for ${S.mine ? "you" : S.name}` : TF.goal === "any" ? `within ${gap}%` : TF.fair ? "within the fair range" : `within ${TF.gap}%`;
     let ideas = findTrades(pkg || X, mode, S, opts);
     const sortKey = {
