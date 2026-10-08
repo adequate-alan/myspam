@@ -1516,6 +1516,24 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .tc-hist { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 14px; padding: 9px 14px;
   border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--muted); background: var(--fill-1, transparent); border: 1px solid var(--line); }
 .tc-hist b { color: var(--ink); }
+.tc-hist { flex-direction: column; align-items: stretch; }
+.tc-hist .th-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; }
+.tc-hist .th-state { color: var(--up, #2FB67E); font-weight: 600; }
+.tc-hist.approx { border-color: color-mix(in srgb, var(--warn) 60%, var(--line)); }
+.tc-hist.approx .th-state { color: var(--warn); }
+.tc-hist .th-diag summary { cursor: pointer; color: var(--ink-2); font-weight: 600; margin-top: 2px; }
+.tc-hist .th-sec { margin-top: 10px; }
+.tc-hist .th-sec h4 { margin: 0 0 4px; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.tc-hist .th-sec ul { margin: 0; padding-left: 18px; }
+.tc-hist .th-sec p { margin: 2px 0; }
+.tc-hist .th-checks { list-style: none; padding-left: 0; }
+.tc-hist .th-checks .ok { color: var(--ink-2); }
+.tc-hist .th-checks .bad, .tc-hist .th-moves .bad { color: var(--warn); }
+.tc-hist .th-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 10px 20px; }
+.tc-hist .th-roster { columns: 2; font-size: 0.76rem; }
+.tc-hist .th-moves { max-height: 220px; overflow: auto; font-size: 0.76rem; }
+.tc-hist [data-th-copy] { margin-top: 10px; }
+.fit-tag.approx { color: var(--warn); }
 .verdict-eyebrow { display: block; margin-bottom: 4px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .verdict-ctx { margin: 8px 0 0; font-size: 0.82rem; color: var(--ink-2); }
 .verdict-ctx b.win-A, .ri-verdicts b.win-A { color: var(--side-a); }
@@ -5234,7 +5252,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-11T00:00Z";
+  const BUILD_ID = "2026-10-11T03:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6040,12 +6058,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
           <button class="btn" type="button" data-tc-remove>Remove</button>`;
     }
-    const hn = $("tc-hist"), h = histOn();
-    hn.hidden = !(h && h.before);
-    if (h && h.before) {
-      const when = new Date(h.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-      hn.innerHTML = `<span><b>Trade from ${esc(when)}</b> · sides from the transaction · rosters as they were just before it (today's rosters with the ${h.undone} later move${h.undone === 1 ? "" : "s"} undone)${h.misses ? ` · ${h.misses} later move${h.misses === 1 ? " doesn't" : "s don't"} match today's rosters, so some players may be off` : ""} · today's AM values · IR and taxi at the time aren't known, so every rostered player counts · editing the trade switches to today's rosters.</span>`;
-    }
+    renderHist();
     renderCardNeeds();
   }
   // Card heading: the picked team's avatar and name (league mode), else Team A / You
@@ -6137,19 +6150,44 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      today's rosters, where the players it moved already sit with the team that received them: the receiving team
      "got" its own players twice, gave nothing it owned, and the roster-adjusted read came out "+0.0%, basically even".
      IR / taxi status at the time isn't in the log, so every rostered player counts; values are today's AM values. */
+  // transaction order: Sleeper's completion time, then the transaction id (Sleeper's ids grow with time), so the
+  // order is the same on every run even when two moves share a timestamp
+  const txIdCmp = (a, b) => (String(a).length - String(b).length) || (String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0);
+  const txCmp = (a, b) => (a.at - b.at) || txIdCmp(a.id, b.id);
   function rostersBeforeTrade(t) {
     const d = activeData();
     if (!d || !Array.isArray(d.tx) || !d.tx.some(x => x.id === t.id)) return null;
     const R = new Map((d.rosters || []).map(r => [r.roster_id, new Set((r.players || []).map(String))]));
-    let misses = 0;
-    const undo = x => {
-      Object.entries(x.adds || {}).forEach(([sid, rid]) => { const set = R.get(rid); if (set && set.has(String(sid))) set.delete(String(sid)); else misses++; });
-      Object.entries(x.drops || {}).forEach(([sid, rid]) => { const set = R.get(rid); if (set) set.add(String(sid)); });
+    const issues = [], steps = [];
+    const where = sid => [...R].filter(([, set]) => set.has(sid)).map(([rid]) => rid);
+    const undo = (x, step) => {
+      // a transaction is undone as a whole: its adds come off the rosters that received them, then its drops go back
+      Object.entries(x.adds || {}).forEach(([sid, rid]) => {
+        sid = String(sid); const set = R.get(rid);
+        if (set && set.has(sid)) set.delete(sid);
+        else step.issues.push({ sid, rid, kind: "add", text: "wasn't on the roster that received him" });
+      });
+      Object.entries(x.drops || {}).forEach(([sid, rid]) => {
+        sid = String(sid); const set = R.get(rid), on = where(sid).filter(r => r !== rid);
+        if (on.length) step.issues.push({ sid, rid, kind: "drop", text: "would be on two rosters", other: on[0] });
+        if (set) set.add(sid);
+      });
     };
-    const later = d.tx.filter(x => x.id !== t.id && x.at > t.at).sort((a, b) => b.at - a.at);
-    later.forEach(undo);
-    undo(t);
-    return { before: R, undone: later.length, misses };
+    const later = d.tx.filter(x => x.id !== t.id && txCmp(x, t) > 0).sort((a, b) => txCmp(b, a));   // newest first
+    later.forEach(x => { const step = { tx: x, issues: [] }; undo(x, step); steps.push(step); });
+    const own = { tx: t, issues: [], trade: true }; undo(t, own); steps.push(own);
+    steps.forEach(st => st.issues.forEach(z => issues.push({ ...z, tx: st.tx })));
+    // after the rebuild: nobody on two rosters, each team gets only players it didn't have, sizes within the league's limit
+    const seen = new Map();
+    R.forEach((set, rid) => set.forEach(sid => { if (seen.has(sid)) issues.push({ sid, rid, kind: "dup", text: "is on two rebuilt rosters", other: seen.get(sid) }); else seen.set(sid, rid); }));
+    Object.entries(t.adds || {}).forEach(([sid, rid]) => { if ((R.get(rid) || new Set()).has(String(sid))) issues.push({ sid: String(sid), rid, kind: "own", text: "was already on the receiving roster before the trade" }); });
+    Object.entries(t.drops || {}).forEach(([sid, rid]) => { if (!(R.get(rid) || new Set()).has(String(sid))) issues.push({ sid: String(sid), rid, kind: "send", text: "wasn't on the sending roster before the trade" }); });
+    const st = (d.league && d.league.settings) || {}, limit = ((d.league && d.league.roster_positions) || []).length + (Number(st.reserve_slots) || 0) + (Number(st.taxi_slots) || 0);
+    const big = (t.rosters || []).filter(rid => limit && (R.get(rid) || new Set()).size > limit).map(rid => ({ rid, n: R.get(rid).size }));
+    const ties = d.tx.filter(x => x.id !== t.id && x.at === t.at && [...Object.keys(x.adds || {}), ...Object.keys(x.drops || {})].some(sid => sid in (t.adds || {}) || sid in (t.drops || {})));
+    const failedWeeks = d.txFailed || [];
+    const exact = !issues.length && !big.length && !ties.length && !failedWeeks.length;
+    return { before: R, undone: later.length, steps, issues, big, limit, ties, failedWeeks, exact, misses: issues.length };
   }
   const histKey = () => JSON.stringify([sides.A, sides.B, sides.C || [], ["A", "B", "C"].map(x => ($("team-" + x) || {}).value || "")]);
   function histOn() {   // the historical view lasts while the trade is exactly as it was loaded; any edit makes it a manual trade
@@ -6162,6 +6200,95 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const h = histOn();
     return h && h.before ? [...(h.before.get(t.rosterId) || [])] : (t.roster.players || []).map(String);
   }
+
+  /* The past-trade notice: which evaluation this is, how the rosters were rebuilt, the transaction's own at-the-time
+     read, and a check of the rebuild you can open (and copy) to verify it against your league */
+  const teamNameOf = rid => (LG.teams.find(x => x.rosterId === rid) || { name: `Team ${rid}` }).name;
+  function histReport() {
+    const h = histOn(); if (!h || !h.rb) return null;
+    const { t, r, rb } = h, map = bySleeper(), ctx = TC_UI.ctx;
+    const nm = sid => { const e = rosterEntry(sid, map); return e && e.name ? e.name : `#${sid}`; };
+    const pl = sid => { const e = rosterEntry(sid, map); return e ? `${e.name}${e.pos ? ` (${e.pos})` : ""}` : `#${sid}`; };
+    const when = ms => new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    const rec = t.rosters.map(rid => ({ rid, name: teamNameOf(rid),
+      got: Object.keys(t.adds).filter(sid => t.adds[sid] === rid), sent: Object.keys(t.drops).filter(sid => t.drops[sid] === rid) }));
+    // the calculator's cards against the transaction: each card = what that team received
+    const letters = ["A", "B", "C"], cardOk = rec.every((x, i) => {
+      const ids = (sides[letters[i]] || []).map(id => String((byId.get(id) || {}).sleeperId)).sort();
+      return $("team-" + letters[i]).value === String(x.rid) && JSON.stringify(ids) === JSON.stringify(x.got.filter(sid => map.get(sid)).sort());
+    });
+    const once = !ctx || (TC3.on ? true : ["A", "B"].every(k => ctx[k].incoming.every(p => { const all = ctx[k].after.starters.concat(ctx[k].after.bench, ctx[k].after.cut); return all.filter(q => q === p).length === 1; })));
+    const newCuts = ctx && !TC3.on ? ["A", "B"].flatMap(k => ctx[k].after.cut.filter(p => !ctx[k].before.cut.includes(p)).map(p => `${ctx[k].t.name}: ${p.name}`)) : [];
+    const checks = [
+      [cardOk, "Direction: each card lists exactly what that team received in Sleeper's record"],
+      [!rb.issues.some(z => z.kind === "own" || z.kind === "send") && !rb.steps.some(st => st.trade && st.issues.length),
+        "Every player in the trade was where the transaction says: each received player on the receiving roster just after it, no one received a player he already had"],
+      [once, "Each incoming player appears exactly once on the roster after the trade"],
+      [!rb.issues.some(z => z.kind === "dup"), "No player is on two rebuilt rosters"],
+      [!rb.steps.some(st => !st.trade && st.issues.length), `All ${rb.undone} later move${rb.undone === 1 ? "" : "s"} lined up with the rosters when undone`],
+      [!rb.ties.length, "No other move at the same moment involves these players (so the order is certain)"],
+      [!rb.failedWeeks.length, rb.failedWeeks.length ? `Weeks ${rb.failedWeeks.join(", ")} of the transaction log didn't load` : "Every week of the transaction log loaded (weeks 1–18)"],
+      [!rb.big.length, rb.limit ? `Rebuilt rosters fit the league's roster size (${rb.limit})` + (rb.big.length ? `: ${rb.big.map(b => `${teamNameOf(b.rid)} ${b.n}`).join(", ")}` : "") : "Roster size: the league's limit isn't known"],
+      [!newCuts.length, newCuts.length ? `The trade forces a cut to fit the roster: ${newCuts.join("; ")}` : "The trade forces no roster cuts"],
+    ];
+    const lines = ctx && !TC3.on ? ["A", "B"].map(k => { const X = ctx[k], lab = (L, p) => L.labels.get(p.id);
+      return { name: X.t.name, before: X.before.starters.map(p => `${lab(X.before, p)} ${p.name}`), after: X.after.starters.map(p => `${lab(X.after, p)} ${p.name}`),
+               out: X.before.starters.filter(p => !X.after.starters.includes(p) && !X.outgoing.includes(p)).map(p => p.name),
+               in: X.incoming.filter(p => X.after.labels.has(p.id)).map(p => `${p.name} → ${X.after.labels.get(p.id)}`),
+               net: X.fit.net, recv: X.fit.recv, give: X.fit.give, impact: X.impact }; }) : [];
+    const rosters = t.rosters.map(rid => ({ name: teamNameOf(rid), ids: [...(rb.before.get(rid) || [])]
+      .map(sid => ({ sid, p: map.get(sid), name: pl(sid) })).sort((a, b) => (b.p ? dv(b.p) : -1) - (a.p ? dv(a.p) : -1)) }));
+    const moves = rb.steps.filter(st => !st.trade).map(st => ({ when: when(st.tx.at), type: txKind(st.tx), teams: uniq(st.tx.rosters || []).map(teamNameOf).join(" / "),
+      adds: Object.entries(st.tx.adds || {}).map(([sid, rid]) => `+${nm(sid)} → ${teamNameOf(rid)}`), drops: Object.entries(st.tx.drops || {}).map(([sid, rid]) => `−${nm(sid)} from ${teamNameOf(rid)}`),
+      issues: st.issues.map(z => `${nm(z.sid)} ${z.text}`) }));
+    const then = r && r.then ? snapText(r, r.then).replace(/<[^>]+>/g, "") : null;
+    const thenWhy = r ? (r.then ? `AM values published by ${new Date(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : r.preSpam ? "No AM value existed at the time of this trade (Pre-AM trade)" : "Only some of these players had an AM value at the time, so there's no at-the-time verdict") : "";
+    return { t, rb, when: when(t.at), rec, checks, lines, rosters, moves, then, thenWhy, nm };
+  }
+  function histText(R) {   // the same check as plain text, for "Copy report"
+    const L = [`Adequate — past trade check`, `Trade: ${R.when} · transaction ${R.t.id}`];
+    R.rec.forEach(x => L.push(`${x.name} received: ${x.got.map(R.nm).join(", ") || "nothing"} · sent: ${x.sent.map(R.nm).join(", ") || "nothing"}`));
+    L.push(`Rebuild: ${R.rb.exact ? "exact" : "approximate"} · ${R.rb.undone} later move${R.rb.undone === 1 ? "" : "s"} undone`);
+    R.checks.forEach(([ok, txt]) => L.push(`${ok ? "OK " : "!! "} ${txt}`));
+    R.rosters.forEach(x => L.push(`${x.name} just before the trade (${x.ids.length}): ${x.ids.map(y => y.name).join(", ")}`));
+    R.lines.forEach(x => {
+      L.push(`${x.name} starters before: ${x.before.join(", ")}`, `${x.name} starters after: ${x.after.join(", ")}`);
+      L.push(`${x.name} new starters: ${x.in.join(", ") || "none"} · moved out of the lineup: ${x.out.join(", ") || "none"} · lineup ${x.impact >= 0 ? "+" : ""}${x.impact.toFixed(1)}% · value to them ${fmt(x.recv)} vs ${fmt(x.give)} given · roster-adjusted ${fmtNet(x.net)}`);
+    });
+    L.push(`At the time: ${R.then || "—"} (${R.thenWhy})`);
+    R.moves.forEach(m => L.push(`Undone: ${m.when} ${m.type} ${m.teams}: ${[...m.adds, ...m.drops].join(", ")}${m.issues.length ? ` !! ${m.issues.join("; ")}` : ""}`));
+    return L.join("\n");
+  }
+  function renderHist() {
+    const hn = $("tc-hist"), h = histOn(), R = h && h.rb ? histReport() : null;
+    hn.hidden = !R;
+    TC.histApprox = false;
+    if (!R) { hn.innerHTML = ""; return; }
+    const bad = R.checks.filter(c => !c[0]).length, li = list => list.map(x => `<li>${esc(x)}</li>`).join("");
+    TC.histApprox = !R.rb.exact || bad > 0;
+    hn.classList.toggle("approx", !R.rb.exact || bad > 0);
+    hn.innerHTML = `<div class="th-row"><span><b>Current evaluation of the ${esc(R.when)} trade</b> · sides from Sleeper's transaction · rosters as they were just before it · today's AM values</span>
+        <span class="th-state">${R.rb.exact && !bad ? "Rosters rebuilt exactly" : `Approximate rebuild · ${bad} check${bad === 1 ? "" : "s"} to look at`}</span></div>
+      <div class="th-row th-then"><span><b>At the time:</b> ${R.then ? esc(R.then) : "—"} <span class="muted">· ${esc(R.thenWhy)}</span></span></div>
+      <details class="th-diag"${TC.histOpen ? " open" : ""}><summary>Check the rebuild</summary>
+        <div class="th-sec"><h4>Sleeper's record</h4><ul>${R.rec.map(x => `<li><b>${esc(x.name)}</b> received ${esc(x.got.map(R.nm).join(", ") || "nothing")} · sent ${esc(x.sent.map(R.nm).join(", ") || "nothing")}</li>`).join("")}</ul></div>
+        <div class="th-sec"><h4>Checks</h4><ul class="th-checks">${R.checks.map(([ok, txt]) => `<li class="${ok ? "ok" : "bad"}">${ok ? "✓" : "!"} ${esc(txt)}</li>`).join("")}</ul></div>
+        ${R.lines.length ? `<div class="th-sec th-cols">${R.lines.map(x => `<div><h4>${esc(x.name)}: starting lineup</h4><p class="muted">Before: ${esc(x.before.join(", "))}</p><p class="muted">After: ${esc(x.after.join(", "))}</p>
+          <p>New starters: ${esc(x.in.join(", ") || "none")} · out of the lineup: ${esc(x.out.join(", ") || "none")}</p></div>`).join("")}</div>` : ""}
+        <div class="th-sec th-cols">${R.rosters.map(x => `<div><h4>${esc(x.name)} just before the trade · ${x.ids.length}</h4><ul class="th-roster">${li(x.ids.map(y => y.name))}</ul></div>`).join("")}</div>
+        <div class="th-sec"><h4>Later moves undone, newest first · ${R.moves.length}</h4>${R.moves.length ? `<ul class="th-moves">${R.moves.map(m => `<li${m.issues.length ? ' class="bad"' : ""}><span class="muted">${esc(m.when)} · ${esc(m.type)} · ${esc(m.teams)}</span> ${esc([...m.adds, ...m.drops].join(", "))}${m.issues.length ? ` <b>! ${esc(m.issues.join("; "))}</b>` : ""}</li>`).join("")}</ul>` : `<p class="muted">None: the trade is the latest move on these rosters.</p>`}</div>
+        <p class="muted">IR and taxi at the time aren't in Sleeper's log, so every rostered player counts. Editing the trade switches to today's rosters.</p>
+        <button class="btn" type="button" data-th-copy>Copy report</button>
+      </details>`;
+  }
+  $("tc-hist").addEventListener("toggle", e => { if (e.target.matches("details.th-diag")) TC.histOpen = e.target.open; }, true);
+  $("tc-hist").addEventListener("click", e => {
+    if (!e.target.closest("[data-th-copy]")) return;
+    const R = histReport(); if (!R) return;
+    const txt = histText(R);
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Report copied"), () => { window.__thReport = txt; toast("Couldn't copy: open the browser console and run copy(__thReport)"); });
+    window.__thReport = txt;
+  });
 
   /* Roster context: how the trade changes each team's best lineup in this league */
   function rosterContext() {
@@ -6428,6 +6555,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     autoPickTeams();
     renderTradeContext();
     TC_UI.ctx = tcLeague() && (sides.A.length || sides.B.length) ? rosterContext() : null;
+    renderHist();
     renderBeforeAfter(TC_UI.ctx);
     renderRoster("A");
     renderRoster("B");
@@ -6496,7 +6624,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const cv = contextVerdict(res, ctx), fitLabel = cv.tier.title(names[cv.ahead], names[cv.loser]);
       if (fitView) { title.textContent = fh.head || fitLabel; title.className = fh.head ? "fair" : cv.fair ? "fair" : "win-" + cv.ahead; }
       else if (fh.head) { title.textContent = fh.head; title.className = "fair"; }
-      gapLine.innerHTML = `<b>${pct}</b> raw difference · Roster-adjusted: ${esc(names.A)} <b>${fmtNet(ctx.A.fit.net)}</b>, ${esc(names.B)} <b>${fmtNet(ctx.B.fit.net)}</b>${fh.tag ? ` <span class="fit-tag">${esc(fh.tag)}</span>` : ""}`;
+      gapLine.innerHTML = `<b>${pct}</b> raw difference · Roster-adjusted: ${esc(names.A)} <b>${fmtNet(ctx.A.fit.net)}</b>, ${esc(names.B)} <b>${fmtNet(ctx.B.fit.net)}</b>${fh.tag ? ` <span class="fit-tag">${esc(fh.tag)}</span>` : ""}${histOn() && TC.histApprox ? ` <span class="fit-tag approx">Approximate rosters</span>` : ""}`;
       sub.textContent = fitReason(ctx, names) || fitLine(ctx, names) || advice;
       if (fitView) {
         const fa = ctx.A.fit.recv, fb = ctx.B.fit.recv, tot = fa + fb;
@@ -9922,7 +10050,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (txOn()) renderLeague();
     try {
       let failed = 0;
-      const lists = await Promise.all(Array.from({ length: 18 }, (_, i) => slGetTimed(`/league/${id}/transactions/${i + 1}`).catch(() => { failed++; return null; })));
+      const failedWeeks = [];
+      const lists = await Promise.all(Array.from({ length: 18 }, (_, i) => slGetTimed(`/league/${id}/transactions/${i + 1}`).catch(() => { failed++; failedWeeks.push(i + 1); return null; })));
       if (failed === 18) throw new Error("Sleeper didn't answer");
       const seen = new Set(), tx = [], claims = [];
       lists.forEach((list, i) => (Array.isArray(list) ? list : []).forEach(t => {
@@ -9959,7 +10088,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       });
       tx.sort((a, b) => b.at - a.at);
       const cur = sl && sl.data && sl.data[id];   // by league id: a background refresh may have replaced the object
-      if (cur) { cur.tx = tx; cur.txV = TX_VERSION; cur.trades = tx.filter(t => t.type === "trade"); cur.tradesAt = Date.now(); writeSl(); }
+      if (cur) { cur.tx = tx; cur.txV = TX_VERSION; cur.txFailed = failedWeeks.sort((a, b) => a - b); cur.trades = tx.filter(t => t.type === "trade"); cur.tradesAt = Date.now(); writeSl(); }
     } catch (err) { LT.error[id] = err.message || "unknown error"; }
     finally { if (LT.loading === id) LT.loading = null; }
     if (txOn()) renderLeague();
@@ -10633,7 +10762,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const giver = P.findIndex(o => o.give.includes(x.sid)); if (giver >= 0) origin.set(x.p.id, letters[giver]);
     }));
     const rb = rostersBeforeTrade(t);
-    TC.hist = { id: t.id, at: t.at, before: rb ? rb.before : null, undone: rb ? rb.undone : 0, misses: rb ? rb.misses : 0,
+    TC.hist = { id: t.id, at: t.at, t, r, rb, before: rb ? rb.before : null, undone: rb ? rb.undone : 0, misses: rb ? rb.misses : 0,
                 why: rb ? "" : "the transaction log isn't loaded", key: histKey() };
     renderTeamRosters(); renderTrade();
     showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
