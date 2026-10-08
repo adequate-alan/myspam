@@ -664,7 +664,7 @@ const FORMAT_ADJUST = {
   qb1Cushion: 0.5,    // 1QB leagues: QB replacement sits this share of the way from the last starting QB down to the waiver QB
                       // (teams carry and stream QBs, so the 12th QB isn't true replacement). Alan Oct 5: QB5-QB12 in 12-team
                       // 1QB were ~25% of their Superflex values; points over replacement put them nearer 35-45%.
-  sfStarterTeams: 8,     // superflex/2QB starter smoothing applies to leagues with at most this many teams (Alan, Oct 6: 8-team SF)
+  sfStarterTeams: 8,     // superflex/2QB: leagues of at most this many teams also get the upper-curve cliff guard; larger ones the starter floor
   sfStarterEase: 0.75,   // superflex/2QB: after the last starting QB, each QB keeps at least this share of the base board's step down
   sfBoundaryBefore: 5,   // larger superflex/2QB leagues (Alan, Oct 10): the starter-boundary ramp starts this many QBs above the
   sfBoundaryAfter: 4,    // last weekly starting QB (teams x QB slots) and runs at least this many QBs past it
@@ -5229,7 +5229,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T15:00Z";
+  const BUILD_ID = "2026-10-10T18:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -8031,26 +8031,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         else if (EDIT_POS.includes(p.pos) && p.posNum != null) v = shifted(p.pos, p.posNum, p.value);   // untiered, tagged (e.g. Hurt)
         raw.set(p.id, Math.max(0, v));
       });
-      // Superflex / 2QB (Alan, Oct 6): pricing tiers as blocks put a cliff inside the starting QBs of smaller
-      // superflex leagues (8-team SF: QB12 2,866 → QB13 1,146 although ~16 QBs start). While QBs are still weekly
-      // starters (teams × QB + superflex slots), none falls further below the QB ahead than on the AM Board;
-      // after the last starter they ease down to their format value (at most sfStarterEase of the board's step
-      // per spot). Only ever raises a value, never above his base value; leagues of up to sfStarterTeams (8) teams only,
-      // so 1QB leagues, 10+ team superflex and the base format are untouched.
-      {
-        const lu = lineupOf(vl);
-        if ((lu.SUPER_FLEX > 0 || lu.QB >= 2) && lu.teams <= (Number(FA.sfStarterTeams) || 0)) {
-          const S = Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0))), ease = Number(FA.sfStarterEase) || 0;
-          const qbs = players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum);
-          for (let i = 1; i < qbs.length; i++) {
-            const a = qbs[i - 1], p = qbs[i];
-            if (p.custom || !(a.value > 0)) continue;
-            const step = Math.min(1, p.value / a.value) * (p.posNum <= S ? 1 : ease);
-            const bound = Math.min(p.value, raw.get(a.id) * step);
-            if (raw.get(p.id) < bound * 0.999) raw.set(p.id, bound); else if (p.posNum > S) break;   // eased back onto the format's own values
-          }
-        }
-      }
       // the position curve alone never reorders a position: keep it in your order first…
       for (const pos of EDIT_POS) {
         let prev = Infinity;
@@ -8093,24 +8073,38 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           });
         }
       }
-      // Superflex / 2QB, leagues over sfStarterTeams: the starter boundary (Alan, Oct 10). Tier blocks priced in this
-      // format can still put cliffs right around the last weekly starting QB (S = teams x QB slots; 10-team SF: QB19
-      // at 7% of QB1, QB22 -> QB23 -58% where the board drops 5%). From sfBoundaryBefore QBs above S, no QB falls
-      // further below the QB ahead than on the AM Board; past S each eases down at most sfStarterEase of the board's
-      // step per spot, and the ramp stops once it's sfBoundaryAfter QBs past S and back on the format's own values.
-      // Derived from the lineup, not from ranks: it only raises, never above the board value, and leaves formats
-      // whose curve is already smooth there (12- and 14-team SF) unchanged.
-      {
+      // Superflex / 2QB: the starter boundary (Alan, Oct 10; 8-team since the C5 preview the same day). Format
+      // smoothing is a floor, not a second valuation curve: it runs after every tier guard, only ever raises a
+      // value, never above his board value, and never below what the scarcity model alone gives (SF_SMOOTH = false
+      // in formatCheck shows that curve). Tier blocks priced in a format put cliffs right around the last weekly
+      // starting QB (S = teams x QB slots; 10-team SF: QB22 -> QB23 -58% where the board drops 5%; 8-team SF:
+      // QB15 -> QB16 -60% where it drops 23%). From sfBoundaryBefore QBs above S no QB falls further below the QB
+      // ahead than on the AM Board; past S each eases down at most sfStarterEase of the board's step per spot, and
+      // the ramp stops once it's sfBoundaryAfter QBs past S and back on the format's own values. Derived from the
+      // lineup, not from ranks; 12- and 14-team SF are already smooth there and don't change.
+      // Leagues of up to sfStarterTeams (8) teams also get an upper-curve cliff guard above the window: no QB drops
+      // further than the board's step times the format's own scarcity step at that rank (8-team SF: QB6 -> QB7 was
+      // -41% at a tier break where the board drops 8%, now -13%). It fades out by itself inside the tier.
+      // Deep-bench cliffs past the ramp (8-team SF QB22 -> QB23, 462 -> 185) are left alone on purpose.
+      if (SF_SMOOTH !== false) {   // (var: may still be undefined on the first leagueRecalc)
         const lu = lineupOf(vl);
-        if ((lu.SUPER_FLEX > 0 || lu.QB >= 2) && lu.teams > (Number(FA.sfStarterTeams) || 0)) {
+        if (lu.SUPER_FLEX > 0 || lu.QB >= 2) {
           const S = Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0))), ease = Number(FA.sfStarterEase) || 0;
           const from = S - (Number(FA.sfBoundaryBefore) || 0), to = S + (Number(FA.sfBoundaryAfter) || 0);
+          const guard = SF_SMOOTH !== "noguard" && lu.teams <= (Number(FA.sfStarterTeams) || 0);
+          const scarce = i => { const k = Math.min(i, base.QB.length) - 1, b0 = base.QB[k], l0 = lg.QB[k]; return b0 > 0 ? l0 / b0 : 0; };
           const qbs = players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum);
           for (let i = 1; i < qbs.length; i++) {
             const a = qbs[i - 1], p = qbs[i];
-            if (p.posNum <= from || p.custom || !(a.value > 0) || !raw.has(a.id)) continue;
-            const step = Math.min(1, p.value / a.value) * (p.posNum <= S ? 1 : ease);
-            const bound = Math.min(p.value, raw.get(a.id) * step);
+            if (p.custom || !(a.value > 0) || !raw.has(a.id)) continue;
+            const board = Math.min(1, p.value / a.value);
+            let bound;
+            if (p.posNum <= from) {
+              if (!guard) continue;
+              const sa = scarce(a.posNum), sp = scarce(p.posNum);
+              bound = sa > 0 ? raw.get(a.id) * board * Math.min(1, sp / sa) : 0;
+            } else bound = raw.get(a.id) * board * (p.posNum <= S ? 1 : ease);
+            bound = Math.min(p.value, bound);
             if (raw.get(p.id) < bound * 0.999) raw.set(p.id, bound); else if (p.posNum > to) break;
           }
         }
@@ -8167,8 +8161,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Adjusted values for any league object, without touching the active league layer (LG): runs the same
   // adjustValues and puts LG back. Used to split a value into its format steps and by SPM.formatCheck.
   var adjCache = new Map();   // var: leagueRecalc can run before this line
+  var SF_SMOOTH = true;         // formatCheck: false = no Superflex smoothing (the scarcity model alone), "noguard" = no 8-team cliff guard
   function adjMapFor(vl) {
-    const key = JSON.stringify([lineupOf(vl), vl.roster_positions, vl.scoring_settings]);
+    const key = JSON.stringify([lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH]);
     if (adjCache.has(key)) return adjCache.get(key);
     const keep = { adj: LG.adj, adjPos: LG.adjPos, adjRank: LG.adjRank, factor: LG.factor, depth: LG.depth };
     try {
@@ -8229,20 +8224,51 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     const two = [val({ qb: "1", tep: 0 }, at("QB", 12)), val({ qb: "2", tep: 0 }, at("QB", 12))];
     check(`${at("QB", 12).name} (QB12): 1QB vs 2QB`, two, two[1] > two[0] * 1.4);
-    // Superflex starter boundary (Alan, Oct 10): around the last weekly starting QB (S = teams x QB slots) no QB drops
-    // further below the QB ahead than on the AM Board, and no QB is worth more in 10-team than in 12-team Superflex
+    // Superflex smoothing is a floor, not a second valuation curve (Alan, Oct 10): against the scarcity model alone
+    // (SF_SMOOTH = false) it only raises, never above the board value; QBs descend; 8 <= 10 <= 12 teams; the 8-team
+    // cliff guard leaves 10/12/14 teams alone; 1QB and RB/WR/TE (bar the auto tail's last few points) never move
     {
-      const S = 20, qs = players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((x, y) => x.posNum - y.posNum);
-      const m10 = adjMapFor(fmtLeague({ ...FMT_DEFAULT, teams: 10, qb: "sf" })), m12 = adjMapFor(fmtLeague({ ...FMT_DEFAULT, teams: 12, qb: "sf" }));
-      const lo = S - (Number(FORMAT_ADJUST.sfBoundaryBefore) || 0), steep = [];
+      const qs = players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((x, y) => x.posNum - y.posNum);
+      const F = { sf8: { teams: 8, qb: "sf" }, sf10: { teams: 10, qb: "sf" }, sf12: { teams: 12, qb: "sf" }, sf14: { teams: 14, qb: "sf" },
+                  q2_8: { teams: 8, qb: "2" }, q2_10: { teams: 10, qb: "2" }, q1_8: { teams: 8, qb: "1" }, q1_10: { teams: 10, qb: "1" }, q1_12: { teams: 12, qb: "1" }, q1_14: { teams: 14, qb: "1" } };
+      const mapsFor = mode => { const keep = SF_SMOOTH; SF_SMOOTH = mode; try { return Object.fromEntries(Object.entries(F).map(([k, f]) => [k, adjMapFor(fmtLeague({ ...FMT_DEFAULT, ...f }))])); } finally { SF_SMOOTH = keep; } };
+      const on = mapsFor(true), off = mapsFor(false), ng = mapsFor("noguard");
+      const sf = ["sf8", "sf10", "sf12", "sf14", "q2_8", "q2_10"], low = [], high = [], desc = [];
+      for (const k of sf) qs.forEach((p, i) => {
+        const v = on[k].get(p.id), v0 = off[k].get(p.id);
+        if (v < v0 - 0.5) low.push(`${k} QB${p.posNum} ${Math.round(v)} < ${Math.round(v0)}`);
+        if (v > v0 + 0.5 && v > p.value + 0.5) high.push(`${k} QB${p.posNum} ${Math.round(v)} > board ${Math.round(p.value)}`);
+        if (i && v > on[k].get(qs[i - 1].id) + 0.5) desc.push(`${k} QB${p.posNum} above QB${qs[i - 1].posNum}`);
+      });
+      check("Superflex smoothing never lowers a QB below the scarcity model alone (8/10/12/14-team SF, 8/10-team 2QB)", low, low.length === 0);
+      check("Superflex smoothing never raises a QB above his AM Board value", high, high.length === 0);
+      check("QB values descend down the position in every Superflex / 2QB format checked", desc, desc.length === 0);
+      // (waiver-level QBs under 100 in 10-team are left out: the tier guard's 40% keep can put 8-team's tier 7 a
+      // few points above 10-team's there, e.g. QB34 43 vs 30, with no smoothing involved)
+      const order = qs.filter(p => on.sf10.get(p.id) >= 100 && !(on.sf8.get(p.id) <= on.sf10.get(p.id) + 0.5 && on.sf10.get(p.id) <= on.sf12.get(p.id) + 0.5))
+        .map(p => `QB${p.posNum} ${[on.sf8, on.sf10, on.sf12].map(m => Math.round(m.get(p.id))).join(" / ")}`);
+      check("Every QB worth 100+: 8-team ≤ 10-team ≤ 12-team Superflex", order, order.length === 0);
+      const moved = (a, b, keys, who) => keys.flatMap(k => players.filter(who).filter(p => Math.abs((a[k].get(p.id) || 0) - (b[k].get(p.id) || 0)) > 0.5).map(p => `${k} ${p.name}`));
+      const g = moved(on, ng, ["sf10", "sf12", "sf14", "q2_10"], p => true);
+      check("The 8-team cliff guard leaves 10-, 12- and 14-team values unchanged", g.slice(0, 8), g.length === 0);
+      const deep = moved(on, off, ["sf12", "sf14"], p => true);
+      check("12- and 14-team Superflex: smoothing changes nothing (already smooth)", deep.slice(0, 8), deep.length === 0);
+      const one = moved(on, off, ["q1_8", "q1_10", "q1_12", "q1_14"], p => true);
+      check("1QB formats: Superflex smoothing changes nothing", one.slice(0, 8), one.length === 0);
+      const nq = moved(on, off, Object.keys(F), p => p.pos !== "QB" && !p.tail);
+      check("RB/WR/TE values never move with the Superflex smoothing (auto tail aside)", nq.slice(0, 8), nq.length === 0);
+      // around the last weekly starters (S = 20 in 10-team SF) no QB drops further below the QB ahead than on the board
+      const S = 20, m10 = on.sf10, lo = S - (Number(FORMAT_ADJUST.sfBoundaryBefore) || 0), steep = [];
       for (let i = 1; i < qs.length; i++) {
         const p = qs[i], q = qs[i - 1];
         if (p.posNum > lo && p.posNum <= S && !p.custom && q.value > 0 && m10.get(q.id) > 0 && m10.get(p.id) / m10.get(q.id) < p.value / q.value - 0.005)
           steep.push(`QB${p.posNum} −${Math.round(100 * (1 - m10.get(p.id) / m10.get(q.id)))}% (board −${Math.round(100 * (1 - p.value / q.value))}%)`);
       }
       check(`10-team Superflex QB${lo + 1}–QB${S} (the last weekly starters): no drop steeper than the AM Board's`, steep, steep.length === 0);
-      const over = qs.filter(p => m10.get(p.id) > m12.get(p.id) + 0.5).map(p => `QB${p.posNum} ${Math.round(m10.get(p.id))} > ${Math.round(m12.get(p.id))}`);
-      check("No QB is worth more in 10-team than in 12-team Superflex", over, over.length === 0);
+      // 8-team: the scarcity discount stays (QB12 well under the board's share of QB1) and the QB6 → QB7 tier cliff is gone
+      const at8 = n => on.sf8.get(qs[n - 1].id), q12 = at8(12) / at8(1), b12 = qs[11].value / qs[0].value, d67 = 1 - at8(7) / at8(6);
+      check("8-team Superflex keeps its scarcity discount: QB12 share of QB1 under 35% (board ~50%) and QB6 → QB7 under 25%",
+        [`QB12 ${Math.round(100 * q12)}% (board ${Math.round(100 * b12)}%)`, `QB6 → QB7 −${Math.round(100 * d67)}%`], q12 < 0.35 && d67 < 0.25);
     }
     // TE premium enhances TE value rather than creating it (Alan, Oct 8 TE audit): TE8's gain shrinks with each
     // step and no TEP -> +0.5 stays under +90% (it was +113% with all-or-nothing FLEX spots)
