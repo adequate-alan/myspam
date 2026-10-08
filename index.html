@@ -1512,6 +1512,7 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
   background: var(--editor-bg); border: 1px solid color-mix(in srgb, var(--burgundy-2) 55%, var(--line));
 }
 .tc-warn b { color: var(--cream); }
+.tc-warn-acts { display: inline-flex; gap: 8px; flex-shrink: 0; }
 .verdict-eyebrow { display: block; margin-bottom: 4px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .verdict-ctx { margin: 8px 0 0; font-size: 0.82rem; color: var(--ink-2); }
 .verdict-ctx b.win-A, .ri-verdicts b.win-A { color: var(--side-a); }
@@ -5229,7 +5230,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T18:00Z";
+  const BUILD_ID = "2026-10-10T21:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6021,8 +6022,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const warn = $("tc-warn"), stray = tcStray();
     warn.hidden = !stray.length;
     if (stray.length) {
-      warn.innerHTML = `<span>${stray.map(x => `<b>${esc(x.p.name)}</b>`).join(", ")} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
-        <button class="btn" type="button" data-tc-remove>Remove</button>`;
+      // a player already on the team set to receive him: the sides are reversed (Oct 10: an entered-backwards trade read as
+      // "+0.0% roster-adjusted, basically even" because each team gave nothing it owned and got its own players twice)
+      const own = stray.filter(x => x.own), names = list => list.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
+      const ownLine = uniq(own.map(x => x.own)).map(t => `${names(own.filter(x => x.own === t))} ${own.filter(x => x.own === t).length === 1 ? "is" : "are"} already on ${esc(t)}'s roster`).join("; ");
+      warn.innerHTML = own.length
+        ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster-adjusted analysis is off until the sides are fixed.</span>
+          <span class="tc-warn-acts"><button class="btn primary" type="button" data-tc-flip>Flip players</button> <button class="btn" type="button" data-tc-remove>Remove</button></span>`
+        : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
+          <button class="btn" type="button" data-tc-remove>Remove</button>`;
     }
     renderCardNeeds();
   }
@@ -6067,8 +6075,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     [["A", "B"], ["B", "A"]].forEach(([getter, giver]) => {
       const t = sideTeam(giver); if (!t) return;
-      const ids = new Set((t.roster.players || []).map(String));
-      sides[getter].forEach(id => { const p = byId.get(id); if (p && !ids.has(String(p.sleeperId))) out.push({ p, side: getter, from: t.name }); });
+      const ids = new Set((t.roster.players || []).map(String)), mine = sideTeam(getter);
+      const own = new Set(((mine && mine.roster.players) || []).map(String));
+      sides[getter].forEach(id => { const p = byId.get(id); if (p && !ids.has(String(p.sleeperId))) out.push({ p, side: getter, from: t.name, own: own.has(String(p.sleeperId)) ? mine.name : null }); });
     });
     return out;
   }
@@ -6100,6 +6109,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   });
   $("needs-reset").addEventListener("click", () => { EDIT_POS.forEach(pos => { NEEDS[pos] = 3; }); saveNeeds(); renderTrade(); });
   $("tc-warn").addEventListener("click", e => {
+    if (e.target.closest("[data-tc-flip]")) { [sides.A, sides.B] = [sides.B, sides.A]; renderTrade(); return; }   // players change sides, teams stay
     if (!e.target.closest("[data-tc-remove]")) return;
     tcStray().forEach(x => { sides[x.side] = sides[x.side].filter(id => id !== x.p.id); });
     renderTrade();
@@ -6109,6 +6119,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function rosterContext() {
     const d = activeData(), tA = sideTeam("A"), tB = sideTeam("B");
     if (!d || !tA || !tB || tA === tB || (!sides.A.length && !sides.B.length)) return null;
+    if (tcStray().some(x => x.own)) return null;   // reversed sides: a lineup read would be meaningless (see the warning)
     const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
@@ -6120,7 +6131,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const getA = sides.A.map(id => byId.get(id)), getB = sides.B.map(id => byId.get(id));
     const team = (t, incoming, outgoing, otherOut) => {
       const before = healthy(t);
-      const after = before.filter(p => !outgoing.includes(p)).concat(incoming.filter(p => !otherOut.has(String(p.sleeperId))));
+      const after = before.filter(p => !outgoing.includes(p)).concat(incoming.filter(p => !otherOut.has(String(p.sleeperId)) && !before.includes(p)));
       const B = strength(before), Aft = strength(after);
       return { t, before: B, after: Aft, incoming, outgoing: outgoing.filter(p => before.includes(p)), impact: B.score > 0 ? 100 * (Aft.score - B.score) / B.score : 0 };
     };
@@ -6137,6 +6148,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
                           without: list => strength(pool.filter(p => !list.includes(p))) });
     }
+    if (A.fit.net == null || B.fit.net == null) return null;   // one team gives nothing it owns: value verdict only
     return { A, B, n: ev.n, league: d.league };
   }
   // QB, RB1, RB2, WR1… FLEX, SF for each starter
@@ -6190,7 +6202,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return { p, f, tv: Math.round(v * f), why, starts: !!role, role: role || "" };
     });
     const recv = inc.reduce((a, x) => a + x.tv, 0), give = out.reduce((a, x) => a + x.tv, 0);
-    return { inc, out, recv, give, net: recv && give ? 100 * (recv - give) / Math.min(recv, give) : 0 };
+    // a team that gives (or gets) nothing has no roster-adjusted net: null, never a fake 0 ("basically even")
+    return { inc, out, recv, give, net: recv && give ? 100 * (recv - give) / Math.min(recv, give) : null };
   }
   // Double-check on every trade read: a position that no player in the deal plays keeps every
   // team's grade there. Position rooms already guarantee this; the check catches any regression.
@@ -6570,7 +6583,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const R = {};
     for (const s of SIDES3) {
       const t = T[s], before = healthy(t), inc = sides[s].map(id => byId.get(id)), out = sentBy(s).map(id => byId.get(id));
-      const incOk = inc.filter(p => !outSet(T[originOf(p.id, s)]).has(String(p.sleeperId)));
+      const incOk = inc.filter(p => !outSet(T[originOf(p.id, s)]).has(String(p.sleeperId)) && !before.includes(p));
       const B = strength(before), A = strength(before.filter(p => !out.includes(p)).concat(incOk));
       R[s] = { t, before: B, after: A, incoming: inc, outgoing: out.filter(p => before.includes(p)), impact: B.score > 0 ? 100 * (A.score - B.score) / B.score : 0 };
     }
@@ -6587,6 +6600,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       X.fit = fitValues({ before: X.before, after: X.after, incoming: X.incoming, outgoing: X.outgoing, places: X.places, n: ev.n, league: d.league,
                           without: list => strength(pool.filter(p => !list.includes(p))) });
     }
+    if (SIDES3.some(x => R[x].fit.net == null)) return null;   // a team gives or gets nothing it owns: no roster-adjusted read
     return { R, n: ev.n, league: d.league };
   }
 
@@ -6694,7 +6708,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("balance-btn").textContent = TC_UI.balance ? "Hide suggestions" : "Balance this trade";
   }
 
-  const fmtNet = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
+  const fmtNet = v => (v == null || !isFinite(v) ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`);
   // "Fair on value, bad fit for X" when AM value and roster fit disagree
   function fitHeadline(ctx, names, marketFair) {
     const n = { A: ctx.A.fit.net, B: ctx.B.fit.net };
