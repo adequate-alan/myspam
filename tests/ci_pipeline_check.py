@@ -49,6 +49,29 @@ ok(any("upload-artifact" in str(s.get("uses")) and s.get("if") == "always()" for
 pins = open(os.path.join(ROOT, "tests/requirements-ci.txt")).read()
 ok(re.search(r"^playwright==\d+\.\d+\.\d+$", pins, re.M) is not None, "Playwright is pinned to an exact version")
 
+# every third-party module a test imports (directly, or through the pipeline modules it loads) is pinned for CI
+# (PR #1: injury_check imports pandas through pipeline/build_stats.py; CI crashed with ModuleNotFoundError)
+import sys as _sys
+PKG = {"yaml": "pyyaml", "playwright": "playwright", "pandas": "pandas", "numpy": "numpy"}
+pinned = {l.split("==")[0].strip().lower() for l in pins.splitlines() if "==" in l}
+def third_party(path, seen=None):
+    seen = set() if seen is None else seen
+    if path in seen or not os.path.exists(path): return set()
+    seen.add(path); src = open(path, encoding="utf-8").read(); out = set()
+    for m in re.finditer(r"^\s*(?:import|from)\s+([A-Za-z_][\w]*)", src, re.M):
+        mod = m[1]
+        if mod in _sys.stdlib_module_names or mod == "__future__": continue
+        local = [os.path.join(ROOT, d, mod + ".py") for d in ("tests", "pipeline")]
+        hit = [x for x in local if os.path.exists(x)]
+        if hit: out |= third_party(hit[0], seen)
+        else: out.add(mod)
+    return out
+need_mods = set()
+for t in sorted(os.listdir(os.path.join(ROOT, "tests"))):
+    if t.endswith(".py"): need_mods |= third_party(os.path.join(ROOT, "tests", t))
+unpinned = sorted(m for m in need_mods if PKG.get(m, m).lower() not in pinned)
+ok(not unpinned, f"Every third-party module the tests import is pinned in tests/requirements-ci.txt ({sorted(need_mods)}) {unpinned}")
+
 # 2. gate conditions: a tiny evaluator for the expressions these jobs use
 def evaluate(expr, ctx):
     e = expr.replace("${{", "").replace("}}", "").strip()
