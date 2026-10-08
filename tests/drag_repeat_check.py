@@ -12,11 +12,11 @@ Checks, over 30 drags:
    consecutive drags, a position tab (WR), unsaved edits piling up, after Save (publishes to the mock), after Cancel
 2. every drop lands on the rank its "#a → #b" chip showed; overall ranks stay 1..N, ids unique, position ranks follow
    the overall order (checked on the data, SPM.rankingSnapshot, and on the screen)
-3. every drawn row matches the HTML it was built from (rows are reused between renders, never stale), and a typed
-   value cancelled with Escape gives the value button back
+3. every drawn row matches the HTML it was built from (rows are reused between renders, never stale), and a value edit
+   cancelled with Escape gives the value button back
 4. nothing is left behind: no floating row, line or shield, the same number of event listeners on window / document
    / the board as before the first drag, no drag animation loop running, page node count not growing
-6. reused rows are never stale: after drags, a typed value and its reset, a tier change, owner filter, search, the
+6. reused rows are never stale: after drags, a value edit, a tier change, owner filter, search, the
    production sort, League-adjusted and back, the drawer open, Save, Cancel, a league switch (ownership) and rapid drags,
    the board equals one built from scratch in the same state; rapid drags leave no stray indicators
 5. a drop inserts only the rows that changed (median ≤ 30 rows, never half the board; the old code redrew all ~259 rows
@@ -157,11 +157,11 @@ with sync_playwright() as p:
     board_ok("3 drags on the WR tab")
     pg.click("#pos-chips button:has-text('All')"); pg.wait_for_timeout(400)
     unsaved = pg.evaluate("() => document.getElementById('eb-count').textContent")
-    # typed value, cancelled with Escape: the row gets its value button back (a reused row is never stale)
+    # a value edit cancelled with Escape: the row gets its value button back (a reused row is never stale)
     pg.locator("#rank-body tr.player").nth(50).locator(".num-btn").click(); pg.wait_for_timeout(150)
     pg.press(".val-input", "Escape"); pg.wait_for_timeout(300)
     ok(pg.locator("#rank-body .val-input").count() == 0 and pg.locator("#rank-body tr.player").nth(50).locator(".num-btn").count() == 1,
-       "A typed value cancelled with Escape gives the value button back")
+       "A value edit cancelled with Escape gives the value button back")
     for k in range(4): drag(100 + k * 9, 2.4 if k % 2 else -2.4)
     board_ok(f"Drags with unsaved edits piling up ({unsaved})")
     # Save (publishes to the mocked repository), then keep dragging
@@ -203,7 +203,9 @@ with sync_playwright() as p:
     for i in range(4): pg.mouse.move(x, y + 3 * (i + 1))
     lifted = pg.locator(".drag-float").count() == 1; lat = round((time.time() - t) * 1000)
     pg.keyboard.press("Escape"); pg.mouse.up()
-    ok(lifted and lat < 250, f"A further drag lifts the row right away ({lat}ms incl. automation)")
+    # 330ms (Oct 12): measured old vs new code on the same machine, 4 alternating runs each: 265–284ms vs 185–290ms,
+    # automation overhead included; the old 250ms limit failed on unchanged code, so it measured the machine, not a regression
+    ok(lifted and lat < 330, f"A further drag lifts the row right away ({lat}ms incl. automation)")
     board_ok("Final board")
 
     # 6. rows reused between renders are never stale: after each kind of change, the board on screen must equal a
@@ -223,13 +225,12 @@ with sync_playwright() as p:
         ok(r["same"], f"Reused rows = a fresh render: {label} ({r['n']} rows)" + ("" if r["same"] else f" first difference at row {r['diff']}: {r['a']!r} vs {r['b']!r}"))
     def sel(id_, v): pg.evaluate(f"() => {{ const s = document.getElementById('{id_}'); s.value = {json.dumps(v)}; s.dispatchEvent(new Event('change')); }}"); pg.wait_for_timeout(400)
     fresh("ranks, position ranks, movement indicators and Revalued tags after 36 drags")
-    # a typed value (manual override), then the model value back
+    # a value edit (and, when it doesn't fit his rank, the notice cancelled: nothing changes)
     vrow = pg.locator("#rank-body tr.player").nth(70)
     v0 = int(re.sub(r"\D", "", vrow.locator(".num-btn").inner_text()))
     vrow.locator(".num-btn").click(); pg.wait_for_timeout(150); pg.fill(".val-input", str(v0 + 3)); pg.press(".val-input", "Enter"); pg.wait_for_timeout(500)
-    fresh("a typed value (CUSTOM)")
-    auto = pg.locator("#rank-body .auto-btn").first
-    if auto.count(): auto.click(); pg.wait_for_timeout(500); fresh("a typed value reset")
+    if pg.locator('#ed-warn [data-ed="close"]').count() and pg.locator("#ed-warn").is_visible(): pg.click('#ed-warn [data-ed="close"]'); pg.wait_for_timeout(300)
+    fresh("a value edit")
     # tier change on a position tab: the first player of a lower WR tier moves up into the tier above
     pg.click("#pos-chips button:has-text('WR')"); pg.wait_for_timeout(400)
     TIERED = """() => [...document.querySelectorAll('#rank-body tr')].reduce((o, tr) => { if (tr.dataset.tier && !tr.classList.contains('player')) o.t = tr.dataset.tier;
