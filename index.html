@@ -1571,6 +1571,16 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .lc-col ul.rat-pro li::before { background: var(--rb); }
 .lc-col ul.rat-con li::before { background: var(--qb); }
 .gl-src { white-space: nowrap; color: var(--muted); font-size: 0.78rem; }
+/* Ranking History kinds (Oct 11): automatic repricing is muted, collapsed runs open on Show */
+.gl-table tr.gl-auto td { color: var(--muted); font-weight: 500; }
+.gl-table tr.gl-auto td .mv { opacity: 0.7; }
+.gl-table tr.gl-in { display: none; }
+.gl-table tr.gl-in.gl-open { display: table-row; }
+.gl-table tr.gl-in td:first-child { padding-left: 18px; }
+.gl-why { display: block; font-size: 0.7rem; color: var(--muted); white-space: normal; max-width: 260px; }
+.gl-pct { font-size: 0.7rem; color: var(--muted); }
+.gl-toggle { background: none; border: 0; padding: 0; color: var(--muted); font: inherit; font-size: 0.74rem; text-decoration: underline; cursor: pointer; }
+.gl-toggle:hover { color: var(--text-primary); }
 .gl-local { margin-left: 4px; padding: 1px 6px; border-radius: 4px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rose-ink); background: color-mix(in srgb, var(--rose) 14%, transparent); }
 
 /* ---------- Sleeper: header league switcher ---------- */
@@ -5245,7 +5255,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T02:00Z";
+  const BUILD_ID = "2026-10-12T04:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7947,16 +7957,32 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const entry = await repoEntry(commit.tree.sha, path);
     return { head, tree: commit.tree.sha, text: entry ? await repoBlobText(entry.sha, path) : null, blob: entry ? entry.sha : null };
   }
+  async function repoReadMany(paths) {   // several files from one commit: { head, tree, texts: { path: text | null } }
+    const ref = await gh(`/repos/${REPO}/git/ref/heads/${BRANCH}`), head = ref.object && ref.object.sha;
+    if (!head) throw new Error(`Couldn't read the ${BRANCH} branch of ${REPO}.`);
+    const commit = await gh(`/repos/${REPO}/git/commits/${head}`), texts = {};
+    for (const path of paths) { const entry = await repoEntry(commit.tree.sha, path); texts[path] = entry ? await repoBlobText(entry.sha, path) : null; }
+    return { head, tree: commit.tree.sha, texts };
+  }
   async function repoWrite(base, path, text, message) {   // the new { commit, blob }, or null when the branch moved since base
-    const blob = await gh(`/repos/${REPO}/git/blobs`, { method: "POST", body: JSON.stringify({ content: b64encode(text), encoding: "base64" }) });
-    const tree = await gh(`/repos/${REPO}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: base.tree, tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }] }) });
+    const r = await repoWriteMany(base, [{ path, text }], message);
+    return r && { commit: r.commit, blob: r.blobs[0] };
+  }
+  // one commit with several files (e.g. the ranking history and its exact snapshot), checked byte for byte after
+  async function repoWriteMany(base, files, message) {   // { commit, blobs } or null when the branch moved since base
+    const blobs = [];
+    for (const f of files) blobs.push((await gh(`/repos/${REPO}/git/blobs`, { method: "POST", body: JSON.stringify({ content: b64encode(f.text), encoding: "base64" }) })).sha);
+    const tree = await gh(`/repos/${REPO}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: base.tree, tree: files.map((f, i) => ({ path: f.path, mode: "100644", type: "blob", sha: blobs[i] })) }) });
     const commit = await gh(`/repos/${REPO}/git/commits`, { method: "POST", body: JSON.stringify({ message, tree: tree.sha, parents: [base.head] }) });
     try { await gh(`/repos/${REPO}/git/refs/heads/${BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }) }); }
     catch (err) { if (err.status === 422 || err.status === 409) return null; throw err; }   // not a fast-forward: someone committed first
-    const back = await gh(`/repos/${REPO}/git/commits/${commit.sha}`), entry = await repoEntry(back.tree.sha, path);
-    if (!entry || entry.sha !== blob.sha || (await repoBlobText(entry.sha, path)) !== text)
-      throw new Error(`GitHub accepted the commit, but reading ${path} back didn't match what was sent. Check the latest commit on GitHub before publishing again.`);
-    return { commit: commit.sha, blob: blob.sha };
+    const back = await gh(`/repos/${REPO}/git/commits/${commit.sha}`);
+    for (let i = 0; i < files.length; i++) {
+      const entry = await repoEntry(back.tree.sha, files[i].path);
+      if (!entry || entry.sha !== blobs[i] || (await repoBlobText(entry.sha, files[i].path)) !== files[i].text)
+        throw new Error(`GitHub accepted the commit, but reading ${files[i].path} back didn't match what was sent. Check the latest commit on GitHub before publishing again.`);
+    }
+    return { commit: commit.sha, blobs };
   }
 
   /* The rankings block in index.html: exactly one `const RANKINGS_CSV = \`` … `\n\`;`, replaced by position so nothing
@@ -8118,7 +8144,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!editor.token) { openSignin(); return; }
     editor.saving = true; updateEditorBar();
     try {
-      let merged = null, same = false;
+      let merged = null, same = false, manualMap = null;
       for (let attempt = 0; attempt < 3 && merged == null; attempt++) {
         const base = await repoRead(FILE);
         if (base.text == null) throw new Error(`${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
@@ -8126,6 +8152,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const csv = mergeInto(cur.csv);
         const problems = validateRankings(csv, cur.csv);
         if (problems.length) throw new Error(`the rankings didn't pass the pre-publish checks, so nothing was changed (${problems.slice(0, 3).join("; ")}${problems.length > 3 ? `; +${problems.length - 3} more` : ""}). Your edits are still saved in this browser.`);
+        manualMap = typedDiff(cur.csv, csv);   // typed values this publish adds, changes or clears (ranking history)
         if (csv === cur.csv) { merged = csv; same = true; break; }   // already live (e.g. published from another tab)
         const res = await repoWrite(base, FILE, replaceRankings(base.text, csv),
           `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count > 1 ? "s" : ""})`);
@@ -8137,7 +8164,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       editor.saving = false;
       rebuild();
       let snapNote = "";
-      try { const n = await saveHistory(); if (n) snapNote = ` Ranking history updated for ${n} player${n === 1 ? "" : "s"}.`; }
+      try { const ev = await saveHistory(manualMap); const s = ev && historySummary(ev); if (s) snapNote = ` Ranking history: ${s}.`; }
       catch (err) { snapNote = " The ranking history wasn't updated (" + err.message + ")."; }
       toast((same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote);
     } catch (err) {
@@ -10242,7 +10269,31 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   let histNorm = { src: undefined, h: null };
   const histNow = () => { if (histNorm.src !== rankHistory) histNorm = { src: rankHistory, h: normalizeHistory(rankHistory || null) }; return histNorm.h; };
+  /* Exact board snapshots (Alan, Oct 11; data/rank_snapshots/<YYYY-MM>.json): the canonical "AM value at the time".
+     A trade uses the latest snapshot published at or before it; trades before the first snapshot fall back to the
+     player's latest history entry at or before the trade (as before Oct 11). Months load on demand (needSnaps). */
+  const SNAPS = {}, snapLoading = {};
+  function loadSnapMonth(m) {
+    if (SNAPS[m]) return Promise.resolve(SNAPS[m]);
+    if (!snapLoading[m]) snapLoading[m] = fetch(snapPath(m), { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
+      .then(d => { SNAPS[m] = d && Array.isArray(d.snapshots) ? d : { snapshots: [] }; delete snapLoading[m]; return SNAPS[m]; });
+    return snapLoading[m];
+  }
+  function snapEventAt(ms) {   // the latest publish with an exact snapshot at or before ms
+    let best = null;
+    (histNow().events || []).forEach(e => { if (!e.snap) return; const t = Date.parse(e.ts); if (t <= ms && (!best || t >= best.t)) best = { t, e }; });
+    return best;
+  }
+  // load the snapshot months the league's trades need, then redraw
+  function needSnaps() {
+    const d = activeData();
+    const months = new Set(((d && d.tx) || []).filter(t => t.type === "trade").map(t => { const se = snapEventAt(t.at); return se && se.e.snap; }).filter(m => m && !SNAPS[m]));
+    if (months.size) Promise.all([...months].map(loadSnapMonth)).then(() => { if (txOn()) renderLeague(); if (currentTab === "trade") renderTrade(); });
+  }
   function valueAt(sid, ms) {
+    const se = snapEventAt(ms), f = se && SNAPS[se.e.snap], s = f && f.snapshots.find(x => x.ts === se.e.ts);
+    if (s) { const a = s.players[sid]; return a ? { t: se.t, ts: s.ts, rank: a[0], pr: a[1], tier: a[2], v: a[3], exact: true } : null; }
+    if (se && !f) loadSnapMonth(se.e.snap).then(() => { if (txOn()) renderLeague(); if (currentTab === "trade") renderTrade(); });
     const list = histNow().players[sid];
     if (!list || !list.length) return null;
     let best = null;
@@ -10312,7 +10363,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   function ensureTrades() {
     const d = activeData();
-    if (rankHistory === undefined) loadHistory().then(() => { if (txOn()) renderLeague(); });
+    if (rankHistory === undefined) loadHistory().then(() => { needSnaps(); if (txOn()) renderLeague(); });
+    else needSnaps();
     if (!d || slSource() !== "sleeper") return;
     const id = d.league.league_id;
     if (LT.loading !== id && !LT.error[id] && (!d.tx || d.txV !== TX_VERSION || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
@@ -12783,12 +12835,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* Ranking history (committed ranking changes plus scheduled snapshots; see the Ranking history section) */
   function historyOf(sid, h = historyWithPending()) {   // pass h when looking up many players (building it is the slow part)
     const list = h.players[sid] || [];
-    return list.map(e => ({ ts: e[0], date: localDay(e[0]), rank: e[1], posRank: e[2], tier: e[3], value: e[4], src: e[5], local: !!e.local }));
+    return list.map(e => ({ ts: e[0], date: localDay(e[0]), rank: e[1], posRank: e[2], tier: e[3], value: e[4], src: e[5], kind: e[6] || "", local: !!e.local }));
   }
   function ppHistory(info) {
     const h = historyOf(info.sid), p = info.p;
     if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the AM Rankings.</p>`;
-    const note = `<p class="pp-note">Ranking history records committed changes to your rankings and values, plus scheduled snapshots. Values are base AM values.</p>`;
+    const note = `<p class="pp-note">Ranking history shows published ranking changes and typed values, and the model's repricing once it adds up to 0.5% (muted). Every publish also stores the exact board. Values are base AM values.</p>`;
     if (!h.length) return `<p class="empty-note">No ranking history for ${esc(info.name)} yet.</p>` + note;
     if (h.length >= 2) {
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.rank })), invert: true, title: "Overall rank", fmt: v => "#" + v });
@@ -12796,12 +12848,50 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.value })), title: "AM Value", fmt: v => fmt(v) });
     }
     const tierCell = (x, prev) => x.tier === "" || x.tier == null ? "–" : isTagTier(x.tier) ? esc(tierLabel(info.pos, x.tier)) : `T${esc(String(x.tier))}${prev && prev.tier !== "" && prev.tier != null && String(prev.tier) !== String(x.tier) ? ` <span class="mv ${Number(x.tier) < Number(prev.tier) ? "up" : "down"}">${Number(x.tier) < Number(prev.tier) ? "▲" : "▼"}</span>` : ""}`;
-    const rows = h.slice().reverse().map((x, i, arr) => {
-      const prev = arr[i + 1];
-      return `<tr><td class="gl-wk">${esc(longWhen(x.ts))}</td><td>#${x.rank}</td><td>${prev ? moveTag(prev.rank - x.rank) : "–"}</td>
+    /* Kinds (Oct 11): ranking changes and typed values stay prominent; automatic repricing is muted, says which
+       publish it came with (what else that publish changed, never a claimed cause) and runs of it collapse. */
+    const evByTs = new Map((historyWithPending().events || []).map(e => [e.ts, e])), names = bySleeper();
+    const sameAs = (x) => {
+      const ev = evByTs.get(x.ts);
+      if (!ev) return x.src === "S" ? "Scheduled update (projections)" : "";
+      if (ev.src === "S") return "Scheduled update (projections)";
+      if (ev.src === "B") return "Baseline snapshot";
+      const moves = ev.ranking.filter(m => m[0] !== info.sid && m[1] != null && m[1] !== m[2]).sort((a, b) => Math.abs(b[1] - b[2]) - Math.abs(a[1] - a[2]) || a[2] - b[2]);
+      const typed = ev.manual.filter(m => m[0] !== info.sid);
+      const nm = sid => { const q = names.get(sid); return q ? q.name : "a player"; };
+      const bits = moves.slice(0, 2).map(m => `${nm(m[0])} #${m[1]} → #${m[2]}`).concat(moves.length ? [] : typed.slice(0, 2).map(m => `${nm(m[0])}'s typed value`));
+      const more = moves.length ? moves.length - bits.length : Math.max(0, typed.length - bits.length);
+      return bits.length ? `Same publish as ${bits.join(", ")}${more > 0 ? ` +${more} more` : ""}` : "";
+    };
+    const kindLabel = (x) => {
+      if (x.kind === "A") return "Model repriced";
+      const ev = evByTs.get(x.ts), man = ev && ev.manual.find(m => m[0] === info.sid);
+      const typed = x.kind.includes("V") ? (man && man[2] === "" ? "Typed value cleared" : "Typed value") : "";
+      if (x.kind === "R") return "Ranking change";
+      if (x.kind === "V") return typed;
+      if (x.kind === "RV") return `Ranking change · ${typed.toLowerCase()}`;
+      return HISTORY_SOURCE[x.src] || "Update";
+    };
+    const pct = (a, b) => (a ? `${b >= a ? "+" : "−"}${Math.abs((b / a - 1) * 100).toFixed(1)}%` : "");
+    const rev = h.slice().reverse(), groups = [];
+    rev.forEach((x, i) => { const g = groups[groups.length - 1]; if (x.kind === "A" && g && g.auto) g.items.push(i); else groups.push({ auto: x.kind === "A", items: [i] }); });
+    let gid = 0;
+    const row = (x, i, cls = "") => {
+      const prev = rev[i + 1], auto = x.kind === "A", note = auto ? sameAs(x) : "";
+      return `<tr class="${auto ? "gl-auto" : ""}${cls}"><td class="gl-wk">${esc(longWhen(x.ts))}</td><td>#${x.rank}</td><td>${prev ? moveTag(prev.rank - x.rank) : "–"}</td>
         <td>${esc(info.pos)}${x.posRank}</td><td>${prev ? moveTag(prev.posRank - x.posRank) : "–"}</td><td>${tierCell(x, prev)}</td>
-        <td class="gl-pts">${fmt(x.value)}</td><td>${prev ? valueMove(x.value - prev.value) : "–"}</td>
-        <td class="gl-src">${esc(HISTORY_SOURCE[x.src] || "Update")}${x.local ? ` <span class="gl-local" title="Saved in this browser; goes live with Publish to live site">not published</span>` : ""}</td></tr>`;
+        <td class="gl-pts">${fmt(x.value)}</td><td>${prev ? valueMove(x.value - prev.value) : "–"}${auto && prev ? ` <span class="gl-pct">${pct(prev.value, x.value)}</span>` : ""}</td>
+        <td class="gl-src">${esc(kindLabel(x))}${note ? `<span class="gl-why">${esc(note)}</span>` : ""}${x.local ? ` <span class="gl-local" title="Saved in this browser; goes live with Publish to live site">not published</span>` : ""}</td></tr>`;
+    };
+    const rows = groups.map(g => {
+      if (!g.auto || g.items.length < 2) return g.items.map(i => row(rev[i], i)).join("");
+      const id = "glg" + (++gid), first = g.items[g.items.length - 1], last = g.items[0], before = rev[first + 1];
+      const from = before ? before.value : rev[first].value, to = rev[last].value;
+      return `<tr class="gl-auto gl-sum"><td class="gl-wk">${esc(shortWhen(rev[first].ts))} – ${esc(shortWhen(rev[last].ts))}</td>
+        <td colspan="5">Model repriced ${g.items.length} times · rank and tier unchanged</td>
+        <td class="gl-pts">${fmt(to)}</td><td>${valueMove(to - from)} <span class="gl-pct">${pct(from, to)}</span></td>
+        <td class="gl-src"><button type="button" class="gl-toggle" data-grp="${id}" aria-expanded="false">Show</button></td></tr>`
+        + g.items.map(i => row(rev[i], i, ` gl-in ${id}`)).join("");
     }).join("");
     return `${h.length >= 2 ? `<div class="pp-three">
         <div><h3 class="section-label">Overall rank</h3><div class="chart-box" data-chart="0"></div></div>
@@ -12828,6 +12918,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   };
   const longDate = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const moveTag = d => (d === 0 ? `<span class="mv">–</span>` : `<span class="mv ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"} ${Math.abs(d)}</span>`);
+  document.addEventListener("click", e => {   // Ranking History: show / hide a collapsed run of automatic repricing
+    const b = e.target.closest && e.target.closest(".gl-toggle"); if (!b) return;
+    const open = b.getAttribute("aria-expanded") !== "true";
+    b.setAttribute("aria-expanded", String(open)); b.textContent = open ? "Hide" : "Show";
+    document.querySelectorAll("tr." + b.dataset.grp).forEach(r => r.classList.toggle("gl-open", open));
+  });
   const valueMove = d => (Math.round(d) === 0 ? `<span class="mv">–</span>` : `<span class="mv ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : "−"}${fmt(Math.abs(d))}</span>`);
 
   /* Trade value: similar values, trade-up and trade-down targets */
@@ -14558,90 +14654,162 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
 
   /* ---------- Ranking history ----------
-     data/rank_history.json (version 2) keeps every player's committed changes:
-       players: { sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source], ...] }
-     source: "M" manual edit (committed with Save changes / Publish to live site), "S" scheduled Tuesday
-     snapshot (pipeline/snapshot_history.py), "P" any other published update.
-     A player gets a new entry only when his overall rank, position rank or tier changed, or his value moved by
-     at least HISTORY_VALUE_MIN, so nothing is recorded while you drag, and repeated moves before one save count
-     once (the final spot). Save changes queues the entries in this browser (PENDING_KEY); Publish to live site
-     writes them, plus anything else that changed, to the shared file. */
-  const HISTORY_FILE = "data/rank_history.json", PENDING_KEY = "spm_history_pending";
-  const HISTORY_VALUE_MIN = { abs: 10, pct: 0.005 };   // smaller value moves aren't a new entry (model rounding)
-  const HISTORY_SOURCE = { M: "Manual edit", S: "Scheduled update", P: "Published update" };
+     Two files, written together in one commit on every publish (Alan, Oct 11):
+     data/rank_history.json (version 2) is the visible history:
+       players: { sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source, kind], ...] }
+       source: "M" publish from the editor, "S" scheduled snapshot (pipeline/snapshot_history.py), "P" older published update.
+       kind: "R" ranking change (overall rank, position rank or tier), "V" manual value change (a typed value added,
+       changed or cleared), "RV" both, "A" automatic repricing (the model moved his value; rank, tier and typed value
+       unchanged). Entries from before Oct 11 were tagged afterwards only where the git history made it certain
+       (pipeline/classify_history.py); the others have no kind (legacy, shown as before).
+       A ranking change or a manual value change is always an entry. Automatic repricing becomes an entry only once his
+       value has moved at least HISTORY_VALUE_MIN since his last entry (smaller drift adds up until it crosses it).
+       events: one per publish { ts, by, src, ranking: [[sid, from rank, to rank, from tier, to tier]], manual: [[sid,
+       from typed value, to typed value]] ("" = none), auto: [sid], repriced: players whose exact value changed since
+       the previous snapshot, snap: the month file holding this publish's snapshot (null when the board was identical) }.
+     data/rank_snapshots/<YYYY-MM>.json is the exact board at every publish: snapshots: [{ ts, src, by, players:
+       { sid: [rank, position rank, tier, value, typed 1/0] } }], the canonical source for "AM value at the time"
+       (historical trades) and for rebuilding an old board exactly.
+     Save changes queues entries in this browser (PENDING_KEY) so the player page shows them as "not published";
+     Publish to live site records the published board itself (one entry per changed player, at the publish time). */
+  const HISTORY_FILE = "data/rank_history.json", PENDING_KEY = "spm_history_pending", SNAP_DIR = "data/rank_snapshots/";
+  const HISTORY_VALUE_MIN = { abs: 10, pct: 0.005 };   // smaller automatic value moves aren't a visible entry yet
+  const HISTORY_SOURCE = { M: "Manual edit", S: "Scheduled update", P: "Published update", B: "Baseline snapshot" };
+  const snapMonth = ts => String(ts).slice(0, 7);
+  const snapPath = month => `${SNAP_DIR}${month}.json`;
   function rankingSnapshot() {
     const out = {};
     players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && p.rank != null)
-      .forEach(p => { out[p.sleeperId] = [p.rank, p.posNum, p.tier === "" || p.tier == null ? "" : Number(p.tier), Math.round(p.value)]; });
+      .forEach(p => { out[p.sleeperId] = [p.rank, p.posNum, p.tier === "" || p.tier == null ? "" : Number(p.tier), Math.round(p.value), p.custom ? 1 : 0]; });
     return out;
   }
   // older files (version 1: one snapshot per publish day) become per-player entries
   function normalizeHistory(h) {
-    if (h && h.version === 2 && h.players) return h;
-    const out = { version: 2, players: {} };
+    if (h && h.version === 2 && h.players) { if (!Array.isArray(h.events)) h.events = []; return h; }
+    const out = { version: 2, players: {}, events: [] };
     ((h && h.snapshots) || []).slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(snap => {
       Object.entries(snap.players || {}).forEach(([sid, a]) => addEntry(out, sid, [snap.date, a[0], a[1], a[3] ?? "", a[2] ?? a[3], "S"]));
     });
     return out;
   }
   const lastOf = (h, sid) => { const l = h && h.players && h.players[sid]; return l && l.length ? l[l.length - 1] : null; };
-  // does cur ([rank, posRank, tier, value]) differ from the last entry enough to record?
+  // did overall rank, position rank or tier change from the last entry? (cur = [rank, posRank, tier, value])
+  const rankMoved = (last, cur) => !last || last[1] !== cur[0] || last[2] !== cur[1] || (last[3] !== "" && cur[2] !== "" && String(last[3]) !== String(cur[2]));
+  // does cur differ from the last entry enough to record?
   function historyChanged(last, cur) {
-    if (!last) return true;
-    if (last[1] !== cur[0] || last[2] !== cur[1]) return true;
-    if (last[3] !== "" && cur[2] !== "" && String(last[3]) !== String(cur[2])) return true;
+    if (rankMoved(last, cur)) return true;
     return Math.abs((last[4] || 0) - cur[3]) >= Math.max(HISTORY_VALUE_MIN.abs, HISTORY_VALUE_MIN.pct * Math.max(last[4] || 0, cur[3]));
   }
-  function addEntry(h, sid, e) {   // e = [ts, rank, posRank, tier, value, source]; skipped when nothing changed
+  const kindOf = (last, cur, manual) => ((rankMoved(last, cur) ? "R" : "") + (manual ? "V" : "")) || "A";
+  function addEntry(h, sid, e) {   // e = [ts, rank, posRank, tier, value, source, kind?]; skipped when nothing changed
     if (!historyChanged(lastOf(h, sid), [e[1], e[2], e[3], e[4]])) return false;
     (h.players[sid] = h.players[sid] || []).push(e);
     return true;
   }
-  function addSnapshot(h, snap, ts, src) {
+  function addSnapshot(h, snap, ts, src) {   // entries only (no event, no exact snapshot); kept for older callers
     let n = 0;
-    Object.entries(snap).forEach(([sid, a]) => { if (addEntry(h, sid, [ts, a[0], a[1], a[2], a[3], src])) n++; });
+    Object.entries(snap).forEach(([sid, a]) => { const last = lastOf(h, sid); if (addEntry(h, sid, [ts, a[0], a[1], a[2], a[3], src, kindOf(last, a, false)])) n++; });
     return n;
   }
+  const typedState = a => (a && a[4] ? String(a[3]) : "");
+  /* One publish (or scheduled snapshot): visible entries, the publish event and the exact snapshot. hist (normalized)
+     and snapFile ({ version, snapshots }) change in place. prevSnap = the latest exact snapshot before this one (null
+     for the first). manualMap: sid → [from, to] typed values this publish changed (the editor knows); typed changes
+     against prevSnap are added too, so another browser's edit is never filed as automatic. */
+  function recordPublish(hist, snapFile, prevSnap, snap, ts, src, by, manualMap) {
+    const manual = new Map(manualMap || []);
+    if (prevSnap) Object.entries(snap).forEach(([sid, a]) => {
+      const p = prevSnap.players[sid];
+      if (p && typedState(p) !== typedState(a) && !manual.has(sid)) manual.set(sid, [typedState(p), typedState(a)]);
+    });
+    const ev = { ts, by: by || "", src, ranking: [], manual: [], auto: [], repriced: null, snap: null };
+    Object.entries(snap).forEach(([sid, a]) => {
+      const last = lastOf(hist, sid), cur = a.slice(0, 4), man = manual.has(sid);
+      if (!man && !historyChanged(last, cur)) return;
+      const kind = kindOf(last, cur, man);
+      (hist.players[sid] = hist.players[sid] || []).push([ts, a[0], a[1], a[2], a[3], src, kind]);
+      if (kind.includes("R")) ev.ranking.push([sid, last ? last[1] : null, a[0], last ? last[3] : null, a[2]]);
+      if (man) ev.manual.push([sid, ...manual.get(sid)]);
+      if (kind === "A") ev.auto.push(sid);
+    });
+    if (prevSnap) ev.repriced = Object.entries(snap).filter(([sid, a]) => prevSnap.players[sid] && prevSnap.players[sid][3] !== a[3]).length;
+    const same = !!prevSnap && Object.keys(snap).length === Object.keys(prevSnap.players).length
+      && Object.entries(snap).every(([sid, a]) => { const p = prevSnap.players[sid]; return p && a.every((x, i) => x === p[i]); });
+    if (!same) { snapFile.snapshots.push({ ts, src, by: by || "", players: snap }); ev.snap = snapMonth(ts); }
+    const changed = !same || ev.ranking.length || ev.manual.length || ev.auto.length;
+    if (changed) hist.events.push(ev);
+    return { ev, changed: !!changed, snapshot: !same };
+  }
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  function historySummary(ev) {
+    const parts = [];
+    if (ev.ranking.length) parts.push(plural(ev.ranking.length, "ranking change", "ranking changes"));
+    if (ev.manual.length) parts.push(plural(ev.manual.length, "manual value change", "manual value changes"));
+    if (ev.auto.length) parts.push(plural(ev.auto.length, "automatic repricing", "automatic repricings"));
+    return parts.join(" · ");
+  }
+  const historyMessage = ev => `Ranking history: ${historySummary(ev) || "exact snapshot"}`;
+  const boardSnapText = f => `{"version":1,"note":"AM board snapshots: the exact board at every publish. players: {sleeper_id: [overall rank, position rank, tier, base AM value, typed value 1/0]}.","snapshots":[\n${(f.snapshots || []).map(s => JSON.stringify(s)).join(",\n")}\n]}\n`;
   const readPending = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]") || []; } catch (e) { return []; } };
   const writePending = list => { try { if (list.length) localStorage.setItem(PENDING_KEY, JSON.stringify(list)); else localStorage.removeItem(PENDING_KEY); } catch (e) {} };
   // history as this browser sees it: the shared file plus saves that aren't published yet
   function historyWithPending() {
-    const h = { version: 2, players: {} };
+    const h = { version: 2, players: {}, events: [] };
     const base = normalizeHistory(rankHistory || null);
     Object.entries(base.players).forEach(([sid, list]) => { h.players[sid] = list.slice(); });
-    readPending().forEach(c => Object.entries(c.entries).forEach(([sid, e]) => { const copy = e.slice(0, 6); if (addEntry(h, sid, copy)) copy.local = true; }));
+    h.events = base.events;
+    readPending().forEach(c => Object.entries(c.entries).forEach(([sid, e]) => { const copy = e.slice(0, 7); if (addEntry(h, sid, copy)) copy.local = true; }));
     return h;
   }
-  // Save changes: one committed update for every player whose saved spot differs from his last entry
+  // typed values (the value column) that differ between two versions of the rankings: sid → [from, to]
+  function typedDiff(fromCsv, toCsv) {
+    const out = new Map(), A = csvToTable(fromCsv), B = csvToTable(toCsv);
+    const val = (t, r) => String(r[colOf(t, "value")] ?? "").trim(), sidOf = (t, r) => String(r[colOf(t, "sleeper_id")] ?? "").trim();
+    const before = new Map(A.rows.map(r => [sidOf(A, r), val(A, r)]));
+    B.rows.forEach(r => { const sid = sidOf(B, r); if (sid && before.has(sid) && before.get(sid) !== val(B, r)) out.set(sid, [before.get(sid), val(B, r)]); });
+    return out;
+  }
+  // Save changes: one pending entry for every player whose saved spot differs from his last entry (shown as not published)
   async function recordSave() {
     await loadHistory();
-    const h = historyWithPending(), ts = new Date().toISOString(), entries = {};
+    const h = historyWithPending(), ts = new Date().toISOString(), entries = {}, manual = typedDiff(publishedCsv, savedCsv);
     Object.entries(rankingSnapshot()).forEach(([sid, a]) => {
-      const e = [ts, a[0], a[1], a[2], a[3], "M"];
-      if (historyChanged(lastOf(h, sid), a)) entries[sid] = e;
+      const last = lastOf(h, sid), man = manual.has(sid);
+      if (man || historyChanged(last, a)) entries[sid] = [ts, a[0], a[1], a[2], a[3], "M", kindOf(last, a, man)];
     });
     if (Object.keys(entries).length) writePending(readPending().concat([{ ts, entries }]));
     return Object.keys(entries).length;
   }
-  const historyText = h => `{"note":"AM ranking history: committed changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source M=manual edit S=scheduled update P=published update], ...]}. A new entry is added only when something changed.","version":2,"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 6)))}`).join(",\n")}\n}}\n`;
-  // Publish to live site: queued saves, then anything else that changed, into the shared file
-  async function saveHistory() {
+  const historyText = h => `{"note":"AM ranking history: visible changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source M=publish S=scheduled update P=older published update, kind R=ranking change V=manual value change A=automatic repricing (none = legacy, unclassified)], ...]} and one event per publish. The exact board at every publish is in data/rank_snapshots/.","version":2,"events":[\n${(h.events || []).map(e => JSON.stringify(e)).join(",\n")}\n],"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 7)))}`).join(",\n")}\n}}\n`;
+  // the newest exact snapshot before this month's file has one: from the month of the last event that wrote one
+  async function previousSnapshot(hist, month) {
+    const ev = [...(hist.events || [])].reverse().find(e => e.snap && e.snap !== month);
+    if (!ev) return null;
+    const f = await repoRead(snapPath(ev.snap));
+    const list = f.text != null ? (JSON.parse(f.text).snapshots || []) : [];
+    return list[list.length - 1] || null;
+  }
+  // Publish to live site: the published board itself (entries, the event and the exact snapshot) in one commit
+  async function saveHistory(manualMap = null) {
     for (let attempt = 0; attempt < 3; attempt++) {
-      let hist = { version: 2, players: {} };
-      const file = await repoRead(HISTORY_FILE);   // Git Data API: the history file grows with every publish (see repoRead)
-      if (file.text != null) hist = normalizeHistory(JSON.parse(file.text));
-      let added = 0;
-      readPending().sort((a, b) => a.ts.localeCompare(b.ts)).forEach(c => Object.entries(c.entries).forEach(([sid, e]) => { if (addEntry(hist, sid, e.slice(0, 6))) added++; }));
-      added += addSnapshot(hist, rankingSnapshot(), new Date().toISOString(), "M");
-      if (!added) { writePending([]); rankHistory = hist; return 0; }
-      if (await repoWrite(file, HISTORY_FILE, historyText(hist), `Ranking history: ${added} change${added === 1 ? "" : "s"}`)) {
-        writePending([]); rankHistory = hist;
-        return added;
+      const ts = new Date().toISOString(), month = snapMonth(ts), path = snapPath(month);
+      const base = await repoReadMany([HISTORY_FILE, path]);   // Git Data API: both files from one commit
+      const hist = normalizeHistory(base.texts[HISTORY_FILE] != null ? JSON.parse(base.texts[HISTORY_FILE]) : null);
+      const snapFile = base.texts[path] != null ? JSON.parse(base.texts[path]) : { version: 1, snapshots: [] };
+      if (!Array.isArray(snapFile.snapshots)) snapFile.snapshots = [];
+      const prevSnap = snapFile.snapshots[snapFile.snapshots.length - 1] || await previousSnapshot(hist, month);
+      const r = recordPublish(hist, snapFile, prevSnap, rankingSnapshot(), ts, "M", editor.login, manualMap);
+      if (!r.changed) { writePending([]); rankHistory = hist; return r.ev; }
+      const files = [{ path: HISTORY_FILE, text: historyText(hist) }];
+      if (r.snapshot) files.push({ path, text: boardSnapText(snapFile) });
+      if (await repoWriteMany(base, files, historyMessage(r.ev))) {
+        writePending([]); rankHistory = hist; SNAPS[month] = snapFile;
+        return r.ev;
       }
     }
     throw new Error("the history file kept changing");
   }
-  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings };   // helpers for the scheduled snapshot and tests
+  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings };   // helpers for the scheduled snapshot and tests
 
   // Start-up: restore a saved connection
   sl = readSl();
