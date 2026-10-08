@@ -1513,6 +1513,9 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 }
 .tc-warn b { color: var(--cream); }
 .tc-warn-acts { display: inline-flex; gap: 8px; flex-shrink: 0; }
+.tc-hist { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 14px; padding: 9px 14px;
+  border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--muted); background: var(--fill-1, transparent); border: 1px solid var(--line); }
+.tc-hist b { color: var(--ink); }
 .verdict-eyebrow { display: block; margin-bottom: 4px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .verdict-ctx { margin: 8px 0 0; font-size: 0.82rem; color: var(--ink-2); }
 .verdict-ctx b.win-A, .ri-verdicts b.win-A { color: var(--side-a); }
@@ -4401,6 +4404,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <span class="tc-badge" id="tc-badge"></span>
     </div>
     <div class="tc-warn" id="tc-warn" role="status" hidden></div>
+    <div class="tc-hist" id="tc-hist" role="status" hidden></div>
 
     <div class="trade-grid">
       <div class="side A">
@@ -5230,7 +5234,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-10T21:00Z";
+  const BUILD_ID = "2026-10-11T00:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5937,6 +5941,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function tcOwner(p, side) {
     if (!tcLeague() || !p.sleeperId) return "";
     const o = LG.ownerOf.get(p.id), giver = sideTeam(side === "A" ? "B" : "A");
+    // a past trade: who sent him, from the transaction (today's owner is usually the team that received him)
+    if (giver && histOn() && histOn().before) return `<span class="own-tag inline">From ${esc(giver.mine ? "your team" : giver.name)}</span>`;
     if (o && giver && o.rosterId === giver.rosterId && !o.mine) return `<span class="own-tag inline">${esc(o.name)}</span>`;
     return ownPill(o, "inline");
   }
@@ -6026,11 +6032,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       // "+0.0% roster-adjusted, basically even" because each team gave nothing it owned and got its own players twice)
       const own = stray.filter(x => x.own), names = list => list.map(x => `<b>${esc(x.p.name)}</b>`).join(", ");
       const ownLine = uniq(own.map(x => x.own)).map(t => `${names(own.filter(x => x.own === t))} ${own.filter(x => x.own === t).length === 1 ? "is" : "are"} already on ${esc(t)}'s roster`).join("; ");
-      warn.innerHTML = own.length
+      warn.innerHTML = TC.hist
+        ? `<span>This is a past trade: ${names(stray)} ${stray.length === 1 ? "has" : "have"} moved since, and the rosters from the time of the trade couldn't be rebuilt from the transaction log${TC.hist.why ? ` (${esc(TC.hist.why)})` : ""}, so there's no roster-adjusted read. The sides come straight from the transaction.</span>`
+        : own.length
         ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster-adjusted analysis is off until the sides are fixed.</span>
           <span class="tc-warn-acts"><button class="btn primary" type="button" data-tc-flip>Flip players</button> <button class="btn" type="button" data-tc-remove>Remove</button></span>`
         : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
           <button class="btn" type="button" data-tc-remove>Remove</button>`;
+    }
+    const hn = $("tc-hist"), h = histOn();
+    hn.hidden = !(h && h.before);
+    if (h && h.before) {
+      const when = new Date(h.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      hn.innerHTML = `<span><b>Trade from ${esc(when)}</b> · sides from the transaction · rosters as they were just before it (today's rosters with the ${h.undone} later move${h.undone === 1 ? "" : "s"} undone)${h.misses ? ` · ${h.misses} later move${h.misses === 1 ? " doesn't" : "s don't"} match today's rosters, so some players may be off` : ""} · today's AM values · IR and taxi at the time aren't known, so every rostered player counts · editing the trade switches to today's rosters.</span>`;
     }
     renderCardNeeds();
   }
@@ -6069,14 +6083,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (TC3.on) {
       SIDES3.forEach(r => sides[r].forEach(id => {
         const g = originOf(id, r), t = sideTeam(g), p = byId.get(id);
-        if (t && p && !(t.roster.players || []).map(String).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
+        if (t && p && !rosterIds(t).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
       }));
       return out;
     }
     [["A", "B"], ["B", "A"]].forEach(([getter, giver]) => {
       const t = sideTeam(giver); if (!t) return;
-      const ids = new Set((t.roster.players || []).map(String)), mine = sideTeam(getter);
-      const own = new Set(((mine && mine.roster.players) || []).map(String));
+      const ids = new Set(rosterIds(t)), mine = sideTeam(getter);
+      const own = new Set(mine ? rosterIds(mine) : []);
       sides[getter].forEach(id => { const p = byId.get(id); if (p && !ids.has(String(p.sleeperId))) out.push({ p, side: getter, from: t.name, own: own.has(String(p.sleeperId)) ? mine.name : null }); });
     });
     return out;
@@ -6115,6 +6129,40 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     renderTrade();
   });
 
+  /* Historical trades (Alan, Oct 10). A trade opened from the league's transaction log is read from the transaction
+     itself (Sleeper's adds = player -> roster that received him, drops = player -> roster that sent him; each card
+     lists what that team gets) and analysed on the rosters as they were just before it, not today's. Those rosters
+     are rebuilt from today's rosters by undoing every later completed transaction (trades, waiver claims, free-agent
+     adds and drops, commissioner moves), newest first, then the trade itself. Before this, a past trade was read on
+     today's rosters, where the players it moved already sit with the team that received them: the receiving team
+     "got" its own players twice, gave nothing it owned, and the roster-adjusted read came out "+0.0%, basically even".
+     IR / taxi status at the time isn't in the log, so every rostered player counts; values are today's AM values. */
+  function rostersBeforeTrade(t) {
+    const d = activeData();
+    if (!d || !Array.isArray(d.tx) || !d.tx.some(x => x.id === t.id)) return null;
+    const R = new Map((d.rosters || []).map(r => [r.roster_id, new Set((r.players || []).map(String))]));
+    let misses = 0;
+    const undo = x => {
+      Object.entries(x.adds || {}).forEach(([sid, rid]) => { const set = R.get(rid); if (set && set.has(String(sid))) set.delete(String(sid)); else misses++; });
+      Object.entries(x.drops || {}).forEach(([sid, rid]) => { const set = R.get(rid); if (set) set.add(String(sid)); });
+    };
+    const later = d.tx.filter(x => x.id !== t.id && x.at > t.at).sort((a, b) => b.at - a.at);
+    later.forEach(undo);
+    undo(t);
+    return { before: R, undone: later.length, misses };
+  }
+  const histKey = () => JSON.stringify([sides.A, sides.B, sides.C || [], ["A", "B", "C"].map(x => ($("team-" + x) || {}).value || "")]);
+  function histOn() {   // the historical view lasts while the trade is exactly as it was loaded; any edit makes it a manual trade
+    const h = TC.hist;
+    if (h && h.key !== histKey()) TC.hist = null;
+    return TC.hist || null;
+  }
+  // a team's player ids: just before the trade in the historical view, else today's
+  function rosterIds(t) {
+    const h = histOn();
+    return h && h.before ? [...(h.before.get(t.rosterId) || [])] : (t.roster.players || []).map(String);
+  }
+
   /* Roster context: how the trade changes each team's best lineup in this league */
   function rosterContext() {
     const d = activeData(), tA = sideTeam("A"), tB = sideTeam("B");
@@ -6123,7 +6171,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
-    const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(s => !o.has(s)).map(s => map.get(s)).filter(Boolean); };
+    const hb = histOn() && histOn().before;   // historical view: the roster just before the trade (IR / taxi then unknown)
+    const healthy = t => { const o = hb ? new Set() : outSet(t); return rosterIds(t).filter(s => !o.has(s)).map(s => map.get(s)).filter(Boolean); };
     const strength = pool => {
       const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench, sorted);
       L.cut = sorted.slice(limit); L.labels = slotLabels(L); L.filled = L.starters.length; return L;
@@ -6578,7 +6627,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
-    const healthy = t => { const o = outSet(t); return (t.roster.players || []).map(String).filter(x => !o.has(x)).map(x => map.get(x)).filter(Boolean); };
+    const hb = histOn() && histOn().before;
+    const healthy = t => { const o = hb ? new Set() : outSet(t); return rosterIds(t).filter(x => !o.has(x)).map(x => map.get(x)).filter(Boolean); };
     const strength = pool => { const sorted = pool.slice().sort(byVal), L = bestLineup(sorted.slice(0, limit), slots, lu.bench, sorted); L.cut = sorted.slice(limit); L.labels = slotLabels(L); L.filled = L.starters.length; return L; };
     const R = {};
     for (const s of SIDES3) {
@@ -10582,9 +10632,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (P.length === 3) P.forEach((s, i) => s.items.filter(x => x.p).forEach(x => {   // who sent each player
       const giver = P.findIndex(o => o.give.includes(x.sid)); if (giver >= 0) origin.set(x.p.id, letters[giver]);
     }));
+    const rb = rostersBeforeTrade(t);
+    TC.hist = { id: t.id, at: t.at, before: rb ? rb.before : null, undone: rb ? rb.undone : 0, misses: rb ? rb.misses : 0,
+                why: rb ? "" : "the transaction log isn't loaded", key: histKey() };
     renderTeamRosters(); renderTrade();
     showTab("trade"); history.replaceState(null, "", "#trade"); window.scrollTo({ top: 0 });
-    toast(`Loaded the ${new Date(t.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} trade with current values.${P.some(s => s.picks.length) ? " Draft picks aren't in the calculator." : ""} Players who have moved since show as hypothetical.`);
+    toast(`Loaded the ${new Date(t.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} trade${rb ? " on the rosters from just before it" : ""}, with today's values.${P.some(s => s.picks.length) ? " Draft picks aren't in the calculator." : ""}`);
   }
 
   // League tab events
@@ -11167,7 +11220,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       tog.textContent = TC3.on ? (open ? "Hide roster" : "Add from roster") : open ? `Hide ${whose} roster` : `Add from ${whose} roster`;
       box.hidden = !open;
       if (!open) { box.innerHTML = ""; return; }
-      const entries = (team.roster.players || []).map(sid => rosterEntry(sid, map))
+      const entries = rosterIds(team).map(sid => rosterEntry(sid, map))   // a past trade: the roster just before it
         .sort((a, b) => (b.ranked ? tv(b.p) : -1) - (a.ranked ? tv(a.p) : -1));
       if (TC3.on) {
         box.innerHTML = `<div class="tr-head">${esc(team.mine ? "Your roster" : team.name + "'s roster")} <span>Send to</span></div>
