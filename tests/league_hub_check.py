@@ -338,9 +338,10 @@ with sync_playwright() as p:
                 good = good and vt.startswith(word) and "STEAL" not in vt and lo - 0.05 <= df <= hi + 0.05
         ok(seen > 0 and good, f"Trade goal '{goal}': {seen} ideas, all {lo}-{hi}% in your favor and labelled '{word.title()}'")
     pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
-    # Trade types: 1-for-1, 1-for-2, 2-for-1, All packages (counted from the starting team's side)
+    # Trade types: 1-for-1, 1-for-2, 2-for-1, 3-for-1s (3-for-1 and 1-for-3), 2-for-4s (2-for-4 and 4-for-2), All packages
+    # (counted from the starting team's side; the two bigger types only when picked, never under All packages)
     labels = pg.locator("#tf-size button").all_inner_texts()
-    ok(labels == ["1-for-1", "1-for-2", "2-for-1", "All packages"], f"Trade type buttons: {labels}")
+    ok(labels == ["1-for-1", "1-for-2", "2-for-1", "3-for-1s", "2-for-4s", "All packages"], f"Trade type buttons: {labels}")
     def shapes(kind):
         pg.click(f"#tf-size [data-size='{kind}']"); pg.wait_for_timeout(250)
         out = set()
@@ -351,6 +352,9 @@ with sync_playwright() as p:
     for kind, want in (("11", {"1-for-1"}), ("12", {"1-for-2"}), ("21", {"2-for-1"})):
         got = shapes(kind)
         ok(got == want, f"Trade type {want.pop()}: only that shape ({got})")
+    for kind, allowed in (("31", {"3-for-1", "1-for-3"}), ("24", {"2-for-4", "4-for-2"})):
+        got = shapes(kind)
+        ok(got and got <= allowed, f"Trade type {' / '.join(sorted(allowed))}: only those shapes ({got})")
     got = shapes("all")
     ok(len(got) >= 2 and got <= {"1-for-1", "1-for-2", "2-for-1", "2-for-2"}, f"All packages mixes shapes ({got})")
     pg.click("#tab-league"); pg.wait_for_timeout(500)
