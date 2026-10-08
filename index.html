@@ -2007,6 +2007,7 @@ dialog.signin label.im-file input { height: auto; border: 0; padding: 4px 0 0; b
 dialog.signin .im-team-top input.im-team-name { flex: 1; min-width: 160px; width: auto; height: 32px; }
 dialog.signin label.im-mine { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
 dialog.signin label.im-mine input { width: 16px; height: 16px; padding: 0; }
+dialog.signin label.signin-remember { margin: 10px 0 0; text-transform: none; letter-spacing: 0; font-size: 0.82rem; font-weight: 500; color: var(--ink-2); }
 .im-team-found { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; font-size: 0.74rem; color: var(--muted); align-items: center; }
 .im-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: 999px; background: var(--control); border: 1px solid var(--line); color: var(--ink-2); }
 .im-chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 0.8rem; line-height: 1; padding: 0 3px; }
@@ -4533,9 +4534,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   <form id="signin-form" method="dialog">
     <h2 id="signin-title">Publish to the live site</h2>
     <p>Publishing writes your edits to the <span class="mono" id="signin-repo"></span> repository on GitHub, so it needs a GitHub access token for an account that can write to it. You only do this once per browser.</p>
-    <p class="hint">Create one at github.com → Settings → Developer settings → Personal access tokens → <strong>Tokens (classic)</strong> with the <strong>repo</strong> scope (collaborators on this repo need a classic token). Signed in as the repo's owner, a fine-grained token for this repository with <strong>Contents</strong> and <strong>Actions: Read and write</strong> also works. It stays saved in this browser until you sign out.</p>
+    <p class="hint">Create one at github.com → Settings → Developer settings → Personal access tokens → <strong>Tokens (classic)</strong> with the <strong>repo</strong> scope (collaborators on this repo need a classic token). Signed in as the repo's owner, a fine-grained token for this repository with <strong>Contents</strong> and <strong>Actions: Read and write</strong> also works. Give it access to this repository only. By default it's kept for this tab only.</p>
     <label for="signin-token">Access token</label>
     <input id="signin-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+    <label class="im-mine signin-remember"><input type="checkbox" id="signin-remember"> Remember on this browser (until you sign out)</label>
     <p class="signin-error" id="signin-error" role="alert"></p>
     <div class="signin-actions">
       <button class="btn" id="signin-cancel" type="button">Cancel</button>
@@ -5094,6 +5096,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   let maxValue = Math.max(1, ...players.map(p => p.value));
   const hasPicks = players.some(p => p.pos === "PICK");
   const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
+  /* Diagnostics (Phase 1): the last 50 publish steps and uncaught errors, kept in memory in this tab only, with any token
+     redacted. Nothing is sent anywhere. SPM.diagnostics() lists them; with ?debug they're also logged to the console. */
+  const DIAG = [], DIAG_DEBUG = /[?&]debug\b/.test(location.search);
+  function diag(area, msg) {
+    const e = { at: new Date().toISOString(), area, msg: redact(msg).slice(0, 300) };
+    DIAG.push(e); if (DIAG.length > 50) DIAG.shift();
+    if (DIAG_DEBUG) console.warn("[AM " + area + "]", e.msg);
+  }
+  window.addEventListener("error", e => diag("error", (e.message || "error") + (e.filename ? ` @${String(e.filename).split("/").pop()}:${e.lineno}` : "")));
+  window.addEventListener("unhandledrejection", e => diag("promise", (e.reason && (e.reason.message || String(e.reason))) || "rejected"));
   let savedCsv = null, draft = null, localEdits = {};   // set up in the editor section below
   const CMP = { on: false };   // board Compare mode (Alan, Oct 5): pick Player B straight from the rankings
   const REVALUED = new Set();   // rows revalued by a move this editing session: a quiet "Revalued from tier" tag until saved or cancelled
@@ -5255,7 +5267,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T06:00Z";
+  const BUILD_ID = "2026-10-12T12:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7623,11 +7635,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     setTimeout(() => { if (TIER_REN && String(TIER_REN.tier) === tier) tierAction("rename", posFilter, tier, v); }, 0);
   });
 
-  function toast(msg) {
+  function toast(msg, ms = 4000) {   // errors pass a longer time, so a failure message can be read in full
     const t = $("toast");
     t.textContent = msg; t.hidden = false;
     clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => { t.hidden = true; }, 4000);
+    toast.timer = setTimeout(() => { t.hidden = true; }, ms);
   }
 
   /* Clicks: arrows, value editing, back-to-auto */
@@ -7904,13 +7916,36 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   document.addEventListener("visibilitychange", () => { if (document.hidden) { dragPending = null; endDrag(false); } });
 
   /* GitHub: sign-in and saving */
+  // Every GitHub request (Phase 1 reliability, Oct 2026): a 30-second timeout, and errors that say what kind of problem it
+  // was, so the editor can tell a rejected token from a missing permission, a rate limit, a lost connection or a GitHub
+  // outage. Error text never contains the token (redact).
+  const GH_TIMEOUT_MS = 30000;
+  function redact(s) {
+    s = String(s ?? "");
+    if (editor.token) s = s.split(editor.token).join("[token]");
+    return s.replace(/\b(gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,})/g, "[token]");
+  }
+  // kind: auth (token rejected) · permission · rate · conflict (branch moved) · network (no answer) · server (GitHub 5xx)
+  //       · unconfirmed (a commit may have landed) · edit-conflict / data (our own checks) · unknown
+  function ghError(kind, message, status) { const e = new Error(redact(message)); e.kind = kind; if (status) e.status = status; return e; }
   async function gh(path, opts = {}) {
-    const res = await fetch("https://api.github.com" + path, {
-      cache: "no-store", ...opts,
-      headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + editor.token, ...(opts.headers || {}) }
-    });
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), GH_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetch("https://api.github.com" + path, {
+        cache: "no-store", ...opts, signal: ctl.signal,
+        headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + editor.token, ...(opts.headers || {}) }
+      });
+    } catch (e) {
+      throw ghError("network", ctl.signal.aborted ? `GitHub didn't answer within ${GH_TIMEOUT_MS / 1000} seconds` : "couldn't reach GitHub (check the connection)");
+    } finally { clearTimeout(timer); }
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) { const err = new Error(body.message || res.statusText); err.status = res.status; throw err; }
+    if (!res.ok) {
+      const st = res.status, msg = body.message || res.statusText || "HTTP " + st;
+      const rate = st === 429 || (st === 403 && (res.headers.get("x-ratelimit-remaining") === "0" || /rate limit/i.test(msg)));
+      const kind = rate ? "rate" : st === 401 ? "auth" : st === 403 || st === 404 ? "permission" : st === 409 || st === 422 ? "conflict" : st >= 500 ? "server" : "unknown";
+      throw ghError(kind, kind === "server" ? `GitHub had a problem (${st}: ${msg})` : msg, st);
+    }
     return body;
   }
   const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), c => c.charCodeAt(0)));
@@ -7924,11 +7959,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      GitHub's Contents API answers with metadata only ("content": "", "encoding": "none"), so every publish failed with
      "Couldn't find the rankings data in index.html" while the data was there all along. Files now go through the Git Data
      API, which handles files up to 100 MB:
-       read   branch ref → its commit → the file's entry in that commit's tree → the blob (base64, size-checked)
-       write  new blob → a tree on the same base → a commit whose parent is the commit that was read → move the branch,
-              not forced, so it only lands if nobody committed in between (otherwise null: re-read, re-merge, retry)
-       check  read the new commit back and compare the file byte for byte before reporting success
-     The branch moves in one step or not at all, so a failed publish never leaves a half-written file. */
+       read   branch ref → its commit → each file's entry in that commit's tree → the blob (base64, size-checked);
+              several files are read from the same commit, so they're consistent with each other
+       write  one new blob per file → ONE tree on the same base → ONE commit whose parent is the commit that was read →
+              move the branch, not forced, so it only lands if nobody committed in between (otherwise null: re-read,
+              re-merge, retry). Rankings and their ranking history land together in that one commit (Phase 1).
+       check  read the new commit back and compare every file byte for byte before reporting success
+     The branch moves in one step or not at all, so a failed publish never leaves a half-written file. When the answer to
+     the branch move is lost (timeout, dropped connection, 5xx), the branch is read again to see whether the commit landed. */
   async function repoEntry(treeSha, path) {
     let sha = treeSha;
     const parts = path.split("/");
@@ -7950,47 +7988,66 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (blob.size != null && n !== blob.size) throw new Error(`${path} came back incomplete from GitHub (${n} of ${blob.size} bytes), so nothing was changed.`);
     return text;
   }
+  async function repoSnapshot(paths) {   // { head, tree, files: { path: { text (null when missing), blob } } }, all from one commit
+    const ref = await gh(`/repos/${REPO}/git/ref/heads/${BRANCH}`), head = ref.object && ref.object.sha;
+    if (!head) throw ghError("server", `Couldn't read the ${BRANCH} branch of ${REPO}.`);
+    const commit = await gh(`/repos/${REPO}/git/commits/${head}`), files = {};
+    for (const path of paths) {
+      const entry = await repoEntry(commit.tree.sha, path);
+      files[path] = { text: entry ? await repoBlobText(entry.sha, path) : null, blob: entry ? entry.sha : null };
+    }
+    return { head, tree: commit.tree.sha, files };
+  }
   async function repoRead(path) {   // { head, tree, text (null when the file doesn't exist yet), blob }
-    const ref = await gh(`/repos/${REPO}/git/ref/heads/${BRANCH}`), head = ref.object && ref.object.sha;
-    if (!head) throw new Error(`Couldn't read the ${BRANCH} branch of ${REPO}.`);
-    const commit = await gh(`/repos/${REPO}/git/commits/${head}`);
-    const entry = await repoEntry(commit.tree.sha, path);
-    return { head, tree: commit.tree.sha, text: entry ? await repoBlobText(entry.sha, path) : null, blob: entry ? entry.sha : null };
+    const s = await repoSnapshot([path]);
+    return { head: s.head, tree: s.tree, ...s.files[path] };
   }
-  async function repoReadMany(paths) {   // several files from one commit: { head, tree, texts: { path: text | null } }
-    const ref = await gh(`/repos/${REPO}/git/ref/heads/${BRANCH}`), head = ref.object && ref.object.sha;
-    if (!head) throw new Error(`Couldn't read the ${BRANCH} branch of ${REPO}.`);
-    const commit = await gh(`/repos/${REPO}/git/commits/${head}`), texts = {};
-    for (const path of paths) { const entry = await repoEntry(commit.tree.sha, path); texts[path] = entry ? await repoBlobText(entry.sha, path) : null; }
-    return { head, tree: commit.tree.sha, texts };
+  // Is commit `sha` on the branch (its head or an ancestor)? true / false; throws when GitHub can't be asked.
+  // One compare request, however many commits came after it (the scheduled jobs commit several times a day).
+  async function commitLanded(sha) {
+    try {
+      const c = await gh(`/repos/${REPO}/compare/${sha}...${BRANCH}`);
+      return c.status === "identical" || c.status === "ahead";   // "diverged" / "behind": not on the branch
+    } catch (err) { if (err.status === 404) return false; throw err; }   // a commit GitHub doesn't know never landed
   }
-  async function repoWrite(base, path, text, message) {   // the new { commit, blob }, or null when the branch moved since base
-    const r = await repoWriteMany(base, [{ path, text }], message);
-    return r && { commit: r.commit, blob: r.blobs[0] };
-  }
-  // one commit with several files (e.g. the ranking history and its exact snapshot), checked byte for byte after
-  async function repoWriteMany(base, files, message) {   // { commit, blobs } or null when the branch moved since base
-    const blobs = [];
-    for (const f of files) blobs.push((await gh(`/repos/${REPO}/git/blobs`, { method: "POST", body: JSON.stringify({ content: b64encode(f.text), encoding: "base64" }) })).sha);
-    const tree = await gh(`/repos/${REPO}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: base.tree, tree: files.map((f, i) => ({ path: f.path, mode: "100644", type: "blob", sha: blobs[i] })) }) });
+  // files: [{ path, text }] → the new { commit }, or null when the branch moved since base. onCommit(sha) runs once the
+  // commit object exists, before the branch moves, so a caller can remember it in case the answer never arrives.
+  async function repoCommit(base, files, message, onCommit) {
+    const entries = [];
+    for (const f of files) {
+      const blob = await gh(`/repos/${REPO}/git/blobs`, { method: "POST", body: JSON.stringify({ content: b64encode(f.text), encoding: "base64" }) });
+      entries.push({ path: f.path, text: f.text, sha: blob.sha });
+    }
+    const tree = await gh(`/repos/${REPO}/git/trees`, { method: "POST", body: JSON.stringify({ base_tree: base.tree, tree: entries.map(e => ({ path: e.path, mode: "100644", type: "blob", sha: e.sha })) }) });
     const commit = await gh(`/repos/${REPO}/git/commits`, { method: "POST", body: JSON.stringify({ message, tree: tree.sha, parents: [base.head] }) });
+    if (onCommit) onCommit(commit.sha);
     try { await gh(`/repos/${REPO}/git/refs/heads/${BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: commit.sha, force: false }) }); }
     catch (err) {
-      if (err.status === 422 || err.status === 409) return null;   // not a fast-forward: someone committed first
-      // any other error: the answer may have been lost after GitHub moved the branch (Oct 11), so look before
-      // reporting a failure; only a branch that really points at this commit counts as written (then read back below)
-      let now = null;
-      try { const ref = await gh(`/repos/${REPO}/git/ref/heads/${BRANCH}`); now = ref.object && ref.object.sha; } catch (e) {}
-      if (now !== commit.sha) throw err;
+      if (err.kind === "conflict") return null;   // not a fast-forward: someone committed first
+      if (err.kind !== "network" && err.kind !== "server") throw err;
+      // no clear answer: GitHub may have moved the branch anyway. Look before saying anything.
+      let landed;
+      try { landed = await commitLanded(commit.sha); }
+      catch (e) { throw ghError("unconfirmed", `GitHub didn't confirm the publish (${err.message}) and the branch couldn't be checked afterwards`); }
+      if (!landed) throw err;
     }
     const back = await gh(`/repos/${REPO}/git/commits/${commit.sha}`);
-    for (let i = 0; i < files.length; i++) {
-      const entry = await repoEntry(back.tree.sha, files[i].path);
-      if (!entry || entry.sha !== blobs[i] || (await repoBlobText(entry.sha, files[i].path)) !== files[i].text)
-        throw new Error(`GitHub accepted the commit, but reading ${files[i].path} back didn't match what was sent. Check the latest commit on GitHub before publishing again.`);
+    for (const e of entries) {
+      const entry = await repoEntry(back.tree.sha, e.path);
+      if (!entry || entry.sha !== e.sha || (await repoBlobText(entry.sha, e.path)) !== e.text)
+        throw ghError("data", `GitHub accepted the commit, but reading ${e.path} back didn't match what was sent. Check the latest commit on GitHub before publishing again.`);
     }
-    return { commit: commit.sha, blobs };
+    return { commit: commit.sha };
   }
+  async function repoWrite(base, path, text, message) {   // one file: the new { commit }, or null when the branch moved since base
+    return repoCommit(base, [{ path, text }], message);
+  }
+  async function repoReadMany(paths) {   // several files from one commit: { head, tree, texts: { path: text | null } }
+    const s = await repoSnapshot(paths), texts = {};
+    paths.forEach(p => { texts[p] = s.files[p].text; });
+    return { head: s.head, tree: s.tree, texts };
+  }
+  const repoWriteMany = (base, files, message) => repoCommit(base, files, message);
 
   /* The rankings block in index.html: exactly one `const RANKINGS_CSV = \`` … `\n\`;`, replaced by position so nothing
      outside it can change, and checked before anything is written (Alan, Oct 11). */
@@ -8063,7 +8120,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   async function verifyToken(token) {
     editor.token = token;
     const repo = await gh(`/repos/${REPO}`);
-    if (!repo.permissions || !repo.permissions.push) throw new Error(`This GitHub account can't edit ${REPO}.`);
+    if (!repo.permissions || !repo.permissions.push) throw ghError("permission", `This GitHub account can't edit ${REPO}.`);
     const user = await gh("/user").catch(() => ({}));
     editor.login = user.login || "";
   }
@@ -8071,6 +8128,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      player, and laid over the live rankings on load. The weekly projection
      refresh keeps flowing in underneath them. */
   function readLocal() { try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  /* What the live rankings said for each field when it was first edited in this browser (Phase 1): {key: {col: value}}.
+     Publishing compares the live rankings with it, so a field someone else published a different value for since then
+     is a conflict that stops the publish, instead of being overwritten. Edits saved before this existed fall back to the
+     rankings this page loaded with. */
+  const LOCAL_BASE_KEY = "spm_local_base";
+  function readBase() { try { return JSON.parse(localStorage.getItem(LOCAL_BASE_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function baseFor(edits, prev) {   // keep the earliest recorded base for every field still edited
+    const pub = csvToTable(publishedCsv), pm = new Map(pub.rows.map(r => [keyOf(pub, r), r])), out = {};
+    for (const [k, e] of Object.entries(edits)) for (const c of Object.keys(e)) {
+      const has = prev[k] && c in prev[k], r = pm.get(k);
+      (out[k] = out[k] || {})[c] = has ? prev[k][c] : r ? (r[colOf(pub, c)] ?? "") : "";
+    }
+    return out;
+  }
   function applyEdits(csv, edits) {
     const t = csvToTable(csv);
     for (const r of t.rows) {
@@ -8100,9 +8171,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     REVALUED.clear();
     const edits = diffEdits(publishedCsv, draft);
     try {
-      if (Object.keys(edits).length) localStorage.setItem(LOCAL_KEY, JSON.stringify(edits));
-      else localStorage.removeItem(LOCAL_KEY);
-    } catch (e) { toast("Couldn't save: this browser is blocking site storage."); return; }
+      if (Object.keys(edits).length) {
+        localStorage.setItem(LOCAL_BASE_KEY, JSON.stringify(baseFor(edits, readBase())));
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(edits));
+      } else { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); }
+    } catch (e) { toast("Couldn't save: this browser is blocking site storage. Your changes are still on screen, unsaved.", 12000); return; }
     localEdits = edits; savedCsv = tableToCsv(draft);
     updateEditorBar();
     // one ranking-history update per changed player, then (when this browser is connected to GitHub)
@@ -8121,27 +8194,131 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return;
     }
     discardArmed = false; $("eb-discard").textContent = "Discard browser edits";
-    try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
+    try { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); localStorage.removeItem(PUBLISH_KEY); } catch (e) {}
     writePending([]);   // their ranking-history updates go too
     localEdits = {}; savedCsv = publishedCsv; draft = csvToTable(savedCsv);
     rebuild(); toast("Browser edits discarded. Showing the live rankings.");
   }
 
-  // Apply only the fields edited in this browser onto the latest version on GitHub,
-  // so the weekly projection refresh and anyone else's published edits are kept.
+  // Apply only the fields edited in this browser onto the latest version on GitHub, so the weekly projection refresh and
+  // anyone else's published edits are kept. Three-way (Phase 1): a field edited here that the live rankings changed to a
+  // different value since it was edited (its base) is a conflict, never overwritten and never guessed:
+  // { csv, conflicts: [{ who, col, base, mine, live }] }. No conflicts = every edit lands exactly as made.
   function mergeInto(latestCsv) {
-    const base = csvToTable(publishedCsv), src = csvToTable(savedCsv), latest = csvToTable(latestCsv);
+    const base = csvToTable(publishedCsv), src = csvToTable(savedCsv), latest = csvToTable(latestCsv), stored = readBase();
     const baseMap = new Map(base.rows.map(r => [keyOf(base, r), r]));
     const latestMap = new Map(latest.rows.map(r => [keyOf(latest, r), r]));
+    const conflicts = [];
     for (const r of src.rows) {
       const k = keyOf(src, r), b = baseMap.get(k), l = latestMap.get(k);
       if (!l) continue;
       for (const c of EDIT_COLS) {
-        const v = r[colOf(src, c)] ?? "";
-        if (!b || v !== (b[colOf(base, c)] ?? "")) l[colOf(latest, c)] = v;
+        const v = r[colOf(src, c)] ?? "", pageBase = b ? (b[colOf(base, c)] ?? "") : null;
+        if (b && v === pageBase) continue;   // not edited in this browser
+        const was = stored[k] && c in stored[k] ? stored[k][c] : pageBase, live = l[colOf(latest, c)] ?? "";
+        if (was != null && live !== was && live !== v) { conflicts.push({ who: r[colOf(src, "player")], col: c, base: was, mine: v, live }); continue; }
+        l[colOf(latest, c)] = v;
       }
     }
-    return tableToCsv(latest);
+    return { csv: tableToCsv(latest), conflicts };
+  }
+  function conflictError(list) {
+    const ex = list.slice(0, 3).map(c => `${c.who}'s ${c.col.replace("_", " ")}: live ${c.live === "" ? "blank" : c.live}, yours ${c.mine === "" ? "blank" : c.mine}`).join("; ");
+    const n = new Set(list.map(c => c.who)).size;
+    return ghError("edit-conflict", `${n} player${n === 1 ? " you edited was" : "s you edited were"} also changed on the live site since you edited ${n === 1 ? "him" : "them"} (${ex}${list.length > 3 ? `; +${list.length - 3} more` : ""}). Nothing was published and nobody's changes were overwritten. Your edits are still saved in this browser: to use the live version, Discard browser edits, reload and redo them.`);
+  }
+
+  /* The ranking history that goes into the same commit as the rankings (Phase 1, on the Oct 11 history model below).
+     Everything is read from the one commit the publish is based on: the rankings, data/rank_history.json, this month's
+     snapshot file and, when this month has none yet, the latest snapshot of an earlier month. recordPublish then
+     records the merged board itself (entries, the publish event and the exact snapshot). checkPublication proves the
+     three files describe the same publication before anything is written. */
+  async function readAt(base, path) {   // a file as it is in the commit `base` was read from (null when missing)
+    const entry = await repoEntry(base.tree, path);
+    return entry ? repoBlobText(entry.sha, path) : null;
+  }
+  const parseOr = (text, path, empty) => {
+    if (text == null) return empty;
+    try { return JSON.parse(text); } catch (e) { throw ghError("data", `${path} on GitHub isn't valid JSON, so nothing was changed. Your edits are still saved in this browser.`); }
+  };
+  async function historyUpdate(base, curCsv, csv, ts) {
+    const month = snapMonth(ts), path = snapPath(month);
+    const histText = base.files[HISTORY_FILE].text, snapText = await readAt(base, path);
+    const hist = normalizeHistory(parseOr(histText, HISTORY_FILE, null));
+    const snapFile = parseOr(snapText, path, { version: 1, snapshots: [] });
+    if (!Array.isArray(snapFile.snapshots)) snapFile.snapshots = [];
+    let prevSnap = snapFile.snapshots[snapFile.snapshots.length - 1] || null;
+    if (!prevSnap) {   // the newest snapshot before this month: the month of the last event that wrote one
+      const ev = [...(hist.events || [])].reverse().find(e => e.snap && e.snap !== month);
+      if (ev) { const f = parseOr(await readAt(base, snapPath(ev.snap)), snapPath(ev.snap), { snapshots: [] }); prevSnap = (f.snapshots || []).slice(-1)[0] || null; }
+    }
+    const board = rankingSnapshot(loadPlayers(csv));
+    const r = recordPublish(hist, snapFile, prevSnap, board, ts, "M", editor.login, typedDiff(curCsv, csv));
+    return { r, hist, snapFile, board, month, path, histText, snapText,
+             histNew: r.changed ? historyText(hist) : null, snapNew: r.snapshot ? boardSnapText(snapFile) : null };
+  }
+  // Problems that must stop a publish (empty = fine): the files are well formed, nothing already recorded changes, and
+  // the rankings, the new history entries, the event and the snapshot all describe the same board at the same moment.
+  function checkPublication(h, ts) {
+    const errs = [];
+    if (h.histNew != null) {
+      let nw, old = null;
+      try { nw = JSON.parse(h.histNew); } catch (e) { return ["the new ranking history isn't valid JSON"]; }
+      if (!nw || nw.version !== 2 || !nw.players || !Array.isArray(nw.events)) return ["the new ranking history has the wrong shape"];
+      try { old = h.histText != null ? JSON.parse(h.histText) : null; } catch (e) {}
+      if (old && old.version === 2 && old.players) {
+        const lost = Object.entries(old.players).find(([sid, list]) => { const now = nw.players[sid] || [];
+          return now.length < list.length || list.some((e, i) => JSON.stringify(e) !== JSON.stringify(now[i])); });
+        if (lost) errs.push(`existing history for ${lost[0]} would change`);
+        const oe = old.events || [];
+        if (nw.events.length < oe.length || oe.some((e, i) => JSON.stringify(e) !== JSON.stringify(nw.events[i]))) errs.push("existing publish events would change");
+      }
+      const ev = nw.events[nw.events.length - 1];
+      if (!ev || ev.ts !== ts) errs.push("the publish event is missing");
+      for (const [sid, list] of Object.entries(nw.players)) {
+        const e = list[list.length - 1];
+        if (!e || e[0] !== ts) continue;   // not part of this publish
+        const b = h.board[sid];
+        if (!b || e[1] !== b[0] || e[2] !== b[1] || String(e[3]) !== String(b[2]) || e[4] !== b[3]) { errs.push(`the history entry for ${sid} doesn't match the published board`); break; }
+      }
+    }
+    if (h.snapNew != null) {
+      let nw, old = null;
+      try { nw = JSON.parse(h.snapNew); } catch (e) { return errs.concat([`the new ${h.path} isn't valid JSON`]); }
+      try { old = h.snapText != null ? JSON.parse(h.snapText) : null; } catch (e) {}
+      const os = (old && old.snapshots) || [], ns = nw.snapshots || [];
+      if (ns.length !== os.length + 1 || os.some((x, i) => JSON.stringify(x) !== JSON.stringify(ns[i]))) errs.push(`existing snapshots in ${h.path} would change`);
+      const last = ns[ns.length - 1];
+      if (!last || last.ts !== ts || JSON.stringify(last.players) !== JSON.stringify(h.board)) errs.push("the snapshot isn't the published board");
+      if (h.histNew != null && JSON.parse(h.histNew).events.slice(-1)[0].snap !== h.month) errs.push("the publish event doesn't point at its snapshot");
+    }
+    return errs;
+  }
+
+  /* A publish whose branch update got no answer may have landed anyway. Its commit is remembered here (Phase 1) until it's
+     settled, so the next publish checks GitHub first: landed = those history entries are already recorded and aren't
+     queued again; not landed = forgotten. */
+  const PUBLISH_KEY = "spm_publish_pending";
+  const readPublish = () => { try { return JSON.parse(localStorage.getItem(PUBLISH_KEY) || "null"); } catch (e) { return null; } };
+  const writePublish = v => { try { if (v) localStorage.setItem(PUBLISH_KEY, JSON.stringify(v)); else localStorage.removeItem(PUBLISH_KEY); } catch (e) {} };
+
+  function publishErrorText(err) {
+    const keep = "Your edits are still saved in this browser.";
+    switch (err.kind) {
+      case "auth": return `Publish failed: GitHub no longer accepts the saved token (expired or revoked), so it was removed from this browser. ${keep} Publish again with a new token.`;
+      case "permission": return `Publish failed: GitHub said "${err.message}". The token needs write access to ${REPO}: a classic token with the repo scope, or the owner's fine-grained token with Contents: Read and write (fix it on GitHub, then publish again).`;
+      case "rate": return `Publish failed: GitHub's rate limit was reached (${err.message}). ${keep} Try again in a few minutes.`;
+      case "network": return `Publish failed: ${err.message}. ${keep} Publishing again is safe: it checks what's already live first.`;
+      case "unconfirmed": return `Publish not confirmed: ${err.message}. ${keep} Publish again once you're back online: it checks whether this one went through, so nothing is published twice.`;
+      case "edit-conflict": return "Publish stopped: " + err.message;
+      case "server": return `Publish failed: ${err.message}. ${keep} Try again in a minute.`;
+      default:
+        if (err instanceof TypeError || err instanceof ReferenceError || err instanceof SyntaxError || err instanceof RangeError) {
+          diag("publish", "unexpected " + err.name + ": " + err.message);
+          return `Publish failed: an unexpected error in the site (${redact(err.message)}). Nothing was confirmed. ${keep}`;
+        }
+        return "Publish failed: " + redact(err.message);
+    }
   }
 
   async function publishLive() {
@@ -8150,62 +8327,79 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!count) { toast("Nothing to publish: there are no unpublished edits in this browser."); return; }
     if (!editor.token) { openSignin(); return; }
     editor.saving = true; updateEditorBar();
+    const startCsv = savedCsv;
     try {
-      /* One commit (Alan, Oct 11): the rankings (index.html), the ranking history and the exact board snapshot are read
-         from the same commit and written together, so the live rankings never exist without their history and snapshot.
-         The snapshot is the merged board itself (loadPlayers on the rankings being published). A branch that moved
-         underneath us means re-read, re-merge and retry, up to 3 times. */
-      let merged = null, same = false, ev = null;
-      for (let attempt = 0; attempt < 3 && merged == null; attempt++) {
-        const ts = new Date().toISOString(), month = snapMonth(ts), spath = snapPath(month);
-        const base = await repoReadMany([FILE, HISTORY_FILE, spath]);
-        const text = base.texts[FILE];
-        if (text == null) throw new Error(`${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
-        const cur = extractRankings(text);
-        const csv = mergeInto(cur.csv);
-        const problems = validateRankings(csv, cur.csv);
-        if (problems.length) throw new Error(`the rankings didn't pass the pre-publish checks, so nothing was changed (${problems.slice(0, 3).join("; ")}${problems.length > 3 ? `; +${problems.length - 3} more` : ""}). Your edits are still saved in this browser.`);
-        let hist, snapFile;
-        try {
-          hist = normalizeHistory(base.texts[HISTORY_FILE] != null ? JSON.parse(base.texts[HISTORY_FILE]) : null);
-          snapFile = base.texts[spath] != null ? JSON.parse(base.texts[spath]) : { version: 1, snapshots: [] };
-        } catch (e) { throw new Error(`${HISTORY_FILE} or ${spath} on GitHub isn't valid JSON, so nothing was changed. Your edits are still saved in this browser.`); }
-        if (!Array.isArray(snapFile.snapshots)) snapFile.snapshots = [];
-        const prevSnap = snapFile.snapshots[snapFile.snapshots.length - 1] || await previousSnapshot(hist, month);
-        const r = recordPublish(hist, snapFile, prevSnap, rankingSnapshot(loadPlayers(csv)), ts, "M", editor.login, typedDiff(cur.csv, csv));
-        const rankings = csv !== cur.csv;
-        if (!rankings && !r.changed) { merged = csv; same = true; rankHistory = hist; break; }   // already live, history already has it
-        const files = [];
-        if (rankings) files.push({ path: FILE, text: replaceRankings(text, csv) });
-        if (r.changed) {
-          files.push({ path: HISTORY_FILE, text: historyText(hist) });
-          if (r.snapshot) files.push({ path: spath, text: boardSnapText(snapFile) });
-        }
-        const head = rankings ? `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count > 1 ? "s" : ""})` : historyMessage(r.ev);
-        const res = await repoWriteMany(base, files, rankings && r.changed ? `${head}\n\n${historyMessage(r.ev)}` : head);
-        if (res) {   // null: the branch moved underneath us, so read and merge again
-          merged = csv; same = !rankings; ev = r.changed ? r.ev : null;
-          rankHistory = hist; if (r.snapshot) SNAPS[month] = snapFile;
-        }
+      // an earlier publish that never got its answer: settle it before anything else (landed → its history is recorded)
+      const prev = readPublish();
+      if (prev && prev.commit) {
+        if (await commitLanded(prev.commit)) diag("publish", `earlier publish ${prev.id} had landed`);
+        writePublish(null);
       }
-      if (merged == null) throw new Error("the site kept changing while publishing. Your edits are still saved in this browser; try again.");
-      try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
-      writePending([]);
-      publishedCsv = merged; localEdits = {}; savedCsv = merged; draft = csvToTable(merged);
+      let done = null;
+      for (let attempt = 0; attempt < 3 && !done; attempt++) {
+        const base = await repoSnapshot([FILE, HISTORY_FILE]), index = base.files[FILE];
+        if (index.text == null) throw ghError("data", `${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
+        const cur = extractRankings(index.text);
+        const { csv, conflicts } = mergeInto(cur.csv);
+        if (conflicts.length) throw conflictError(conflicts);
+        const problems = validateRankings(csv, cur.csv);
+        if (problems.length) throw ghError("data", `the rankings didn't pass the pre-publish checks, so nothing was changed (${problems.slice(0, 3).join("; ")}${problems.length > 3 ? `; +${problems.length - 3} more` : ""}). Your edits are still saved in this browser.`);
+        const ts = new Date().toISOString(), h = await historyUpdate(base, cur.csv, csv, ts);
+        const hp = checkPublication(h, ts);
+        if (hp.length) throw ghError("data", `the ranking history didn't pass the pre-publish checks, so nothing was changed (${hp.slice(0, 3).join("; ")}). Your edits are still saved in this browser.`);
+        const same = csv === cur.csv;
+        if (same && !h.r.changed) { done = { csv, same, h }; break; }   // already live (e.g. published from another tab)
+        const changes = [];
+        if (!same) changes.push({ path: FILE, text: replaceRankings(index.text, csv) });
+        if (h.histNew != null) changes.push({ path: HISTORY_FILE, text: h.histNew });
+        if (h.snapNew != null) changes.push({ path: h.path, text: h.snapNew });
+        const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36), hl = h.r.changed ? historyMessage(h.r.ev) : "";
+        const msg = same ? hl : `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})` + (hl ? "\n\n" + hl : "");
+        diag("publish", `attempt ${attempt + 1} on ${base.head.slice(0, 7)}: ${changes.map(c => c.path).join(" + ")}`);
+        const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts }));
+        if (res) done = { csv, same, h };   // null: the branch moved underneath us, so read and merge again
+        else diag("publish", "branch moved, re-reading");
+      }
+      if (!done) throw ghError("server", "the site kept changing while publishing. Your edits are still saved in this browser; try again.");
+      writePublish(null); writePending([]);
+      // confirmed: the merged rankings are now the published ones. Unsaved changes made while publishing are kept on top.
+      const unsaved = diffEdits(startCsv, draft);
+      try { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); } catch (e) {}
+      publishedCsv = done.csv; localEdits = {}; savedCsv = done.csv;
+      draft = Object.keys(unsaved).length ? applyEdits(done.csv, unsaved) : csvToTable(done.csv);
+      rankHistory = done.h.hist;   // what was just committed (the deployed files catch up in about a minute)
+      if (done.h.r.snapshot) SNAPS[done.h.month] = done.h.snapFile;
       editor.saving = false;
       rebuild();
-      const s = ev && historySummary(ev);
-      toast((same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + (s ? ` Ranking history: ${s}.` : ""));
+      const s = done.h.r.changed && historySummary(done.h.r.ev), snapNote = s ? ` Ranking history: ${s}.` : "";
+      toast((done.same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote);
     } catch (err) {
+      if (err.kind === "auth") { editor.token = null; editor.login = ""; clearToken(); }
+      // keep the record of a commit that may have landed (no clear answer); anything else definitely didn't publish it
+      if (!["unconfirmed", "network", "server"].includes(err.kind)) writePublish(null);
       editor.saving = false; updateEditorBar();
-      toast(err.status === 401 || err.status === 403 || err.status === 404   // GitHub answers "Not Found" when the token can't see the repo
-        ? `Publish failed: GitHub said "${err.message}". The token needs write access to ${REPO}: a classic token with the repo scope, or the owner's fine-grained token with Contents: Read and write (fix it on GitHub, then publish again).`
-        : "Publish failed: " + err.message);
+      diag("publish", `failed (${err.kind || err.name || "error"}): ${redact(err.message)}`);
+      toast(publishErrorText(err), 15000);
     }
   }
 
-  function forgetToken() {
+  /* Where the token lives (Phase 1). By default only in this tab (sessionStorage: gone when the tab closes); in
+     localStorage only when "Remember on this browser" is ticked at sign-in. A token remembered before this change stays
+     remembered. Nothing else is stored, it's only ever sent to api.github.com, and error messages are redacted. */
+  function storedToken() {
+    for (const st of ["localStorage", "sessionStorage"]) { try { const t = window[st].getItem(TOKEN_KEY); if (t) return { token: t, remember: st === "localStorage" }; } catch (e) {} }
+    return null;
+  }
+  function storeToken(token, remember) {
+    try { (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token); } catch (e) {}   // storage blocked: this page only
+    try { (remember ? sessionStorage : localStorage).removeItem(TOKEN_KEY); } catch (e) {}
+  }
+  function clearToken() {
     try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  }
+  function forgetToken() {
+    clearToken();
     Object.assign(editor, { token: null, login: "" });
     updateEditorBar(); toast("Signed out. Your GitHub token was removed from this browser.");
   }
@@ -8224,7 +8418,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const dialog = $("signin-dialog");
   $("signin-repo").textContent = REPO;
   function openSignin() {
-    $("signin-error").textContent = ""; $("signin-token").value = "";
+    $("signin-error").textContent = ""; $("signin-token").value = ""; $("signin-remember").checked = false;
     if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
     $("signin-token").focus();
   }
@@ -8236,26 +8430,32 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("signin-submit").disabled = true; $("signin-error").textContent = "Checking with GitHub…";
     try {
       await verifyToken(token);
-      try { localStorage.setItem(TOKEN_KEY, token); } catch (err) {}
+      storeToken(token, $("signin-remember").checked);
+      $("signin-token").value = "";
       dialog.close();
       publishLive();
     } catch (err) {
       editor.token = null;
-      $("signin-error").textContent = err.status === 401 ? "GitHub didn't recognize that token." : err.message;
+      $("signin-error").textContent = err.kind === "auth" ? "GitHub didn't recognize that token." : redact(err.message);
     } finally { $("signin-submit").disabled = false; }
   });
 
   window.addEventListener("beforeunload", e => {
-    if (editor.on && changedRows().length) { e.preventDefault(); e.returnValue = ""; }
+    if (editor.on && (changedRows().length || editor.saving)) { e.preventDefault(); e.returnValue = ""; }
   });
 
-  // A remembered token is reused for publishing
+  // A saved token (this tab, or remembered) is reused for publishing. A token GitHub rejects is removed; when GitHub
+  // can't be reached it's kept, and publishing reports any problem then.
   (async () => {
-    let token = null;
-    try { token = localStorage.getItem(TOKEN_KEY); } catch (e) {}
-    if (!token) return;
-    try { await verifyToken(token); updateEditorBar(); }
-    catch (err) { editor.token = null; if (err.status === 401) { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} } }
+    const st = storedToken();
+    if (!st) return;
+    try { await verifyToken(st.token); updateEditorBar(); }
+    catch (err) {
+      if (err.kind === "auth") { editor.token = null; clearToken(); }
+      else if (err.kind === "network" || err.kind === "server" || err.kind === "rate") { editor.token = st.token; updateEditorBar(); }
+      else editor.token = null;
+      diag("signin", `saved token not verified (${err.kind || "error"})`);
+    }
   })();
 
   /* ---------- Sleeper league sync ----------
@@ -13989,7 +14189,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     for (const [sid, r] of Object.entries(f)) { const p = map.get(sid); if (p && r[0] > 0 && dv(p) >= 800) ratios.push(dv(p) / r[0]); }
     if (ratios.length < 20) return null;
     ratios.sort((a, b) => a - b);
-    return { f, key, scale: ratios[Math.floor(ratios.length / 2)], updated: MKT.d.updated, url: MKT.d.url || "https://www.fantasycalc.com/" };
+    return { f, key, scale: ratios[Math.floor(ratios.length / 2)], updated: MKT.d.updated, url: /^https:\/\//.test(MKT.d.url || "") ? MKT.d.url : "https://www.fantasycalc.com/" };
   }
   const mkt = p => { const c = MKT.cur, r = c && p && p.sleeperId ? c.f[p.sleeperId] : null; return r ? { raw: r[0], rank: r[1], prank: r[3], trend: r[4], v: r[0] * c.scale } : null; };
   const mktSum = list => { let t = 0; for (const p of list) { const m = mkt(p); if (!m) return null; t += m.v; } return t; };
@@ -14039,7 +14239,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (F.tep > 0 && key.endsWith("_tep") && F.tep !== 0.5) notes.push("TE Premium + market for a bigger TE premium");
         const rows = new Map(Object.entries(f).map(([sid, r]) => [sid, { ov: Number(r[1]) || 9999, pr: Number(r[3]) || 999, raw: r[0], trend: r[4] }]));
         const mis = { qb: false, tep: !key.endsWith("_tep") && F.tep > 0, rec: F.rec !== 1, teams: F.teams !== t };
-        out.push(mkWeigh({ id: "fc", name: "FantasyCalc", kind: "trade market", rows, at: MKT.d.updated, notes, mis, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: MKT.d.url || "https://www.fantasycalc.com/" }));
+        out.push(mkWeigh({ id: "fc", name: "FantasyCalc", kind: "trade market", rows, at: MKT.d.updated, notes, mis, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: /^https:\/\//.test(MKT.d.url || "") ? MKT.d.url : "https://www.fantasycalc.com/" }));
       }
     }
     const FL = flockNow();
@@ -14810,15 +15010,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return Object.keys(entries).length;
   }
   const historyText = h => `{"note":"AM ranking history: visible changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source M=publish S=scheduled update P=older published update, kind R=ranking change V=manual value change A=automatic repricing (none = legacy, unclassified)], ...]} and one event per publish. The exact board at every publish is in data/rank_snapshots/.","version":2,"events":[\n${(h.events || []).map(e => JSON.stringify(e)).join(",\n")}\n],"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 7)))}`).join(",\n")}\n}}\n`;
-  // the newest exact snapshot before this month's file has one: from the month of the last event that wrote one
-  async function previousSnapshot(hist, month) {
-    const ev = [...(hist.events || [])].reverse().find(e => e.snap && e.snap !== month);
-    if (!ev) return null;
-    const f = await repoRead(snapPath(ev.snap));
-    const list = f.text != null ? (JSON.parse(f.text).snapshots || []) : [];
-    return list[list.length - 1] || null;
-  }
-  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings };   // helpers for the scheduled snapshot and tests
+  window.SPM = { rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, snapshotOf: csv => rankingSnapshot(loadPlayers(csv)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
 
   // Start-up: restore a saved connection
   sl = readSl();
