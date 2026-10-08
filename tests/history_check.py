@@ -4,8 +4,8 @@ code runs against an in-memory GitHub repository (tests/gh_mock.py); nothing rea
 Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/history_check.py
 
 Checks:
-1. Moving a player down one spot publishes one rankings commit and ONE history commit that holds both
-   data/rank_history.json and data/rank_snapshots/<YYYY-MM>.json. The commit message and the event split the publish
+1. Moving a player down one spot publishes ONE commit holding index.html, data/rank_history.json and
+   data/rank_snapshots/<YYYY-MM>.json together (atomic: the rankings are never live without their history). The commit message and the event split the publish
    into ranking changes (the two players who swapped, with from/to ranks), manual value changes (none) and automatic
    repricing; every entry of the publish carries a kind and the publish time; automatic entries are exactly the
    players whose rank and tier didn't move and whose value moved at least 0.5% (and 10 points) since their last entry.
@@ -22,6 +22,9 @@ Checks:
    as … CeeDee Lamb #7 → #8", two repricings in a row collapse into one row with Show / Hide, and a typed value reads
    "Typed value".
 8. Older entries keep their stored fields; the page still renders players with legacy (untagged) entries.
+9. Failures and retries: another writer committing a snapshot mid-publish (both kept, ours once), the answer to the
+   branch update lost after GitHub applied it (checked, reported as published, one event), a read-back mismatch
+   (reported, nothing half-written); never a duplicate event, snapshot or entry.
 """
 import functools, hashlib, http.server, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
@@ -50,7 +53,7 @@ repo = Repo({"index.html": ORIG, "data/rank_history.json": HIST, "data/injury_ov
 def hist(): return json.loads(repo.read("data/rank_history.json"))
 def snapfile(month):
     b = repo.read(f"data/rank_snapshots/{month}.json"); return json.loads(b) if b else None
-def history_commits(): return [c for c in repo.log() if c.startswith("Ranking history")]
+def publish_commits(): return [c for c in repo.log() if c.startswith("Rankings edit") or c.startswith("Ranking history")]
 def changed(last, cur):   # same rule as the page
     if last is None: return True
     if last[1] != cur[0] or last[2] != cur[1] or (last[3] != "" and cur[2] != "" and str(last[3]) != str(cur[2])): return True
@@ -73,33 +76,34 @@ with sync_playwright() as p:
     pg.click("#pos-chips button:has-text('All')"); pg.wait_for_timeout(300)
 
     def arrow(name, d):
-        pg.locator("#rank-body tr.player", has_text=name).first.locator(f'.arrow[data-dir="{d}"]').click(force=True); pg.wait_for_timeout(350)
+        pg.locator("#rank-body tr.player", has_text=name).first.locator(f'.arrow[data-dir="{d}"]').evaluate("b => b.click()"); pg.wait_for_timeout(350)
     def save():
         pg.evaluate("() => { const t = document.getElementById('toast'); t.textContent = ''; t.hidden = true; }")
         pg.click("#eb-save")
         pg.wait_for_function("() => /Publish|Already live|Nothing to publish|Saved/.test(document.getElementById('toast').textContent)", timeout=20000)
         pg.wait_for_timeout(400); return pg.inner_text("#toast")
     snap_now = lambda: pg.evaluate("() => SPM.rankingSnapshot()")
+    local_edits_empty = lambda: pg.evaluate("() => !Object.keys(JSON.parse(localStorage.getItem('spm_local_edits') || '{}')).length")
     sid_of = lambda name: pg.evaluate("n => { const r = [...document.querySelectorAll('#rank-body tr.player')].find(tr => tr.querySelector('.pl-name').textContent.trim() === n); return r && r.querySelector('[data-sid]') ? r.querySelector('[data-sid]').dataset.sid : null; }", name)
     names = {k: v[0] for k, v in json.load(open(os.path.join(ROOT, "data/sleeper_players.json"))).items()}
     sid = {n: s for s, n in names.items()}
     LAMB, STB, PUKA = sid["CeeDee Lamb"], sid["Amon-Ra St. Brown"], sid["Puka Nacua"]
 
     # 1. CeeDee down one spot
-    before = hist(); before_snap = snap_now(); c0 = len(history_commits())
+    before = hist(); before_snap = snap_now(); c0 = len(publish_commits())
     msg = save if False else None
     arrow("CeeDee Lamb", 1); toast = save()
     h1 = hist(); ev = h1["events"][-1]; month = ev["ts"][:7]; s1 = snapfile(month)
-    new = history_commits()[c0:]
-    ok(len(new) == 1, f"One history commit for the publish: {new}")
-    ok(re.fullmatch(r"Ranking history: 2 ranking changes · \d+ automatic repricings?", new[0] if new else "") is not None, f"Commit message splits the publish: {new[0] if new else None}")
+    new = publish_commits()[c0:]
+    ok(len(new) == 1 and new[0].startswith("Rankings edit by @tester"), f"One commit for the publish: {[m.splitlines()[0] for m in new]}")
+    ok(re.search(r"\n\nRanking history: 2 ranking changes · \d+ automatic repricings?$", new[0] if new else "") is not None, f"Commit message splits the publish: {new[0].splitlines()[-1] if new else None}")
     ok("Ranking history: 2 ranking changes" in toast, f"Toast names the split: {toast!r}")
     head = repo.commits[repo.head]
     ok(repo.read(f"data/rank_snapshots/{month}.json") is not None and repo.read("data/rank_history.json", repo.commits[repo.head]["parents"][0]) == repo.read("data/rank_history.json", repo.commits[repo.head]["parents"][0]),
        "The history commit holds the snapshot file")
     parent = head["parents"][0]
-    ok(repo.read(f"data/rank_snapshots/{month}.json", parent) is None and repo.read("data/rank_history.json", parent) != repo.read("data/rank_history.json"),
-       "History file and snapshot file changed in the same commit")
+    ok(repo.read(f"data/rank_snapshots/{month}.json", parent) is None and repo.read("data/rank_history.json", parent) != repo.read("data/rank_history.json")
+       and repo.read("index.html", parent) != repo.read("index.html"), "index.html, the history file and the snapshot file changed in the same commit")
     rk = {m[0]: m for m in ev["ranking"]}
     ok(set(rk) == {LAMB, STB} and rk[LAMB][1:3] == [7, 8] and rk[STB][1:3] == [8, 7], f"Ranking changes: CeeDee #7 → #8, St. Brown #8 → #7 ({ev['ranking']})")
     ok(ev["manual"] == [] and ev["src"] == "M" and ev["by"] == "tester" and ev["repriced"] is None and ev["snap"] == month, f"Event fields (no manual changes, first snapshot): { {k: ev[k] for k in ('src', 'by', 'repriced', 'snap')} }")
@@ -139,9 +143,9 @@ with sync_playwright() as p:
     ok(snapfile(month)["snapshots"][-1]["players"][PUKA][4] == 1, "Snapshot marks him typed")
 
     # 5. nothing new: no history commit
-    n = len(history_commits())
+    n = len(publish_commits())
     pg.evaluate("() => { localStorage.setItem('spm_local_edits', '{}'); }")
-    ok(len(history_commits()) == n, "No new history commit without a publish")
+    ok(len(publish_commits()) == n, "No new history commit without a publish")
 
     # 6. valueAt: exact snapshot, fallback before the first snapshot
     t1 = pg.evaluate("ts => Date.parse(ts)", ev["ts"]); t2 = pg.evaluate("ts => Date.parse(ts)", ev2["ts"])
@@ -173,6 +177,45 @@ with sync_playwright() as p:
     ok(pg.locator("dialog.pm[open] tr.gl-auto td").first.evaluate("e => getComputedStyle(e).color") != pg.locator("dialog.pm[open] tr:not(.gl-auto) td").last.evaluate("e => getComputedStyle(e).color") or True, "Repricing rows are muted")
     t = history_tab("Puka Nacua")
     ok("Typed value" in t.inner_text(), "Puka's typed value reads 'Typed value'")
+
+    # 9. failures and retries
+    import collections, datetime
+    hook = {"mode": None}
+    def faulty(route):
+        req = route.request
+        if hook["mode"] == "readback" and req.method == "POST" and req.url.endswith("/git/commits") and json.loads(req.post_data)["message"].startswith("Rankings edit"):
+            hook["mode"] = None; repo.faults["readback"] = True
+        if hook["mode"] in ("concurrent", "lost") and req.method == "PATCH" and "/git/refs/heads/" in req.url:
+            sha = json.loads(req.post_data)["sha"]; m = hook["mode"]; hook["mode"] = None
+            if m == "concurrent":   # the weekly job lands an event + snapshot first
+                hh = hist(); f = snapfile(month); ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                f["snapshots"].append({"ts": ts, "src": "S", "by": "scheduled", "players": f["snapshots"][-1]["players"]})
+                hh["events"].append({"ts": ts, "by": "scheduled", "src": "S", "ranking": [], "manual": [], "auto": [], "repriced": 0, "snap": month})
+                repo.commit_file(f"data/rank_snapshots/{month}.json", json.dumps(f).encode(), "Weekly projections and stats refresh")
+                repo.commit_file("data/rank_history.json", json.dumps(hh).encode(), "Weekly projections and stats refresh")
+            else:                   # GitHub moves the branch, but the answer never arrives
+                if repo.head in repo.commits[sha]["parents"]: repo.head = sha
+                return route.fulfill(status=502, content_type="application/json", body='{"message":"Bad Gateway"}')
+        return repo.handle(route)
+    pg.unroute("https://api.github.com/**"); pg.route("https://api.github.com/**", faulty)
+    def dupes():
+        hh = hist(); ev = collections.Counter(e["ts"] for e in hh["events"]); sn = collections.Counter(x["ts"] for x in snapfile(month)["snapshots"])
+        return [k for k, v in ev.items() if v > 1], [k for k, v in sn.items() if v > 1], sum(1 for l in hh["players"].values() for a, b in zip(l, l[1:]) if a[0] == b[0])
+    pg.evaluate("() => document.querySelectorAll('dialog[open]').forEach(d => d.close())"); pg.wait_for_timeout(300)
+    pg.click("#pos-chips button:has-text('All')"); pg.wait_for_timeout(300)
+    e0, s0 = len(hist()["events"]), len(snapfile(month)["snapshots"])
+    hook["mode"] = "concurrent"; arrow("CeeDee Lamb", 1); t = save()
+    hh = hist()
+    ok("Published and confirmed" in t and len(hh["events"]) == e0 + 2 and [e["src"] for e in hh["events"][-2:]] == ["S", "M"] and len(snapfile(month)["snapshots"]) == s0 + 2,
+       f"A concurrent writer's snapshot is kept and ours lands once, after a re-read ({t[-60:]!r})")
+    e1 = len(hist()["events"]); hook["mode"] = "lost"; arrow("CeeDee Lamb", -1); t = save()
+    ok("Published and confirmed" in t and "wasn't" not in t and len(hist()["events"]) == e1 + 1, f"Lost answer: checked on GitHub, reported as published, one event ({t[-60:]!r})")
+    e2 = len(hist()["events"]); h0 = repo.read("index.html"); hook["mode"] = "readback"; arrow("CeeDee Lamb", 1); t = save()
+    ok("Publish failed" in t and "didn't match" in t and len(hist()["events"]) == e2 and not local_edits_empty(), f"Read-back mismatch: reported, no event, edits kept ({t[:70]!r})")
+    pg.evaluate("() => { const t = document.getElementById('toast'); t.textContent = ''; }"); pg.click("#eb-publish")
+    pg.wait_for_function("() => /Publish|Already live/.test(document.getElementById('toast').textContent)", timeout=30000); pg.wait_for_timeout(400)
+    arrow("CeeDee Lamb", -1); save()
+    ok(dupes() == ([], [], 0), f"After every failure and retry: no duplicate events, snapshots or entries {dupes()}")
 
     # 8. legacy entries untouched
     ok(all(h3["players"][s][:len(l)] == l for s, l in json.loads(HIST)["players"].items()), "Every earlier entry is kept exactly")
