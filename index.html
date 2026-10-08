@@ -5245,7 +5245,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-11T22:00Z";
+  const BUILD_ID = "2026-10-12T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5539,7 +5539,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     for (const el of want) el._dirty = false;
     tb._mo.takeRecords();   // our own moves don't count as changes
   }
+  /* While a row is being dragged the board isn't redrawn (Oct 11, runaway auto-scroll): a redraw mid-drag (a league
+     sync, the ranking history or market data arriving) replaced the dragged row, its handle lost the pointer capture,
+     and the drag stopped hearing the pointer and the release, so auto-scroll kept going at the last pointer position.
+     The redraw waits and runs once the drag ends. */
+  const DRAG_STATE = { on: false, pending: false };
   function renderRankings() {
+    if (DRAG_STATE.on) { DRAG_STATE.pending = true; return; }
+    DRAG_STATE.pending = false;
     $("rk-sort-wrap").hidden = posFilter === "PICK";
     $("mk-bar").hidden = !mkOn();
     if (prodOn()) return renderProd();
@@ -7728,6 +7735,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     drag.shield = document.createElement("div"); drag.shield.className = "drag-shield"; document.body.append(drag.shield);
     document.addEventListener("keydown", dragKey);
     window.addEventListener("scroll", dragScroll, { passive: true });
+    DRAG_STATE.on = true; drag.t = 0; drag.carry = 0;
     applySlot();
     dragMove();
     drag.raf = requestAnimationFrame(dragLoop);
@@ -7776,14 +7784,28 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // smooth auto-scroll near the top (under the sticky column guide) or bottom of the screen, faster closer to the edge;
   // the float is viewport-fixed, so it stays under the pointer while the page moves
-  function dragLoop() {
-    if (!drag) return;
-    const zone = 80, top = drag.headBottom;
-    let v = 0;
-    if (drag.y < top + zone) v = -Math.ceil(18 * Math.min(1, (top + zone - drag.y) / zone));
-    else if (drag.y > window.innerHeight - zone) v = Math.ceil(18 * Math.min(1, (drag.y - (window.innerHeight - zone)) / zone));
-    if (v) { window.scrollBy(0, v); const sy = window.scrollY; if (sy !== drag.sy) { drag.sy = sy; drag.scrolling = true; dragMove(); drag.scrolling = false; } }
-    drag.raf = requestAnimationFrame(dragLoop);
+  // Speed (Oct 11): from the pointer's own position only, in pixels per second (the same on 60 and 120 Hz screens),
+  // slow where the zone starts and rising to a cap at the edge; a late frame counts at most 50ms, so it can't jump.
+  // Outside the zones nothing scrolls. One loop per drag: a frame scheduled for an earlier drag stops itself.
+  const SCROLL_ZONE = 72, SCROLL_MIN = 60, SCROLL_MAX = 720;
+  function dragLoop(ts) {
+    const d = drag; if (!d) return;
+    const dt = d.t ? Math.min(50, ts - d.t) / 1000 : 0; d.t = ts;
+    const top = d.headBottom, bottom = window.innerHeight, y = d.y;
+    let dir = 0, f = 0;
+    if (y < top + SCROLL_ZONE) { dir = -1; f = Math.min(1, (top + SCROLL_ZONE - y) / SCROLL_ZONE); }
+    else if (y > bottom - SCROLL_ZONE) { dir = 1; f = Math.min(1, (y - (bottom - SCROLL_ZONE)) / SCROLL_ZONE); }
+    const room = dir < 0 ? window.scrollY > 0 : dir > 0 && window.scrollY + bottom < document.documentElement.scrollHeight;
+    if (!dir || !room) d.carry = 0;
+    else {
+      d.carry += dir * (SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * f * f) * dt;
+      const step = Math.trunc(d.carry);
+      if (step) {
+        d.carry -= step; window.scrollBy(0, step);
+        const sy = window.scrollY; if (sy !== d.sy) { d.sy = sy; d.scrolling = true; dragMove(); d.scrolling = false; }
+      }
+    }
+    if (drag === d) d.raf = requestAnimationFrame(dragLoop);
   }
   const dragKey = e => { if (e.key === "Escape" && drag) { e.preventDefault(); endDrag(false); } };
   const dragScroll = () => { if (drag && window.scrollY !== drag.sy) { drag.sy = window.scrollY; dragMove(); } };   // wheel / keyboard scrolling mid-drag
@@ -7810,13 +7832,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const { id, target, after, tr, from } = drag, moved = drag.pill.classList.contains("moved");
     const n = commit && target && moved ? dropNum() : null;
     cancelAnimationFrame(drag.raf); drag.float.remove(); drag.line.remove(); drag.shield.remove();
-    drag = null;
+    drag = null; DRAG_STATE.on = false;
     document.removeEventListener("keydown", dragKey); window.removeEventListener("scroll", dragScroll);
     clearMarks(); tr.classList.remove("dragging", "drag-origin");
-    if (!commit || !target || !moved) return;
+    if (!commit || !target || !moved) { if (DRAG_STATE.pending) renderRankings(); return; }
     if (n != null && from != null) showDrop(tr, target, after, n, from);
     const ticket = ++dropCommit;
-    requestAnimationFrame(() => setTimeout(() => { if (ticket === dropCommit) { dropCommit = 0; commitDrop(id, target, after); } }, 0));
+    requestAnimationFrame(() => setTimeout(() => {
+      if (ticket !== dropCommit) return;
+      dropCommit = 0; commitDrop(id, target, after);
+      if (DRAG_STATE.pending) renderRankings();   // a redraw that waited for the drag (commitDrop usually ran one already)
+    }, 0));
   }
   function commitDrop(id, target, after) {
     const me = byId.get(id);
@@ -7846,17 +7872,26 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const tr = h.closest("tr.player");
     dragPending = { id: Number(tr.dataset.id), tr, x: e.clientX, y: e.clientY };
   });
-  $("rank-body").addEventListener("pointermove", e => {
+  // Pointer moves and the release are heard on the window, not the board (Oct 11): if the dragged row's handle loses the
+  // pointer capture (the row redrawn, the pointer leaving the page) the drag still follows the pointer and still ends.
+  // A move with no button down means the release was missed: the drag is cancelled, never committed to a guessed spot.
+  // Losing focus (switching apps or tabs) cancels it too.
+  window.addEventListener("pointermove", e => {
+    if (!dragPending && !drag) return;
     if (dragPending && !drag) {
+      if (!e.buttons) { dragPending = null; return; }
       if (Math.hypot(e.clientX - dragPending.x, e.clientY - dragPending.y) < DRAG_START_PX) return;
       const p = dragPending; dragPending = null; dragStart(p);
     }
     if (!drag) return;
+    if (!e.buttons) { endDrag(false); return; }
     drag.y = e.clientY;
     dragMove();
-  });
-  $("rank-body").addEventListener("pointerup", () => endDrag(true));
-  $("rank-body").addEventListener("pointercancel", () => endDrag(false));
+  }, { passive: true });
+  window.addEventListener("pointerup", () => { dragPending = null; endDrag(true); });
+  window.addEventListener("pointercancel", () => { dragPending = null; endDrag(false); });
+  window.addEventListener("blur", () => { dragPending = null; endDrag(false); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) { dragPending = null; endDrag(false); } });
 
   /* GitHub: sign-in and saving */
   async function gh(path, opts = {}) {
