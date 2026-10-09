@@ -12,6 +12,9 @@ Prints every SPM.valueCheck() warning (formula cliffs, rank gaps, tier gaps, tie
 4. a stored value that doesn't show exactly as stored (values are state since Oct 12). No page errors.
 A one-player tier is allowed (Alan, Oct 12: Lamar Jackson alone in QB Tier 2 is intentional): it's listed as
 information for review, never a failure.
+Checks 2 and 3 are board-quality preferences, not correctness (Alan, Oct 14): tests/ci_policy.json lists them as
+advisory, so run_ci.py reports them without blocking a deploy (the Review panel shows the same warnings to editors).
+Checks 1, 2b and 4 and the page-error check are correctness and stay blocking.
 """
 import csv, functools, http.server, io, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
