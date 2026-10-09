@@ -5215,7 +5215,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T06:00Z";
+  const BUILD_ID = "2026-10-14T14:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -11173,7 +11173,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const main = r.then || r.now;   // the headline verdict: at the time when AM values existed, else today's (labeled)
     const verdict = P.length === 2
       ? (!main.oneSided
-          ? `<span class="th-verdict${main.fair ? " fair" : ""}${r.then ? "" : " lookback"}"><small>${r.then ? "At the time" : "Today"}</small>${esc(main.tier.title(P[main.ahead].team.name, P[1 - main.ahead].team.name))}</span>`
+          ? `<span class="th-verdict${main.fair ? " fair" : ""}${r.then ? "" : " lookback"}"><small>${r.then ? "Then" : "Now"}</small>${esc(main.tier.title(P[main.ahead].team.name, P[1 - main.ahead].team.name))}</span>`
           : `<span class="th-verdict">One-sided in AM values</span>`)
       : `<span class="th-verdict fair">${P.length}-team trade</span>`;
     const side = s => `<div class="th-side">
@@ -11192,8 +11192,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : `Not every player had an AM value at the time (${P.flatMap(s => s.items).filter(x => (x.p || x.then) && !x.then).map(x => esc(x.e.name)).join(", ")})`;
     const aged = agedText(r);
     const ages = `<div class="th-ages">
-        <div class="th-age"><span class="th-age-k">AM at trade</span>${r.then ? `<b>${snapText(r, r.then)}</b><small>${esc(basisDate)} values</small>` : `<span class="th-age-none">${noThen}</span>`}</div>
-        <div class="th-age"><span class="th-age-k">AM today</span><b>${snapText(r, r.now)}</b><small>${esc(dShort(Date.now()))} values</small></div>
+        <div class="th-age"><span class="th-age-k">Then</span>${r.then ? `<b>${snapText(r, r.then)}</b><small>${esc(basisDate)} AM values</small>` : `<span class="th-age-none">${noThen}</span>`}</div>
+        <div class="th-age"><span class="th-age-k">Now</span><b>${snapText(r, r.now)}</b><small>Current AM values</small></div>
         ${aged ? `<p class="th-aged">${esc(aged)}</p>` : ""}
       </div>`;
     const anyPicks = P.some(s => s.picks.length);
