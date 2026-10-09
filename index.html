@@ -4078,12 +4078,12 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body .pl-team { margin-left: 7px; font-size: 0.68rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); opacity: 1; }
 /* NFL team as a tiny inline logo after the name (Alan, Oct 13 trial; nflMark): a fixed 19×18px slot, the logo at most 18×17 inside it,
    so no logo shape moves the name or the row; the abbreviation shows only when the logo can't load (.nologo). Rankings rows only. */
-#rank-body .pl-tm { position: relative; display: inline-block; width: 19px; height: 18px; margin-left: 6px; vertical-align: -3.5px; }
-#rank-body .pl-tm img { position: absolute; inset: 0; margin: auto; max-width: 18px; max-height: 17px; width: auto; height: auto; object-fit: contain; }
-#rank-body .pl-tm .tm-abbr { display: none; }
-#rank-body .pl-tm.nologo { position: static; display: inline; width: auto; height: auto; vertical-align: baseline; }
-#rank-body .pl-tm.nologo img { display: none; }
-#rank-body .pl-tm.nologo .tm-abbr { display: inline; }
+:is(#rank-body, #panel-myteam .mt-table) .pl-tm { position: relative; display: inline-block; width: 19px; height: 18px; margin-left: 6px; vertical-align: -3.5px; }
+:is(#rank-body, #panel-myteam .mt-table) .pl-tm img { position: absolute; inset: 0; margin: auto; max-width: 18px; max-height: 17px; width: auto; height: auto; object-fit: contain; }
+:is(#rank-body, #panel-myteam .mt-table) .pl-tm .tm-abbr { display: none; }
+:is(#rank-body, #panel-myteam .mt-table) .pl-tm.nologo { position: static; display: inline; width: auto; height: auto; vertical-align: baseline; }
+:is(#rank-body, #panel-myteam .mt-table) .pl-tm.nologo img { display: none; }
+:is(#rank-body, #panel-myteam .mt-table) .pl-tm.nologo .tm-abbr { display: inline; }
 /* owner line in caps (Alan, Oct 9), small and spaced, still readable: brighter than the old faint system label */
 #rank-body .own-tag { display: block; margin-top: 4px; font-size: 0.63rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: .82; }
@@ -5215,7 +5215,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T14:00Z";
+  const BUILD_ID = "2026-10-14T15:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -10392,7 +10392,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? posLabel(e.p) : e.pos)}</span>` : "";
       return `<tr class="mt-row">
         <td class="slot">${esc(slot)}</td>
-        <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflTag(e.team)}</div></div></td>
+        <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflMark(e.team)}</div></div></td>
         <td class="pos-col">${badge}</td>
         <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
         ${mtWeek(e)}
