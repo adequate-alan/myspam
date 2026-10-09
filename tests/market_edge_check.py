@@ -62,7 +62,8 @@ def market_file(updated):
 now = datetime.datetime.now(datetime.timezone.utc)
 FRESH = market_file(now.strftime("%Y-%m-%dT%H:%MZ"))
 STALE = market_file((now - datetime.timedelta(days=10)).strftime("%Y-%m-%dT%H:%MZ"))
-csv_path = os.path.join(os.environ.get("TMPDIR", "/tmp"), "synthetic_flock.csv")
+import tempfile
+csv_path = os.path.join(tempfile.mkdtemp(prefix="market-edge-"), "synthetic_flock.csv")   # a private temp dir: suites may run in parallel
 with open(csv_path, "w") as f:
     f.write("player_id,Rank,Name,Team,Position,Tier\n")
     for sid, (o, pr) in sorted(fl.items(), key=lambda x: x[1][0]):
