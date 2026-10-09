@@ -166,8 +166,8 @@ A league-wide trade discovery tool (needs a connected Sleeper league).
 | `index.html` | The whole site: rankings data (`RANKINGS_CSV`), tier names, value model settings, and the page itself |
 | `pipeline/build_curves.py` | Builds the points-by-finish curves and replacement/waiver levels → `curves.json` (rerun only if league settings change) |
 | `pipeline/team_ratings.py` | Fits team offense/defense ratings from posted spreads and totals; projects every remaining game |
-| `pipeline/project_players.py` | Rest-of-season projections from usage, actual points and team environment → `projections.csv` |
-| `pipeline/merge_projections.py` | Writes projection columns into `index.html` for every ranked player |
+| `pipeline/project_players.py` | Rest-of-season projected PPG (`ros_model.py`: role, opportunity values, partial efficiency, team environment, schedule; `ros_backtest.py` scores it on past seasons) → `projections.csv` |
+| `pipeline/merge_projections.py` | Writes projection columns into `index.html` (matched by Sleeper ID) and `data/projections.json` for the browser |
 | `pipeline/build_sleeper_ids.py` | Sleeper player IDs: `data/sleeper_players.json` and the `sleeper_id` column |
 | `pipeline/build_stats.py` | Weekly game logs and schedules → `data/stats/<season>.json` (stats only; never touches rankings) |
 | `pipeline/stamp_date.py` | Sets the "Updated" date on the site |

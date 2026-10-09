@@ -4135,7 +4135,13 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .pm-head .pm-ros .pr-rk { font: 600 0.74rem/1 var(--font-display); color: var(--text-secondary); margin-left: 8px; padding: 2px 6px; border-radius: 999px; background: var(--fill-1, rgba(255,255,255,.045)); cursor: help; }
 .pm-head .pm-ros .pr-delta { font: 600 0.72rem/1 var(--font-body); margin-left: 8px; color: var(--text-muted); cursor: help; }
 .pm-head .pm-ros .pr-delta.up { color: var(--rb); } .pm-head .pm-ros .pr-delta.down { color: var(--qb); }
-.pm-head .pm-sppg .pd-item b { font-weight: 600; color: var(--text-secondary); }
+.pm-head .pm-sppg { margin-top: 3px !important; font-size: 0.78rem !important; }
+.pm-head .pm-sppg .pr-k { font-size: 0.64rem; }
+.pm-head .pm-sppg .pd-item b { font: 600 0.82rem/1.2 var(--font-display); color: var(--text-secondary); }
+.pm-head .pm-ros .pd-item.ros .pr-k { color: var(--text-secondary); }
+.pm-head .pm-ros .pr-conf { font: 600 0.66rem/1 var(--font-body); letter-spacing: 0.04em; margin-left: 8px; padding: 2px 6px; border-radius: 999px; cursor: help; color: var(--text-muted); border: 1px solid var(--border); }
+.pm-head .pm-ros .pr-conf.low { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.pp-glance.pp-ros .ros-why { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 0.8rem; }
 .pm-valline .pv-k { font: 600 0.7rem/1 var(--font-body); letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; }
 .pm-valline b { font: 700 1.15rem/1.2 var(--font-display); color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .pm-valline .pv-sub { font-size: 0.78rem; color: var(--text-secondary); }
@@ -5161,7 +5167,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* Weekly projections (data/projections.json, refreshed by the Tuesday job) feed weekly points only. The value model
      keeps the projection columns in RANKINGS_CSV, which change only when someone asks (Alan, Oct 5: nothing scheduled
      changes rankings or values). */
-  let PROJ_WEEKLY = null;
+  let PROJ_WEEKLY = null, PROJ_ROS = null;   // PROJ_ROS: the model's per-player factors (data/projections.json `f`)
   const projPPGOf = p => (p ? (PROJ_WEEKLY && PROJ_WEEKLY[p.sleeperId] != null ? PROJ_WEEKLY[p.sleeperId] : p.projPPG) : null);
   // ROS PPG (Alan, Oct 14): AM's rest-of-season projected points per game in the scoring on the page (projRatios rescoring,
   // as the weekly projections do). rosRank = his place among everyone at his position with a projection.
@@ -5327,7 +5333,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T21:00Z";
+  const BUILD_ID = "2026-10-14T22:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9009,7 +9015,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const get = async url => { try { const r = await fetch(url); return r.ok ? r.json() : null; } catch (e) { return null; } };
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
     if (!comps) comps = await get("data/curve_components.json");
-    if (!PROJ_WEEKLY) PROJ_WEEKLY = ((await get("data/projections.json")) || {}).ppg || {};
+    if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; }
   }
 
   /* League summaries */
@@ -13067,11 +13073,45 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       a.push(it("ros", "ROS PPG", fp(ros), `AM's projected points per game from now to the end of the season (${scName}): his role (snap, target and touch share, red-zone usage), team scoring environment, schedule and sustainable efficiency; not a recent average`));
       if (rk) a.push(`<span class="pr-rk" title="${esc(`${rk.rank} of ${rk.n} ${p.pos}s by ROS PPG`)}">${esc(p.pos)}${rk.rank}</span>`);
       if (d != null) a.push(`<span class="pr-delta ${d >= 0.05 ? "up" : d <= -0.05 ? "down" : ""}" title="ROS PPG minus his actual season PPG: what AM expects to change going forward">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} vs season</span>`);
+      const conf = rosConfidence(p);
+      if (conf) a.push(`<span class="pr-conf ${conf.cls}" title="${esc(conf.tip)}">${conf.label}</span>`);
     } else if (p) a.push(it("ros nr", "ROS PPG", "—", "No rest-of-season projection yet"));
     if (ppg != null) b.push(it("sppg", "Season PPG", fp(ppg), `Actual points per game this season over ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName}), injury-shortened games included`));
     if (healthy != null) b.push(it("hppg", "Healthy PPG", fp(healthy), `PPG excluding only his ${curT.short} injury-shortened game${curT.short === 1 ? "" : "s"} (${curT.fullG} game${curT.fullG === 1 ? "" : "s"})`));
     if (!a.length && !b.length) return "";
     return `<div class="pm-rosline">${a.length ? `<div class="pm-prodrk pm-ros">${a.join("")}</div>` : ""}${b.length ? `<div class="pm-prodrk pm-sppg">${b.join("")}</div>` : ""}</div>`;
+  }
+  // The model's factors behind his ROS PPG (data/projections.json `f`: [games of evidence, role xPPG, efficiency,
+  // environment, schedule, healthy PPG], base scoring; every factor is a ratio, so it holds in any scoring).
+  function rosFactors(p) {
+    const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId], proj = p ? projPPGOf(p) : null;
+    if (!f || proj == null || !(f[5] > 0)) return null;
+    const [g, roleX, eff, env, sched, hppg] = f, L = Math.log;
+    const items = [
+      { k: "role", v: L(roleX / hppg), up: "usage supports more than he has scored", down: "TD / efficiency regression" },
+      { k: "eff", v: L(eff), up: "own efficiency partly credited", down: "own low efficiency partly carried" },
+      { k: "env", v: L(env), up: "team expected to score more", down: "team expected to score less" },
+      { k: "sched", v: L(sched), up: "softer remaining schedule", down: "tougher remaining schedule" }];
+    const total = L(proj / hppg), rest = total - items.reduce((t, i) => t + i.v, 0);
+    items.push({ k: "sample", v: rest, up: "small sample, pulled toward the position average", down: "small sample, pulled toward the position average" });
+    return { g, proj, hppg, total, items };
+  }
+  // One short reason line for the Overview (Alan, Oct 14): why ROS PPG sits above or below his healthy PPG; never a paragraph.
+  function rosWhy(p) {
+    const F = rosFactors(p); if (!F) return "";
+    const dir = F.total > 0.03 ? 1 : F.total < -0.03 ? -1 : 0;
+    if (!dir) return "In line with his healthy PPG";
+    const picks = F.items.filter(i => Math.sign(i.v) === dir && Math.abs(i.v) >= 0.02).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 2);
+    const what = picks.length ? picks.map(i => (dir > 0 ? i.up : i.down)).join(" + ") : (dir > 0 ? "above his healthy PPG" : "below his healthy PPG");
+    return `${dir > 0 ? "↑" : "↓"} ${what}`;
+  }
+  // Sample-size tag on ROS PPG (Alan, Oct 14): games of evidence this season (an injury-shortened game counts as a fraction).
+  function rosConfidence(p) {
+    const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId]; if (!f) return null;
+    const g = f[0], tip = `${g} game${g === 1 ? "" : "s"} of evidence this season (an injury-shortened game counts as a fraction of a game)`;
+    if (g < 3) return { cls: "low", label: "Low sample", tip: `Low sample: ${tip}. The projection leans on the position average until he has played more.` };
+    if (g < 6) return { cls: "mod", label: "Moderate confidence", tip: `Moderate confidence: ${tip}.` };
+    return null;
   }
   function renderPlayer() {
     const box = $("player-body"), sid = PP.sid;
@@ -13105,8 +13145,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
             <p class="pm-scoring" title="Every fantasy point on this page is computed from his raw NFL stats with these scoring rules">${esc(scoringLabel())}</p>
           </div>
         </div>
-        ${loaded ? prodRankLine(p, sid, pos, curT) : ""}
         ${loaded ? rosLine(p, curT) : ""}
+        ${loaded ? prodRankLine(p, sid, pos, curT) : ""}
         <div class="pm-stats pm-valline"${p ? ` title="${esc(`${leagueView() ? (LG.active ? "League-adjusted AM value" : "AM value in your settings") : "Base AM value"}${posLabel(p) !== p.posRank ? ` · AM Board ${p.posRank}` : ""}`)}"` : ""}>${p
           ? `<span class="pv-k">Value</span><b>${fmt(dv(p))}</b><span class="pv-sub">#${leagueView() ? overallRank(p) : p.rank ?? "–"} overall${p.tier ? " · " + esc(tierLabel(p.pos, p.tier)) : ""}</span>`
           : `<span class="pv-sub">Not in the AM Rankings</span>`}</div>
@@ -13237,7 +13277,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       </div>
       ${usage ? `<h3 class="section-label">Usage</h3>${usage}` : ""}
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
-      ${projPPGOf(p) != null ? `<p class="pp-glance">ROS PPG: <b>${fp(rosPPG(p))}</b> · AM's projected points per game for the rest of the season (${activeData() ? "league" : "AM default"} scoring), from his role, team context and schedule.</p>` : ""}
+      ${projPPGOf(p) != null ? `<p class="pp-glance pp-ros" title="AM's projected points per game for the rest of the season (${activeData() ? "league" : "AM default"} scoring): his role (snap, target and touch share, red-zone usage), team scoring environment, remaining schedule and sustainable efficiency; injury-shortened games count as the fraction he played">ROS projection: <b>${fp(rosPPG(p))}</b>${rosWhy(p) ? `<span class="ros-why">${esc(rosWhy(p))}</span>` : ""}</p>` : ""}
       </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
   }
   // Last few committed ranking changes for this player (newest first)

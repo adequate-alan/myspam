@@ -233,13 +233,14 @@ with sync_playwright() as p:
     def drawer_ranks(pg, sid):
         pg.evaluate(f"() => document.querySelector('#rank-body [data-player=\"{sid}\"]').click()"); pg.wait_for_timeout(700)
         # one compact line (Oct 14): "AM WR8 · FPTS WR14 · PPG WR11 · 4 GP"; the rank in <b>, the number behind it in data-v
-        r = pg.evaluate("""() => { const gp = (document.querySelector('.pm-prodrk .pr-gp') || {}).textContent || '';
-          const q = c => { const e = document.querySelector('.pm-prodrk .pd-item.' + c); if (!e) return null; const b = e.querySelector('b').textContent.trim(), v = e.dataset.v;
+        # the AM/FPTS/PPG line is the one with the aria-label; the ROS PPG and Season/Healthy lines above it reuse the class (Oct 14)
+        r = pg.evaluate("""() => { const L = '.pm-prodrk[aria-label]', gp = (document.querySelector(L + ' .pr-gp') || {}).textContent || '';
+          const q = c => { const e = document.querySelector(L + ' .pd-item.' + c); if (!e) return null; const b = e.querySelector('b').textContent.trim(), v = e.dataset.v;
             if (v == null) return { v: b, sub: '' };
             const star = b.endsWith('*') ? '*' : '', n = (+v).toFixed(4);
             return c === 'am' ? { v: b, sub: '' } : c === 'fp' ? { v: n, sub: b + ' · ' + gp.trim() } : { v: n + star, sub: b === 'NR' ? 'Not ranked · ' + gp.trim() : b.replace('*', '') }; };
-          const d = document.querySelector('.pm-prodrk .pr-diff'), n = document.querySelector('.pm-prodrk .pr-note');
-          const first = document.querySelector('.pm-prodrk .pd-item');
+          const d = document.querySelector(L + ' .pr-diff'), n = document.querySelector(L + ' .pr-note');
+          const first = document.querySelector(L + ' .pd-item');
           return { am: q('am'), fp: q('fp'), ppg: q('ppg'), diff: d ? d.textContent : '', note: n ? n.textContent : '', firstAm: !!first && first.classList.contains('am') }; }""")
         pg.keyboard.press("Escape"); pg.wait_for_timeout(250)
         return r
