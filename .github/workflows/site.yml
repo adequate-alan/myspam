@@ -110,11 +110,11 @@ jobs:
         working-directory: pipeline
         run: |
           pip install pandas numpy
+          python build_sleeper_ids.py ../index.html
+          python build_stats.py 2026
           python project_players.py
           python merge_projections.py ../index.html --json ../data/projections.json
           python merge_projections.py ../index.html
-          python build_sleeper_ids.py ../index.html
-          python build_stats.py 2026
           python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
