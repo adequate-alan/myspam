@@ -86,6 +86,7 @@ with sync_playwright() as p:
     br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
     errs = []
     pg = br.new_page(viewport={"width": 1440, "height": 1000})
+    pg.add_init_script("window.__SPM_TEST_HOOKS = true;")   # the editor's functions (SPM.edit) are test-only
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|api\.github\.com)/.*"), lambda r: r.abort())
     pg.goto(BASE + "/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
@@ -99,6 +100,7 @@ with sync_playwright() as p:
     ok(not re.search(r"calibrateToAnchors|anchorFade|shadowOf|custom-pill|auto-btn|bendCheck|typedMoveNotice|\bp\.custom\b|modelValued|Typed values win", SRC),
        "The typed / anchor code path is gone (calibrateToAnchors, anchorFade, shadow run, custom pill, Auto/Reset, bend warning, p.custom, modelValued)")
     pg2 = br.new_page(); pg2.on("pageerror", lambda e: errs.append(str(e)))
+    pg2.add_init_script("window.__SPM_TEST_HOOKS = true;")   # the editor's functions (SPM.edit) are test-only
     pg2.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|api\.github\.com)/.*"), lambda r: r.abort())
     pg2.route(re.compile(re.escape(BASE) + r"/(index\.html)?([?#].*)?$"), lambda r: r.fulfill(status=200, content_type="text/html; charset=utf-8", body=with_proj(1.37)))
     pg2.goto(BASE + "/#rankings"); pg2.wait_for_selector("#rank-body tr.player"); pg2.wait_for_timeout(800)
@@ -215,6 +217,7 @@ with sync_playwright() as p:
     ok(len(autos) > 0 and sorted(on_page) == sorted(autos), f"Auto players exist: {len(autos)} with source auto, the same on the page")
     ok(len(re.findall(r"autoValues\(", SRC)) == 2 and "function positionCurve" in SRC, "The Auto tail (autoValues) is defined once and called only from the position curve")
     pd = br.new_page(viewport={"width": 1440, "height": 1000}); pd.on("pageerror", lambda e: errs.append(str(e)))
+    pd.add_init_script("window.__SPM_TEST_HOOKS = true;")   # the editor's functions (SPM.edit) are test-only
     pd.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|api\.github\.com)/.*"), lambda r: r.abort())
     pd.goto(BASE + "/?debug=1#rankings"); pd.wait_for_selector("#rank-body tr.player"); pd.wait_for_timeout(1200)
     b1 = {x["name"]: x for x in pd.evaluate("() => SPM.edit.board()")}
