@@ -5207,7 +5207,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T20:00Z";
+  const BUILD_ID = "2026-10-14T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7295,8 +7295,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("eb-local").hidden = local === 0 && !editor.saving;
     $("eb-local-text").textContent = editor.saving ? "Publishing…" : `${local} unpublished`;
     $("eb-local-text").title = `${local} player${local > 1 ? "s" : ""} edited in this browser and not on the live site yet`;
-    $("eb-publish").disabled = $("eb-discard").disabled = editor.saving || n > 0 || local === 0;
-    $("eb-publish").title = n > 0 ? "Save or cancel your changes first" : "";
+    // Publish stays offered while an earlier publish is unconfirmed, so it can be settled once GitHub answers (Oct 13)
+    const pending = !!(readPublish() || {}).commit;
+    $("eb-discard").disabled = editor.saving || n > 0 || local === 0;
+    $("eb-publish").disabled = editor.saving || n > 0 || (local === 0 && !pending);
+    $("eb-publish").title = n > 0 ? "Save or cancel your changes first" : pending && local === 0 ? "An earlier publish wasn't confirmed: click to check whether it landed" : "";
     $("eb-signout").hidden = !editor.token;
     // published (no browser edits left): the editor bookkeeping saved with them goes too
     if (local === 0 && !editor.saving && SESSION_AT_SAVE) { SESSION_AT_SAVE = null; try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
@@ -8482,22 +8485,30 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return r;
   }
 
-  function saveLocal() {
-    REVALUED.clear(); RECALC_TAG.clear();
+  // the draft's edits against the published board, into this browser's storage (false when storage is blocked)
+  function persistEdits() {
     const edits = diffEdits(publishedCsv, draft);
     try {
       if (Object.keys(edits).length) {
         localStorage.setItem(LOCAL_BASE_KEY, JSON.stringify(baseFor(edits, readBase())));
         localStorage.setItem(LOCAL_KEY, JSON.stringify(edits));
       } else { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); }
-    } catch (e) { toast("Couldn't save: this browser is blocking site storage. Your changes are still on screen, unsaved.", 12000); return; }
+    } catch (e) { return false; }
     localEdits = edits; savedCsv = tableToCsv(draft);
     touchSaved = new Map(touchDraft); writeTouch(Object.keys(edits).length ? touchSaved : new Map()); storeSession();
+    return true;
+  }
+  function saveLocal() {
+    REVALUED.clear(); RECALC_TAG.clear();
+    if (!persistEdits()) { toast("Couldn't save: this browser is blocking site storage. Your changes are still on screen, unsaved.", 12000); return; }
     updateEditorBar();
     // one ranking-history update per changed player, then (when this browser is connected to GitHub)
-    // straight to the live site: a save becomes the new master rankings for everyone
+    // straight to the live site: a save becomes the new master rankings for everyone. An earlier publish that never got
+    // its answer is settled first, even when there is nothing new to save (Oct 13: Save never silently does nothing
+    // while a publish is unconfirmed).
+    const pending = readPublish();
     recordSave().catch(() => {}).then(() => {
-      if (editor.token && Object.keys(localEdits).length) publishLive();
+      if (editor.token && (Object.keys(localEdits).length || (pending && pending.commit))) publishLive();
       else toast("Saved in this browser. Click Publish to live site once (it asks for your GitHub token); after that, every save publishes automatically.");
     });
   }
@@ -8638,20 +8649,95 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
   }
 
+  /* Edits made while a publish was in flight (Oct 13; Joe Burrow). They're kept on top of the newly published board,
+     which is the new baseline (§2.4), so they must be priced exactly as the same edits made after the publish: every
+     player with an own edit standing is anchored at his newly published value and spot (a value you set keeps its
+     anchor), and the session counts him as a deliberate edit. Own edits: a manual value edit, a standing move or
+     deliberate tier in the session, or a value the board shows that differs from the newly published one (a tier change
+     back to the published tier, like Burrow's T4 → T3 while T4 was publishing, leaves no move or pin standing). Players
+     who only shifted keep the published value, stay untouched and never count as edits. Before: only manual value edits
+     kept their anchors, so a mover sat at his newly published value in his new tier or slot (Burrow back in Tier 3 at the
+     Tier 4 price, 5,379), and a rank move during a publish could break the value order. */
+  function inFlightEdits(unsaved, oldTouch, oldSession) {
+    const st = pubState(), anchors = new Map(), own = new Set(), iV = colOf(draft, "value");
+    const ids = new Map(draft.rows.map((r, id) => [keyOf(draft, r), id]));
+    const standing = id => !!oldSession && ((oldSession.moves.get(id) || []).length > 0 || oldSession.pinned.has(id) || oldSession.kept.has(id));
+    for (const k of Object.keys(unsaved)) {
+      const id = ids.get(k); if (id == null) continue;
+      const t = oldTouch.get(k), pub = st.base.get(k), shown = Number(draft.rows[id][iV]);
+      // a value you set that the publish just made official isn't an edit any more (a neighbour's move may have nudged
+      // his shown value by a point in the whole-number fit); one that still differs from the published value is
+      if (t && t.edit && (pub == null || Math.round(t.v) !== pub || standing(id))) { anchors.set(k, t); own.add(id); continue; }
+      if ((pub != null && Math.round(shown) !== pub && !(t && t.edit)) || standing(id)) {
+        own.add(id);
+        if (st.base.has(k)) anchors.set(k, { v: st.base.get(k), pv: st.curve.get(k), edit: false });
+      }
+    }
+    return { anchors, own };
+  }
+  /* The newly published board becomes this browser's baseline (after a confirmed publish, or once an earlier publish
+     is found to have landed): the edits made since the publish started are kept on top of it, re-anchored
+     (inFlightEdits), the history and snapshot it carried are adopted. Returns how many rows are still unsaved. */
+  function adoptPublished(csv, h, startCsv) {
+    const unsaved = diffEdits(startCsv, draft), oldTouch = touchDraft, oldSession = EDIT_SESSION;
+    try { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); } catch (e) {}
+    publishedCsv = csv; localEdits = {}; savedCsv = csv;
+    draft = Object.keys(unsaved).length ? applyEdits(csv, unsaved) : csvToTable(csv);
+    // the published board is the new baseline (Architecture C): saved anchors go; the edits made while publishing are
+    // re-anchored on it so they price exactly as the same edits made after the publish (inFlightEdits)
+    touchSaved = new Map(); writeTouch(touchSaved);
+    const flight = inFlightEdits(unsaved, oldTouch, oldSession);
+    touchDraft = flight.anchors;
+    resetEditSession(true);
+    { const S = editSession(); S.kept = new Set([...S.kept].filter(id => flight.own.has(id))); }   // players who only shifted aren't edits
+    flight.own.forEach(id => { const t = touchDraft.get(keyOf(draft, draft.rows[id])); if (t && !t.edit) REVALUED.add(id); });
+    rankHistory = h.hist;   // what was committed (the deployed files catch up in about a minute)
+    if (h.snapFile) SNAPS[h.month] = h.snapFile;
+    rebuild();
+    return changedRows().length;
+  }
+  // An earlier publish that never got its answer (Oct 13): ask GitHub whether its commit is on the branch. Landed → read
+  // the files that commit holds and adopt them as the baseline, the edits made since re-anchored and saved again against
+  // it (nothing is committed or recorded twice). Not landed → forget it; the saved edits publish as usual. GitHub
+  // unreachable → it stays pending and the publish stops with "not confirmed". Records from before this change have no
+  // `start`; the board saved at the time stands in for it.
+  async function settlePending(prev) {
+    let landed;
+    try { landed = await commitLanded(prev.commit); }
+    catch (e) { throw ghError("unconfirmed", `the publish started ${prev.at ? "at " + prev.at : "earlier"} still isn't confirmed: GitHub couldn't be reached to check whether it landed (${e.message}). Your edits are still saved in this browser; try again when you're online.`); }
+    if (!landed) { diag("publish", `earlier publish ${prev.id} never landed`); writePublish(null); return false; }
+    diag("publish", `earlier publish ${prev.id} had landed: adopting ${prev.commit.slice(0, 7)}`);
+    const commit = await gh(`/repos/${REPO}/git/commits/${prev.commit}`), base = { head: prev.commit, tree: commit.tree.sha };
+    const index = await readAt(base, FILE);
+    if (index == null) throw ghError("data", `${FILE} wasn't found in the landed commit ${prev.commit.slice(0, 7)}, so nothing was changed.`);
+    const csv = extractRankings(index).csv, month = snapMonth(prev.at || new Date().toISOString());
+    const hist = normalizeHistory(parseOr(await readAt(base, HISTORY_FILE), HISTORY_FILE, null)), snapFile = parseOr(await readAt(base, snapPath(month)), snapPath(month), null);
+    const left = adoptPublished(csv, { hist, month, snapFile }, typeof prev.start === "string" ? prev.start : savedCsv);
+    writePublish(null); writePending([]);
+    persistEdits();   // what's left is saved again, now against the board that landed
+    return left;
+  }
   async function publishLive() {
-    const count = Object.keys(localEdits).length;
     if (editor.saving) return;
-    if (!count) { toast("Nothing to publish: there are no unpublished edits in this browser."); return; }
+    const prev = readPublish();
+    if (!Object.keys(localEdits).length && !(prev && prev.commit)) { toast("Nothing to publish: there are no unpublished edits in this browser."); return; }
     if (!editor.token) { openSignin(); return; }
     editor.saving = true; updateEditorBar();
-    const startCsv = savedCsv;
+    let startCsv = savedCsv, settledNote = "";
     try {
-      // an earlier publish that never got its answer: settle it before anything else (landed → its history is recorded)
-      const prev = readPublish();
+      // an earlier publish that never got its answer: settle it before anything else
       if (prev && prev.commit) {
-        if (await commitLanded(prev.commit)) diag("publish", `earlier publish ${prev.id} had landed`);
-        writePublish(null);
+        const left = await settlePending(prev);
+        if (left !== false) {
+          startCsv = savedCsv; settledNote = "The earlier publish had landed. ";
+          if (!Object.keys(localEdits).length) {
+            editor.saving = false; updateEditorBar();
+            toast(`Already live: the earlier publish had landed, and this browser now shows the published rankings.${left ? ` ${left} later edit${left === 1 ? " is" : "s are"} saved here, not published yet.` : " Nothing more to publish."}`);
+            return;
+          }
+        }
       }
+      const count = Object.keys(localEdits).length;
       let done = null;
       for (let attempt = 0; attempt < 3 && !done; attempt++) {
         const base = await repoSnapshot([FILE, HISTORY_FILE]), index = base.files[FILE];
@@ -8673,27 +8759,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36), hl = h.r.changed ? historyMessage(h.r.ev) : "";
         const msg = same ? hl : `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})` + (hl ? "\n\n" + hl : "");
         diag("publish", `attempt ${attempt + 1} on ${base.head.slice(0, 7)}: ${changes.map(c => c.path).join(" + ")}`);
-        const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts }));
+        const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts, start: startCsv }));
         if (res) done = { csv, same, h };   // null: the branch moved underneath us, so read and merge again
         else diag("publish", "branch moved, re-reading");
       }
       if (!done) throw ghError("server", "the site kept changing while publishing. Your edits are still saved in this browser; try again.");
       writePublish(null); writePending([]);
       // confirmed: the merged rankings are now the published ones. Unsaved changes made while publishing are kept on top.
-      const unsaved = diffEdits(startCsv, draft);
-      try { localStorage.removeItem(LOCAL_KEY); localStorage.removeItem(LOCAL_BASE_KEY); } catch (e) {}
-      publishedCsv = done.csv; localEdits = {}; savedCsv = done.csv;
-      draft = Object.keys(unsaved).length ? applyEdits(done.csv, unsaved) : csvToTable(done.csv);
-      // the published board is the new baseline (Architecture C): saved anchors go; unsaved edits made while publishing
-      // keep a value you set, and moves are re-anchored at the newly published value and spot
-      touchSaved = new Map(); writeTouch(touchSaved);
-      { const keep = new Map(); for (const k of Object.keys(unsaved)) { const t = touchDraft.get(k); if (t && t.edit) keep.set(k, t); } touchDraft = keep; }
-      rankHistory = done.h.hist;   // what was just committed (the deployed files catch up in about a minute)
-      if (done.h.r.snapshot) SNAPS[done.h.month] = done.h.snapFile;
       editor.saving = false;
-      rebuild();
+      const left = adoptPublished(done.csv, { hist: done.h.hist, month: done.h.month, snapFile: done.h.r.snapshot ? done.h.snapFile : null }, startCsv);
       const s = done.h.r.changed && historySummary(done.h.r.ev), snapNote = s ? ` Ranking history: ${s}.` : "";
-      toast((done.same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote);
+      const leftNote = left ? ` ${left} edit${left === 1 ? "" : "s"} made while publishing ${left === 1 ? "is" : "are"} still unsaved.` : "";
+      toast(settledNote + (done.same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote + leftNote);
     } catch (err) {
       if (err.kind === "auth") { editor.token = null; editor.login = ""; clearToken(); }
       // keep the record of a commit that may have landed (no clear answer); anything else definitely didn't publish it
