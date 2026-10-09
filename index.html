@@ -5333,7 +5333,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T22:30Z";
+  const BUILD_ID = "2026-10-14T23:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -13077,6 +13077,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (conf) a.push(`<span class="pr-conf ${conf.cls}" title="${esc(conf.tip)}">${conf.label}</span>`);
     } else if (p) a.push(it("ros nr", "ROS PPG", "—", "No rest-of-season projection yet"));
     if (ppg != null) b.push(it("sppg", "Season PPG", fp(ppg), `Actual points per game this season over ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName}), injury-shortened games included`));
+    if (ppg != null) b.push(it("stot", "Total", fp(curT.pts), `Total fantasy points so far this season: ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName})`));
     if (healthy != null) b.push(it("hppg", "Healthy PPG", fp(healthy), `PPG excluding only his ${curT.short} injury-shortened game${curT.short === 1 ? "" : "s"} (${curT.fullG} game${curT.fullG === 1 ? "" : "s"})`));
     if (!a.length && !b.length) return "";
     return `<div class="pm-rosline">${a.length ? `<div class="pm-prodrk pm-ros">${a.join("")}</div>` : ""}${b.length ? `<div class="pm-prodrk pm-sppg">${b.join("")}</div>` : ""}</div>`;
