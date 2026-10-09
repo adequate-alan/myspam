@@ -55,7 +55,8 @@
       "reversal_check",
       "reversal_persist_check",
       "tier_boundary_check",
-      "fixture_check"
+      "fixture_check",
+      "inflight_check"
     ],
     "weights": {
       "league_hub_check": 180,
@@ -80,7 +81,8 @@
       "reversal_check": 150,
       "reversal_persist_check": 60,
       "tier_boundary_check": 45,
-      "fixture_check": 70
+      "fixture_check": 70,
+      "inflight_check": 130
     }
   }
 }
