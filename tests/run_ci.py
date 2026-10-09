@@ -68,13 +68,13 @@ def main():
         print(f"[{status}] {s}: {passes} passed, {len(fails)} failed ({len(new)} new, {len(known)} known, {len(adv)} advisory) in {dt:.0f}s", flush=True)
         for x in new: print("    NEW FAILURE: " + x[:300])
         for x in sorted(known): print("    known baseline failure: " + x)
-        for x in adv: print("    advisory (timing, not blocking): " + x[:200])
+        for x in adv: print("    advisory (not blocking): " + x[:200])
         for x in fixed: print("    known failure no longer fails, remove it from tests/ci_policy.json: " + x)
 
     md = [f"### Release checks: {a.tier}" + (f" (shard {k}/{n})" if a.tier == "full" and n > 1 else ""), "",
           "| Suite | Result | Passed | Failed | Time |", "|---|---|---|---|---|"]
     for s, st, p, f, dt, new, known, adv, fixed in rows:
-        md.append(f"| {s} | {'❌ new failure' if st == 'FAIL' else '✅ pass' + (' (known baseline)' if known else '') + (' (advisory timing)' if adv else '')} | {p} | {f} | {dt:.0f}s |")
+        md.append(f"| {s} | {'❌ new failure' if st == 'FAIL' else '✅ pass' + (' (known baseline)' if known else '') + (' (advisory)' if adv else '')} | {p} | {f} | {dt:.0f}s |")
     for s, st, p, f, dt, new, known, adv, fixed in rows:
         for x in new: md.append(f"- **{s}** new failure: {x[:300]}")
         for x in known: md.append(f"- {s} known baseline failure: {x}")

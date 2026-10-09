@@ -12,11 +12,15 @@ him QB6, now first in Tier 4 ahead of Goff (QB7); promoting Goff into Tier 3 kee
   5. Save, reload, reverse; a tier move then Cancel goes back to the saved board
   6. every tier boundary at QB, RB, WR and TE, both directions, applied and reversed
 Nothing is published (GitHub is blocked; no token).
+Runs on the frozen test board (tests/fixture_board.py: the current code, the board from tests/fixtures/board), so the
+named players and values hold whatever the live rankings say.
 
 Run from the repo root:  python3 tests/tier_boundary_check.py   (CHROMIUM=/path/to/chromium if needed)
 """
 import functools, http.server, os, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fixture_board as FB
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 h = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT); h.log_message = lambda *a: None
@@ -40,6 +44,7 @@ with sync_playwright() as pw:
     writes = []
     ctx.route("https://api.github.com/**", lambda r: (writes.append(r.request.method), r.abort()))
     ctx.route("https://*.sleepercdn.com/**", lambda r: r.abort())
+    FB.route(ctx, BASE)   # the frozen test board, never the live rankings
     ctx.add_init_script("window.__SPM_TEST_HOOKS = true;")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
 

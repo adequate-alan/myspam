@@ -2,18 +2,85 @@
   "note": "Read by tests/run_ci.py. A suite fails CI when it prints a FAIL line not listed here, or exits non-zero without one (a crash). Entries match the start of a check's message exactly as the suite prints it after 'FAIL '. Keep this list short and specific: never add a pattern that could hide a new regression.",
   "known_failures": {},
   "advisory": {
-    "_why": "Timing measurements: they depend on the machine's speed and load (they fail when 15 browsers share 4 CPUs and pass alone). Reported in the summary, never block a deploy. The correctness checks in the same suites (landings, ranks 1..N, stale rows, scrolling stops at 0px, listeners, node counts) stay blocking.",
-    "drag_check": ["Grab restyles only the drag elements", "No long tasks", "First frame after the drop", "A further drag lifts the row right away"],
-    "drag_repeat_check": ["Drops don't get slower", "Script time per drop", "A drop redraws only the rows that changed"],
-    "drag_scroll_check": ["Holding near the bottom edge scrolls", "Five drags in a row scroll at the same speed", "Long drag from #9", "The top edge scrolls up", "Drawer open: edge scroll"]
+    "_why": "Reported in the summary, never block a deploy; every correctness check in the same suites stays blocking. Timing measurements (drag suites): they depend on the machine's speed and load (they fail when 15 browsers share 4 CPUs and pass alone); the landings, ranks 1..N, stale rows, scrolling stops at 0px, listeners and node counts stay blocking. Board-quality preferences (value_curve_check, Alan, Oct 14): a tier boundary under the preferred 3% gap and an adjacent value drop over 30% describe Alan's board, not the code, so they inform (the Review panel and the suite's own output list them) without overruling a ranking publish; values rising down the order, split or inverted tiers, stored values not shown as stored and page errors stay blocking.",
+    "drag_check": [
+      "Grab restyles only the drag elements",
+      "No long tasks",
+      "First frame after the drop",
+      "A further drag lifts the row right away"
+    ],
+    "drag_repeat_check": [
+      "Drops don't get slower",
+      "Script time per drop",
+      "A drop redraws only the rows that changed"
+    ],
+    "drag_scroll_check": [
+      "Holding near the bottom edge scrolls",
+      "Five drags in a row scroll at the same speed",
+      "Long drag from #9",
+      "The top edge scrolls up",
+      "Drawer open: edge scroll"
+    ],
+    "value_curve_check": [
+      "Every tier boundary has a real value gap",
+      "No formula cliff over 30%"
+    ]
   },
   "suites": {
-    "fast": ["static_check", "ci_pipeline_check", "smoke_check"],
-    "full": ["publish_check", "publish_safety_check", "history_check", "xss_check", "editor_check", "drag_check", "drag_repeat_check", "drag_scroll_check",
-             "drawer_check", "format_check", "value_curve_check", "injury_check", "league_hub_check", "market_edge_check",
-             "production_check", "roster_fit_check", "trade_history_check", "trade_target_check", "value_state_check", "reversal_check", "reversal_persist_check", "tier_boundary_check"],
-    "weights": {"league_hub_check": 180, "drag_repeat_check": 160, "publish_check": 150, "publish_safety_check": 150, "history_check": 90, "market_edge_check": 120,
-                "production_check": 115, "roster_fit_check": 115, "drag_scroll_check": 100, "drawer_check": 75, "editor_check": 70,
-                "format_check": 70, "injury_check": 65, "drag_check": 60, "xss_check": 40, "trade_history_check": 55, "trade_target_check": 45, "value_curve_check": 20, "value_state_check": 60, "reversal_check": 150, "reversal_persist_check": 60, "tier_boundary_check": 45}
+    "fast": [
+      "static_check",
+      "ci_pipeline_check",
+      "smoke_check"
+    ],
+    "full": [
+      "publish_check",
+      "publish_safety_check",
+      "history_check",
+      "xss_check",
+      "editor_check",
+      "drag_check",
+      "drag_repeat_check",
+      "drag_scroll_check",
+      "drawer_check",
+      "format_check",
+      "value_curve_check",
+      "injury_check",
+      "league_hub_check",
+      "market_edge_check",
+      "production_check",
+      "roster_fit_check",
+      "trade_history_check",
+      "trade_target_check",
+      "value_state_check",
+      "reversal_check",
+      "reversal_persist_check",
+      "tier_boundary_check",
+      "fixture_check"
+    ],
+    "weights": {
+      "league_hub_check": 180,
+      "drag_repeat_check": 160,
+      "publish_check": 150,
+      "publish_safety_check": 150,
+      "history_check": 90,
+      "market_edge_check": 120,
+      "production_check": 115,
+      "roster_fit_check": 115,
+      "drag_scroll_check": 100,
+      "drawer_check": 75,
+      "editor_check": 70,
+      "format_check": 70,
+      "injury_check": 65,
+      "drag_check": 60,
+      "xss_check": 40,
+      "trade_history_check": 55,
+      "trade_target_check": 45,
+      "value_curve_check": 20,
+      "value_state_check": 60,
+      "reversal_check": 150,
+      "reversal_persist_check": 60,
+      "tier_boundary_check": 45,
+      "fixture_check": 70
+    }
   }
 }

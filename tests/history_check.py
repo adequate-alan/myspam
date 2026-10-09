@@ -26,16 +26,20 @@ Checks:
 9. Failures and retries: another writer committing a snapshot mid-publish (both kept, ours once), the answer to the
    branch update lost after GitHub applied it (checked, reported as published, one event), a read-back mismatch
    (reported, nothing half-written); never a duplicate event, snapshot or entry.
+Runs on the frozen test board (tests/fixture_board.py): the in-memory repository starts from the current code with the
+fixture rankings block, the fixture history and no snapshot file yet, so CeeDee #7, St. Brown #8 and Puka's value hold
+whatever the live rankings say. The files on disk are only checked to be unchanged.
 """
 import functools, hashlib, http.server, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gh_mock import Repo
+import fixture_board as FB
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DISK = {f: hashlib.sha256(open(os.path.join(ROOT, f), "rb").read()).hexdigest() for f in ("index.html", "data/rank_history.json")}
-ORIG = open(os.path.join(ROOT, "index.html"), "rb").read()
-HIST = open(os.path.join(ROOT, "data/rank_history.json"), "rb").read()
+ORIG = FB.html()                                   # the current code with the frozen test board
+HIST = FB.files()["data/rank_history.json"]        # its history (the fixture's snapshot file is left out: the first publish creates the month)
 INJ = open(os.path.join(ROOT, "data/injury_overrides.json"), "rb").read()
 MIN_ABS, MIN_PCT = 10, 0.005
 

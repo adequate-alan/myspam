@@ -26,25 +26,35 @@ steps deep in the tail when there is no integer room. Checks, all in the page's 
    moving an Auto player makes him Manual while one who only shifted stays Auto; a scheduled snapshot of an unchanged
    board records nothing; the tail logic (autoValues) is only used by the position curve, never by the typed path.
 10. No page errors.
+Checks 2–9 run on the frozen test board (tests/fixture_board.py: the current code with the board from
+tests/fixtures/board), so the named players and the approved preview values hold whatever the live rankings say; the
+data-validity checks in 1 and 8 (every stored value shown exactly, every player valued, the live block passing the
+pre-publish checks) run on the current rankings as well.
 """
 import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fixture_board as FB
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+SRC = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()          # the live rankings: data-validity checks only
 M = re.search(r"(const RANKINGS_CSV = `\n)(.*?)(\n`;)", SRC, re.S)
 ROWS = list(csv.DictReader(io.StringIO(M.group(2))))
-STORED = {r["player"]: int(r["value"]) for r in ROWS}
+STORED = {r["player"]: int(r["value"]) for r in ROWS if r["value"].strip()}
+FX = FB.html().decode("utf-8")                                                   # the frozen test board: every behaviour check
+FM = re.search(r"(const RANKINGS_CSV = `\n)(.*?)(\n`;)", FX, re.S)
+FROWS = FB.rows()
+FSTORED = {r["player"]: int(r["value"]) for r in FROWS}
 
-def with_proj(scale):   # the same page with every projection column changed (a weekly projection refresh)
-    rows = list(csv.reader(io.StringIO(M.group(2)))); h = rows[0]
+def with_proj(scale):   # the fixture page with every projection column changed (a weekly projection refresh)
+    rows = list(csv.reader(io.StringIO(FM.group(2)))); h = rows[0]
     for r in rows[1:]:
         for c in ("proj_ppg", "proj_score"):
             i = h.index(c)
             if r[i]: r[i] = f"{float(r[i]) * scale:.2f}"
         r[h.index("games")] = "9"
     cell = lambda v: '"' + v.replace('"', '""') + '"' if re.search(r'[",\n]', v) else v
-    return SRC[:M.start(2)] + "\n".join(",".join(cell(c) for c in r) for r in rows) + SRC[M.end(2):]
+    return FX[:FM.start(2)] + "\n".join(",".join(cell(c) for c in r) for r in rows) + FX[FM.end(2):]
 
 class Q(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -89,14 +99,23 @@ with sync_playwright() as p:
     pg.add_init_script("window.__SPM_TEST_HOOKS = true;")   # the editor's functions (SPM.edit) are test-only
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|api\.github\.com)/.*"), lambda r: r.abort())
+    FB.route(pg, BASE)   # the frozen test board
     pg.goto(BASE + "/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
     pg.evaluate(HELP)
 
-    # 1. migration identity
-    shown = {x[0]: x[3] for x in pg.evaluate("() => __B().map(p => [p.name, p.rank, p.tier, p.value])")}
-    same = [n for n in STORED if shown.get(n) == STORED[n]]
-    ok(len(same) == len(STORED) == len(shown), f"Migration identity: {len(same)}/{len(STORED)} stored values shown exactly")
+    # 1. migration identity: the live rankings (data validity) and the fixture board (the page under test)
+    pl = br.new_page(); pl.on("pageerror", lambda e: errs.append(str(e)))
+    pl.add_init_script("window.__SPM_TEST_HOOKS = true;")
+    pl.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|api\.github\.com)/.*"), lambda r: r.abort())
+    pl.goto(BASE + "/#rankings"); pl.wait_for_selector("#rank-body tr.player"); pl.wait_for_timeout(800)
+    live = {x[0]: x[1] for x in pl.evaluate("() => SPM.edit.board().map(p => [p.name, p.value])")}
+    pl.close()
+    same = [n for n in STORED if live.get(n) == STORED[n]]
+    ok(len(same) == len(STORED) == len(ROWS) == len(live), f"Migration identity (live rankings): {len(same)}/{len(ROWS)} stored values shown exactly")
     ok(all(r["value"].strip() for r in ROWS), "Every player has a stored value (no blank = model, no typed state)")
+    shown = {x[0]: x[3] for x in pg.evaluate("() => __B().map(p => [p.name, p.rank, p.tier, p.value])")}
+    same = [n for n in FSTORED if shown.get(n) == FSTORED[n]]
+    ok(len(same) == len(FSTORED) == len(shown), f"The frozen test board loads exactly as stored: {len(same)}/{len(FSTORED)} values")
     ok(not re.search(r"calibrateToAnchors|anchorFade|shadowOf|custom-pill|auto-btn|bendCheck|typedMoveNotice|\bp\.custom\b|modelValued|Typed values win", SRC),
        "The typed / anchor code path is gone (calibrateToAnchors, anchorFade, shadow run, custom pill, Auto/Reset, bend warning, p.custom, modelValued)")
     pg2 = br.new_page(); pg2.on("pageerror", lambda e: errs.append(str(e)))
@@ -190,8 +209,8 @@ with sync_playwright() as p:
 
     # 8. pre-publish checks
     def broken(fn):
-        t = [r.copy() for r in ROWS]; fn(t)
-        out = io.StringIO(); w = csv.DictWriter(out, fieldnames=list(ROWS[0].keys()), lineterminator="\n"); w.writeheader(); w.writerows(t)
+        t = [r.copy() for r in FROWS]; fn(t)
+        out = io.StringIO(); w = csv.DictWriter(out, fieldnames=list(FROWS[0].keys()), lineterminator="\n"); w.writeheader(); w.writerows(t)
         return out.getvalue().strip()
     def tier_split(t):
         wr = sorted([r for r in t if r["pos"] == "WR"], key=lambda r: int(r["rank"]))
@@ -204,20 +223,23 @@ with sync_playwright() as p:
     for label, (csvtext, needle) in cases.items():
         errs_v = pg.evaluate("c => SPM.validateRankings(c, null)", csvtext)
         ok(any(needle in e for e in errs_v), f"Pre-publish check stops {label}: {[e for e in errs_v if needle in e][:1]}")
-    ok(pg.evaluate("c => SPM.validateRankings(c, null)", M.group(2)) == [], "The migrated rankings pass every pre-publish check")
+    live_errs = pg.evaluate("c => SPM.validateRankings(c, null)", M.group(2))
+    ok(live_errs == [], f"The live rankings pass every pre-publish check {live_errs[:2]}")
+    ok(pg.evaluate("c => SPM.validateRankings(c, null)", FM.group(2)) == [], "The frozen test board passes every pre-publish check")
     def bump(t):
         r = next(r for r in t if r["rank"] == "40"); r["value"] = str(int(r["value"]) - 20)
-    errs_v = pg.evaluate("([c, l]) => SPM.validateRankings(c, l, new Map())", [broken(bump), M.group(2)])
+    errs_v = pg.evaluate("([c, l]) => SPM.validateRankings(c, l, new Map())", [broken(bump), FM.group(2)])
     ok(any("nobody edited" in e for e in errs_v), f"Pre-publish check stops an untouched player's value change: {[e for e in errs_v if 'nobody' in e][:1]}")
 
     # 9. the Auto workflow
-    autos = [r["player"] for r in ROWS if r["source"] == "auto"]
+    autos = [r["player"] for r in FROWS if r["source"] == "auto"]
     on_page = pg.evaluate("() => SPM.edit.board().filter(p => p.source === 'auto').map(p => p.name)")
     ok(len(autos) > 0 and sorted(on_page) == sorted(autos), f"Auto players exist: {len(autos)} with source auto, the same on the page")
     ok(len(re.findall(r"autoValues\(", SRC)) == 2 and "function positionCurve" in SRC, "The Auto tail (autoValues) is defined once and called only from the position curve")
     pd = br.new_page(viewport={"width": 1440, "height": 1000}); pd.on("pageerror", lambda e: errs.append(str(e)))
     pd.add_init_script("window.__SPM_TEST_HOOKS = true;")   # the editor's functions (SPM.edit) are test-only
     pd.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|api\.github\.com)/.*"), lambda r: r.abort())
+    FB.route(pd, BASE)
     pd.goto(BASE + "/?debug=1#rankings"); pd.wait_for_selector("#rank-body tr.player"); pd.wait_for_timeout(1200)
     b1 = {x["name"]: x for x in pd.evaluate("() => SPM.edit.board()")}
     pd.click("#eb-vcheck"); pd.wait_for_timeout(300)

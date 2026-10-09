@@ -7,6 +7,8 @@ disagreements (no real FantasyCalc or Flock numbers, no real league):
   SPLIT a player FantasyCalc ranks far lower and Flock far higher -> mixed, low confidence
 
 Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/market_edge_check.py
+Runs on the frozen test board (tests/fixture_board.py), so the planted players and their market gaps don't move with
+the live rankings.
 
 Checks: the AM board is identical before and after (ranks, values) · Market edge sorts · Flock import (CSV file),
 persistence and removal · approximate-format and stale labels · drawer Market section · Trade Finder Market leverage
@@ -15,8 +17,14 @@ Market comparison (AM line separate) · editor-only market audit with ?debug · 
 """
 import os, re, sys, json, datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import fixture_board as FB
 src = open(os.path.join(HERE, "league_hub_check.py"), encoding="utf-8").read()
-exec(src.split("failures = []")[0])   # make_league, L1, sleeper(), serve(), rows, name_of, sync_playwright
+# the frozen test board (tests/fixture_board.py): the synthetic leagues, the market file and the planted disagreements are
+# all built from the fixture rows, and the page is served with the fixture block, so a ranking publish changes nothing here
+LIVE_READ = 'src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()'
+assert LIVE_READ in src, "league_hub_check.py no longer reads index.html the way market_edge_check expects"
+exec(src.split("failures = []")[0].replace(LIVE_READ, "src = FB.html().decode('utf-8')"))   # make_league, L1, sleeper(), serve(), rows, name_of, sync_playwright
 
 failures = []
 def ok(cond, msg):
@@ -73,6 +81,7 @@ with sync_playwright() as p:
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
         pg.route("**/data/market/redraft.json", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(market)))
         pg.route("**/data/market/flock.json", lambda r: r.fulfill(status=404, body=""))   # synthetic Flock only: the built-in list stays out
+        FB.route(pg, f"http://127.0.0.1:{port}")
         pg.goto(f"http://127.0.0.1:{port}/{'?debug' if debug else ''}#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
         return pg
     def connect(pg):
