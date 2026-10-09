@@ -5,7 +5,7 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/trade_history_
 
 Checks:
 1. A trade after AM values existed shows both snapshots: "AM at trade" from the latest entry at or before the trade
-   (an update published an hour after it is never used) and "AM today" from today's base AM values, plus a
+   (an update published an hour after it is never used; the card labels it "Then · <date> AM values") and "Now · Current AM values" from today's base AM values, plus a
    how-it-aged line.
 2. The breakdown lists each player's rank, position rank, tier and value at the time, today's value and the change.
 3. A trade before any AM value says "No AM value existed at the time of this trade" and only shows today.
@@ -85,7 +85,7 @@ with sync_playwright() as p:
             # 1. the two-team trade after AM existed: Team 1 got b1 (8,500 then), Team 2 got a1 + a2 (6,100 + 2,400 then)
             c = txt("hist")
             print("   card:", c[:400])
-            ok("AM AT TRADE" in c.upper() and "AM TODAY" in c.upper(), "Both snapshots shown on the compact card")
+            ok("THEN" in c.upper() and "NOW" in c.upper() and "AM VALUES" in c.upper() and "CURRENT AM VALUES" in c.upper(), "Both snapshots shown on the compact card as Then / Now with the values they use")
             ok("8,500" in c and "6,100" in c and "2,400" in c and "4,000" not in c, "At the time = the entry before the trade, never the update an hour after it")
             ok("AT THE TIME" in c.upper(), "The headline verdict is labeled as the at-the-time verdict")
             aged = cards.nth(I["hist"]).locator(".th-aged").inner_text()
@@ -102,10 +102,10 @@ with sync_playwright() as p:
             ok("At the time:" in full and "Today:" in full, "Both verdicts in the breakdown")
             # 3-team
             c3 = txt("three")
-            ok("AM AT TRADE" in c3.upper() and c3.count("Team 7") >= 3 and ("+" in c3 and "−" in c3 or "Basically" in c3), "Three-team trade: each team's net in both snapshots")
+            ok("THEN" in c3.upper() and c3.count("Team 7") >= 3 and ("+" in c3 and "−" in c3 or "Basically" in c3), "Three-team trade: each team's net in both snapshots")
             # partial and pre-AM
             cp, c0 = txt("part"), txt("pre")
-            ok("Not every player had an AM value at the time" in cp and "AM TODAY" in cp.upper() and cards.nth(I["part"]).locator(".th-verdict small").inner_text().upper() == "TODAY", "Partial history: no at-the-time verdict")
+            ok("Not every player had an AM value at the time" in cp and "NOW" in cp.upper() and cards.nth(I["part"]).locator(".th-verdict small").inner_text().upper() == "TODAY", "Partial history: no at-the-time verdict")
             ok("No AM value existed at the time of this trade" in c0 and cards.nth(I["pre"]).locator(".th-tag.pre").count() == 1, "Pre-AM trade says no AM value existed, shows today only")
             ok(cards.nth(I["pre"]).locator(".th-verdict small").inner_text().upper() == "TODAY", "Pre-AM headline verdict is labeled Today")
         if SHOTS:
