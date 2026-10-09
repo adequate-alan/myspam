@@ -4119,6 +4119,63 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   #panel-myteam .mt-act:not(:is(tr.sel *)) { display: none; }
 }
 .tf-disc-only { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 4px; font-weight: 600; }
+/* Player drawer: compact top (Alan, Oct 14): "AM WR8 · FPTS WR14 · PPG WR11" then "Value 7,320", then tabs */
+.pm-head .pm-prodrk:not(.pm-mkt *) { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; margin-top: 12px; font-size: 0.86rem; }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pd-item { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pd-item + .pd-item::before, .pm-head .pm-prodrk:not(.pm-mkt *) .pr-gp::before { content: "·"; margin: 0 9px; color: var(--text-muted); font-weight: 400; }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pr-k { font: 600 0.7rem/1 var(--font-body); letter-spacing: 0.06em; color: var(--text-muted); }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pd-item b { font: 700 0.95rem/1.2 var(--font-display); color: var(--text-primary); }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pd-item.nr b { color: var(--text-muted); font-weight: 600; }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pr-gp { font-size: 0.76rem; color: var(--text-muted); }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pr-diff { margin-left: 10px; align-self: center; }
+.pm-head .pm-prodrk:not(.pm-mkt *) .pr-note { margin-top: 2px; }
+.pm-head .pm-stats.pm-valline { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; row-gap: 0; }
+.pm-valline .pv-k { font: 600 0.7rem/1 var(--font-body); letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; }
+.pm-valline b { font: 700 1.15rem/1.2 var(--font-display); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.pm-valline .pv-sub { font-size: 0.78rem; color: var(--text-secondary); }
+.pm-head .pm-actions { margin-top: 12px; gap: 6px; }
+.pm-head .pm-actions .btn.sm { flex: 0 0 auto; flex-basis: auto; width: auto; padding: 5px 11px; font-size: 0.76rem; min-height: 0; }
+.pm-head .pm-actions .pp-hint { flex-basis: auto; font-size: 0.72rem; }
+/* Ranking History (Alan, Oct 14): summary, one step chart, a timeline */
+.rh-sum { display: grid; grid-template-columns: 1.25fr 1.25fr 1fr 1fr 1fr; margin: 4px 0 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.rh-sum-i { display: flex; flex-direction: column; gap: 2px; padding: 9px 11px; border-left: 1px solid var(--line); min-width: 0; }
+.rh-sum-i:first-child { border-left: 0; }
+.rh-sum .rh-k { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+.rh-sum b { font: 700 1.05rem/1.2 var(--font-display); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.rh-sum b .up { color: var(--rb); } .rh-sum b .down { color: var(--qb); }
+.rh-sum .rh-sub { font-size: 0.68rem; color: var(--text-muted); line-height: 1.3; }
+.rh-chart-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rh-chart-h .section-label { margin: 0; }
+.rh-sw .vt-btn { padding: 3px 9px; font-size: 0.72rem; }
+.rh-chart { margin: 8px 0 18px; }
+.rh-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.rh-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
+.rh-ax { font: 500 10px var(--font-body); fill: var(--text-muted); }
+.rh-end { font: 700 11px var(--font-display); fill: var(--text-primary); }
+.rh-line { fill: none; stroke: var(--text-secondary); stroke-width: 1.8; stroke-linejoin: round; }
+.rh-pt { stroke: var(--surface); stroke-width: 1.5; fill: var(--text-secondary); }
+.rh-pt.up { fill: var(--rb); } .rh-pt.down { fill: var(--qb); } .rh-pt.auto { fill: var(--text-muted); stroke-width: 0; } .rh-pt.first { fill: var(--text-primary); }
+.rh-table td { vertical-align: top; padding-top: 9px; padding-bottom: 9px; }
+.rh-table .gl-wk { white-space: nowrap; color: var(--text-secondary); font-size: 0.76rem; position: relative; padding-left: 18px; }
+.rh-table .rh-dot { position: absolute; left: 4px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--text-secondary); }
+.rh-table tr.gl-auto .rh-dot { width: 5px; height: 5px; left: 5px; top: 14px; background: var(--text-muted); }
+.rh-table tr.rh-r .rh-dot, .rh-table tr.rh-rv .rh-dot { background: var(--accent-primary, #E4002B); }
+.rh-table td.rh-what { white-space: normal; color: var(--text-primary); font-size: 0.82rem; }
+.rh-table td.rh-what > b { font-weight: 650; }
+.rh-table tr.gl-auto td.rh-what, .rh-table tr.gl-auto td.rh-what > b { color: var(--text-muted); font-weight: 500; }
+.rh-moves { display: inline-flex; gap: 5px; margin-left: 8px; vertical-align: 1px; }
+.rh-chip { font-size: 0.66rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+.rh-chip.up { color: var(--rb); background: color-mix(in srgb, var(--rb) 14%, transparent); }
+.rh-chip.down { color: var(--qb); background: color-mix(in srgb, var(--qb) 14%, transparent); }
+.rh-at { display: block; margin-top: 2px; font-size: 0.7rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.rh-table .rh-val { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rh-table td.rh-val { font-weight: 650; }
+.rh-dv { display: block; font-size: 0.7rem; font-weight: 500; }
+.rh-time { display: block; font-size: 0.66rem; color: var(--text-muted); }
+.rh-table .gl-toggle { margin-left: 6px; }
+@media (max-width: 420px) { .rh-sum { grid-template-columns: 1fr 1fr 1fr; } .rh-sum-i:nth-child(4) { border-left: 0; } .rh-sum-i:nth-child(n+4) { border-top: 1px solid var(--line); } }
+.rh-table th, .rh-table td.gl-wk, .rh-table td.rh-what { text-align: left; }
+.rh-table th.rh-val { text-align: right; }
 /* owner line in caps (Alan, Oct 9), small and spaced, still readable: brighter than the old faint system label */
 #rank-body .own-tag { display: block; margin-top: 4px; font-size: 0.63rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: .82; }
@@ -5250,7 +5307,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T19:00Z";
+  const BUILD_ID = "2026-10-14T20:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -12700,17 +12757,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!am && !r) return "";
     const P = r ? r.pos : pos, scName = activeData() ? "league scoring" : "AM default scoring";
     const nth = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
-    // stacked items (Alan, Oct 9): small label · the player's own number (primary) · his position rank under it (secondary)
-    const item = (cls, k, v, sub, tip) => `<span class="pd-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b><span class="pr-sub">${sub}</span></span>`;
+    // one compact line (Alan, Oct 14): "AM WR8 · FPTS WR14 · PPG WR11 · 4 GP"; the numbers behind each rank are in its tooltip
+    const item = (cls, k, rk, tip, v) => `<span class="pd-item ${cls}" title="${esc(tip)}"${v != null ? ` data-v="${v}"` : ""}><span class="pr-k">${k}</span><b>${rk}</b></span>`;
     const out = [];
-    if (am) out.push(item("am", "AM rank", esc(am), "Rest of season", `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
-    if (!r) out.push(item("fp", "FPTS", "—", "No games", "No games played this season"), item("ppg", "PPG", "—", "No games", "No games played this season"));
+    if (am) out.push(item("am", "AM", esc(am), `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
+    if (!r) out.push(item("fp", "FPTS", "—", "No games played this season"), item("ppg", "PPG", "—", "No games played this season"));
     else {
-      out.push(item("fp", "FPTS", fp(r.pts), `${P}${r.fpRank} · ${r.gp} GP`, `${nth(r.fpRank)} of ${r.fpN} ${P}s by total fantasy points this season: ${fp(r.pts)} pts in ${r.gp} game${r.gp === 1 ? "" : "s"} (${scName})`));
+      out.push(item("fp", "FPTS", `${P}${r.fpRank}`, `${nth(r.fpRank)} of ${r.fpN} ${P}s by total fantasy points this season: ${fp(r.pts)} pts in ${r.gp} game${r.gp === 1 ? "" : "s"} (${scName})`, r.pts));
       const star = r.short ? "*" : "";
       const full = r.short && curT && curT.fullPpg != null ? ` · ${fp(curT.fullPpg)} PPG in completed games` : "";
-      if (r.ppgRank) out.push(item("ppg", "PPG", `${fp(r.ppg)}${star}`, `${P}${r.ppgRank}`, `${nth(r.ppgRank)} of ${r.ppgN} ${P}s with ${r.min}+ games by points per game: ${fp(r.ppg)} PPG (${scName})${r.short ? ` · includes ${r.short} injury-shortened game${r.short === 1 ? "" : "s"}${full}` : ""}`));
-      else out.push(item("ppg nr", "PPG", fp(r.ppg), `Not ranked · ${r.gp} GP`, `Not ranked yet: PPG ranks need ${r.min}+ games played at this point of the season (${fp(r.ppg)} PPG in ${r.gp})`));
+      if (r.ppgRank) out.push(item("ppg", "PPG", `${P}${r.ppgRank}${star}`, `${nth(r.ppgRank)} of ${r.ppgN} ${P}s with ${r.min}+ games by points per game: ${fp(r.ppg)} PPG (${scName})${r.short ? ` · includes ${r.short} injury-shortened game${r.short === 1 ? "" : "s"}${full}` : ""}`, r.ppg));
+      else out.push(item("ppg nr", "PPG", "NR", `Not ranked yet: PPG ranks need ${r.min}+ games played at this point of the season (${fp(r.ppg)} PPG in ${r.gp})`, r.ppg));
+      out.push(`<span class="pr-gp" title="Games played this season">${r.gp} GP</span>`);
       const amN = am && p.pos === P ? Number(am.replace(/\D/g, "")) : null;
       if (amN && r.ppgRank) {
         const dlt = r.ppgRank - amN;
@@ -12993,8 +13051,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const prevName = PP.trail.length ? playerInfo(PP.trail[PP.trail.length - 1]).name : "";
     const inTradeNow = p && inTrade(p.id);
     const findHint = !LG.active ? "Connect a league to find trades" : !p ? "Unranked players can't be valued yet" : own === "fa" ? "Free agent in your league" : "";
-    const stat = (label, val, sub) => `<div class="pm-stat"><span class="pm-stat-label">${label}</span><span class="pm-stat-val">${val}</span>${sub ? `<span class="pm-stat-sub">${sub}</span>` : ""}</div>`;
-    const tabsList = PP.compare ? PP_TABS.concat([["compare", "Compare"]]) : PP_TABS;
+    const tabsList = PP_TABS.concat([["compare", "Compare"]]);   // Compare is always a tab (Alan, Oct 14)
     box.innerHTML = `
       <div class="pm-head tm" style="${teamStyle(info.team)}">
         ${closeBtn}
@@ -13009,23 +13066,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
             <p class="pm-scoring" title="Every fantasy point on this page is computed from his raw NFL stats with these scoring rules">${esc(scoringLabel())}</p>
           </div>
         </div>
-        <div class="pm-stats">
-          ${stat("Overall", p ? "#" + (leagueView() ? overallRank(p) : p.rank ?? "–") : "–", "")}
-          ${stat("Position", p ? esc(posLabel(p)) : "–", [p && posLabel(p) !== p.posRank ? "AM Board " + esc(p.posRank) : "", p && p.tier ? esc(tierLabel(p.pos, p.tier)) : ""].filter(Boolean).join(" · "))}
-          ${stat("Value", p ? fmt(dv(p)) : "–", p ? (leagueView() ? (LG.active ? "League-adj." : "Your settings") : "Base") : "Unranked")}
-          ${(() => {   // Proj PPG (Alan, Oct 9; was "2026 PPG", which the PPG item below now shows): AM's rest-of-season projection,
-            // rescored to the scoring shown on this page the same way weekly projections are (projRatios); never invented
-            const base = projPPGOf(p), R = base != null && p ? projRatios(scoringNow()) : null;
-            const v = base != null && R ? base * (R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1) : null;
-            return stat("Proj PPG", v != null ? fp(v) : "–", v != null ? `<span title="AM's rest-of-season projection (usage, results and team context), in ${esc(activeData() ? "league" : "site")} scoring">Rest of season</span>` : "No projection");
-          })()}
-        </div>
         ${loaded ? prodRankLine(p, sid, pos, curT) : ""}
-        ${mkDrawer(p)}
+        <div class="pm-stats pm-valline"${p ? ` title="${esc(`${leagueView() ? (LG.active ? "League-adjusted AM value" : "AM value in your settings") : "Base AM value"}${posLabel(p) !== p.posRank ? ` · AM Board ${p.posRank}` : ""}`)}"` : ""}>${p
+          ? `<span class="pv-k">Value</span><b>${fmt(dv(p))}</b><span class="pv-sub">#${leagueView() ? overallRank(p) : p.rank ?? "–"} overall${p.tier ? " · " + esc(tierLabel(p.pos, p.tier)) : ""}</span>`
+          : `<span class="pv-sub">Not in the AM Rankings</span>`}</div>
         <div class="pm-actions">
-          <button class="btn primary" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
-          <button class="btn secondary" type="button" data-find-trades="${esc(sid)}"${findHint ? ` disabled title="${esc(findHint)}"` : ""}>${own && own !== "fa" && !own.mine && LG.teams.some(t => t.mine) ? "Target in Trade Finder" : "Find trades"}</button>
-          <button class="btn" type="button" data-pm-compare aria-pressed="${PP.picking}">${PP.compare ? "Compare: change" : "Compare player"}</button>
+          <button class="btn primary sm" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
+          <button class="btn secondary sm" type="button" data-find-trades="${esc(sid)}"${findHint ? ` disabled title="${esc(findHint)}"` : ""}>${own && own !== "fa" && !own.mine && LG.teams.some(t => t.mine) ? "Target in Trade Finder" : "Find trades"}</button>
+          <button class="btn sm" type="button" data-pm-compare aria-pressed="${PP.picking}">${PP.compare ? "Compare: change" : "Compare player"}</button>
           ${findHint ? `<span class="pp-hint">${esc(findHint)}</span>` : ""}
         </div>
         </div>${loaded && info.team ? `<div class="pm-right">${thisWeekCard(info, true)}</div>` : ""}</div>
@@ -13065,7 +13113,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (PP.tab === "perf") return ppPerformance(info);
     if (PP.tab === "history") return ppHistory(info);
     if (PP.tab === "value") return ppTradeValue(info);
-    if (PP.tab === "compare" && PP.compare) return ppCompare(info);
+    if (PP.tab === "compare") return PP.compare ? ppCompare(info) : `<p class="empty-note">Pick a player to compare with ${esc(info.name)}: search above${canBoardPick() ? ", or click a player on the rankings board" : ""}.</p>`;
     return ppOverview(info);
   }
   const seasonChips = (active, attr) => `<div class="chips pp-sub" role="group">${STATS_SEASONS.map(y =>
@@ -13630,11 +13678,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the AM Rankings.</p>`;
     const note = `<p class="pp-note">Ranking history shows published rank, tier and value edits, and older model repricing once it added up to 0.5% (muted). Every publish also stores the exact board. Values are base AM values.</p>`;
     if (!h.length) return `<p class="empty-note">No ranking history for ${esc(info.name)} yet.</p>` + note;
-    if (h.length >= 2) {
-      PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.rank })), invert: true, title: "Overall rank", fmt: v => "#" + v });
-      PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.posRank })), invert: true, title: "Position rank", fmt: v => info.pos + v });
-      PP.charts.push({ type: "line", points: h.map(x => ({ label: x.ts, y: x.value })), title: "AM Value", fmt: v => fmt(v) });
-    }
     const tierCell = (x, prev) => x.tier === "" || x.tier == null ? "–" : isTagTier(x.tier) ? esc(tierLabel(info.pos, x.tier)) : `T${esc(String(x.tier))}${prev && prev.tier !== "" && prev.tier != null && String(prev.tier) !== String(x.tier) ? ` <span class="mv ${Number(x.tier) < Number(prev.tier) ? "up" : "down"}">${Number(x.tier) < Number(prev.tier) ? "▲" : "▼"}</span>` : ""}`;
     /* Kinds (Oct 11): ranking changes and typed values stay prominent; automatic repricing is muted, says which
        publish it came with (what else that publish changed, never a claimed cause) and runs of it collapse. */
@@ -13673,31 +13716,74 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const rev = h.slice().reverse(), groups = [];
     rev.forEach((x, i) => { const g = groups[groups.length - 1]; if (x.kind === "A" && g && g.auto) g.items.push(i); else groups.push({ auto: x.kind === "A", items: [i] }); });
     let gid = 0;
+    // Timeline (Alan, Oct 14): Date · Change · Value, one row per publish that touched him, newest first
+    const chip = (d, lab) => (d ? `<span class="rh-chip ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}${lab ? " " + lab : ""}</span>` : "");
     const row = (x, i, cls = "") => {
       const prev = rev[i + 1], auto = x.kind === "A", note = auto ? sameAs(x) : "";
-      return `<tr class="${auto ? "gl-auto" : ""}${cls}"><td class="gl-wk">${esc(longWhen(x.ts))}</td><td>#${x.rank}</td><td>${prev ? moveTag(prev.rank - x.rank) : "–"}</td>
-        <td>${esc(info.pos)}${x.posRank}</td><td>${prev ? moveTag(prev.posRank - x.posRank) : "–"}</td><td>${tierCell(x, prev)}</td>
-        <td class="gl-pts">${fmt(x.value)}</td><td>${prev ? valueMove(x.value - prev.value) : "–"}${auto && prev ? ` <span class="gl-pct">${pct(prev.value, x.value)}</span>` : ""}</td>
-        <td class="gl-src">${esc(kindLabel(x, prev))}${note ? `<span class="gl-why">${esc(note)}</span>` : ""}${x.local ? ` <span class="gl-local" title="Saved in this browser; goes live with Publish to live site">not published</span>` : ""}</td></tr>`;
+      const moves = prev && !auto && prev.posRank !== x.posRank ? chip(prev.posRank - x.posRank, info.pos) : "";   // the overall move is in the headline
+      return `<tr class="${auto ? "gl-auto" : `rh-${x.kind ? x.kind.toLowerCase() : "legacy"}`}${cls}"><td class="gl-wk" title="${esc(longWhen(x.ts))}"><span class="rh-dot" aria-hidden="true"></span>${esc(shortWhen(x.ts))}${hasTime(x.ts) ? `<span class="rh-time">${esc(whenDate(x.ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }))}</span>` : ""}</td>
+        <td class="gl-src rh-what"><b>${esc(prev ? kindLabel(x, prev) : "First ranked")}</b>${moves ? `<span class="rh-moves">${moves}</span>` : ""}<span class="rh-at">#${x.rank} · ${esc(info.pos)}${x.posRank} · ${tierCell(x, null)}</span>${note ? `<span class="gl-why">${esc(note)}</span>` : ""}${x.local ? ` <span class="gl-local" title="Saved in this browser; goes live with Publish to live site">not published</span>` : ""}</td>
+        <td class="gl-pts rh-val">${fmt(x.value)}<span class="rh-dv">${prev ? valueMove(x.value - prev.value) : ""}${auto && prev ? ` <span class="gl-pct">${pct(prev.value, x.value)}</span>` : ""}</span></td></tr>`;
     };
     const rows = groups.map(g => {
       if (!g.auto || g.items.length < 2) return g.items.map(i => row(rev[i], i)).join("");
       const id = "glg" + (++gid), first = g.items[g.items.length - 1], last = g.items[0], before = rev[first + 1];
       const from = before ? before.value : rev[first].value, to = rev[last].value;
-      return `<tr class="gl-auto gl-sum"><td class="gl-wk">${esc(shortWhen(rev[first].ts))} – ${esc(shortWhen(rev[last].ts))}</td>
-        <td colspan="5">Model repriced ${g.items.length} times · rank and tier unchanged</td>
-        <td class="gl-pts">${fmt(to)}</td><td>${valueMove(to - from)} <span class="gl-pct">${pct(from, to)}</span></td>
-        <td class="gl-src"><button type="button" class="gl-toggle" data-grp="${id}" aria-expanded="false">Show</button></td></tr>`
+      return `<tr class="gl-auto gl-sum"><td class="gl-wk"><span class="rh-dot" aria-hidden="true"></span>${esc(shortWhen(rev[first].ts))} – ${esc(shortWhen(rev[last].ts))}</td>
+        <td class="gl-src rh-what">Model repriced ${g.items.length} times · rank and tier unchanged <button type="button" class="gl-toggle" data-grp="${id}" aria-expanded="false">Show</button></td>
+        <td class="gl-pts rh-val">${fmt(to)}<span class="rh-dv">${valueMove(to - from)} <span class="gl-pct">${pct(from, to)}</span></span></td></tr>`
         + g.items.map(i => row(rev[i], i, ` gl-in ${id}`)).join("");
     }).join("");
-    return `${h.length >= 2 ? `<div class="pp-three">
-        <div><h3 class="section-label">Overall rank</h3><div class="chart-box" data-chart="0"></div></div>
-        <div><h3 class="section-label">Position rank</h3><div class="chart-box" data-chart="1"></div></div>
-        <div><h3 class="section-label">AM Value</h3><div class="chart-box" data-chart="2"></div></div></div>` : ""}
-      <h3 class="section-label">Ranking changes</h3>
-      <div class="table-scroll"><table class="gl-table">
-        <thead><tr><th scope="col">Date</th><th scope="col">Overall</th><th scope="col">Move</th><th scope="col">Pos rank</th><th scope="col">Move</th><th scope="col">Tier</th><th scope="col">Value</th><th scope="col">Change</th><th scope="col">Source</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>${h.length < 2 ? `<p class="pp-note">Charts appear once there are two entries.</p>` : ""}${note}`;
+    // Summary: where he stands now, where he started, best and worst spots, how many ranking changes
+    const f0 = h[0], last = h[h.length - 1];
+    const peak = h.reduce((a, x) => (x.rank < a.rank ? x : a), h[0]), low = h.reduce((a, x) => (x.rank > a.rank ? x : a), h[0]);
+    const nChanges = h.filter(x => /R/.test(x.kind)).length, d0 = f0.rank - last.rank;
+    const sumItem = (k, v, sub, tip) => `<div class="rh-sum-i"${tip ? ` title="${esc(tip)}"` : ""}><span class="rh-k">${k}</span><b>${v}</b>${sub ? `<span class="rh-sub">${sub}</span>` : ""}</div>`;
+    const summary = `<div class="rh-sum">
+        ${sumItem("Now", `#${last.rank}`, `${esc(info.pos)}${last.posRank} · ${tierCell(last, null)}`)}
+        ${sumItem(`Since ${esc(shortWhen(f0.ts))}`, d0 ? `<span class="${d0 > 0 ? "up" : "down"}">${d0 > 0 ? "▲" : "▼"}${Math.abs(d0)}</span>` : "–", `from #${f0.rank} · ${pct(f0.value, last.value) || "±0%"} value`, `Overall rank since his first entry on ${longWhen(f0.ts)}, and his AM value change since then`)}
+        ${sumItem("Peak", `#${peak.rank}`, esc(shortWhen(peak.ts)))}
+        ${sumItem("Low", `#${low.rank}`, esc(shortWhen(low.ts)))}
+        ${sumItem("Changes", String(nChanges), "published", "Published rank, position rank or tier changes")}
+      </div>`;
+    const metric = PP.histMetric || "rank";
+    const sw = `<div class="view-toggle rh-sw" role="group" aria-label="Chart">${[["rank", "Overall"], ["pos", "Position"], ["value", "Value"]].map(([k, l]) => `<button type="button" class="vt-btn" data-rh-metric="${k}" aria-pressed="${metric === k}">${l}</button>`).join("")}</div>`;
+    return `${summary}
+      ${h.length >= 2 ? `<div class="rh-chart-h"><h3 class="section-label">${metric === "value" ? "AM value" : metric === "pos" ? "Position rank" : "Overall rank"}</h3>${sw}</div>${rhChart(h, metric, info.pos)}` : `<p class="pp-note">The chart appears once there are two entries.</p>`}
+      <h3 class="section-label">Timeline</h3>
+      <div class="table-scroll"><table class="gl-table rh-table">
+        <thead><tr><th scope="col">Date</th><th scope="col">Change</th><th scope="col" class="rh-val">Value</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>${note}`;
+  }
+  /* Ranking History chart (Alan, Oct 14): one step chart (ranks and values only change at a publish), on a real time
+     axis, with a dot at every ranking change (green up, brick down), muted dots for repricing, the start and current
+     values labelled, and a tooltip on every point. Ranks run top-down (#1 at the top). */
+  function rhChart(h, metric, pos) {
+    const W = 520, H = 170, L = 44, R = 64, T = 14, B = 26;
+    const yv = x => (metric === "value" ? x.value : metric === "pos" ? x.posRank : x.rank);
+    const lab = v => (metric === "value" ? fmt(v) : metric === "pos" ? pos + v : "#" + v);
+    const ts = h.map(x => whenDate(x.ts).getTime()), now = Math.max(Date.now(), ts[ts.length - 1] + 1);
+    const t0 = ts[0], t1 = now, vals = h.map(yv);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (lo === hi) { lo -= metric === "value" ? Math.max(50, lo * 0.05) : 1; hi += metric === "value" ? Math.max(50, hi * 0.05) : 1; }
+    const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+    if (metric !== "value") lo = Math.max(0.5, lo);
+    const X = t => L + (W - L - R) * (t - t0) / Math.max(1, t1 - t0);
+    const Y = v => (metric === "value" ? T + (H - T - B) * (hi - v) / (hi - lo) : T + (H - T - B) * (v - lo) / (hi - lo));
+    let d = `M${X(ts[0]).toFixed(1)},${Y(vals[0]).toFixed(1)}`;
+    for (let i = 1; i < h.length; i++) d += `H${X(ts[i]).toFixed(1)}V${Y(vals[i]).toFixed(1)}`;
+    d += `H${X(now).toFixed(1)}`;
+    const ticks = [0, 0.5, 1].map(f => lo + (hi - lo) * f).map(v => (metric === "value" ? Math.round(v / 10) * 10 : Math.round(v)));
+    const grid = [...new Set(ticks)].map(v => `<line class="rh-grid" x1="${L}" x2="${W - R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="rh-ax" x="${L - 6}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end">${esc(lab(v))}</text>`).join("");
+    const dates = [t0, (t0 + t1) / 2, t1].map((t, i) => `<text class="rh-ax" x="${X(t).toFixed(1)}" y="${H - 6}" text-anchor="${["start", "middle", "end"][i]}">${esc(new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}</text>`).join("");
+    const dots = h.map((x, i) => {
+      const prev = h[i - 1], dv0 = prev ? yv(x) - yv(prev) : 0, better = metric === "value" ? dv0 > 0 : dv0 < 0;
+      const cls = !prev ? "first" : x.kind === "A" ? "auto" : dv0 === 0 ? "flat" : better ? "up" : "down";
+      const tip = `${longWhen(x.ts)} · #${x.rank} · ${pos}${x.posRank} · ${fmt(x.value)}${prev && dv0 ? ` (${dv0 > 0 ? "+" : "−"}${metric === "value" ? fmt(Math.abs(dv0)) : Math.abs(dv0)})` : ""}`;
+      return `<circle class="rh-pt ${cls}" cx="${X(ts[i]).toFixed(1)}" cy="${Y(vals[i]).toFixed(1)}" r="${cls === "auto" ? 2.2 : 3.6}"><title>${esc(tip)}</title></circle>`;
+    }).join("");
+    const end = `<text class="rh-end" x="${(X(now) + 6).toFixed(1)}" y="${(Y(vals[vals.length - 1]) + 4).toFixed(1)}">${esc(lab(vals[vals.length - 1]))}</text>`;
+    return `<div class="rh-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc((metric === "value" ? "AM value" : metric === "pos" ? "Position rank" : "Overall rank") + " over time")}">${grid}${dates}<path class="rh-line" d="${d}"/>${dots}${end}</svg></div>`;
   }
   // timestamps: "2026-10-01" (date only) or full ISO times; shown in the visitor's local time
   const hasTime = ts => String(ts).length > 10;
@@ -13715,6 +13801,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   };
   const longDate = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const moveTag = d => (d === 0 ? `<span class="mv">–</span>` : `<span class="mv ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"} ${Math.abs(d)}</span>`);
+  document.addEventListener("click", e => {   // Ranking History: chart metric
+    const m = e.target.closest && e.target.closest("[data-rh-metric]"); if (!m) return;
+    PP.histMetric = m.dataset.rhMetric; renderPlayer();
+  });
   document.addEventListener("click", e => {   // Ranking History: show / hide a collapsed run of automatic repricing
     const b = e.target.closest && e.target.closest(".gl-toggle"); if (!b) return;
     const open = b.getAttribute("aria-expanded") !== "true";
@@ -13727,6 +13817,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function ppTradeValue(info) {
     const p = info.p;
     if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the AM Rankings, so he has no trade value yet.</p>`;
+    return mkDrawer(p) + ppTradeValueBody(info);
+  }
+  function ppTradeValueBody(info) {
+    const p = info.p;
     const h = historyOf(info.sid), today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
     const before = h.filter(x => x.date < today).pop();
     const v = dv(p), mineOwner = ownerOfSid(info.sid);
@@ -14102,7 +14196,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const t = e.target;
     if (t.closest("[data-pm-close]")) { closePlayer(); return; }
     if (t.closest("[data-pm-back]")) { const prev = PP.trail.pop(); if (prev) { PP.sid = prev; if (PP.tab === "compare") PP.tab = "overview"; renderPlayer(); } return; }
-    const tab = t.closest("[data-pp-tab]"); if (tab) { PP.tab = tab.dataset.ppTab; renderPlayer(); return; }
+    const tab = t.closest("[data-pp-tab]");
+    if (tab) {
+      PP.tab = tab.dataset.ppTab;
+      if (PP.tab === "compare" && !PP.compare && !PP.picking) { PP.picking = true; PP.pickQuery = ""; setCompareMode(canBoardPick()); }   // no Player B yet: open the search
+      renderPlayer(); return;
+    }
     const se = t.closest("[data-pp-season]"); if (se) { PP.season = Number(se.dataset.ppSeason); renderPlayer(); return; }
     const pf = t.closest("[data-pp-perf]"); if (pf) { PP.perf = pf.dataset.ppPerf; renderPlayer(); return; }
     if (t.closest("[data-pm-add]")) {
