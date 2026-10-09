@@ -176,6 +176,7 @@ jobs:
         with:
           node-version: "20"
       - name: Install the test browser (pinned Playwright + its Chromium)
+        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
         run: |
           pip install -r tests/requirements-ci.txt
           python -m playwright install --with-deps chromium
@@ -226,6 +227,7 @@ jobs:
         with:
           node-version: "20"
       - name: Install the test browser (pinned Playwright + its Chromium)
+        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
         run: |
           pip install -r tests/requirements-ci.txt
           python -m playwright install --with-deps chromium
@@ -259,6 +261,7 @@ jobs:
         with:
           node-version: "20"
       - name: Install the test browser (pinned Playwright + its Chromium)
+        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
         run: |
           pip install -r tests/requirements-ci.txt
           python -m playwright install --with-deps chromium
