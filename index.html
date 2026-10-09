@@ -4130,6 +4130,12 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .pm-head .pm-prodrk:not(.pm-mkt *) .pr-diff { margin-left: 10px; align-self: center; }
 .pm-head .pm-prodrk:not(.pm-mkt *) .pr-note { margin-top: 2px; }
 .pm-head .pm-stats.pm-valline { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; row-gap: 0; }
+.pm-rosline .pm-prodrk { margin-top: 5px !important; }
+.pm-head .pm-ros .pd-item.ros b { font-size: 1.02rem; }
+.pm-head .pm-ros .pr-rk { font: 600 0.74rem/1 var(--font-display); color: var(--text-secondary); margin-left: 8px; padding: 2px 6px; border-radius: 999px; background: var(--fill-1, rgba(255,255,255,.045)); cursor: help; }
+.pm-head .pm-ros .pr-delta { font: 600 0.72rem/1 var(--font-body); margin-left: 8px; color: var(--text-muted); cursor: help; }
+.pm-head .pm-ros .pr-delta.up { color: var(--rb); } .pm-head .pm-ros .pr-delta.down { color: var(--qb); }
+.pm-head .pm-sppg .pd-item b { font-weight: 600; color: var(--text-secondary); }
 .pm-valline .pv-k { font: 600 0.7rem/1 var(--font-body); letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; }
 .pm-valline b { font: 700 1.15rem/1.2 var(--font-display); color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .pm-valline .pv-sub { font-size: 0.78rem; color: var(--text-secondary); }
@@ -5157,6 +5163,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      changes rankings or values). */
   let PROJ_WEEKLY = null;
   const projPPGOf = p => (p ? (PROJ_WEEKLY && PROJ_WEEKLY[p.sleeperId] != null ? PROJ_WEEKLY[p.sleeperId] : p.projPPG) : null);
+  // ROS PPG (Alan, Oct 14): AM's rest-of-season projected points per game in the scoring on the page (projRatios rescoring,
+  // as the weekly projections do). rosRank = his place among everyone at his position with a projection.
+  function rosPPG(p, R) {
+    const base = projPPGOf(p); if (base == null || !p) return null;
+    R = R || projRatios(scoringNow());
+    return base * (R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1);
+  }
+  function rosRank(p) {
+    const v = rosPPG(p); if (v == null) return null;
+    const R = projRatios(scoringNow());
+    let n = 0, ahead = 0;
+    players.forEach(q => { if (q.pos !== p.pos || !EDIT_POS.includes(q.pos)) return; const w = rosPPG(q, R); if (w == null) return; n++; if (w > v + 1e-9) ahead++; });
+    return { rank: ahead + 1, n };
+  }
   /* League settings picked by hand (for anyone not connecting a league).
      null = the site's own format. A connected league's settings always win over these. */
   const FMT_DEFAULT = { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 };
@@ -5307,7 +5327,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T20:00Z";
+  const BUILD_ID = "2026-10-14T21:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -13034,6 +13054,25 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return "A";
   }
 
+  // Drawer lines 2–3 (Alan, Oct 14): "ROS PPG 17.8 · WR9 · +1.9 vs season" and "Season PPG 15.9 · Healthy PPG 16.7".
+  // PPG = actual season PPG; Healthy PPG = excluding only injury-shortened games; ROS PPG = AM's projection from now on;
+  // the weekly number stays "Wk proj" elsewhere. Never a weekly projection dressed up as PPG.
+  function rosLine(p, curT) {
+    const ros = p ? rosPPG(p) : null, rk = ros != null ? rosRank(p) : null, scName = activeData() ? "league scoring" : "AM default scoring";
+    const ppg = curT && curT.g ? curT.ppg : null, healthy = curT && curT.short && curT.fullG ? curT.fullPpg : null;
+    const d = ros != null && ppg != null ? ros - ppg : null;
+    const it = (cls, k, v, tip) => `<span class="pd-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b></span>`;
+    const a = [], b = [];
+    if (ros != null) {
+      a.push(it("ros", "ROS PPG", fp(ros), `AM's projected points per game from now to the end of the season (${scName}): his role (snap, target and touch share, red-zone usage), team scoring environment, schedule and sustainable efficiency; not a recent average`));
+      if (rk) a.push(`<span class="pr-rk" title="${esc(`${rk.rank} of ${rk.n} ${p.pos}s by ROS PPG`)}">${esc(p.pos)}${rk.rank}</span>`);
+      if (d != null) a.push(`<span class="pr-delta ${d >= 0.05 ? "up" : d <= -0.05 ? "down" : ""}" title="ROS PPG minus his actual season PPG: what AM expects to change going forward">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} vs season</span>`);
+    } else if (p) a.push(it("ros nr", "ROS PPG", "—", "No rest-of-season projection yet"));
+    if (ppg != null) b.push(it("sppg", "Season PPG", fp(ppg), `Actual points per game this season over ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName}), injury-shortened games included`));
+    if (healthy != null) b.push(it("hppg", "Healthy PPG", fp(healthy), `PPG excluding only his ${curT.short} injury-shortened game${curT.short === 1 ? "" : "s"} (${curT.fullG} game${curT.fullG === 1 ? "" : "s"})`));
+    if (!a.length && !b.length) return "";
+    return `<div class="pm-rosline">${a.length ? `<div class="pm-prodrk pm-ros">${a.join("")}</div>` : ""}${b.length ? `<div class="pm-prodrk pm-sppg">${b.join("")}</div>` : ""}</div>`;
+  }
   function renderPlayer() {
     const box = $("player-body"), sid = PP.sid;
     if (!sid) return;
@@ -13067,6 +13106,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           </div>
         </div>
         ${loaded ? prodRankLine(p, sid, pos, curT) : ""}
+        ${loaded ? rosLine(p, curT) : ""}
         <div class="pm-stats pm-valline"${p ? ` title="${esc(`${leagueView() ? (LG.active ? "League-adjusted AM value" : "AM value in your settings") : "Base AM value"}${posLabel(p) !== p.posRank ? ` · AM Board ${p.posRank}` : ""}`)}"` : ""}>${p
           ? `<span class="pv-k">Value</span><b>${fmt(dv(p))}</b><span class="pv-sub">#${leagueView() ? overallRank(p) : p.rank ?? "–"} overall${p.tier ? " · " + esc(tierLabel(p.pos, p.tier)) : ""}</span>`
           : `<span class="pv-sub">Not in the AM Rankings</span>`}</div>
@@ -13197,7 +13237,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       </div>
       ${usage ? `<h3 class="section-label">Usage</h3>${usage}` : ""}
       ${glance ? `<p class="pp-glance">${glance}</p>` : ""}
-      ${projPPGOf(p) != null ? `<p class="pp-glance">AM projection: <b>${fp(projPPGOf(p))}</b> PPG rest of season (site scoring), from usage, results and team context.</p>` : ""}
+      ${projPPGOf(p) != null ? `<p class="pp-glance">ROS PPG: <b>${fp(rosPPG(p))}</b> · AM's projected points per game for the rest of the season (${activeData() ? "league" : "AM default"} scoring), from his role, team context and schedule.</p>` : ""}
       </div>${side ? `<aside class="ov-side"><h3 class="section-label">This week context</h3><div class="ov-side-card">${side}</div></aside>` : ""}</div>`;
   }
   // Last few committed ranking changes for this player (newest first)
@@ -13955,7 +13995,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       ["profile", "Profile", [
         ["Age", S => ageFrom(playerInfo(S.inf.sid).birth), v => v, 0],
         ["Tier", S => (S.inf.p && S.inf.p.tier ? tierLabel(S.inf.p.pos, S.inf.p.tier) : null), v => esc(v), 0],
-        ["Rest-of-season projection", S => projPPGOf(S.inf.p), v => fp(v) + "<small> PPG</small>", 1, "proj"],
+        ["ROS PPG", S => rosPPG(S.inf.p), v => fp(v), 1, "proj"],
         ["Team implied total (next game)", S => S.implied, (v, S) => `${fp(v)}<small> ${esc(S.ng.opp || "")}</small>`, 1]]]];
     return { P, sections: out };
   }
