@@ -11,7 +11,8 @@ Run from the repo root:  python3 tests/ci_pipeline_check.py      (needs PyYAML; 
 3. run_ci.py: a new failure blocks; the known baseline failure and advisory timing checks don't; a crash blocks;
    a known failure that starts passing is reported.
 4. static_check.py on a copy of the repo: broken rankings, a rewritten history entry, and a changed rank under
-   --frozen-rankings each fail; the untouched copy passes.
+   --frozen-rankings each fail; the untouched copy passes; both board-snapshot formats pass (4-field with a value
+   model, 5-field legacy) and malformed snapshots (wrong field count, bad typed flag, duplicate rank or timestamp) fail.
 5. The fast path's code fingerprint: a rankings edit and data/*.json changes keep it; code in index.html (JS, CSS),
    tests, pinned test dependencies, the CI policy, the workflow, pipeline scripts, the manifest and a non-JSON file
    under data/ each change it (so they always get the full suite).
@@ -209,6 +210,31 @@ try:
     rc, o = static(d, "--base", "HEAD"); ok(rc == 1 and "history only grows" in o, "static_check: a rewritten history entry fails")
     open(os.path.join(d, "index.html"), "w").write(html.replace("const BUILD_ID", "const const BUILD_ID", 1))
     rc, o = static(d); ok(rc == 1 and "scripts parse" in o, "static_check: a JavaScript syntax error fails")
+    # snapshots: both formats pass (the committed file holds 5-field snapshots from before Oct 12 and 4-field ones since);
+    # a wrong field count for the snapshot's format, a bad typed flag, a duplicate rank or timestamp each fail
+    shutil.copy(os.path.join(ROOT, "index.html"), os.path.join(d, "index.html"))
+    json.dump(h0 := json.load(open(os.path.join(ROOT, "data/rank_history.json"))), open(os.path.join(d, "data/rank_history.json"), "w"))
+    sp = os.path.join(d, "data/rank_snapshots/2026-10.json"); snap0 = json.load(open(sp))
+    kinds = {("valueModelVersion" in s): len(next(iter(s["players"].values()))) for s in snap0["snapshots"]}
+    ok(kinds.get(True) == 4 and kinds.get(False) == 5, f"The committed snapshot file holds both formats: 4-field with a value model, 5-field legacy {kinds}")
+    rc, o = static(d); ok(rc == 0, "static_check: both snapshot formats pass as committed")
+    def snap_case(label, fn, msg):
+        f = json.loads(json.dumps(snap0)); fn(f); json.dump(f, open(sp, "w"))
+        rc, o = static(d); ok(rc == 1 and msg in o, f"static_check: {label} fails")
+    new = lambda f: next(s for s in f["snapshots"] if "valueModelVersion" in s)
+    old = lambda f: next(s for s in f["snapshots"] if "valueModelVersion" not in s)
+    def five_in_new(f): sid = next(iter(new(f)["players"])); new(f)["players"][sid].append(0)
+    def four_in_old(f): sid = next(iter(old(f)["players"])); old(f)["players"][sid].pop()
+    def bad_typed(f): sid = next(iter(old(f)["players"])); old(f)["players"][sid][4] = 2
+    def dup_rank(f): a, b = list(new(f)["players"].values())[:2]; b[0] = a[0]
+    def dup_ts(f): f["snapshots"].append(json.loads(json.dumps(f["snapshots"][-1])))
+    def zero_rank(f): sid = next(iter(new(f)["players"])); new(f)["players"][sid][0] = 0
+    def float_value(f): sid = next(iter(new(f)["players"])); new(f)["players"][sid][3] = 5760.5
+    for label, fn, msg in (("a 5-field entry in a value-model snapshot", five_in_new, "isn't a 4-field entry"), ("a 4-field entry in a legacy snapshot", four_in_old, "isn't a 5-field entry"),
+                           ("a typed flag of 2", bad_typed, "isn't a 5-field entry"), ("a duplicate rank", dup_rank, "appears twice"), ("a duplicate timestamp", dup_ts, "two snapshots at"),
+                           ("a rank of 0", zero_rank, "isn't a 4-field entry"), ("a fractional value", float_value, "isn't a 4-field entry")):
+        snap_case(label, fn, msg)
+    json.dump(snap0, open(sp, "w"))
 
     # 5. the fast path's fingerprint: data-only changes keep it, anything that can change behaviour changes it
     shutil.copy(os.path.join(ROOT, "index.html"), os.path.join(d, "index.html"))

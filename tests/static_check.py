@@ -96,13 +96,30 @@ def history_errors(h):   # the Oct 11 model: entries [ts, rank, posRank, tier, v
     if not isinstance(ev, list) or any(not isinstance(e, dict) or not isinstance(e.get("ts"), str) for e in ev): errs.append("publish events are malformed")
     return errs
 
-def snapshot_errors(path, f):   # data/rank_snapshots/<YYYY-MM>.json: {version: 1, snapshots: [{ts, src, by, players: {sid: [rank, posRank, tier, value, typed]}}]}
+def snapshot_errors(path, f):   # data/rank_snapshots/<YYYY-MM>.json: {version: 1, snapshots: [{ts, src, by, valueModelVersion?, players}]}
+    """Two snapshot formats, each checked against its own schema (Oct 13): a snapshot that names its value model
+    (`valueModelVersion`, values as state since Oct 12) holds [rank, posRank, tier, value] per player; an older one
+    holds [rank, posRank, tier, value, typed 0/1]. Ranks are whole numbers from 1 and unique within a snapshot, values
+    whole numbers from 0, tiers numbers or strings; snapshots carry a timestamp in the file's month, unique within the
+    file, and at least one player."""
     if not isinstance(f, dict) or f.get("version") != 1 or not isinstance(f.get("snapshots"), list): return [f"{path} isn't a version-1 snapshot file"]
     month = os.path.basename(path)[:7]
+    whole = lambda x, lo: isinstance(x, int) and not isinstance(x, bool) and x >= lo
+    seen = set()
     for s in f["snapshots"]:
-        if not (isinstance(s, dict) and isinstance(s.get("ts"), str) and s["ts"].startswith(month) and isinstance(s.get("players"), dict)
-                and all(isinstance(a, list) and len(a) == 5 and isinstance(a[0], int) for a in s["players"].values())):
-            return [f"{path} has a malformed snapshot ({str(s.get('ts'))[:24]})"]
+        label = f"{path} has a malformed snapshot ({str(s.get('ts') if isinstance(s, dict) else s)[:24]})"
+        if not (isinstance(s, dict) and isinstance(s.get("ts"), str) and s["ts"].startswith(month) and isinstance(s.get("players"), dict) and s["players"]): return [label]
+        if s["ts"] in seen: return [f"{path} has two snapshots at {s['ts'][:24]}"]
+        seen.add(s["ts"])
+        stored = "valueModelVersion" in s
+        if stored and not (isinstance(s["valueModelVersion"], str) and s["valueModelVersion"]): return [label + ": valueModelVersion isn't a name"]
+        n = 4 if stored else 5
+        ranks = set()
+        for sid, a in s["players"].items():
+            if not (isinstance(a, list) and len(a) == n and whole(a[0], 1) and whole(a[1], 1) and isinstance(a[2], (int, str)) and whole(a[3], 0) and (n == 4 or a[4] in (0, 1))):
+                return [label + f": player {sid} {json.dumps(a)[:60]} isn't a {n}-field entry"]
+            if a[0] in ranks: return [label + f": rank {a[0]} appears twice"]
+            ranks.add(a[0])
     return []
 
 def main():
