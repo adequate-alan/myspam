@@ -390,7 +390,9 @@ try:
     css_line = line_of(lambda i: R0[i] == "css" and "{" in L0[i - 1] and "drag" not in L0[i - 1])
     cases = [
         ("CSS", [(css_line, lambda l: l.replace("{", "{ outline: 0;", 1))], {}, "fast", []),
-        ("copy: a label in a render function", [(line_of(lambda i: 'r.then ? "At the time" : "Today"' in L0[i - 1]), lambda l: l.replace('"At the time"', '"Then"'))], {}, "fast", []),
+        # the trade card's verdict label (found by structure, not wording: the label text itself changes over time)
+        ("copy: a label in a render function", [(line_of(lambda i: F0[i] == "tradeCard" and re.search(r'r\.then \? "[A-Z][^"]*"', L0[i - 1]) is not None),
+            lambda l: re.sub(r'(r\.then \? )"[A-Z][^"]*"', r'\1"Earlier"', l, count=1))], {}, "fast", []),
         ("BUILD_ID", [(line_of(lambda i: L0[i - 1].strip().startswith('const BUILD_ID = "')), lambda l: re.sub(r'"[^"]*"', '"2099-01-01T00:00Z"', l))], {}, "fast", []),
         ("a JS comment", [(line_of(lambda i: R0[i] == "js" and L0[i - 1].strip().startswith("// ")), lambda l: l + " (edited)")], {}, "fast", []),
         ("the rankings block (a publish)", [(line_of(lambda i: R0[i] == "rankings"), lambda l: l.replace(",manual", ",manual", 1) + "")], {"data/rank_history.json": "{}"}, "fast", []),
