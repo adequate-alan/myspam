@@ -122,11 +122,13 @@ with sync_playwright() as p:
     sort(pg, "mkcons")
     # 3. drawer
     pg.evaluate(f"() => document.querySelector('#rank-body [data-player=\"{BUY}\"]').click()"); pg.wait_for_timeout(1200)
+    pg.click("[data-pp-tab=value]"); pg.wait_for_timeout(400)   # the Market line sits in Trade Value since Oct 14
     d = pg.inner_text(".pm-mkt") if pg.locator(".pm-mkt").count() else ""
     ok(all(k in d.upper() for k in ("MARKET", "FANTASYCALC", "FLOCK", "CONSENSUS", "AM EDGE +")) and "BUY" in d.upper(), f"Drawer Market section for the buy: {d[:120]!r}")
     ok("both the trade market and expert consensus" in d, "Drawer explains: AM higher than both")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
     pg.evaluate(f"() => document.querySelector('#rank-body [data-player=\"{SPLIT}\"]').click()"); pg.wait_for_timeout(1200)
+    pg.click("[data-pp-tab=value]"); pg.wait_for_timeout(400)
     d = pg.inner_text(".pm-mkt") if pg.locator(".pm-mkt").count() else ""
     ok("mixed" in d.lower(), f"Split player: external opinion is mixed {d[-160:]!r}")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
