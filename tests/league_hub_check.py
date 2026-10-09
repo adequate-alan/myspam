@@ -360,6 +360,29 @@ with sync_playwright() as p:
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_myteam.png", full_page=True)
     wk = [t.upper() for t in pg.locator("td.mt-wk").all_inner_texts()]
     ok(len(wk) >= 9 and "THIS WEEK" in pg.inner_text(".mt-table thead").upper() and not any("LIVE · LIVE PROJ" in t or "FINAL ·" in t for t in wk), f"One weekly state per row: {wk[:4]}")
+    # Command-center top (Alan, Oct 14): one summary strip, no position cards; roster columns without raw value; row actions only on hover
+    sm = pg.inner_text(".mt-summary").upper()
+    ok(all(k in sm for k in ("POWER RANK", "STARTER STRENGTH", "DEPTH", "POSITIONS")) and re.search(r"(PROJECTED|LIVE PROJ|POINTS) · WK \d+", sm) and pg.locator(".mt-strength, .mt-summary .strength").count() == 0,
+       f"My Team summary strip: {sm[:120]!r}")
+    hd = pg.inner_text(".mt-table thead").upper()
+    ok("MATCHUP" in hd and "VALUE" not in hd, f"Roster columns: matchup, no raw value column ({hd.split()})")
+    r0 = pg.locator(".mt-table tr.mt-row:has(.mt-act)").first
+    op = lambda: r0.locator(".mt-act").evaluate("a => getComputedStyle(a).opacity")
+    before = op(); r0.locator("td.pos-col").hover(); pg.wait_for_timeout(250); after = op()
+    ok(before == "0" and after == "1" and r0.locator(".mt-act button").count() == 3, f"Row actions hidden until hover ({before} → {after})")
+    pos = r0.locator("[data-mt-repl]").get_attribute("data-pos")
+    r0.locator("[data-mt-repl]").click(); pg.wait_for_timeout(1200)
+    cards = pg.locator("#tf-body .tf-dcard .pos").all_inner_texts()
+    ok(pg.url.endswith("#finder") and pg.locator(".tf-disc-only").count() == 1 and cards and all(c.startswith(pos) for c in cards), f"Target replacement: Find targets at {pos} only ({cards[:4]})")
+    pg.click(".tf-disc-only [data-tf-discpos]"); pg.wait_for_timeout(600)
+    ok(pg.locator(".tf-disc-only").count() == 0, "Show all positions clears the filter")
+    pg.click("#tab-myteam"); pg.wait_for_timeout(800)
+    r0 = pg.locator(".mt-table tr.mt-row:has(.mt-act)").first; r0.locator("td.pos-col").hover(); r0.locator("[data-mt-shop]").click(); pg.wait_for_timeout(1000)
+    ok(pg.url.endswith("#finder") and pg.locator("[data-src='mine'][aria-pressed='true'], [data-src='mine'].on, [data-src='mine'][aria-checked='true']").count() >= 1, "Shop opens Shop my players")
+    pg.click("#tab-myteam"); pg.wait_for_timeout(800)
+    r0 = pg.locator(".mt-table tr.mt-row:has(.mt-act)").first; r0.locator("td.pos-col").hover(); r0.locator("[data-mt-cmp]").click(); pg.wait_for_timeout(1000)
+    ok(pg.locator("#pm-pick").count() == 1, "Compare opens the player with the compare search")
+    pg.keyboard.press("Escape"); pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
     # Trade Finder goals: Slight edge / Best value ideas favor you within their range and are labelled as such (never "steal")
     pg.click("#tab-finder"); pg.wait_for_timeout(1200)
     pv = pg.evaluate("() => [...document.getElementById('tf-player').options].map(o => o.value)")[:6]

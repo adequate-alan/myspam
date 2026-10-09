@@ -4084,6 +4084,41 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 :is(#rank-body, #panel-myteam .mt-table) .pl-tm.nologo { position: static; display: inline; width: auto; height: auto; vertical-align: baseline; }
 :is(#rank-body, #panel-myteam .mt-table) .pl-tm.nologo img { display: none; }
 :is(#rank-body, #panel-myteam .mt-table) .pl-tm.nologo .tm-abbr { display: inline; }
+/* My Team summary strip + row actions (Alan, Oct 14) */
+#panel-myteam .mt-summary { display: flex; flex-wrap: wrap; align-items: stretch; margin: 0 0 14px; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; font-size: inherit; color: inherit; gap: 0; }
+#panel-myteam .mt-sum { display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 10px 18px; border-left: 1px solid var(--line); min-width: 0; }
+#panel-myteam .mt-sum:first-child { border-left: 0; }
+#panel-myteam .mt-sum-l { display: flex; align-items: baseline; gap: 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+#panel-myteam .mt-sum-v { display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#panel-myteam .mt-sum-v b { font-size: 1.2rem; font-weight: 700; color: var(--cream); }
+#panel-myteam .mt-sum-v i { font-style: normal; font-size: 0.76rem; color: var(--muted); }
+#panel-myteam .mt-sum-v b.good { color: var(--rb); }
+#panel-myteam .mt-sum-v b.tough { color: var(--qb); }
+#panel-myteam .mt-rooms { margin-left: auto; }
+#panel-myteam .mt-rooms .mt-sum-v { gap: 14px; }
+#panel-myteam .mt-room { font-size: 0.78rem; font-weight: 600; color: var(--ink-2); }
+#panel-myteam .mt-room b { font-size: 0.92rem; margin-left: 2px; }
+#panel-myteam .mt-pb { margin-left: 0; font-size: 0.66rem; letter-spacing: 0; text-transform: none; }
+#panel-myteam .mt-table td.mt-pl { position: relative; }
+#panel-myteam .mt-act { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; gap: 2px; padding: 2px; background: var(--raised, var(--surface)); border: 1px solid var(--line); border-radius: 7px; box-shadow: 0 2px 10px rgba(0,0,0,.18); opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 2; }
+#panel-myteam .mt-act button { font: inherit; font-size: 0.68rem; font-weight: 600; color: var(--ink-2); background: transparent; border: 0; border-radius: 5px; padding: 3px 7px; cursor: pointer; white-space: nowrap; }
+#panel-myteam .mt-act button:hover, #panel-myteam .mt-act button:focus-visible { color: var(--cream); background: var(--fill-2, rgba(255,255,255,.08)); }
+#panel-myteam tr.mt-row:hover .mt-act, #panel-myteam tr.mt-row.sel .mt-act, #panel-myteam tr.mt-row:focus-within .mt-act { opacity: 1; pointer-events: auto; }
+#panel-myteam tr.mt-row.sel td { background: var(--fill-1, rgba(255,255,255,.045)); }
+#panel-myteam .mt-table td.mt-mu, #panel-myteam .mt-table th.mt-mu, #panel-myteam .mt-table td.mt-l3, #panel-myteam .mt-table th.mt-l3 { white-space: nowrap; width: 1%; }
+#panel-myteam .mt-table td.mt-mu { padding-right: 22px; }
+@media (hover: none) { #panel-myteam tr.mt-row:hover:not(.sel) .mt-act { opacity: 0; pointer-events: none; } }
+@media (max-width: 760px) {
+  #panel-myteam .mt-summary { display: grid; grid-template-columns: 1fr 1fr; }
+  #panel-myteam .mt-sum { padding: 8px 12px; }
+  #panel-myteam .mt-sum:nth-child(odd) { border-left: 0; }
+  #panel-myteam .mt-sum:nth-child(n+3) { border-top: 1px solid var(--line); }
+  #panel-myteam .mt-rooms { grid-column: 1 / -1; margin-left: 0; border-left: 0; }
+  #panel-myteam .mt-table td.mt-mu, #panel-myteam .mt-table th.mt-mu { display: none; }
+  #panel-myteam tr.mt-row.sel .mt-act { position: static; transform: none; margin-top: 6px; width: auto; max-width: 100%; flex-wrap: wrap; }
+  #panel-myteam .mt-act:not(:is(tr.sel *)) { display: none; }
+}
+.tf-disc-only { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 4px; font-weight: 600; }
 /* owner line in caps (Alan, Oct 9), small and spaced, still readable: brighter than the old faint system label */
 #rank-body .own-tag { display: block; margin-top: 4px; font-size: 0.63rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: .82; }
@@ -5215,7 +5250,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T15:00Z";
+  const BUILD_ID = "2026-10-14T19:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -10330,13 +10365,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* My Team */
   // This week for one roster row: the shared weekOutlook (same as Matchups / Waiver Wire / Rosters), with Sleeper's
   // live points for your lineup when Matchups has loaded them
+  function mtOutlook(e, wk) {
+    const d = activeData(), data = d && typeof LT !== "undefined" ? LT.mx[mxKey(d.league.league_id, wk)] : null;
+    const m = data && data.list.find(x => x.roster_id === LG.myRosterId), v = m && m.players_points ? m.players_points[e.sid] : null;
+    return { o: weekOutlook(e, wk, { pts: v != null ? Number(v) : undefined }), v };
+  }
   function mtWeek(e) {
     const wk = currentWeek();
     { const dd = activeData(); if (wk && dd && slSource() === "sleeper" && !LT.mxError[dd.league.league_id]) loadMatchups(wk); }   // cached 2 min; redraws My Team when it lands (not again after an error)
     if (!wk || !e.team) return `<td class="mt-wk"><span class="muted">—</span></td>`;
-    const d = activeData(), data = d && typeof LT !== "undefined" ? LT.mx[mxKey(d.league.league_id, wk)] : null;
-    const m = data && data.list.find(x => x.roster_id === LG.myRosterId), v = m && m.players_points ? m.players_points[e.sid] : null;
-    const o = weekOutlook(e, wk, { pts: v != null ? Number(v) : undefined }), g = o.game || {};
+    const { o, v } = mtOutlook(e, wk), g = o.game || {};
     // one primary state per player (Alan, Oct 4): "30.9 LIVE", "10.4 FINAL", "Proj 16.6", OUT, BYE; live adds one small "Live proj" line
     const tag = t => `<span class="mt-tag">${t}</span>`, tip = g.oppTeam ? ` title="${esc(`${g.home ? "vs" : "@"} ${g.oppTeam}${g.text ? " · " + g.text : ""}`)}"` : "";
     if (o.kind === "bye") return `<td class="mt-wk off">BYE</td>`;
@@ -10374,6 +10412,29 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // Trade with sits at the bottom of this card (Alan, Oct 5: one card, not two)
     return rows.length || extra ? `<section class="mt-card mt-ctx">${rows.length ? `<h3 class="rr-label">Team insights</h3><ul class="tc-list">${rows.join("")}</ul>` : ""}${extra}</section>` : "";
   }
+  // This week's projected points for the starting lineup: the shared weekOutlook per starter, summed like Matchups'
+  // Live proj (finals count their points, live games points so far + the rest of the projection, bye/out/empty 0)
+  function mtProjected(starterIds, map) {
+    const wk = currentWeek();
+    if (!wk) return null;
+    let sum = 0, missing = [], live = 0, open = 0;
+    for (const sid of starterIds || []) {
+      if (!sid || sid === "0") continue;
+      const e = rosterEntry(sid, map);
+      if (!e.team) { missing.push(e.name); continue; }
+      const { o } = mtOutlook(e, wk);
+      if (o.kind === "live") live++;
+      if (o.kind === "upcoming" || o.kind === "live") open++;
+      if (o.missing) missing.push(e.name);
+      sum += o.est || 0;
+    }
+    return { wk, sum, missing, label: live ? "Live proj" : open ? "Projected" : "Points" };
+  }
+  // Row actions (Alan, Oct 14): shown on hover / focus / a tapped row, never permanently
+  const mtActions = e => `<span class="mt-act" role="group" aria-label="${esc(e.name)}: actions">
+      <button type="button" data-mt-shop="${esc(e.sid)}" title="Trade Finder: what ${esc(e.name)} could bring back">Shop</button>
+      <button type="button" data-mt-cmp="${esc(e.sid)}" title="Open ${esc(e.name)} and pick a player to compare with">Compare</button>
+      <button type="button" data-mt-repl="${esc(e.sid)}" data-pos="${esc(e.pos)}" title="Trade Finder: ${esc(e.pos)}s on other rosters who'd start for you">Target replacement</button></span>`;
   function renderMyTeam() {
     const box = $("myteam-body"), d = activeData();
     if (!d) { box.innerHTML = ""; return; }
@@ -10392,12 +10453,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const badge = e.pos ? `<span class="pos ${esc(e.pos)}">${esc(e.ranked ? posLabel(e.p) : e.pos)}</span>` : "";
       return `<tr class="mt-row">
         <td class="slot">${esc(slot)}</td>
-        <td><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflMark(e.team)}</div></div></td>
+        <td class="mt-pl"><div class="pl-cell">${face(e.sid, e.name)}<div class="pl-text">${nameLink(EDIT_POS.includes(e.pos) ? e.sid : "", e.name)}${nflMark(e.team)}</div></div>${e.ranked && EDIT_POS.includes(e.pos) ? mtActions(e) : ""}</td>
         <td class="pos-col">${badge}</td>
-        <td class="rk">${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
+        <td class="rk"${e.ranked ? ` title="AM value ${fmt(dv(e.p))}"` : ""}>${e.ranked ? overallRank(e.p) : `<span class="muted">—</span>`}</td>
         ${mtWeek(e)}
-        <td class="mt-l3">${recentForm(e.sid, e.pos, e.team)}</td>
-        <td class="mt-val">${e.ranked ? fmt(dv(e.p)) : `<span class="muted">Unranked</span>`}</td></tr>`;
+        <td class="mt-mu">${e.team && EDIT_POS.includes(e.pos) ? faMatch(e) : `<span class="muted">—</span>`}</td>
+        <td class="mt-l3">${recentForm(e.sid, e.pos, e.team)}</td></tr>`;
     };
     const section = (title, rowsHtml) => rowsHtml ? `<tr class="tier mt-sec"><td colspan="7">${title}<span class="mt-sec-n">${(rowsHtml.match(/<tr class="mt-row(?! empty-slot)/g) || []).length}</span></td></tr>${rowsHtml}` : "";
     // Sleeper's lineup; before one is set (all slots empty), AM's best lineup by value
@@ -10416,10 +10477,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const ir = r.reserve.map(x => row("IR", x)).join("");
     const taxi = r.taxi.map(x => row("TAXI", x)).join("");
 
-    // Roster strength: same evaluation as the League power rankings
-    const strength = strengthCards(mineEv, ev);
-    const n = ev.n, third = Math.max(1, Math.floor(n / 3));
-    const needs = EDIT_POS.filter(pos => mineEv.place[pos] > n - third), strong = EDIT_POS.filter(pos => mineEv.place[pos] <= third);
+    // Team summary (Alan, Oct 14): one strip, same evaluation as the League power rankings
+    const n = ev.n;
+    const startPlace = [...ev.list].sort((a, b) => b.startVal - a.startVal).indexOf(mineEv) + 1;
+    const pj = mtProjected(starterIds, map);
+    const seg = (cls, label, val, of, tip) => `<div class="mt-sum ${cls}"${tip ? ` title="${esc(tip)}"` : ""}><span class="mt-sum-l">${label}</span><span class="mt-sum-v">${val}${of ? `<i>${of}</i>` : ""}</span></div>`;
+    const rankV = k => `<b class="${gradeOf(k, n)}">#${k}</b>`;
+    const summary = `<div class="mt-summary">
+        ${seg("mt-pr", "Power rank", `<b>#${mineEv.power}</b>`, `of ${n}`, `Team score ${fmt(mineEv.score)}: starting lineup + bench depth in AM values, injured reserve counted as healthy`)}
+        ${seg("mt-proj", pj ? `${pj.label} · Wk ${pj.wk}` : "This week", pj ? `<b>${fp(pj.sum)}${pj.missing.length ? "*" : ""}</b>` : `<span class="muted">—</span>`, "", pj ? (pj.missing.length ? `Partial: no projection for ${pj.missing.join(", ")}. ` : "") + "Your starting lineup's projected points this week in your league's scoring, the same sum as Matchups' Live proj" : "")}
+        ${seg("mt-st", "Starter strength", rankV(startPlace), `of ${n}`, "Your best starting lineup's AM value, ranked in the league")}
+        ${seg("mt-dp", "Depth", rankV(mineEv.place.DEPTH), `of ${n}`, "Bench depth, ranked in the league")}
+        <div class="mt-sum mt-rooms"><span class="mt-sum-l">Positions<button class="btn link inline mt-pb" type="button" data-open-team="${me.rosterId}" title="Open your team in League → Power Rankings: every position's players, starters and depth vs the league">Breakdown →</button></span>
+          <span class="mt-sum-v">${EDIT_POS.map(pos => `<span class="mt-room" title="${esc(pos)} room: ${ordinal(mineEv.place[pos])} of ${n}${mineEv.roomPlayers[pos][0] ? " · best: " + esc(mineEv.roomPlayers[pos][0].name) : ""}">${pos} <b class="${gradeOf(mineEv.place[pos], n)}">${ordinal(mineEv.place[pos])}</b></span>`).join("")}</span></div>
+      </div>`;
     const hot = r.players.map(x => map.get(String(x))).filter(Boolean).map(p => ({ p, g: recentGames(p.sleeperId, p.pos, 3) })).filter(x => x.g.length)
       .map(x => ({ ...x, a: avgPts(x.g) })).sort((a, b) => b.a - a.a).slice(0, 3);
     const others = LG.teams.filter(t => !t.mine);
@@ -10427,17 +10498,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <div class="panel-head mt-head">
         <div class="mt-id">${teamFace(me, "lg")}<div>
           <h2 class="panel-title">${esc(me.name)}</h2>
-          <p class="mt-summary"><span class="mt-pr">Power rank <b>#${mineEv.power}</b><i>of ${n}</i></span>${recordText(r.settings) ? `<span>Record <b>${esc(recordText(r.settings))}</b></span>` : ""}<span>Team score <b>${fmt(mineEv.score)}</b></span></p>
-          <p class="mt-meta">${esc(me.manager)} · ${esc(d.league.name)} · ${leagueView() ? "League-adjusted values" : "Base values"}</p>
+          <p class="mt-meta">${[esc(me.manager), esc(d.league.name), recordText(r.settings) ? "Record " + esc(recordText(r.settings)) : "", leagueView() ? "League-adjusted values" : "Base values"].filter(Boolean).join(" · ")}</p>
         </div></div>
       </div>
-      <h3 class="section-label mt-sl">Roster strength<button class="btn link inline mt-pb" type="button" data-open-team="${me.rosterId}" title="Open your team in League → Power Rankings: every position's players, starters and depth vs the league">Full position breakdown →</button></h3>
-      <div class="strength-grid mt-strength">${strength}</div>
+      ${summary}
 
       <div class="mt-dash"><div class="mt-main">
       <h3 class="section-label">Roster${noLineup ? `<span class="tier-sub">No lineup set in Sleeper yet: starters are AM's best lineup</span>` : ""}</h3>
       <div class="table-scroll"><table class="mt-table">
-        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="rk">Rk</th><th scope="col" class="mt-wk" title="${currentWeek() ? "Week " + currentWeek() + ": " : ""}his projection before kickoff, points (+ Live proj) during his game, his points once it's final, in your league's scoring (same as Matchups and Waiver Wire). Hover a cell for the opponent.">This week</th><th scope="col" class="mt-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th><th scope="col">Value</th></tr></thead>
+        <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="rk">Rk</th><th scope="col" class="mt-wk" title="${currentWeek() ? "Week " + currentWeek() + ": " : ""}his projection before kickoff, points (+ Live proj) during his game, his points once it's final, in your league's scoring (same as Matchups and Waiver Wire). Hover a cell for the opponent.">This week</th><th scope="col" class="mt-mu" title="This week's opponent, kickoff and how the opponent defends his position">Matchup</th><th scope="col" class="mt-l3" title="His last three weeks, oldest to newest (BYE = team bye, OUT = his team played without him), the average of the games he played, and whether that's above or below his usual output">Recent form</th></tr></thead>
         <tbody>${section("Starters", starters)}${section("Bench", bench)}${section("Injured reserve", ir)}${section("Taxi squad", taxi)}</tbody>
       </table></div></div>
       <aside class="mt-side">
@@ -10457,6 +10526,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   $("myteam-body").addEventListener("click", e => {
     const ot = e.target.closest("[data-open-team]");
     if (ot) { openTeam(ot.dataset.openTeam); return; }
+    const sh = e.target.closest("[data-mt-shop]");
+    if (sh) { openFinder(sh.dataset.mtShop); return; }
+    const cp = e.target.closest("[data-mt-cmp]");
+    if (cp) { openPlayer(cp.dataset.mtCmp, cp); PP.picking = true; PP.pickQuery = ""; renderPlayer(); return; }
+    const rp = e.target.closest("[data-mt-repl]");
+    if (rp) { targetReplacement(rp.dataset.mtRepl, rp.dataset.pos); return; }
+    const tr = e.target.closest("tr.mt-row");   // touch: a tap on the row (not a link) shows its actions
+    if (tr && !e.target.closest("a, button, [data-player], select")) {
+      const on = !tr.classList.contains("sel");
+      $("myteam-body").querySelectorAll("tr.mt-row.sel").forEach(x => x.classList.remove("sel"));
+      if (on && tr.querySelector(".mt-act")) tr.classList.add("sel");
+      return;
+    }
     const b = e.target.closest("[data-roster]");
     if (b) tradeWith(b.dataset.roster);
   });
@@ -14078,7 +14160,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      premium via league values, bench depth, roster spots) ranks the value-matched ideas.
      Optional 3-team ideas only appear when every team improves its lineup and the direct
      2-team swap wouldn't work for the partner. */
-  const TF = { goalSet: false, src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", send: "any", recv: "any", three: false,
+  const TF = { goalSet: false, discPos: "", discFor: "", src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", send: "any", recv: "any", three: false,
                gap: 10, fair: false, goal: "fair", sort: "best", disc: "buy", q: "", ideas: [], ideas3: [], openFull: new Set(), show: 10, showKey: "" };
   const TF_PAGE = 10;   // ideas shown at first; "Show more" adds this many
   // Trade types (Steven, Oct 4): 1-for-1, 1-for-2, 2-for-1 or All packages (incl. 2-for-2), counted from the starting team's side.
@@ -14102,7 +14184,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return all.filter(([a, b]) => (s == null || a === s) && (r == null || b === r));
   }
   const pkgText = (s, r) => (s === "any" && r === "any" ? "Any package" : `Send ${s === "any" ? "any" : s} · Get ${r === "any" ? "any" : r}`);
+  // My Team → Target replacement: Find targets at his position (players on other rosters who'd start for you)
+  function targetReplacement(sid, pos) {
+    const p = bySleeper().get(String(sid));
+    TF.src = "discover"; TF.disc = "buy"; TF.discPos = EDIT_POS.includes(pos) ? pos : ""; TF.discFor = p ? p.name : "";
+    if (!TF.goalSet) TF.goal = "edge";
+    showTab("finder"); history.replaceState(null, "", "#finder"); window.scrollTo({ top: 0 });
+  }
   function openFinder(sid) {
+    TF.discPos = "";
     TF.sid = String(sid); TF.sid2 = ""; TF.from = "auto"; TF.against = "ANY"; TF.pos = "ANY"; TF.openFull = new Set();
     const p = bySleeper().get(TF.sid), o = p ? LG.ownerOf.get(p.id) : null;
     TF.src = o && o.mine ? "mine" : o && LG.teams.some(t => t.mine) ? "target" : "any";
@@ -15083,14 +15173,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     </article>`;
   }
   // Find targets: players on other rosters worth going after, scored on fit, AM vs the market / expert consensus, and what their owner needs
-  function findTargets(K, me) {
+  function findTargets(K, me, onlyPos = "") {
     const mine = roomSummary(K, me), out = [];
     const myBase = K.base.get(me.rosterId);
     for (const T of LG.teams) {
       if (T === me) continue;
       const theirs = roomSummary(K, T), canHelp = theirs.needs.filter(pos => mine.strong.includes(pos));
       for (const p of K.tradable(T)) {
-        if (!EDIT_POS.includes(p.pos) || dv(p) < 600) continue;
+        if (!EDIT_POS.includes(p.pos) || dv(p) < 600 || (onlyPos && p.pos !== onlyPos)) continue;
         const tags = [], r = mkOf(p);
         const after = K.after(me, [], [p], [T]), gain = myBase.startVal > 0 ? (after.startVal - myBase.startVal) / myBase.startVal : 0;
         if (gain <= 0.004) continue;   // he has to start for you
@@ -15143,9 +15233,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <p class="tf-dtags">${x.returns.length ? x.returns.map(y => `<span>${esc(y.q.name)} · ${esc(y.T.name)} · AM ${y.q.pos}${y.rq.ap} vs market ${y.q.pos}${y.rq.cRank}</span>`).join("") : "<span>No clear return target at his market price</span>"}</p></div>
           <button class="btn secondary" type="button" data-tf-shop="${esc(x.p.sleeperId)}">Shop him</button></article>`).join("") + `</div>${mkCredit(all.srcs)}`;
     }
-    const list = findTargets(K, me);
-    if (!list.length) return sw + fresh + `<p class="empty-note">No player on another roster would start for you right now.</p>`;
-    return sw + fresh + `<p class="pp-note">${esc(roomsLine(roomSummary(K, me), "Your rooms"))}</p><div class="tf-disc">` + list.map(x => `
+    const fp0 = TF.discPos, list = findTargets(K, me, fp0);
+    const only = fp0 ? `<p class="tf-disc-only">${esc(fp0)} targets${TF.discFor ? ` · upgrading on ${esc(TF.discFor)}` : ""}<button class="btn link inline" type="button" data-tf-discpos="">Show all positions</button></p>` : "";
+    if (!list.length) return sw + fresh + only + `<p class="empty-note">No ${fp0 ? esc(fp0) + " " : "player "}on another roster would start for you right now.</p>`;
+    return sw + fresh + only + `<p class="pp-note">${esc(roomsLine(roomSummary(K, me), "Your rooms"))}</p><div class="tf-disc">` + list.map(x => `
       <article class="tf-dcard">${face(x.p.sleeperId, x.p.name)}<div class="tf-dmain"><div class="pl-head"><b>${nameLink(x.p.sleeperId, x.p.name)}</b>${nflTag(x.p.team)}<span class="pos ${esc(x.p.pos)}">${esc(posLabel(x.p))}</span>${x.r && x.r.lvl ? mkPill(x.r) : ""}${x.verdict ? `<span class="tf-pill conf hi">${esc(x.verdict)}</span>` : ""}</div>
         <p class="tf-dsub">${teamFace(x.T, "xs")}${esc(x.T.name)} · AM ${fmt(dv(x.p))}${x.r ? ` · Market Confidence ${esc(x.r.mconf)}` : ""}</p>
         <p class="tf-dtags">${x.tags.map(t => `<span>${esc(t)}</span>`).join("")}</p></div>
@@ -15283,7 +15374,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   $("tf-src").addEventListener("click", e => {
     const b = e.target.closest("button[data-src]"); if (!b) return;
-    const prev = TF.src; TF.src = b.dataset.src; TF.sid2 = ""; TF.from = "auto"; TF.openFull = new Set();
+    const prev = TF.src; TF.src = b.dataset.src; TF.discPos = ""; TF.discFor = ""; TF.sid2 = ""; TF.from = "auto"; TF.openFull = new Set();
     if ((TF.src === "target" || TF.src === "discover") && !TF.goalSet) TF.goal = "edge";
     if (TF.src === "target" && prev !== "target") { const o = TF.sid && bySleeper().get(TF.sid), ow = o && LG.ownerOf.get(o.id); if (!ow || ow.mine) { TF.sid = null; } }
     renderFinder();
@@ -15340,6 +15431,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   $("tf-body").addEventListener("click", e => {
     const dsc = e.target.closest("[data-tf-disc]");
     if (dsc) { TF.disc = dsc.dataset.tfDisc; renderFinder(); return; }
+    const dps = e.target.closest("[data-tf-discpos]");
+    if (dps) { TF.discPos = dps.dataset.tfDiscpos; TF.discFor = ""; renderFinder(); return; }
     const shop = e.target.closest("[data-tf-shop]");
     if (shop) { Object.assign(TF, { src: "mine", sid: shop.dataset.tfShop, sid2: "", from: "auto", goal: "market", goalSet: true, openFull: new Set() }); renderFinder(); return; }
   });
