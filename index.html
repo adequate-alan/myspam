@@ -4076,6 +4076,14 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body .face img { object-position: center 14%; transform: scale(1.06); transform-origin: 50% 30%; }
 #rank-body .pl-name { font-size: 1.02rem; font-weight: 700; color: var(--text-strong); letter-spacing: 0; }
 #rank-body .pl-team { margin-left: 7px; font-size: 0.68rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); opacity: 1; }
+/* NFL team as a tiny inline logo after the name (Alan, Oct 13 trial; nflMark): a fixed 18×16px slot, the logo at most 18×15 inside it,
+   so no logo shape moves the name or the row; the abbreviation shows only when the logo can't load (.nologo). Rankings rows only. */
+#rank-body .pl-tm { position: relative; display: inline-block; width: 18px; height: 16px; margin-left: 7px; vertical-align: -2.5px; }
+#rank-body .pl-tm img { position: absolute; inset: 0; margin: auto; max-width: 18px; max-height: 15px; width: auto; height: auto; object-fit: contain; }
+#rank-body .pl-tm .tm-abbr { display: none; }
+#rank-body .pl-tm.nologo { position: static; display: inline; width: auto; height: auto; vertical-align: baseline; }
+#rank-body .pl-tm.nologo img { display: none; }
+#rank-body .pl-tm.nologo .tm-abbr { display: inline; }
 /* owner line in caps (Alan, Oct 9), small and spaced, still readable: brighter than the old faint system label */
 #rank-body .own-tag { display: block; margin-top: 4px; font-size: 0.63rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
 #rank-body .own-tag:not(.mine):not(.fa) { opacity: .82; }
@@ -5207,7 +5215,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T02:00Z";
+  const BUILD_ID = "2026-10-14T04:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5345,6 +5353,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   // NFL team: a muted abbreviation right beside the player's name
   const nflTag = team => (team ? `<span class="pl-team" title="NFL team">${esc(team)}</span>` : "");
+  // Rankings rows only (Alan, Oct 13 trial): the NFL team as a tiny logo after the name instead of the abbreviation (teamMeta, the same
+  // ESPN logos as everywhere else); the abbreviation comes back when the logo can't load, and an unknown team or no team is shown as before.
+  const nflMark = team => { const m = team ? teamMeta(team) : null;
+    return m ? `<span class="pl-team pl-tm" title="${esc(m.name)}"><img src="${m.logo}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('nologo')"><span class="tm-abbr">${esc(team)}</span></span>` : nflTag(team); };
   // Fantasy owner: a separate pill ("Owned by X" / "My team" / "Free agent"), never styled like an NFL team.
   // o = a league team, or "fa"/null for a free agent. cls: "" (its own line under the name) or "inline" (inside a second line).
   function ownPill(o, cls = "", nameOf = t => t.name) {
@@ -5592,7 +5604,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const shownRank = posFilter === "ALL" ? (leagueView() ? LG.adjRank.get(p.id) : p.rank) : (leagueView() ? LG.adjPos.get(p.id) : p.posNum);
       out.push(`<tr class="player${own && own.mine ? " mine" : ""}${shownRank != null && shownRank <= 3 && posFilter !== "PICK" ? " top3" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
         <td class="rk">${rk(p)}</td>
-        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
+        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
@@ -5657,7 +5669,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const sr = spamRk(p), spamTxt = sr < 1e9 ? `AM #${sr}` : "AM —";
       return `<tr class="player prod${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>
         <td class="rk">${r.rank}</td>
-        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
+        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted AM rank" : "AM Board rank"}">${spamTxt}</span></td>
         <td class="prod-col"><div class="prodbar" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))"><div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div><span class="pnum">${num}${star}</span>${sub}</div></td>
         <td class="val val-2"><span class="num-2" title="${leagueView() ? "League-adjusted AM value" : "AM value"}">${p.hasValue === false ? "—" : fmt(dv(p))}</span></td>
@@ -5705,7 +5717,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const srcLine = Object.values(r.per).map(s => `${s.id === "fc" ? "FC" : "Flock"} ${p.pos}${s.pr}`).join(" · ");
       return `<tr class="player prod mkrow${own && own.mine ? " mine" : ""}" data-id="${p.id}">
         <td class="rk">${i + 1}</td>
-        <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}${ownerTag(p)}</div></div></td>
+        <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(p.pos)}${r.ap}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk">AM #${amRk(p)}</span></td>
         <td class="mk-col"><div class="mk-cell" title="${esc(mkSentence(r))}">
           <span class="mk-ranks"><b>AM ${p.pos}${r.ap}</b><span>${x ? x.name : "Market"} ${p.pos}${cR}</span></span>
