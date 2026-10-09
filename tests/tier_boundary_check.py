@@ -35,7 +35,7 @@ CONTIG = """() => { const bad = []; for (const pos of ['QB', 'RB', 'WR', 'TE']) 
     const t = Number(p.tier); if (!isFinite(t) || t >= 90) continue; if (t < last) bad.push(pos + p.posNum); last = t; } } return bad; }"""
 
 with sync_playwright() as pw:
-    br = pw.chromium.launch(executable_path=os.environ.get("CHROMIUM") or "/opt/pw-browsers/chromium")
+    br = pw.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
     ctx = br.new_context(viewport={"width": 1440, "height": 1000})
     writes = []
     ctx.route("https://api.github.com/**", lambda r: (writes.append(r.request.method), r.abort()))
