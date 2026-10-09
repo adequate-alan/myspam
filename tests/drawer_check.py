@@ -111,7 +111,7 @@ with sync_playwright() as p:
     else:
         pg.fill("#rank-search", hit["name"]); pg.wait_for_timeout(400)
         pg.evaluate("document.querySelector('#rank-body [data-player]').click()"); pg.wait_for_timeout(1500)
-        head = pg.inner_text(".pm-stats") + " " + pg.inner_text(".pm-prodrk")   # PPG, games and the injury note sit in the production line (Oct 9)
+        head = pg.inner_text(".pm-stats") + " " + pg.inner_text(".pm-prodrk[aria-label]")   # PPG, games and the injury note sit in the AM / FPTS / PPG line (Oct 9; the ROS PPG line above it reuses the class since Oct 14)
         cells = pg.inner_text(".ov-grid"); summ = pg.inner_text(".wk-sum")
         tips = pg.evaluate("[...document.querySelectorAll('.wk-chart .hit')].map(h => h.dataset.tip)")
         ok("injury-shortened" in head and "injury-shortened" in summ and f"{hit['games']} G" in head,
