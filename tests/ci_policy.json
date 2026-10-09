@@ -11,9 +11,9 @@
     "fast": ["static_check", "ci_pipeline_check", "smoke_check"],
     "full": ["publish_check", "publish_safety_check", "history_check", "xss_check", "editor_check", "drag_check", "drag_repeat_check", "drag_scroll_check",
              "drawer_check", "format_check", "value_curve_check", "injury_check", "league_hub_check", "market_edge_check",
-             "production_check", "roster_fit_check", "trade_history_check", "trade_target_check", "value_state_check", "reversal_check", "reversal_persist_check"],
+             "production_check", "roster_fit_check", "trade_history_check", "trade_target_check", "value_state_check", "reversal_check", "reversal_persist_check", "tier_boundary_check"],
     "weights": {"league_hub_check": 180, "drag_repeat_check": 160, "publish_check": 150, "publish_safety_check": 150, "history_check": 90, "market_edge_check": 120,
                 "production_check": 115, "roster_fit_check": 115, "drag_scroll_check": 100, "drawer_check": 75, "editor_check": 70,
-                "format_check": 70, "injury_check": 65, "drag_check": 60, "xss_check": 40, "trade_history_check": 55, "trade_target_check": 45, "value_curve_check": 20, "value_state_check": 60, "reversal_check": 150, "reversal_persist_check": 60}
+                "format_check": 70, "injury_check": 65, "drag_check": 60, "xss_check": 40, "trade_history_check": 55, "trade_target_check": 45, "value_curve_check": 20, "value_state_check": 60, "reversal_check": 150, "reversal_persist_check": 60, "tier_boundary_check": 45}
   }
 }

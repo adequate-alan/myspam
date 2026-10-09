@@ -11,7 +11,7 @@ steps deep in the tail when there is no integer room. Checks, all in the page's 
    a TE/WR swap. Only the mover's value changes (plus at most whole-point tail steps), it lands strictly between his
    new neighbours, values stay strictly down the board and tiers stay in one piece. Known values from the approved
    preview: CeeDee 8,815 → 8,295, Bowers 9,710 → 7,770, Bijan 9,950 → 7,770.
-3. Tiers: a same-rank tier change keeps his rank and explains where Tier 2 pricing would place him (suggested rank);
+3. Tiers: a same-rank tier change keeps his rank with a short confirmation (no rank suggestion when his value fits);
    a rank + tier change; tiers stay in one piece after every move.
 4. Value edits: a value that fits is kept exactly and moves nobody else; one that doesn't fit changes nothing until a
    choice (also in tests/editor_check.py through the value box).
@@ -141,11 +141,10 @@ with sync_playwright() as p:
     ch = b0["Ja'Marr Chase"]
     r = pg.evaluate("ops => __run(ops)", [["pos", "Ja'Marr Chase", ch[5], 2]])
     to = r["movers"]["Ja'Marr Chase"]["to"]
-    ok(to["rank"] == ch[1] and to["tier"] == "2" and "Tier 2 pricing would place Ja'Marr Chase" in r["warn"] and "Suggested rank: #" in r["warn"] and not TAIL(r["changed"]),
-       f"Same-rank tier change: Chase stays #{to['rank']} in Tier 2, explained: {r['warn'][:130]!r}")
-    pg.click('#ed-warn [data-ed="move-rank"]'); pg.wait_for_timeout(300)
-    rk = pg.evaluate("() => __p(\"Ja'Marr Chase\").rank"); sug = int(re.search(r"Suggested rank: #(\d+)", r["warn"]).group(1))
-    ok(rk == sug, f"Move to the suggested rank: #{rk}")
+    ok(to["rank"] == ch[1] and to["tier"] == "2" and not r["warn"] and not TAIL(r["changed"]),
+       f"Same-rank tier change: Chase stays #{to['rank']} in Tier 2, no rank suggestion (Oct 13: a tier-only move is confirmed, not questioned) {r['warn'][:80]!r}")
+    L = pg.evaluate("() => SPM.edit.board().sort((a, b) => a.rank - b.rank)"); i = next(k for k, p in enumerate(L) if p["name"] == "Ja'Marr Chase")
+    ok(L[i - 1]["value"] > L[i]["value"] > L[i + 1]["value"], f"His new value fits between his unchanged neighbours ({L[i - 1]['value']} > {L[i]['value']} > {L[i + 1]['value']})")
     fl = b0["Zay Flowers"] if "Zay Flowers" in b0 else None
     if fl:
         r = move_case("Rank + tier change: Zay Flowers down into the next WR tier", [["pos", "Zay Flowers", fl[5] + 3]])
