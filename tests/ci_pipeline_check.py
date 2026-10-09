@@ -173,6 +173,49 @@ try:
     rc, o = ci({"value_curve_check": (["PASS a", "PASS Synthetic baseline failure"], 0)})
     ok(rc == 0 and "no longer fails" in o, "run_ci: a known failure that now passes is reported")
 
+    # run_ci scheduling (Oct 14): independent suites run in parallel with --jobs, the exclusive (timing) suites run alone
+    # afterwards, a heartbeat shows what is running, a suite over the timeout is a failure; nothing is skipped
+    import time as _time
+    def timed_suite(name, secs, lines=("PASS a",)):
+        stamp = os.path.join(tmp, f"stamp-{name}")
+        open(os.path.join(fake, "tests", name + ".py"), "w").write(
+            f"import time\nopen({stamp!r}, 'w').write(str(time.time()) + ' ')\ntime.sleep({secs})\nopen({stamp!r}, 'a').write(str(time.time()))\n" + "".join(f"print({l!r})\n" for l in lines))
+    def stamps(name):
+        a, b = open(os.path.join(tmp, f"stamp-{name}")).read().split(); return float(a), float(b)
+    def sched(names, *args):
+        policy["suites"]["fast"] = list(names); json.dump(policy, open(os.path.join(fake, "tests/ci_policy.json"), "w"))
+        t0 = _time.time(); r = subprocess.run([sys.executable, "tests/run_ci.py", "fast", "--logs", os.path.join(tmp, "logs"), *args], cwd=fake, capture_output=True, text=True)
+        return r.returncode, r.stdout, _time.time() - t0
+    policy["suites"]["exclusive"] = ["drag_check"]
+    for nm in ("s1", "s2", "s3"): timed_suite(nm, 2)
+    timed_suite("drag_check", 1)
+    rc, o, wall = sched(["s1", "s2", "s3", "drag_check"], "--jobs", "3", "--heartbeat", "0.5")
+    st = {nm: stamps(nm) for nm in ("s1", "s2", "s3", "drag_check")}
+    ok(rc == 0 and max(st[n][0] for n in ("s1", "s2", "s3")) < min(st[n][1] for n in ("s1", "s2", "s3")) and wall < 5.5,
+       f"run_ci --jobs 3: the three independent suites ran at the same time ({wall:.1f}s wall for 7s of suite time)")
+    ok(st["drag_check"][0] >= max(st[n][1] for n in ("s1", "s2", "s3")), "run_ci: the exclusive (timing) suite started only after every other suite had finished")
+    ok("[start] s1" in o and "running:" in o and "3 at a time" in o and o.count("[pass]") == 4, "run_ci: start lines, a heartbeat while suites run, and one result line per suite")
+    rc, o, wall = sched(["s1", "s2"])
+    st = {nm: stamps(nm) for nm in ("s1", "s2")}
+    ok(rc == 0 and (st["s1"][1] <= st["s2"][0] or st["s2"][1] <= st["s1"][0]) and "running:" not in o,
+       "run_ci (default --jobs 1, as in CI): suites run one at a time and the 60s heartbeat stays quiet on a short run")
+    timed_suite("slow", 12)
+    rc, o, wall = sched(["slow", "s1"], "--jobs", "2", "--timeout", "0.05")
+    ok(rc == 1 and "timed out after 0.05 min" in o and "[pass] s1" in o and wall < 10, f"run_ci: a suite over the timeout fails the run while the others still report ({wall:.1f}s)")
+    # a timed-out suite's own subprocesses (browsers, servers) die with it: the suite runs in its own process group
+    child_pid = os.path.join(tmp, "child-pid")
+    open(os.path.join(fake, "tests", "hang.py"), "w").write(
+        f"import subprocess, time\np = subprocess.Popen(['sleep', '300'])\nopen({child_pid!r}, 'w').write(str(p.pid))\nprint('PASS a')\ntime.sleep(300)\n")
+    rc, o, wall = sched(["hang"], "--timeout", "0.05")
+    pid = int(open(child_pid).read()); _time.sleep(0.5)
+    def state(pid):   # a killed child whose parent died is a zombie until init reaps it (some sandboxes never do): dead for our purposes
+        try: return open(f"/proc/{pid}/status").read().split("State:")[1].split()[0]
+        except (FileNotFoundError, ProcessLookupError, IndexError): return "gone"
+    alive = state(pid) not in ("gone", "Z", "X")
+    if alive: os.kill(pid, 9)
+    ok(rc == 1 and "timed out" in o and not alive and wall < 10, f"run_ci: a timed-out suite's subprocess is killed with it ({'still alive' if alive else 'gone'})")
+    policy["suites"].pop("exclusive", None)
+
     # 4. static_check.py on broken copies of the repo
     def repo_copy():
         d = os.path.join(tmp, "copy"); shutil.rmtree(d, ignore_errors=True)
