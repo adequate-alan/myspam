@@ -31,10 +31,17 @@ on:
     # FantasyCalc market values only, every 8 hours (Alan, Oct 9): 00:20, 08:20 and 16:20 UTC. Stdlib only, no
     # stats, projections or snapshot; failures keep the last file. Never touches ranks, tiers or values.
     - cron: "20 */8 * * *"
+    # Nightly full CI (Alan, Oct 14): the whole regression suite on main, 07:15 UTC = 3:15 AM ET. Never deploys, never
+    # refreshes data, runs in its own concurrency group, so it can't delay a push. A failure shows as a red run.
+    - cron: "15 7 * * *"
   workflow_dispatch:
     inputs:
       stats_only:
         description: "Only refresh player stats (game logs), not projections or ranking history"
+        type: boolean
+        default: false
+      full_ci:
+        description: "Run full CI: the whole regression suite on this branch, no data refresh, no deploy"
         type: boolean
         default: false
 
@@ -42,22 +49,28 @@ on:
 permissions:
   contents: read
 
+# Release runs (pushes) cancel the run they supersede, so a new push never waits behind an obsolete commit. Pull requests
+# do the same per branch. The nightly / manual full CI and the scheduled data refresh have their own groups and never
+# cancel: a 12-minute nightly suite can't delay a push. Deploys are serialized separately (the deploy job's own group).
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'push' && 'release' || github.event_name == 'pull_request' && format('pr-{0}', github.ref) || ((github.event_name == 'schedule' && github.event.schedule == '15 7 * * *') || (github.event_name == 'workflow_dispatch' && inputs.full_ci)) && 'full-ci' || 'refresh' }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
-# Release flow (Phase 1 reliability):
+# Release flow (Alan, Oct 14: three lanes, tests/release_tier.py):
 #   refresh (scheduled / manual only)  pipeline jobs → static checks on the result (rankings must not change) → commit
-#   verify                              static checks + browser smoke test on the exact commit being released, then
-#                                       decides whether the full suite is needed: it is, unless this code (everything
-#                                       but data/ and the rankings block, tests/release_fingerprint.py) already passed it
-#   full (3 shards, when needed)        the whole regression suite; logs uploaded as an artifact, pass or fail
-#   build → deploy                      only after the checks above succeeded; pull requests never deploy
-# So a rankings publish (data only) deploys after ~2 minutes of checks, and a code change only after the full suite.
+#   verify                              static + pipeline + smoke checks on the exact commit, then picks the lane from the
+#                                       diff since the newest commit whose code already passed its checks:
+#     fast      CSS, copy and labels, docs, BUILD_ID, comments, data → deploy right after verify (~2–3 min)
+#     targeted  one known UI feature → its suites (job `targeted`) → deploy (~4–7 min)
+#     full      risky / core / unknown / CI → the whole suite (job `full`, 3 shards) → deploy (~12–14 min)
+#   build → deploy                      only after the lane's checks passed, and only if the commit is still main's head;
+#                                       pull requests, the nightly run and manual full CI never deploy
+#   mark-verified                       records the code fingerprint once its lane passed (the next push diffs from it)
+# No trailing full suite after fast or targeted releases: it runs nightly and on demand (Run workflow → full_ci).
 # Known baseline failures and advisory timing checks are listed in tests/ci_policy.json.
 jobs:
   refresh:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' && github.event.schedule != '15 7 * * *') || (github.event_name == 'workflow_dispatch' && !inputs.full_ci)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -136,17 +149,25 @@ jobs:
     needs: refresh
     if: always() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read   # lists the verified-code records (Actions cache keys) to find the last commit that passed
     outputs:
       sha: ${{ steps.ref.outputs.sha }}
-      full: ${{ steps.verified.outputs.cache-hit != 'true' }}
+      lane: ${{ steps.lane.outputs.lane }}
+      suites: ${{ steps.lane.outputs.suites }}
+      deploy: ${{ steps.ref.outputs.deploy }}
       fingerprint: ${{ steps.fp.outputs.fp }}
     steps:
       - id: ref
-        run: echo "sha=${{ needs.refresh.outputs.sha || github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "sha=${{ needs.refresh.outputs.sha || github.event.pull_request.head.sha || github.sha }}" >> "$GITHUB_OUTPUT"
+          # deploy: pushes and scheduled data refreshes; never pull requests, the nightly run or manual full CI
+          echo "deploy=${{ github.event_name == 'push' || (github.event_name == 'schedule' && github.event.schedule != '15 7 * * *') || (github.event_name == 'workflow_dispatch' && !inputs.full_ci) }}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.ref.outputs.sha }}
-          fetch-depth: 50   # enough to reach the previous push (falls back to the parent commit)
+          fetch-depth: 60   # reaches the last verified commit (tests/release_tier.py walks back up to 30 first parents)
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -169,13 +190,16 @@ jobs:
       - name: Code fingerprint
         id: fp
         run: echo "fp=$(python tests/release_fingerprint.py)" >> "$GITHUB_OUTPUT"
-      - name: Was this code already verified?
-        id: verified
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ runner.temp }}/verified
-          key: verified-${{ steps.fp.outputs.fp }}
-          lookup-only: true
+      - name: Pick the release lane
+        id: lane
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # verified-code records on main; if GitHub can't list them, the lane is full (nothing to diff from)
+          gh api -X GET "repos/${{ github.repository }}/actions/caches" -f key=verified- -f ref=refs/heads/main -f per_page=100 --paginate \
+            --jq '.actions_caches[].key' > "$RUNNER_TEMP/ok-keys" || : > "$RUNNER_TEMP/ok-keys"
+          python tests/release_tier.py --head HEAD --start "${{ github.event.pull_request.base.sha || 'HEAD' }}" --ok-keys "$RUNNER_TEMP/ok-keys" \
+            --github-output ${{ ((github.event_name == 'schedule' && github.event.schedule == '15 7 * * *') || (github.event_name == 'workflow_dispatch' && inputs.full_ci) || contains(github.event.pull_request.labels.*.name, 'full-ci')) && '--force-full' || '' }}
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -186,9 +210,38 @@ jobs:
 
   # always(): GitHub skips a job without a status function whenever ANY upstream job was skipped, and `refresh` is
   # skipped on every push and pull request (PR #1's first run skipped the full suite that way).
+  targeted:
+    needs: verify
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.lane == 'targeted'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install the test browser (pinned Playwright + its Chromium)
+        run: |
+          pip install -r tests/requirements-ci.txt
+          python -m playwright install --with-deps chromium
+      - name: The changed feature's suites (${{ needs.verify.outputs.suites }})
+        run: python tests/run_ci.py targeted --suites "${{ needs.verify.outputs.suites }}" --jobs 2 --logs "$RUNNER_TEMP/ci-logs"
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-targeted
+          path: ${{ runner.temp }}/ci-logs
+          retention-days: 14
+
   full:
     needs: verify
-    if: always() && needs.verify.result == 'success' && needs.verify.outputs.full == 'true'
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.lane == 'full'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -219,38 +272,61 @@ jobs:
           path: ${{ runner.temp }}/ci-logs
           retention-days: 14
 
-  # Only after every shard passed: this exact code is verified, so later rankings-only publishes on it run the fast checks.
+  # After the lane's checks passed: this exact code is verified, and the next push's lane is picked from the diff since it.
   mark-verified:
-    needs: [verify, full]
-    if: always() && needs.full.result == 'success' && github.event_name != 'pull_request'
+    needs: [verify, targeted, full]
+    if: always() && github.event_name != 'pull_request' && needs.verify.result == 'success' && (needs.verify.outputs.lane == 'fast' || (needs.verify.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.verify.outputs.lane == 'full' && needs.full.result == 'success'))
     runs-on: ubuntu-latest
     steps:
-      - run: mkdir -p "$RUNNER_TEMP/verified" && echo "${{ needs.verify.outputs.sha }}" > "$RUNNER_TEMP/verified/sha"
-      - uses: actions/cache/save@v4
+      # an existing record is restored instead (that counts as use, so code that only changes nightly or by rankings
+      # publishes isn't evicted after GitHub's 7 days without access)
+      - id: have
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/verified
+          key: verified-${{ needs.verify.outputs.fingerprint }}
+      - if: steps.have.outputs.cache-hit != 'true'
+        run: mkdir -p "$RUNNER_TEMP/verified" && echo "${{ needs.verify.outputs.sha }}" > "$RUNNER_TEMP/verified/sha"
+      - if: steps.have.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
         with:
           path: ${{ runner.temp }}/verified
           key: verified-${{ needs.verify.outputs.fingerprint }}
 
   build:
-    needs: [verify, full]
-    # deploy only after the full suite passed, or when verify said this exact code already passed it: a full suite that
-    # was skipped for any other reason never lets code through
-    if: always() && github.event_name != 'pull_request' && needs.verify.result == 'success' && (needs.full.result == 'success' || (needs.full.result == 'skipped' && needs.verify.outputs.full == 'false'))
+    needs: [verify, targeted, full]
+    # deploy only after the lane's own checks passed: fast = verify; targeted = verify + its suites; full = verify + the
+    # whole suite. A lane whose check job was skipped for any other reason never deploys.
+    if: always() && needs.verify.outputs.deploy == 'true' && needs.verify.result == 'success' && (needs.verify.outputs.lane == 'fast' || (needs.verify.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.verify.outputs.lane == 'full' && needs.full.result == 'success'))
     runs-on: ubuntu-latest
+    outputs:
+      current: ${{ steps.head.outputs.current }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.verify.outputs.sha }}
           persist-credentials: false
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Still the newest commit on main?
+        id: head
+        run: |
+          head=$(git ls-remote "https://github.com/${{ github.repository }}" refs/heads/main | cut -f1)
+          if [ "$head" = "${{ needs.verify.outputs.sha }}" ] || [ -z "$head" ]; then echo "current=true" >> "$GITHUB_OUTPUT";
+          else echo "current=false" >> "$GITHUB_OUTPUT"; echo "main moved on to $head: that commit's own run deploys it" >> "$GITHUB_STEP_SUMMARY"; fi
+      - if: steps.head.outputs.current == 'true'
+        uses: actions/configure-pages@v5
+      - if: steps.head.outputs.current == 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
   deploy:
     needs: build
-    if: always() && needs.build.result == 'success'
+    if: always() && needs.build.result == 'success' && needs.build.outputs.current == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
