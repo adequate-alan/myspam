@@ -87,7 +87,7 @@ with sync_playwright() as p:
             print("   card:", c[:400])
             ok("THEN" in c.upper() and "NOW" in c.upper() and "AM VALUES" in c.upper() and "CURRENT AM VALUES" in c.upper(), "Both snapshots shown on the compact card as Then / Now with the values they use")
             ok("8,500" in c and "6,100" in c and "2,400" in c and "4,000" not in c, "At the time = the entry before the trade, never the update an hour after it")
-            ok("AT THE TIME" in c.upper(), "The headline verdict is labeled as the at-the-time verdict")
+            ok(cards.nth(I["hist"]).locator(".th-verdict small").inner_text().upper() == "THEN", "The headline verdict is labeled Then (the at-the-time verdict)")
             aged = cards.nth(I["hist"]).locator(".th-aged").inner_text()
             ok(any(k in aged for k in ("at the time", "then", "initial value")), f"How it aged: {aged}")
             ok("$15 FAAB" in c and "2027 Round 1" in c, "Draft pick and FAAB stay listed")
@@ -105,9 +105,9 @@ with sync_playwright() as p:
             ok("THEN" in c3.upper() and c3.count("Team 7") >= 3 and ("+" in c3 and "−" in c3 or "Basically" in c3), "Three-team trade: each team's net in both snapshots")
             # partial and pre-AM
             cp, c0 = txt("part"), txt("pre")
-            ok("Not every player had an AM value at the time" in cp and "NOW" in cp.upper() and cards.nth(I["part"]).locator(".th-verdict small").inner_text().upper() == "TODAY", "Partial history: no at-the-time verdict")
+            ok("Not every player had an AM value at the time" in cp and "NOW" in cp.upper() and cards.nth(I["part"]).locator(".th-verdict small").inner_text().upper() == "NOW", "Partial history: no at-the-time verdict")
             ok("No AM value existed at the time of this trade" in c0 and cards.nth(I["pre"]).locator(".th-tag.pre").count() == 1, "Pre-AM trade says no AM value existed, shows today only")
-            ok(cards.nth(I["pre"]).locator(".th-verdict small").inner_text().upper() == "TODAY", "Pre-AM headline verdict is labeled Today")
+            ok(cards.nth(I["pre"]).locator(".th-verdict small").inner_text().upper() == "NOW", "Pre-AM headline verdict is labeled Now")
         if SHOTS:
             cards.nth(I["hist"]).scroll_into_view_if_needed()
             pg.screenshot(path=os.path.join(SHOTS, f"trade_history_{theme}.png"), full_page=False)

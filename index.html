@@ -5207,7 +5207,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T12:00Z";
+  const BUILD_ID = "2026-10-14T13:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -11161,7 +11161,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const main = r.then || r.now;   // the headline verdict: at the time when AM values existed, else today's (labeled)
     const verdict = P.length === 2
       ? (!main.oneSided
-          ? `<span class="th-verdict${main.fair ? " fair" : ""}${r.then ? "" : " lookback"}"><small>${r.then ? "At the time" : "Today"}</small>${esc(main.tier.title(P[main.ahead].team.name, P[1 - main.ahead].team.name))}</span>`
+          ? `<span class="th-verdict${main.fair ? " fair" : ""}${r.then ? "" : " lookback"}"><small>${r.then ? "Then" : "Now"}</small>${esc(main.tier.title(P[main.ahead].team.name, P[1 - main.ahead].team.name))}</span>`
           : `<span class="th-verdict">One-sided in AM values</span>`)
       : `<span class="th-verdict fair">${P.length}-team trade</span>`;
     const side = s => `<div class="th-side">
