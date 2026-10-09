@@ -5207,7 +5207,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T14:00Z";
+  const BUILD_ID = "2026-10-13T20:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5551,7 +5551,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const range = isFinite(x.lo) ? (Math.round(x.lo) === Math.round(x.hi) ? fmt(x.hi) : `${fmt(x.hi)}–${fmt(x.lo)}`) : "";
       return `<span class="tier-meta">${x.n} player${x.n === 1 ? "" : "s"}${range ? " · " + range : ""}</span>`; };
     const tierBand = label => `<tr class="tier"><td colspan="${cols}"><div class="tier-band"><span class="tier-label">${esc(label)}</span>${tierMeta(label)}</div></td></tr>`;
-    const tierHead = (t, label, empty) => {
+    /* Tier boundary moves (Alan, Oct 13): a tier is a valuation grouping, not a ranking move. The header between two
+       tiers offers to move the player on either side of it across the boundary; both keep their rank (the arrows swap
+       ranks instead). Not offered when it would empty a tier (Lamar alone in QB Tier 2 stays put). */
+    const tierCount = new Map(); list.forEach(p => { if (p.tier !== "" && !isTagTier(p.tier)) tierCount.set(String(p.tier), (tierCount.get(String(p.tier)) || 0) + 1); });
+    const edgeTools = (t, up, down) => {
+      if (!up || !down || isTagTier(t) || isTagTier(up.tier) || String(up.tier) === String(t)) return "";
+      const short = q => esc(compactName(q.name)), out = [];
+      if ((tierCount.get(String(up.tier)) || 0) > 1) out.push(`<button type="button" data-tier-act="edge" data-id="${up.id}" data-to="${esc(String(t))}" title="Move ${esc(up.name)} into Tier ${esc(String(t))}. He stays ${esc(up.pos)}${up.posNum} (#${up.rank}).">${short(up)} → Tier ${esc(String(t))}</button>`);
+      if ((tierCount.get(String(t)) || 0) > 1) out.push(`<button type="button" data-tier-act="edge" data-id="${down.id}" data-to="${esc(String(up.tier))}" title="Move ${esc(down.name)} into Tier ${esc(String(up.tier))}. He stays ${esc(down.pos)}${down.posNum} (#${down.rank}).">${short(down)} → Tier ${esc(String(up.tier))}</button>`);
+      return out.join("");
+    };
+    const tierHead = (t, label, empty, up, down) => {
       if (!tierEdit) return tierBand(label);
       const del = TIER_DEL && TIER_DEL.pos === posFilter && String(TIER_DEL.tier) === String(t);
       const tag = isTagTier(t), nums = tierNums(posFilter), i = nums.indexOf(Number(t));
@@ -5561,17 +5572,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           ? `<input class="tier-input" type="text" value="${esc(tierNameOf(posFilter, t))}" placeholder="Name this tier" aria-label="Tier name" maxlength="60">`
           : `<button class="tier-name" type="button" data-tier-act="rename" title="Rename tier">${esc(label)}<span class="tier-pen" aria-hidden="true">✎</span></button>`}${empty ? "" : tierMeta(label)}
         ${del ? `<span class="tier-del-ask">Move its players to: ${hasAbove ? `<button class="btn" type="button" data-tier-act="del-up">Tier above</button>` : ""}${hasBelow ? `<button class="btn" type="button" data-tier-act="del-down">Tier below</button>` : ""}<button class="btn link" type="button" data-tier-act="del-cancel">Cancel</button></span>`
-          : `<span class="tier-tools">${tag ? "" : `<button type="button" data-tier-act="above">+ Tier above</button><button type="button" data-tier-act="below">+ Tier below</button><button type="button" class="danger" data-tier-act="delete">Delete</button>`}</span>`}
+          : `<span class="tier-tools">${tag ? "" : `${empty ? "" : edgeTools(t, up, down)}<button type="button" data-tier-act="above">+ Tier above</button><button type="button" data-tier-act="below">+ Tier below</button><button type="button" class="danger" data-tier-act="delete">Delete</button>`}</span>`}
       </div></td></tr>${empty ? `<tr class="tier-drop" data-tier="${esc(String(t))}"><td colspan="${cols}">Empty tier: drag players here</td></tr>` : ""}`;
     };
-    const flushEmpties = upTo => { while (empties.length && empties[0].tier < upTo) { const e = empties.shift(); out.push(tierHead(e.tier, tierLabel(posFilter, e.tier), true)); } };
+    let edgeAbove = null;   // the player right above the next tier header (none across an empty tier)
+    const flushEmpties = upTo => { while (empties.length && empties[0].tier < upTo) { const e = empties.shift(); out.push(tierHead(e.tier, tierLabel(posFilter, e.tier), true)); edgeAbove = null; } };
     list.forEach(p => {
       const g = group(p);
       if (tierEdit && !isTagTier(p.tier)) flushEmpties(Number(p.tier));
       if (g && g !== lastGroup && !query && !filtered) {
-        out.push(tierEdit ? tierHead(p.tier, g, false) : tierBand(g));
+        out.push(tierEdit ? tierHead(p.tier, g, false, edgeAbove, p) : tierBand(g));
       }
       lastGroup = g;
+      edgeAbove = p.tier !== "" && !isTagTier(p.tier) && p.posNum != null ? p : null;
       const editCol = !editing ? "" : `<td class="edit-col">${canReorder && numOf(p) != null ? `
           <span class="ed-move"><button class="handle" type="button" aria-label="Drag to move ${esc(p.name)}"${query ? " disabled title=\"Clear the search to drag\"" : ""}>${GRIP_SVG}</button><span class="ed-arrows"><button class="arrow" type="button" data-dir="-1" aria-label="Move ${esc(p.name)} up"${numOf(p) <= 1 ? " disabled" : ""}>▲</button><button class="arrow" type="button" data-dir="1" aria-label="Move ${esc(p.name)} down"${numOf(p) >= lastNum ? " disabled" : ""}>▼</button></span></span>` : ""}</td>`;
       const own = LG.active && LG.ownerOf.get(p.id);
@@ -7507,7 +7520,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (split) { splitNotice(now, split); return; }
     if (!moved || (opts && opts.quiet)) return;
     if (now.value === 0 && oldVal === 0 && !isTagTier(now.tier)) { zeroNotice(now); return; }
-    if (opts && opts.sameRankTier) { tierFitNotice(now); return; }
+    if (opts && opts.sameRankTier) { tierMoveNotice(now, String(me.tier), oldVal); return; }
     toast(`${now.name}: ${fmt(oldVal)} → ${fmt(now.value)} · #${now.rank} overall, ${now.posRank}.`);
   }
   /* Ranking source. Auto players were added under your rankings; one you move, give a value or put in a tier yourself
@@ -7677,23 +7690,36 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Notices above the board (#ed-warn): a value that doesn't fit, a tier change that doesn't fit his rank, a tier that
   // would split, a player at 0 moved off the Out list
   function edWarn(id, html) { const box = $("ed-warn"); box.innerHTML = html; box.dataset.id = id; box.hidden = false; }
-  function hideEdWarn() { const b = $("ed-warn"); if (b) { b.hidden = true; b.innerHTML = ""; delete b.dataset.v; delete b.dataset.rank; } }
+  function hideEdWarn() { const b = $("ed-warn"); if (b) { b.hidden = true; b.innerHTML = ""; delete b.dataset.v; delete b.dataset.rank; delete b.dataset.tier; } }
   function valueNotice(me, v, f) {
     const lim = f.high ? f.up.value - 1 : f.dn.value + 1;
     edWarn(me.id, `<p><b>${fmt(v)}</b> does not fit at #${me.rank}: ${f.high ? `${esc(f.up.name)} (#${f.up.rank}) is worth ${fmt(f.up.value)}` : `${esc(f.dn.name)} (#${f.dn.rank}) is worth ${fmt(f.dn.value)}`}. This value fits around <b>#${f.rank}</b>.</p>
       <div class="eb-group"><button class="btn primary" type="button" data-ed="move-fit">Move to #${f.rank}</button><button class="btn" type="button" data-ed="use-limit">Use ${f.high ? "maximum" : "minimum"} value at current rank (${fmt(Math.max(0, lim))})</button><button class="btn link" type="button" data-ed="close">Cancel</button></div>`);
     const box = $("ed-warn"); box.dataset.v = String(v); box.dataset.rank = String(f.rank); box.dataset.limit = String(Math.max(0, lim));
   }
-  function tierFitNotice(me) {
-    const want = LAST_FIT && LAST_FIT.proposed.get(valueKey(me));
-    if (!(want > 0) || Math.abs(want / Math.max(1, me.value) - 1) < 0.01) { toast(`${me.name} is now in ${tierLabel(me.pos, me.tier)} at #${me.rank} · value ${fmt(me.value)}.`); return; }
+  /* A tier-only move (same rank, Alan, Oct 13): a tier is a valuation grouping, not a ranking move. When his new value
+     fits between his unchanged overall neighbours (values still strictly down the board) it's a short confirmation, like
+     any other unsaved edit. Only a genuine ordering conflict (no value at his rank keeps the order) gets a notice: move
+     him where his value fits, keep him at his rank at the most / least that rank allows, or cancel the tier move. A
+     standalone tier price that differs from his rank is never a reason to suggest another rank. */
+  function tierConflict(me) {
+    const L = overallOrder(), i = L.indexOf(me), up = L[i - 1], dn = L[i + 1], v = me.value;
+    const high = !!up && v >= up.value, low = !!dn && v <= dn.value && !(v === 0 && dn.value === 0);
+    return high || low ? { up, dn, high } : null;
+  }
+  function tierMoveNotice(me, oldTier, oldVal, force) {
+    const c = force ? { up: overallOrder()[overallOrder().indexOf(me) - 1], dn: overallOrder()[overallOrder().indexOf(me) + 1], high: true } : tierConflict(me);
+    const pn = `${me.pos}${me.posNum}`;
+    if (!c) { toast(`${me.name} moved to ${tierWord(me.pos, me.tier)} · ${pn} unchanged · ${fmt(oldVal)} → ${fmt(me.value)}`); return; }
+    const want = (LAST_FIT && LAST_FIT.proposed.get(valueKey(me))) || me.value;
     const others = overallOrder().filter(p => p !== me);
     let k = others.findIndex(p => p.value < want); if (k < 0) k = others.length;
-    const ref = want < me.value ? others[k - 1] : others[k], where = want < me.value ? "below" : "above";
-    edWarn(me.id, `<p>Tier ${esc(String(me.tier))} pricing would place <b>${esc(me.name)}</b> ${where} ${ref ? `${esc(ref.name)} (#${ref.rank})` : "the board"}, around ${fmt(Math.round(want))}. He stays at #${me.rank} for now, valued ${fmt(me.value)} to keep the order. Suggested rank: <b>#${k + 1}</b>.</p>
-      <div class="eb-group"><button class="btn primary" type="button" data-ed="move-rank">Move to #${k + 1}</button><button class="btn link" type="button" data-ed="close">Keep at #${me.rank}</button></div>`);
-    $("ed-warn").dataset.rank = String(k + 1);
+    const lim = c.high ? (c.up ? c.up.value - 1 : me.value) : (c.dn ? c.dn.value + 1 : me.value);
+    edWarn(me.id, `<p>Moving <b>${esc(me.name)}</b> to ${esc(tierWord(me.pos, me.tier))} at #${me.rank} breaks the value order: ${c.high ? `${esc(c.up.name)} (#${c.up.rank}) is worth ${fmt(c.up.value)}` : `${esc(c.dn.name)} (#${c.dn.rank}) is worth ${fmt(c.dn.value)}`}, ${esc(me.name)} ${fmt(me.value)}. His value fits around <b>#${k + 1}</b>.</p>
+      <div class="eb-group"><button class="btn primary" type="button" data-ed="move-rank">Move to #${k + 1}</button><button class="btn" type="button" data-ed="use-limit">Keep at #${me.rank} (${c.high ? "maximum" : "minimum"} value ${fmt(Math.max(0, lim))})</button><button class="btn link" type="button" data-ed="tier-cancel">Cancel</button></div>`);
+    const box = $("ed-warn"); box.dataset.rank = String(k + 1); box.dataset.limit = String(Math.max(0, lim)); box.dataset.tier = oldTier;
   }
+
   function splitNotice(me, sp) {
     edWarn(me.id, `<p>Moving <b>${esc(me.name)}</b> to Tier ${esc(sp.want)} here would split Tier ${esc(String(sp.broken))} (tiers stay in one piece down a position), so he joined Tier ${esc(sp.fix)} at #${me.rank}. To put him in Tier ${esc(sp.want)}, move him to that tier's edge or move the tier boundary.</p>
       <div class="eb-group"><button class="btn link" type="button" data-ed="close">OK</button></div>`);
@@ -7716,6 +7742,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     if (act === "move-rank") { const r = Number(box.dataset.rank); hideEdWarn(); moveOverall(id, r > me.rank ? r : r, { quiet: true }); return; }
     if (act === "recalc") { recalcPlayer(id); return; }
+    if (act === "tier-cancel") { const t = box.dataset.tier; hideEdWarn(); if (t != null && me.posNum != null) movePlayer(id, me.posNum, t); return; }
   });
 
   /* ---------- Tier editing (position tabs) ----------
@@ -7785,6 +7812,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (b.dataset.tierAct === "rename") {
       TIER_REN = { pos: posFilter, tier: row.dataset.tier }; renderRankings();
       const inp = $("rank-body").querySelector(".tier-input"); if (inp) { inp.focus(); inp.select(); }
+      return;
+    }
+    if (b.dataset.tierAct === "edge") {   // across the tier boundary, rank kept
+      const p = byId.get(Number(b.dataset.id)); if (p && p.posNum != null) movePlayer(p.id, p.posNum, b.dataset.to);
       return;
     }
     tierAction(b.dataset.tierAct, posFilter, row.dataset.tier);
@@ -7898,7 +7929,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const rows = [], tiers = [];
     $("rank-body").querySelectorAll("tr.player, tr.tier-edit, tr.tier-drop").forEach(row => {
       if (row === tr) return;
-      const b = row.getBoundingClientRect(), g = { tr: row, top: b.top + sy, bot: b.bottom + sy, mid: (b.top + b.bottom) / 2 + sy };
+      const b = row.getBoundingClientRect(), g = { tr: row, top: b.top + sy, bot: b.bottom + sy, mid: (b.top + b.bottom) / 2 + sy, tier: row.dataset.tier };
       (row.classList.contains("player") ? rows : tiers).push(g);
     });
     const t = tr.closest("table").getBoundingClientRect(), head = document.querySelector("#panel-rankings thead");
@@ -7912,6 +7943,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       from: me ? (all ? me.rank : me.posNum) : null, lab: v => all ? "#" + v : (me ? me.pos : "") + v };
     // the slot he starts in: right where he is, so nothing moves until the pointer does
     drag.slot = rows.filter(g => g.mid < r.top + r.height / 2 + sy).length;
+    /* Tier boundaries (Oct 13): on a position tab the gap between two players can hold tier headers. Which side of a
+       header the pointer is on decides his tier, so a drop just across a boundary is a tier move at the same rank
+       (Burrow, last of QB Tier 3, dropped below the Tier 4 header stays QB6 and leads Tier 4; Goff, first of Tier 4,
+       dropped above it stays QB7 and closes Tier 3). Dropping where he started changes nothing. */
+    drag.heads = all ? null : Array.from({ length: rows.length + 1 }, (_, k) => {
+      const a = rows[k - 1], z = rows[k];
+      return tiers.filter(g => g.tr.classList.contains("tier-edit") && (!a || g.top >= a.mid) && (!z || g.bot <= z.mid)).sort((x, y) => x.top - y.top);
+    });
+    drag.zone = all ? null : dragZone(r.top + r.height / 2 + sy);   // where he starts: his own tier
     drag.pill = drag.float.querySelector(".drag-rk");
     tr.classList.add("drag-origin");
     drag.shield = document.createElement("div"); drag.shield.className = "drag-shield"; document.body.append(drag.shield);
@@ -7923,19 +7963,41 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     drag.raf = requestAnimationFrame(dragLoop);
   }
   // marks, line and chip for the current slot (only runs when the slot or tier target changes)
+  // the tier the pointer is in, inside the current slot's gap: the last tier header above it (null: no header passed)
+  function dragZone(yDoc) {
+    const H = drag.heads && drag.heads[drag.slot];
+    if (!H || !H.length) return null;
+    let z = null; H.forEach(h => { if (yDoc >= h.top) z = h.tier; });
+    return z;
+  }
+  const tierWord = (pos, t) => isTagTier(t) ? tierLabel(pos, t) : "Tier " + t;
   function applySlot() {
-    clearMarks(); drag.target = null; drag.edgeDoc = null;
-    if (drag.tierRow) { drag.target = drag.tierRow.tr; drag.after = false; drag.tierRow.tr.classList.add("drop-before"); }
+    clearMarks(); drag.target = null; drag.edgeDoc = null; drag.tier = null;
+    const me = byId.get(drag.id), tierOf = tr => { const q = byId.get(Number(tr.dataset.id)); return q && q.tier !== "" ? String(q.tier) : null; };
+    if (drag.tierRow) { drag.target = drag.tierRow.tr; drag.after = false; drag.tier = drag.tierRow.tier; drag.tierRow.tr.classList.add("drop-before"); }
     else if (drag.rows.length) {
-      const R = drag.rows, k = drag.slot, n = R.length;
+      const R = drag.rows, k = drag.slot, n = R.length, H = drag.heads && drag.heads[k];
       drag.target = k < n ? R[k].tr : R[n - 1].tr; drag.after = k >= n;
       drag.edgeDoc = k < n ? R[k].top : R[n - 1].bot;
+      if (drag.heads) {
+        drag.tier = tierOf(drag.target);
+        if (H && H.length && k > 0) {   // a gap with tier headers: the side of the header decides his tier
+          const z = drag.zone == null ? tierOf(R[k - 1].tr) : drag.zone;
+          if (z === tierOf(R[k - 1].tr) && z !== (k < n ? tierOf(R[k].tr) : null)) { drag.target = R[k - 1].tr; drag.after = true; drag.edgeDoc = R[k - 1].bot; }
+          drag.tier = z;
+        }
+      }
     }
-    const n = dropNum(), moved = n != null && n !== drag.from;
+    const n = dropNum(), num = n != null && n !== drag.from;
+    const tierMove = !!me && drag.tier != null && me.tier !== "" && String(drag.tier) !== String(me.tier);
+    const moved = num || (n != null && tierMove);
     if (!moved) { clearMarks(); drag.edgeDoc = null; }   // dropping back where he was: no line
-    if (drag.from != null) drag.pill.textContent = moved ? `${drag.lab(drag.from)} → ${drag.lab(n)}` : drag.lab(drag.from);
+    if (drag.from != null) drag.pill.textContent = !moved ? drag.lab(drag.from)
+      : !num ? `${drag.lab(drag.from)} · ${tierWord(me.pos, me.tier)} → ${tierWord(me.pos, drag.tier)}`
+      : `${drag.lab(drag.from)} → ${drag.lab(n)}${tierMove && drag.heads ? " · " + tierWord(me.pos, drag.tier) : ""}`;
     drag.pill.classList.toggle("moved", moved);
   }
+
   // every pointer move or scroll frame: the transform (1:1, vertical only), the slot (with hysteresis), the line position
   function dragMove() {
     const yDoc = drag.y + drag.sy;
@@ -7949,6 +8011,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (k > cur && yDoc < R[k - 1].mid + DRAG_HYST) k = cur;   // moving down: past the midpoint by a margin
       if (k < cur && yDoc > R[k].mid - DRAG_HYST) k = cur;       // moving up: the same, the other way
       if (k !== cur) { drag.slot = k; changed = true; }
+      const zone = dragZone(yDoc);
+      if (zone !== drag.zone) { drag.zone = zone; changed = true; }
     }
     if (changed) applySlot();
     // the line: transform only, written only when its spot on screen changes; it appears in place, then glides
@@ -8011,7 +8075,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function endDrag(commit) {
     dragPending = null;
     if (!drag) return;
-    const { id, target, after, tr, from } = drag, moved = drag.pill.classList.contains("moved");
+    const { id, target, after, tr, from, tier } = drag, moved = drag.pill.classList.contains("moved");
     const n = commit && target && moved ? dropNum() : null;
     cancelAnimationFrame(drag.raf); drag.float.remove(); drag.line.remove(); drag.shield.remove();
     drag = null; DRAG_STATE.on = false;
@@ -8022,11 +8086,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const ticket = ++dropCommit;
     requestAnimationFrame(() => setTimeout(() => {
       if (ticket !== dropCommit) return;
-      dropCommit = 0; commitDrop(id, target, after);
+      dropCommit = 0; commitDrop(id, target, after, tier);
       if (DRAG_STATE.pending) renderRankings();   // a redraw that waited for the drag (commitDrop usually ran one already)
     }, 0));
   }
-  function commitDrop(id, target, after) {
+  function commitDrop(id, target, after, tier) {
     const me = byId.get(id);
     if (!me) return;
     if (target.dataset.tier != null && !target.classList.contains("player")) {   // a tier header or an empty tier
@@ -8044,7 +8108,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     let num = key(tp) + (after ? 1 : 0);
     if (key(me) < num) num -= 1;
     // position tab: dropping next to a player puts you in his tier
-    if (all) moveOverall(id, num); else movePlayer(id, num, tp.tier !== "" ? tp.tier : null);
+    // (or, in a gap between tiers, the tier on the side of the header he was dropped: tier)
+    if (all) moveOverall(id, num); else movePlayer(id, num, tier != null ? tier : tp.tier !== "" ? tp.tier : null);
   }
   $("rank-body").addEventListener("pointerdown", e => {
     const h = e.target.closest(".handle");
@@ -15361,7 +15426,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // editor operations for the tests (the same functions the board's drag, arrows and value box call)
   const EDIT_API = { moveOverall, movePlayer, setValue, applyValue: (id, v) => applyValue(byId.get(id), v), sendOut: id => sendOut(byId.get(id)), recalcPlayer, recalcAuto, tierAction,
     touched: () => [...touchDraft.keys()], board: () => players.filter(p => p.pos !== "PICK" && p.rank != null).map(p => ({ id: p.id, name: p.name, pos: p.pos, rank: p.rank, posNum: p.posNum, tier: String(p.tier), value: p.value, source: p.source, curve: p.curve, tail: p.tail })),
-    save: () => saveLocal(), cancel: () => $("eb-cancel").click(), lastFit: () => LAST_FIT && { moved: LAST_FIT.moved } };
+    save: () => saveLocal(), tierNotice: (id, oldTier, oldVal) => tierMoveNotice(byId.get(id), String(oldTier), oldVal, true), cancel: () => $("eb-cancel").click(), lastFit: () => LAST_FIT && { moved: LAST_FIT.moved } };
   window.SPM = { formulaPreview, stateValues, scarcityIndex, rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, snapshotOf: csv => rankingSnapshot(loadPlayers(csv)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
   /* The editor's own functions for the tests (SPM.edit): only when a test sets window.__SPM_TEST_HOOKS before the page
      loads. Visitors never get them; they can only change this browser's unsaved draft, like the arrows. */
