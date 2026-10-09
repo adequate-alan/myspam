@@ -55,6 +55,9 @@ for j in ("verify", "targeted", "full", "build"):
     ok(co.get("with", {}).get("persist-credentials") is False, f"{j}: the checkout doesn't keep the GitHub token")
 for j in ("full", "targeted"):
     ok(any("upload-artifact" in str(s.get("uses")) and s.get("if") == "always()" for s in jobs[j]["steps"]), f"{j}: logs are uploaded whether it passes or fails")
+for j in ("verify", "targeted", "full"):
+    inst = next(s for s in jobs[j]["steps"] if str(s.get("name", "")).startswith("Install the test browser"))
+    ok(0 < inst.get("timeout-minutes", 0) <= 10, f"{j}: the browser install has a time limit (a hung install can't hold a release)")
 crons = [c["cron"] for c in on["schedule"]]
 ok("15 7 * * *" in crons, "A nightly full CI run is scheduled (07:15 UTC)")
 ok(on["workflow_dispatch"]["inputs"]["full_ci"]["type"] == "boolean", "Run workflow offers a manual full CI")
