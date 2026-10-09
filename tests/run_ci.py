@@ -3,6 +3,7 @@ locally.
 
   python3 tests/run_ci.py fast                 static checks + browser smoke test (~30 s)
   python3 tests/run_ci.py full [--shard 1/3]   the full regression suite, or one of N balanced shards
+  python3 tests/run_ci.py targeted --suites a,b the named suites only (the targeted release lane, tests/release_tier.py)
   options: --jobs N        run up to N suites at once (default 1, as in CI). The timing-sensitive suites listed under
                            "exclusive" in tests/ci_policy.json (the drag suites) always run one at a time with nothing
                            else running, after the others; every other suite is independent (its own server, browser and
@@ -39,13 +40,20 @@ def classify(suite, line):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("tier", choices=["fast", "full"]); ap.add_argument("--shard", default="1/1")
+    ap.add_argument("tier", choices=["fast", "full", "targeted"]); ap.add_argument("--shard", default="1/1")
+    ap.add_argument("--suites", default="", help="targeted: comma-separated suites (each must be in the full tier)")
     ap.add_argument("--logs", default=os.path.join(ROOT, "tests", ".ci-logs")); ap.add_argument("--static-args", default="")
     ap.add_argument("--jobs", type=int, default=1); ap.add_argument("--heartbeat", type=float, default=60)
     ap.add_argument("--timeout", type=float, default=float(POLICY["suites"].get("timeout_minutes", 15)))
     a = ap.parse_args()
     k, n = map(int, a.shard.split("/"))
-    suites = POLICY["suites"][a.tier]
+    if a.tier == "targeted":
+        suites = [x for x in a.suites.split(",") if x]
+        unknown = [x for x in suites if x not in POLICY["suites"]["full"]]
+        if unknown or not suites:
+            print(f"targeted: unknown or no suites {unknown or a.suites!r}"); return 1
+    else:
+        suites = POLICY["suites"][a.tier]
     if a.tier == "full": suites = shard_of(suites, k, n)
     os.makedirs(a.logs, exist_ok=True)
     timeout = a.timeout * 60
