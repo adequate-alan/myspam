@@ -14,9 +14,15 @@ real arrow clicks and a real mouse drag:
   5. deliberate edits kept: a tier rename, a value edit, a tier drop and a new empty tier, then 40 moves undone
   6. the UI path: arrow clicks and a mouse drag, undone with the arrows
 
+Runs on the frozen test board (tests/fixture_board.py; Oct 10): the current code with the committed fixture rankings,
+so a ranking publish never changes what the checks find. Found the day a "Recalculate Auto players" publish landed on
+main: on the live board a recalculation then changed 0 values, the tail had no room for the value-edit picks, and the
+suite failed CI for data reasons while the editor was unchanged.
+
 Run from the repo root:  python3 tests/reversal_check.py   (CHROMIUM=/path/to/chromium if needed)
 """
 import functools, http.server, os, re, socketserver, sys, threading, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import fixture_board as FB
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -69,6 +75,7 @@ with sync_playwright() as p:
     pg.route("https://api.github.com/**", lambda r: r.abort())
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
     pg.add_init_script("window.__SPM_TEST_HOOKS = true;")   # the editor's functions (SPM.edit) are test-only
+    FB.route(pg, f"http://127.0.0.1:{srv.server_address[1]}")   # the frozen test board, not the live rankings
     pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/#rankings"); pg.wait_for_timeout(4000)
     pg.evaluate(LIB)
     n = pg.evaluate("() => __R.rows().length")
