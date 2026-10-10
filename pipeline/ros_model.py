@@ -43,6 +43,8 @@ RATES = [("cmp", "pass_cmp", "pass_att"), ("sack", "pass_sack", "pass_att"), ("p
 # and schedule at ENV4_EL / SCHED4_EL: posted lines exist for the coming weeks and that horizon is what they're for.
 PARAMS = dict(HALF_LIFE=20.0, K_PRIOR=2.0, K_NOPRIOR=1.0, MIN_PRIOR_G=4, PRIOR_EFF_W=0.5, K_EFF=30.0, EFF_W=0.75,
               ENV_EL=0.0, SCHED_EL=0.25, ENV4_EL=0.5, SCHED4_EL=0.25, PRIOR_GAMES=0.0, SHORT_MIN_F=0.15)
+# The market environment (implied team totals) and the matchup (defense vs position) are separate factors everywhere
+# (env / sched, env4 / sched4, env1 / sched1), never one blended "environment": eval_projections.py scores each on its own.
 
 def scoring():
     return json.load(open(os.path.join(HERE, "..", "data", "curve_components.json")))["base_scoring"]
@@ -128,9 +130,37 @@ def ros_weights(future):
     """Playoff weeks count 1.5x in rest-of-season averages, as team_ratings does."""
     return [tr.PLAYOFF_WEIGHT if w in tr.PLAYOFF_WEEKS else 1.0 for w, _, _ in future]
 
+def injury_status(stats):
+    """Sleeper ID -> game status from the latest injury report in the stats file (Out / Doubtful / Questionable), if any."""
+    inj = stats.get("injuries"); out = {}
+    if not inj or "cols" not in inj: return out
+    ci = {c: i for i, c in enumerate(inj["cols"])}
+    for rows in (inj.get("teams") or {}).values():
+        for r in rows:
+            sid, st = r[ci["sid"]], r[ci["status"]]
+            if sid and st: out[str(sid)] = st
+    return out
+
+def confidence(g_full, prior_g, opp_cv, last_short, status, props=False):
+    """Projection confidence 0-1 (Alan, Oct 15): healthy games this season, the strength of the prior, how stable his
+    role has been (coefficient of variation of his per-game opportunities), injury uncertainty (an injury-shortened game
+    in his last two, or a game-status designation), and whether props agree (reserved until a props feed exists).
+    Informs the card's label only; it never touches AM rank."""
+    sample = min(1.0, g_full / 6.0)
+    prior = min(1.0, prior_g / 12.0)
+    stable = max(0.0, 1.0 - opp_cv / 0.6) if opp_cv is not None else 0.5
+    health = 1.0
+    if last_short: health -= 0.4
+    if status in ("Out", "IR", "Doubtful"): health -= 0.6
+    elif status == "Questionable": health -= 0.3
+    health = max(0.0, health)
+    c = 0.35 * sample + 0.2 * prior + 0.25 * stable + 0.2 * health
+    return round(min(1.0, c + (0.1 if props else 0.0)), 3)
+
 def prepare(stats, games, cutoff, prior_stats=None, rates=None, use_future_lines=False, sc=None, repl=None):
     """Everything a projection needs that doesn't depend on the tunable parameters."""
     sc = sc or scoring(); repl = repl or replacement()
+    status = injury_status(stats) if cutoff >= stats.get("through_week", cutoff) else {}
     d = frame(stats, sc)
     pr = frame(prior_stats, sc) if prior_stats else None
     rates = rates or league_rates([d] + ([pr] if pr is not None else []))
@@ -151,7 +181,7 @@ def prepare(stats, games, cutoff, prior_stats=None, rates=None, use_future_lines
         groups.append(dict(sid=sid, name=name, pos=pos, team=team, week=s.week.to_numpy(float), f=s.f.to_numpy(),
                            pts=s.pts.to_numpy(), opps={o: s[o].to_numpy(float) for o in OPPS},
                            counts={name: (s.loc[s.f >= 1, num].sum(), s.loc[s.f >= 1, den].sum()) for name, num, den in RATES},
-                           past_imp=np.mean(pi) if pi else None, prior=prior.get(sid),
+                           past_imp=np.mean(pi) if pi else None, prior=prior.get(sid), status=status.get(sid),
                            fut_imp=[v for _, _, v in fut], fut_w=ros_weights(fut), fut_sched=[dvp.get((o, pos), 1.0) for _, o, _ in fut]))
     return dict(groups=groups, repl=repl, rates=rates, sc=sc)
 
@@ -198,10 +228,17 @@ def project_from(ctx, params=PARAMS):
             sched = (np.average(sch, weights=wts) ** s_el) if sch else 1.0
             return env, sched
         env, sched = ctx_factors(None, params["ENV_EL"], params["SCHED_EL"]); env4, sched4 = ctx_factors(NEXT_N, params["ENV4_EL"], params["SCHED4_EL"])
+        env1, sched1 = ctx_factors(1, params["ENV4_EL"], params["SCHED4_EL"])
         proj = base_pts * env * sched
+        # confidence: healthy games, prior, role stability (CV of per-game opportunity volume over full games), injury signals
+        vol = sum(g["opps"][o] for o in ("pass_att", "rush_att", "rec_tgt"))[full]
+        cv = (vol.std() / vol.mean()) if len(vol) >= 2 and vol.mean() > 0 else None
+        last_short = bool(len(f) and (f[-2:] < 1).any())
+        conf = confidence(int(full.sum()), pr["g"] if pr else 0, cv, last_short, g["status"])
         rows.append(dict(sleeper_id=g["sid"], player=g["name"], pos=pos, team=g["team"], games=len(f), g_eff=round(g_eff, 2),
                          ppg=ppg, healthy_ppg=hppg, prior_g=(pr["g"] if pr else 0), base_ppg=base_pts, env=env, sched=sched,
-                         env4=env4, sched4=sched4, proj_ppg=proj, n4_ppg=base_pts * env4 * sched4,
+                         env4=env4, sched4=sched4, env1=env1, sched1=sched1, proj_ppg=proj, n4_ppg=base_pts * env4 * sched4,
+                         n1_ppg=base_pts * env1 * sched1, conf=conf,
                          rank_score=(g_eff * proj + 2 * repl[pos]) / (g_eff + 2), line={k: round(v, 3) for k, v in line.items()}))
     out = pd.DataFrame(rows)
     out["proj_rank"] = out.groupby("pos").rank_score.rank(ascending=False, method="first").astype(int)

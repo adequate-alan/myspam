@@ -4,8 +4,8 @@ The model lives in ros_model.py (role-based: recent opportunities with injury-sh
 opportunity values fitted on the previous seasons, partial own efficiency, team environment from betting lines,
 remaining schedule, small-sample shrinkage); ros_backtest.py scores it against 2024-25. This script runs it on
 data/stats/<SEASON>.json (so build_stats.py must run first) and writes one row per player keyed by Sleeper ID:
-    sleeper_id, player, pos, team, games, g_eff, prior_g, ppg, healthy_ppg, base_ppg, env, sched, env4, sched4, proj_ppg, n4_ppg,
-    rank_score, proj_rank, line_json (the projected per-game stat line, which the browser scores with the league's scoring)
+    sleeper_id, player, pos, team, games, g_eff, prior_g, ppg, healthy_ppg, base_ppg, env, sched, env4, sched4, env1, sched1,
+    proj_ppg, n4_ppg, n1_ppg, conf, rank_score, proj_rank, line_json (the projected per-game stat line, which the browser scores with the league's scoring)
 merge_projections.py puts proj_ppg / rank_score / games into RANKINGS_CSV and the per-player factors into data/projections.json.
 
     python3 project_players.py [games.csv]     (default: nflverse's games.csv)
@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SEASON = 2026
 HIST_SEASONS = [2024, 2025]
 COLS = ["sleeper_id", "player", "pos", "team", "games", "g_eff", "prior_g", "ppg", "healthy_ppg", "base_ppg", "env", "sched",
-        "env4", "sched4", "proj_ppg", "n4_ppg", "rank_score", "proj_rank", "line_json"]
+        "env4", "sched4", "env1", "sched1", "proj_ppg", "n4_ppg", "n1_ppg", "conf", "rank_score", "proj_rank", "line_json"]
 
 def norm(name):
     """Name key used by the name-based fallbacks (merge_projections.py, build_sleeper_ids.py)."""

@@ -4140,6 +4140,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .pm-head .pm-sppg .pd-item b { font: 600 0.82rem/1.2 var(--font-display); color: var(--text-secondary); }
 .pm-head .pm-ros .pd-item.ros .pr-k { color: var(--text-secondary); }
 .pm-head .pm-ros .pr-conf { font: 600 0.66rem/1 var(--font-body); letter-spacing: 0.04em; margin-left: 8px; padding: 2px 6px; border-radius: 999px; cursor: help; color: var(--text-muted); border: 1px solid var(--border); }
+.pm-head .pm-ros .pr-conf.high { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 40%, transparent); }
 .pm-head .pm-ros .pr-conf.low { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
 .pm-head .pm-ros .pd-item.n4 b { font-size: 0.95rem; color: var(--text-secondary); }
 .pm-head .pm-ros .pr-n4tag { font: 600 0.68rem/1 var(--font-body); margin-left: 6px; color: var(--text-muted); cursor: help; }
@@ -5342,7 +5343,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T00:30Z";
+  const BUILD_ID = "2026-10-15T02:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -13124,9 +13125,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const NEXT_N_LABEL = "4";
   function rosConfidence(p) {
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId]; if (!f) return null;
-    const g = f[0], tip = `${g} game${g === 1 ? "" : "s"} of evidence this season (an injury-shortened game counts as a fraction of a game)`;
-    if (g < 3) return { cls: "low", label: "Low sample", tip: `Low sample: ${tip}. The projection leans on the position average until he has played more.` };
-    if (g < 6) return { cls: "mod", label: "Moderate confidence", tip: `Moderate confidence: ${tip}.` };
+    const g = f[0], games = `${g} game${g === 1 ? "" : "s"} of evidence this season (an injury-shortened game counts as a fraction of a game)`;
+    if (f.length >= 9) {   // the model's confidence score (Oct 15): healthy games, the prior, role stability, injury signals; never touches AM rank
+      const c = f[8], tip = `Projection confidence ${Math.round(c * 100)}%: ${games}; last season's sample, how stable his role has been and injury signals also count`;
+      return c < 0.4 ? { cls: "low", label: "Low sample", tip: `Low sample. ${tip}` } : c < 0.7 ? { cls: "mod", label: "Moderate confidence", tip } : { cls: "high", label: "High confidence", tip };
+    }
+    if (g < 3) return { cls: "low", label: "Low sample", tip: `Low sample: ${games}. The projection leans on the position average until he has played more.` };
+    if (g < 6) return { cls: "mod", label: "Moderate confidence", tip: `Moderate confidence: ${games}.` };
     return null;
   }
   function renderPlayer() {
