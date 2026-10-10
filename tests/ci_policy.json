@@ -94,6 +94,7 @@
       "drag_scroll_check"
     ],
     "timeout_minutes": 15,
+    "infra_retries": 1,
     "_weights_note": "Expected seconds per suite, measured on CI runs #116–#118 (Oct 14); run_ci balances the 3 CI shards and orders local parallel runs with them. Update after a suite's duration changes a lot."
   }
 }

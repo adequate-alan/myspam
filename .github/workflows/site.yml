@@ -61,7 +61,9 @@ concurrency:
 #   verify                              static + pipeline + smoke checks on the exact commit, then picks the lane from the
 #                                       diff since the newest commit whose code already passed its checks:
 #     fast      CSS, copy and labels, docs, BUILD_ID, comments, data → deploy right after verify (~2–3 min)
-#     targeted  one known UI feature → its suites (job `targeted`) → deploy (~4–7 min)
+#     targeted  known UI features of one family → their suites (job `targeted`, the independent suites and the
+#               timing-sensitive drag suites on two runners at once) → deploy (~4–7 min; an editor feature ~6–9).
+#               A browser / server crash in a suite is retried once inside the job (tests/run_ci.py), never the job
 #     full      risky / core / unknown / CI → the whole suite (job `full`, 3 shards) → deploy (~12–14 min)
 #   build → deploy                      only after the lane's checks passed, and only if the commit is still main's head;
 #                                       pull requests, the nightly run and manual full CI never deploy
@@ -217,6 +219,10 @@ jobs:
     needs: verify
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.lane == 'targeted'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [shared, exclusive]   # the independent suites together; the timing-sensitive drag suites alone
     steps:
       - uses: actions/checkout@v4
         with:
@@ -233,13 +239,13 @@ jobs:
         run: |
           pip install -r tests/requirements-ci.txt
           python -m playwright install --with-deps chromium
-      - name: The changed feature's suites (${{ needs.verify.outputs.suites }})
-        run: python tests/run_ci.py targeted --suites "${{ needs.verify.outputs.suites }}" --jobs 2 --logs "$RUNNER_TEMP/ci-logs"
+      - name: The changed features' suites, ${{ matrix.group }} group (${{ needs.verify.outputs.suites }})
+        run: python tests/run_ci.py targeted --suites "${{ needs.verify.outputs.suites }}" --group ${{ matrix.group }} --jobs 3 --logs "$RUNNER_TEMP/ci-logs"
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-logs-targeted
+          name: ci-logs-targeted-${{ matrix.group }}
           path: ${{ runner.temp }}/ci-logs
           retention-days: 14
 
