@@ -4167,6 +4167,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .pm-head .pm-ros .pr-conf { font: 600 0.66rem/1 var(--font-body); letter-spacing: 0.04em; margin-left: 8px; padding: 2px 6px; border-radius: 999px; cursor: help; color: var(--text-muted); border: 1px solid var(--border); }
 .pm-head .pm-ros .pr-conf.high { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 40%, transparent); }
 .pm-head .pm-ros .pr-conf.low { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.pm-head .pm-ros .pr-conf.out { color: var(--qb); border-color: color-mix(in srgb, var(--qb) 45%, transparent); }
 .pm-head .pm-ros .pd-item.n4 b { font-size: 0.95rem; color: var(--text-secondary); }
 .pm-head .pm-ros .pr-n4tag { font: 600 0.68rem/1 var(--font-body); margin-left: 6px; color: var(--text-muted); cursor: help; }
 .pm-head .pm-ros .pr-n4tag.down { color: var(--qb); } .pm-head .pm-ros .pr-n4tag.up { color: var(--rb); }
@@ -5205,7 +5206,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      keeps the projection columns in RANKINGS_CSV, which change only when someone asks (Alan, Oct 5: nothing scheduled
      changes rankings or values). */
   let PROJ_WEEKLY = null, PROJ_ROS = null, PROJ_LINE = null;   // the model's per-player factors (`f`) and projected stat lines (`line`)
-  const projPPGOf = p => (p ? (PROJ_WEEKLY && PROJ_WEEKLY[p.sleeperId] != null ? PROJ_WEEKLY[p.sleeperId] : p.projPPG) : null);
+  // Out for season (Alan, Oct 15): a player in the Out for season tier projects to 0 everywhere (ROS, Next 4, this week),
+  // whatever the pipeline's line says; the board's tier is the source of truth for his availability.
+  const outForSeason = p => !!p && Number(p.tier) === OUT_TIER;
+  const projPPGOf = p => (p ? outForSeason(p) ? 0 : (PROJ_WEEKLY && PROJ_WEEKLY[p.sleeperId] != null ? PROJ_WEEKLY[p.sleeperId] : p.projPPG) : null);
   // ROS PPG (Alan, Oct 14): AM's rest-of-season projected points per game in the scoring on the page (projRatios rescoring,
   // as the weekly projections do). rosRank = his place among everyone at his position with a projection.
   // With the model's projected stat line (Oct 14) the number is that line scored with the page's scoring, times the
@@ -5213,6 +5217,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // line fall back to the base-scoring PPG rescored with projRatios.
   function rosPPG(p, R, horizon) {
     if (!p) return null;
+    if (outForSeason(p)) return 0;
     const f = PROJ_ROS && PROJ_ROS[p.sleeperId], l = PROJ_LINE && PROJ_LINE[p.sleeperId];
     if (f && l && f.length >= 6) { const pts = gamePoints(l, p.pos, scoringNow()); return horizon === "n4" ? pts * f[4] * f[5] : pts * f[2] * f[3]; }
     const base = projPPGOf(p); if (base == null) return null;
@@ -5223,7 +5228,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const v = rosPPG(p); if (v == null) return null;
     const R = projRatios(scoringNow());
     let n = 0, ahead = 0;
-    players.forEach(q => { if (q.pos !== p.pos || !EDIT_POS.includes(q.pos)) return; const w = rosPPG(q, R); if (w == null) return; n++; if (w > v + 1e-9) ahead++; });
+    players.forEach(q => { if (q.pos !== p.pos || !EDIT_POS.includes(q.pos) || outForSeason(q)) return; const w = rosPPG(q, R); if (w == null) return; n++; if (w > v + 1e-9) ahead++; });
     return { rank: ahead + 1, n };
   }
   /* League settings picked by hand (for anyone not connecting a league).
@@ -5376,7 +5381,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T10:00Z";
+  const BUILD_ID = "2026-10-15T11:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -12470,6 +12475,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const after = d && Date.parse(d.updated) >= (g.kick || 0) + 3.5 * 3600e3;
       return d && d.through_week >= week && after ? { kind: "final", game: g, pts: 0, est: 0, dnp: true, text: "DNP" } : { kind: "final", game: g, pts: null, est: 0, pending: true, text: "Final · pts pending" };
     }
+    if (e.p && outForSeason(e.p)) return { kind: "out", game: g, est: 0, text: "Out", season: true };   // Out for season tier: 0 every week
     if (g.kind === "upcoming" && week === now && e.p) {
       const rep = injuryReport(e.team), inj = rep && rep.week === week ? injuryOf(e.team, e.sid) : null;
       if (inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", game: g, est: 0, text: "Out" };   // once his game starts, his points speak
@@ -13259,7 +13265,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const d = ros != null && ppg != null ? ros - ppg : null;
     const it = (cls, k, v, tip) => `<span class="pd-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b></span>`;
     const a = [], b = [];
-    if (ros != null) {
+    if (p && outForSeason(p)) {
+      a.push(it("ros", "ROS PPG", fp(0), "He is in the Out for season tier, so AM projects 0 points per game for the rest of the season")
+        + `<span class="pr-conf out" title="Out for season on the AM Board: no rest-of-season, Next 4 or weekly projection">Out for season</span>`);
+    } else if (ros != null) {
       a.push(it("ros", "ROS PPG", fp(ros), `AM's projected points per game from now to the end of the season (${scName}): his role (snap, target and touch share, red-zone usage), team scoring environment, schedule and sustainable efficiency; not a recent average`));
       if (rk) a.push(`<span class="pr-rk" title="${esc(`${rk.rank} of ${rk.n} ${p.pos}s by ROS PPG`)}">${esc(p.pos)}${rk.rank}</span>`);
       if (d != null) a.push(`<span class="pr-delta ${d >= 0.05 ? "up" : d <= -0.05 ? "down" : ""}" title="ROS PPG minus his actual season PPG: what AM expects to change going forward">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} vs season</span>`);
@@ -13294,6 +13303,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // One short reason line for the Overview (Alan, Oct 14): why ROS PPG sits above or below his healthy PPG; never a paragraph.
   function rosWhy(p) {
+    if (outForSeason(p)) return "Out for season";
     const F = rosFactors(p); if (!F) return "";
     const dir = F.total > 0.03 ? 1 : F.total < -0.03 ? -1 : 0;
     if (!dir) return "In line with his healthy PPG";
