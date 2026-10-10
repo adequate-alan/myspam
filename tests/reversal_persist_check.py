@@ -20,13 +20,13 @@ import csv, functools, hashlib, http.server, io, json, os, re, socketserver, sys
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gh_mock import Repo
+import fixture_board as FB   # the frozen test board (Oct 15): the mock repository starts from it, not the live rankings
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DISK_SHA = hashlib.sha256(open(os.path.join(ROOT, "index.html"), "rb").read()).hexdigest()
-FILES = {"index.html": open(os.path.join(ROOT, "index.html"), "rb").read(),
-         "data/rank_history.json": open(os.path.join(ROOT, "data/rank_history.json"), "rb").read(),
+FILES = {"index.html": FB.html(),   # the current code with the fixture board
          "data/injury_overrides.json": open(os.path.join(ROOT, "data/injury_overrides.json"), "rb").read(),
-         **{f"data/rank_snapshots/{f}": open(os.path.join(ROOT, "data/rank_snapshots", f), "rb").read() for f in os.listdir(os.path.join(ROOT, "data/rank_snapshots"))}}
+         **FB.files()}   # the fixture's history and its snapshot month
 CSV_RE = re.compile(r"const RANKINGS_CSV = `\n([\s\S]*?)\n`;")
 def board_csv(html): return CSV_RE.search(html if isinstance(html, str) else html.decode()).group(1)
 def rows_of(text):
