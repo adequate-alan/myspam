@@ -1220,11 +1220,11 @@ tr.drop-after td { box-shadow: inset 0 -2px 0 var(--gold-bright); }
   transition: border-color 0.16s ease, background 0.16s ease;
 }
 .num-btn:hover { border-color: var(--line); background: var(--surface-2); }
-.val-input {
+.val-input, .mv-input {
   width: 90px; height: 30px; font-size: 0.94rem; font-weight: 600; padding: 0 8px; text-align: right; font-variant-numeric: tabular-nums;
   border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--cream);
 }
-.val-input:focus { outline: none; border-color: var(--rose); }
+.val-input:focus, .mv-input:focus { outline: none; border-color: var(--rose); }
 .val-extra { display: inline-flex; gap: 8px; align-items: center; min-width: 104px; }
 body.editing #panel-rankings td.val { min-width: 330px; }
 
@@ -4042,6 +4042,26 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #panel-rankings .arrow { width: 16px; height: 14px; font-size: 0.5rem; border-radius: 3px; }
 #rank-body tr.player:hover .handle { opacity: .9; color: var(--ink); }
 #panel-rankings .handle:active { cursor: grabbing; }
+/* Move to rank (Oct 14): the rank number is a quiet button while the row can be reordered; a small popover under it takes
+   the target rank (overall or position) and says where it puts him before anything moves */
+#rank-body .rk-btn { font: inherit; color: inherit; background: none; border: 0; padding: 0 4px; margin: 0 -4px; border-radius: 4px; cursor: pointer; line-height: inherit;
+  text-decoration: underline dotted transparent; text-decoration-thickness: 1px; text-underline-offset: 3px; transition: text-decoration-color .12s, background .12s; }
+#rank-body tr.player:hover .rk-btn { text-decoration-color: var(--muted); }
+#rank-body .rk-btn:hover, #rank-body .rk-btn:focus-visible { background: var(--fill-2); outline: none; text-decoration-color: var(--muted); }
+#rank-body .rk-btn[aria-expanded="true"] { background: var(--fill-2); text-decoration-color: var(--accent-primary); }
+.mv-pop { position: fixed; z-index: 70; width: 280px; max-width: calc(100vw - 16px); padding: 12px 12px 10px; background: var(--surface-raised); color: var(--text-primary);
+  border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: 0 22px 44px -18px var(--shadow-color), 0 2px 6px -2px var(--shadow-soft); animation: dd-in 0.12s ease-out; }
+.mv-pop[hidden] { display: none; }
+.mv-head { margin: 0 0 8px; font-size: 0.8rem; color: var(--text-muted); } .mv-head b { color: var(--text-strong); font-weight: 650; }
+.mv-seg { display: inline-flex; padding: 2px; margin: 0 0 9px; border-radius: 7px; background: var(--fill-1); }
+.mv-mode { border: 0; background: none; color: var(--text-muted); font: 600 0.68rem/1 var(--font-body); letter-spacing: .05em; text-transform: uppercase; padding: 6px 10px; border-radius: 5px; cursor: pointer; }
+.mv-mode[aria-checked="true"] { background: var(--surface); color: var(--text-strong); box-shadow: inset 0 -2px 0 var(--accent-primary); }
+.mv-mode:disabled { opacity: .4; cursor: default; } .mv-mode:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+.mv-row { display: flex; align-items: center; gap: 8px; margin: 0; }
+.mv-lab { font-size: 0.7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+.mv-pop .mv-input { width: 84px; text-align: left; }
+.mv-now, .mv-to { margin: 7px 0 0; font-size: 0.78rem; line-height: 1.35; color: var(--text-muted); } .mv-to { color: var(--text-primary); } .mv-to.err { color: var(--warn); }
+.mv-acts { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
 /* drag and drop: a floating copy of the row, a faded placeholder, a thin red insertion line, a live rank preview */
 #rank-body img { -webkit-user-drag: none; user-drag: none; }
 #panel-rankings .handle { position: relative; }
@@ -4394,6 +4414,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <div class="rv-body" id="rv-body"></div>
     </aside>
     <div class="ed-warn" id="ed-warn" role="alert" hidden></div>
+    <div class="mv-pop" id="mv-pop" role="dialog" aria-label="Move to rank" hidden>
+      <div class="mv-head">Move <b id="mv-name"></b></div>
+      <div class="mv-seg" role="radiogroup" aria-label="Which rank"><button type="button" class="mv-mode" role="radio" data-mode="overall" aria-checked="true">Overall</button><button type="button" class="mv-mode" role="radio" data-mode="pos" aria-checked="false" id="mv-mode-pos">Position</button></div>
+      <label class="mv-row"><span class="mv-lab" id="mv-lab">To #</span><input class="mv-input" id="mv-input" type="number" min="1" step="1" inputmode="numeric" aria-describedby="mv-now mv-to"></label>
+      <p class="mv-now" id="mv-now"></p>
+      <p class="mv-to" id="mv-to"></p>
+      <div class="mv-acts"><button type="button" class="btn link" id="mv-cancel">Cancel</button><button type="button" class="btn primary" id="mv-apply">Move</button></div>
+    </div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
       <div class="league-controls" id="league-controls" hidden>
@@ -5631,6 +5659,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      and the drag stopped hearing the pointer and the release, so auto-scroll kept going at the last pointer position.
      The redraw waits and runs once the drag ends. */
   const DRAG_STATE = { on: false, pending: false };
+  const MV = { id: null, mode: "overall", btn: null };   // Move to rank: the open popover's player (see mvOpen)
   function renderRankings() {
     if (DRAG_STATE.on) { DRAG_STATE.pending = true; return; }
     DRAG_STATE.pending = false;
@@ -5736,7 +5765,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const cmpA = CMP.on && p.sleeperId && String(p.sleeperId) === String(PP.sid);
       const shownRank = posFilter === "ALL" ? (leagueView() ? LG.adjRank.get(p.id) : p.rank) : (leagueView() ? LG.adjPos.get(p.id) : p.posNum);
       out.push(`<tr class="player${own && own.mine ? " mine" : ""}${shownRank != null && shownRank <= 3 && posFilter !== "PICK" ? " top3" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
-        <td class="rk">${rk(p)}</td>
+        <td class="rk">${(() => { const h = rk(p), n = String(numOf(p)); return canReorder && numOf(p) != null && h.startsWith(n)
+          ? `<button class="rk-btn" type="button" data-mv="${p.id}" aria-haspopup="dialog" aria-expanded="${MV.id === p.id ? "true" : "false"}" title="Move to rank…" aria-label="Move ${esc(p.name)} to a rank (now ${posFilter === "ALL" ? "#" + n : esc(posLabel(p))})">${n}</button>` + h.slice(n.length) : h; })()}</td>
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
         <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
@@ -7986,9 +8016,106 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     toast.timer = setTimeout(() => { t.hidden = true; }, ms);
   }
 
+  /* Move to rank (Alan, Oct 14): an alternative to dragging for long-distance moves, not another way of ranking. While
+     the board can be reordered, the rank number in each row is a quiet button; it opens a small popover under it where
+     you type the target: his overall rank (the default on All) or his position rank (the default on a position tab;
+     either can be picked). It shows where he is and where that puts him before anything changes, and Move runs exactly
+     the arrows' and drag's path (moveOverall / movePlayer with no forced tier: a rank move, never a tier move), so tiers,
+     values, Auto/Manual, touched players and the undo bookkeeping behave as for any other move. Escape, Cancel or a
+     click outside closes it with nothing changed; an invalid rank can't be applied. */
+  const mvPop = $("mv-pop");
+  function mvNeighbours(up, dn) {
+    return up && dn ? `between ${up.name} and ${dn.name}` : up ? `after ${up.name}` : dn ? `before ${dn.name}` : "";
+  }
+  // where n would put him in this mode: {max, cur, n, text} or {max, cur, error}
+  function mvTarget(me, mode, n) {
+    if (mode === "overall") {
+      const order = overallOrder(), max = order.length, cur = me.rank, r = { max, cur };
+      if (!(Number.isInteger(n) && n >= 1 && n <= max)) return { ...r, error: `Enter a whole number from 1 to ${max}.` };
+      if (n === cur) return { ...r, error: `${me.name} is already #${cur}.` };
+      const others = order.filter(p => p !== me); others.splice(n - 1, 0, me);
+      const posN = others.slice(0, n).filter(p => p.pos === me.pos).length;
+      return { ...r, n, text: `→ #${n} overall · ${me.pos}${posN} · ${mvNeighbours(others[n - 2], others[n])}` };
+    }
+    const group = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum), max = group.length, cur = me.posNum, r = { max, cur };
+    if (!(Number.isInteger(n) && n >= 1 && n <= max)) return { ...r, error: `Enter a whole number from 1 to ${max}.` };
+    if (n === cur) return { ...r, error: `${me.name} is already ${me.pos}${cur}.` };
+    const others = group.filter(p => p !== me); others.splice(n - 1, 0, me);
+    return { ...r, n, text: `→ ${me.pos}${n} · ${mvNeighbours(others[n - 2], others[n])} · his overall spot follows his value there` };
+  }
+  function mvPlace() {   // under the rank button, inside the viewport
+    const b = MV.btn && document.contains(MV.btn) ? MV.btn : MV.id != null && $("rank-body").querySelector(`tr[data-id="${MV.id}"] .rk-btn`);
+    if (!b) { mvClose(); return; }
+    MV.btn = b; b.setAttribute("aria-expanded", "true");
+    const r = b.getBoundingClientRect(), w = mvPop.offsetWidth, h = mvPop.offsetHeight;
+    let top = r.bottom + 6; if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    mvPop.style.top = top + "px"; mvPop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left)) + "px";
+  }
+  function mvRender() {
+    const me = byId.get(MV.id); if (!me) { mvClose(); return; }
+    const canPos = me.posNum != null, canAll = me.rank != null && hasOverall();
+    if (MV.mode === "pos" && !canPos) MV.mode = "overall"; if (MV.mode === "overall" && !canAll) MV.mode = "pos";
+    $("mv-name").textContent = me.name;
+    mvPop.querySelectorAll(".mv-mode").forEach(x => { x.setAttribute("aria-checked", x.dataset.mode === MV.mode ? "true" : "false"); x.disabled = x.dataset.mode === "pos" ? !canPos : !canAll; });
+    $("mv-mode-pos").textContent = `${me.pos} rank`;
+    $("mv-lab").textContent = MV.mode === "overall" ? "To #" : `To ${me.pos}`;
+    const inp = $("mv-input"), t = mvTarget(me, MV.mode, Number(inp.value));
+    inp.max = String(t.max);
+    $("mv-now").textContent = `Now #${me.rank ?? "–"} overall · ${me.posRank || me.pos}` + (me.tier !== "" && me.tier != null ? ` · ${isTagTier(me.tier) ? tierLabel(me.pos, me.tier) : "Tier " + me.tier}` : "");
+    const to = $("mv-to"); to.textContent = t.error && inp.value !== "" ? t.error : t.text || `Type a rank from 1 to ${t.max}.`; to.classList.toggle("err", !!t.error && inp.value !== "");
+    $("mv-apply").disabled = !!t.error;
+    mvPlace();
+  }
+  function mvOpen(id, btn) {
+    const me = byId.get(id); if (!me || !editor.on) return;
+    if (MV.btn && MV.btn !== btn) MV.btn.setAttribute("aria-expanded", "false");
+    MV.id = id; MV.btn = btn; MV.mode = posFilter === "ALL" || me.posNum == null ? "overall" : "pos";
+    const inp = $("mv-input"); inp.value = String(MV.mode === "overall" ? me.rank : me.posNum);
+    mvPop.hidden = false; mvRender(); inp.focus(); inp.select();
+    window.addEventListener("scroll", mvPlace, { passive: true }); window.addEventListener("resize", mvPlace);
+  }
+  function mvClose(refocus) {
+    if (mvPop.hidden) return;
+    mvPop.hidden = true;
+    const b = MV.btn; MV.id = null; MV.btn = null;
+    if (b && document.contains(b)) { b.setAttribute("aria-expanded", "false"); if (refocus) b.focus({ preventScroll: true }); }
+    window.removeEventListener("scroll", mvPlace); window.removeEventListener("resize", mvPlace);
+  }
+  function mvApply() {
+    const me = byId.get(MV.id); if (!me) { mvClose(); return; }
+    const t = mvTarget(me, MV.mode, Number($("mv-input").value)); if (t.error) { mvRender(); return; }
+    const id = MV.id, mode = MV.mode; mvClose();
+    if (mode === "overall") moveOverall(id, t.n); else movePlayer(id, t.n);   // the arrows' path
+    requestAnimationFrame(() => {   // show him where he landed; the focus goes back to his rank so the keyboard can carry on
+      const tr = $("rank-body").querySelector(`tr[data-id="${id}"]`); if (!tr) return;
+      const b = tr.querySelector(".rk-btn"); if (b) b.focus({ preventScroll: true });
+      const r = tr.getBoundingClientRect(), mast = (document.querySelector(".masthead") || { offsetHeight: 0 }).offsetHeight;
+      if (r.top < mast + 60 || r.bottom > window.innerHeight - 40) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - mast - 80), behavior: "smooth" });
+      tr.classList.remove("flash"); void tr.offsetWidth; tr.classList.add("flash");
+    });
+  }
+  mvPop.addEventListener("click", e => {
+    const m = e.target.closest(".mv-mode");
+    if (m && !m.disabled) { MV.mode = m.dataset.mode; const me = byId.get(MV.id); if (me) $("mv-input").value = String(MV.mode === "overall" ? me.rank : me.posNum); mvRender(); $("mv-input").focus(); $("mv-input").select(); return; }
+    if (e.target.closest("#mv-cancel")) { mvClose(true); return; }
+    if (e.target.closest("#mv-apply")) mvApply();
+  });
+  $("mv-input").addEventListener("input", mvRender);
+  mvPop.addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); mvClose(true); return; }
+    if (e.key === "Enter" && e.target.id === "mv-input") { e.preventDefault(); mvApply(); return; }
+    if (e.key === "Tab") {   // the focus stays inside the popover
+      const f = [...mvPop.querySelectorAll("button:not(:disabled), input")], i = f.indexOf(document.activeElement);
+      if (i >= 0 && (e.shiftKey ? i === 0 : i === f.length - 1)) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+    }
+  });
+  document.addEventListener("pointerdown", e => { if (!mvPop.hidden && !e.target.closest("#mv-pop") && !e.target.closest(".rk-btn")) mvClose(); });
+
   /* Clicks: arrows, value editing, back-to-auto */
   $("rank-body").addEventListener("click", e => {
     if (!editor.on) return;
+    const mvb = e.target.closest(".rk-btn");
+    if (mvb) { if (MV.id === Number(mvb.dataset.mv)) mvClose(); else mvOpen(Number(mvb.dataset.mv), mvb); return; }
     const arrow = e.target.closest(".arrow");
     if (arrow && !arrow.disabled) {
       const id = Number(arrow.closest("tr").dataset.id), dir = Number(arrow.dataset.dir);
@@ -8213,7 +8340,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     else { let at = target; if (at.nextElementSibling && at.nextElementSibling.classList.contains("tier-drop")) at = at.nextElementSibling; at.after(tr); }
     const all = posFilter === "ALL", key = p => all ? p.rank : p.posNum;
     const lo = Math.min(from, n), hi = Math.max(from, n), shift = n > from ? -1 : 1;
-    const setNum = (row, v) => { const c = row.querySelector("td.rk"), t = c && c.firstChild; if (t && t.nodeType === 3 && /^\d+$/.test(t.nodeValue)) t.nodeValue = String(v); };
+    const setNum = (row, v) => { const c = row.querySelector("td.rk"); let t = c && c.firstChild;   // the number's text node (inside the Move-to-rank button while editing)
+      if (t && t.nodeType === 1 && t.classList.contains("rk-btn")) t = t.firstChild;
+      if (t && t.nodeType === 3 && /^\d+$/.test(t.nodeValue)) t.nodeValue = String(v); };
     $("rank-body").querySelectorAll("tr.player").forEach(row => {
       if (row === tr) return setNum(row, n);
       const p = byId.get(Number(row.dataset.id)), k = p && key(p);

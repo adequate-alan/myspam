@@ -55,6 +55,7 @@
       "reversal_check",
       "reversal_persist_check",
       "tier_boundary_check",
+      "move_to_rank_check",
       "fixture_check",
       "inflight_check",
       "form_trend_check"
@@ -68,6 +69,7 @@
       "publish_check": 105,
       "publish_safety_check": 105,
       "tier_boundary_check": 90,
+      "move_to_rank_check": 95,
       "roster_fit_check": 85,
       "fixture_check": 85,
       "reversal_persist_check": 72,
