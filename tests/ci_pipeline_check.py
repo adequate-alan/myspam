@@ -400,7 +400,7 @@ try:
         ("a JS comment", [(line_of(lambda i: R0[i] == "js" and L0[i - 1].strip().startswith("// ")), lambda l: l + " (edited)")], {}, "fast", []),
         ("the rankings block (a publish)", [(line_of(lambda i: R0[i] == "rankings"), lambda l: l.replace(",manual", ",manual", 1) + "")], {"data/rank_history.json": "{}"}, "fast", []),
         ("docs", [], {"README.md": "more\n"}, "fast", []),
-        ("render code of one feature (tradeCard)", [(in_fn("tradeCard"), code)], {}, "targeted", ["league_hub_check", "trade_history_check", "xss_check"]),
+        ("render code of one feature (tradeCard)", [(in_fn("tradeCard"), code)], {}, "targeted", ["form_trend_check", "league_hub_check", "trade_history_check", "xss_check"]),
         ("render code of the drawer (ppSchedule)", [(in_fn("ppSchedule"), code)], {}, "targeted", ["drawer_check", "xss_check"]),
         ("a class name in a lowercase string is code, not copy", [(line_of(lambda i: F0[i] == "tradeCard" and 'class="th-age' in L0[i - 1]), lambda l: l.replace('class="th-age', 'class="th-agex', 1))], {}, "targeted", None),
         ("a test file only", [], {"tests/drawer_check.py": "\n# x\n"}, "targeted", ["drawer_check"]),
