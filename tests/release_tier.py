@@ -5,12 +5,21 @@
 Three lanes:
   fast      CSS, copy and labels, docs, BUILD_ID, comments, and data (JSON under data/, the RANKINGS_CSV block).
             Static + pipeline + smoke checks, then deploy (~2–3 minutes).
-  targeted  rendering code of ONE known UI feature, or a test file. The fast checks plus that feature's suites, then
-            deploy (~4–7 minutes).
-  full      everything risky or unknown: the value model and Architecture C, the editor, league adjustments,
-            publishing, history and snapshots, trade logic, scoring and projections, market math, shared helpers, the
-            settings script, page markup, pipeline scripts, CI and test infrastructure, two or more features at once,
-            and any function not in the map below. The whole suite must pass before deploy (~12–14 minutes).
+  targeted  rendering or interaction code of known UI features, or a test file. The fast checks plus those features'
+            suites, then deploy (~4–7 minutes; an editor feature ~6–9). Several features changed together stay targeted
+            while they belong to one family (FAMILIES below: the editor family is the board's edit controls, drag and
+            the rankings rendering; the league family is the League hub, Trade Finder and calculator screens; the
+            drawer is its own), and run the union of their suites; features from different families → full.
+            The editor family (Alan, Oct 15): a control that changes how a move is made but reuses moveOverall /
+            movePlayer and the value and publish functions unchanged (Move to rank, the tier-header actions, the
+            notices) runs the suites that protect the editor's invariants (editor, move_to_rank, tier_boundary,
+            reversal, reversal_persist, value_state, the drag suites, publish) and not the drawer, league or market
+            suites.
+  full      everything risky or unknown: the value model and Architecture C, the movement and value functions
+            themselves (moveOverall / movePlayer / writeOrder semantics), tier pricing, publishing, history and
+            snapshots, league adjustments, trade logic, scoring and projections, market math, shared helpers, the
+            settings script, page markup, pipeline scripts, CI and test infrastructure, features from more than one
+            family, and any function not in the map below. The whole suite must pass before deploy (~12–14 minutes).
 There's no trailing full run after a fast or targeted release: the full suite also runs nightly and on demand.
 
 What counts as the change. The diff is taken from the newest commit whose code already passed its lane (an Actions cache
@@ -23,6 +32,8 @@ How index.html is read. Every changed line is placed by region (the rankings blo
 or the top-level JavaScript declaration it belongs to); everything else is placed by its path. Copy and labels: a
 changed line counts as copy when it's identical to the line it replaced once visible text is blanked (HTML text between
 tags, and quoted strings that start with a capital letter and contain a lowercase one, like "Then" or "At the time").
+A top-level event listener (`$("rank-body").addEventListener("click", …)`, `mvPop.addEventListener("keydown", …)`)
+counts as its own declaration named on:<target>:<event>, so a changed handler is placed by what it handles.
 The map below names which functions belong to which UI feature; a new function nobody mapped gets the full suite.
 `--force-full` (the workflow's full_ci input, the full-ci pull request label) or a `CI: full` line in any commit
 message of the range forces the full lane.
@@ -48,7 +59,11 @@ RISK = {
  "rankings-ui":   (TARGETED, ["league_hub_check", "production_check", "xss_check"],
                    "renderRankings renderProd renderMkt renderMkBar renderRail valueCell valueCellEdit nflTag nflMark ownPill ownerTag tierTag boardMove boardMoves sinceText rankMove patchRows syncRkControls updateEditorBar renderReview reviewWarnings reviewMarket renderValueCheck renderMarketAudit openReview closeReview".split()),
  "drag-ui":       (TARGETED, ["drag_check", "drag_repeat_check", "drag_scroll_check"],
-                   "dragFloat dropNum dragStart dragZone applySlot dragMove dragLoop dragScroll showDrop endDrag commitDrop clearMarks DRAG_STATE drag".split()),
+                   "dragFloat dropNum dragStart dragZone applySlot dragMove dragLoop dragScroll showDrop endDrag commitDrop clearMarks DRAG_STATE drag on:rank-body:pointerdown on:window:pointermove on:window:pointerup on:window:pointercancel on:window:blur".split()),
+ # the editor's controls and notices (not the movement, value or publish functions they call: those are "editor", full)
+ "editor-ui":     (TARGETED, ["editor_check", "move_to_rank_check", "tier_boundary_check", "reversal_check", "reversal_persist_check", "value_state_check",
+                              "drag_check", "drag_repeat_check", "drag_scroll_check", "publish_check"],
+                   "MV mvPop mvNeighbours mvTarget mvPlace mvRender mvOpen mvOutside mvClose mvApply edWarn hideEdWarn REVALUED RECALC_TAG TIER_EMPTY TIER_DEL on:rank-body:click on:rank-body:keydown on:rank-body:focusout on:ed-warn:click on:mvPop:click on:mvPop:keydown on:mv-input:input".split()),
  "drawer-ui":     (TARGETED, ["drawer_check", "xss_check"],
                    "openPlayer closePlayer renderPlayer ppSection ppOverview thisWeekCard ppSchedule ppPractice ppDepth ppGameLog ppStats ppPerformance ppHistory ppTradeValue ppCompare weeklySeries weeksChart barChart lineChart usageGrid prodRankLine statsStamp markCurrent mkDrawer".split()),
  "league-ui":     (TARGETED, ["league_hub_check", "trade_history_check", "xss_check", "form_trend_check"],
@@ -59,6 +74,9 @@ RISK = {
                    "renderTrade renderTrade3 renderImpact rationaleHtml renderBreakdown formatBreakdown renderBeforeAfter renderHist renderTradeContext renderTcMarket".split()),
 }
 FN = {n: k for k, (_, _, ns) in RISK.items() for n in ns}
+# UI features that may change together and still release on their suites' union (one screen, one set of invariants)
+FAMILIES = {"editor": {"editor-ui", "drag-ui", "rankings-ui"}, "league": {"league-ui", "finder-ui", "calc-ui"}, "drawer": {"drawer-ui"}}
+FAMILY = {f: name for name, fs in FAMILIES.items() for f in fs}
 # CI and test infrastructure: a change here changes the gate itself
 INFRA = {"tests/run_ci.py", "tests/ci_policy.json", "tests/static_check.py", "tests/smoke_check.py", "tests/ci_pipeline_check.py",
          "tests/release_fingerprint.py", "tests/release_tier.py", "tests/requirements-ci.txt", "tests/gh_mock.py",
@@ -81,11 +99,13 @@ def regions(text):
         a = text.count("\n", 0, m.start()) + 1; b = text.count("\n", 0, m.end()) + 1
         for i in range(a + 1, b): reg[i] = "rankings"   # the data lines only
     decl = re.compile(r"^  (?:async\s+)?(?:function\s*\*?\s*([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=)")
+    listener = re.compile(r'^  (?:\$\("([\w-]+)"\)|([A-Za-z_$][\w$]*))\.addEventListener\("(\w+)"')
     cur = None
     for i, l in enumerate(lines, 1):
         if reg[i] != "js": cur = None; continue
-        mm = decl.match(l)
+        mm = decl.match(l); ml = listener.match(l)
         if mm: cur = mm.group(1) or mm.group(2)
+        elif ml: cur = f"on:{ml.group(1) or ml.group(2)}:{ml.group(3)}"
         fn[i] = cur
     return lines, reg, fn
 
@@ -111,6 +131,8 @@ def classify(base, head="HEAD", force=False):
     for f in files:
         if f.startswith("data/") and f.endswith(".json"): reasons.append(f"fast: {f} (data)"); continue
         if f.endswith(".md") or f == ".gitignore": reasons.append(f"fast: {f} (docs)"); continue
+        if f == "tests/ci_policy.json" and policy_adds_suite_only(base, head):
+            reasons.append(f"targeted: {f} (only lists a new suite: its weight and its place in the full tier)"); bump("targeted", f"{f} (a new suite registered)"); continue
         if f.startswith(".github/") or f in INFRA or f.startswith("tests/fixtures/"): bump("full", f"{f} (CI / test infrastructure)"); continue
         if re.fullmatch(r"tests/[a-z_]+_check\.py", f): bump("targeted", f"{f} (test only: its suite runs)", [f[6:-3]]); continue
         if f.startswith("tests/"): bump("full", f"{f} (other test file)"); continue
@@ -153,9 +175,30 @@ def classify(base, head="HEAD", force=False):
                 else:
                     l, st, _ = RISK[feat]; features.add(feat); bump(l, f"JS {key[1]} ({feat})", st)
     ui = sorted(x for x in features if RISK[x][0] == TARGETED)
-    if len(ui) > 1: bump("full", f"more than one UI feature changed ({', '.join(ui)})")
+    fams = sorted({FAMILY.get(x, x) for x in ui})
+    if len(fams) > 1: bump("full", f"UI features from different areas changed ({', '.join(ui)})")
+    elif len(ui) > 1: reasons.append(f"targeted: {len(ui)} features of the {fams[0]} family ({', '.join(ui)}): their suites together")
+    if lane == "targeted" and not suites: lane = "fast"; reasons.append("fast: nothing beyond the fast checks to run for this")
     out.update(lane=lane, features=sorted(features), reasons=reasons, suites=sorted(suites) if lane == "targeted" else [])
     return out
+
+def policy_adds_suite_only(base, head):
+    """tests/ci_policy.json changed only by registering suites: names added to suites.full and their weights (and a
+    timing-sensitive one to suites.exclusive). Any other change (known failures, advisory patterns, the fast tier,
+    timeouts, retries) is a change to the gate itself and stays full."""
+    try: old, new = json.loads(git("show", f"{base}:tests/ci_policy.json")), json.loads(git("show", f"{head}:tests/ci_policy.json"))
+    except (subprocess.CalledProcessError, ValueError): return False
+    so, sn = dict(old.get("suites", {})), dict(new.get("suites", {}))
+    added = set(sn.get("full", [])) - set(so.get("full", []))
+    if not added or set(so.get("full", [])) - set(sn.get("full", [])): return False
+    for k in ("full", "weights", "exclusive"):
+        if k == "full": continue
+        o, n = so.get(k, {} if k == "weights" else []), sn.get(k, {} if k == "weights" else [])
+        if k == "weights" and (set(n) - set(o) - added or any(o[x] != n.get(x) for x in o)): return False
+        if k == "exclusive" and (set(n) - set(o) - added or set(o) - set(n)): return False
+    so.pop("full", None); sn.pop("full", None); so.pop("weights", None); sn.pop("weights", None); so.pop("exclusive", None); sn.pop("exclusive", None)
+    old = dict(old); new = dict(new); old["suites"] = so; new["suites"] = sn
+    return old == new
 
 def ok_base(start, ok_fps, limit=WALK):
     """The newest first-parent ancestor of `start` (itself included) whose code fingerprint passed its checks."""
