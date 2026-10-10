@@ -53,7 +53,7 @@ with sync_playwright() as p:
     chip = lambda: pg.evaluate("() => (document.querySelector('.drag-rk') || {}).textContent || null")
     snap = lambda: pg.evaluate("() => JSON.stringify(SPM.rankingSnapshot())")
     def ranks_ok():
-        r = pg.evaluate("() => [...document.querySelectorAll('#rank-body tr.player')].map(t => (t.querySelector('td.rk').firstChild || {}).nodeValue)")
+        r = pg.evaluate("() => [...document.querySelectorAll('#rank-body tr.player')].map(t => ((t.querySelector('td.rk .rk-btn') || t.querySelector('td.rk')).firstChild || {}).nodeValue)")
         return all(x == str(i + 1) for i, x in enumerate(r))
     def scrolled(ms):
         a = sy(); pg.wait_for_timeout(ms); return sy() - a
@@ -124,7 +124,7 @@ with sync_playwright() as p:
     pid = pg.evaluate("document.querySelectorAll('.drag-float tr.player')[0].dataset.id")
     pg.mouse.up(); pg.wait_for_timeout(700)
     after = renders() - during
-    landed = pg.evaluate(f"(() => {{ const r = document.querySelector('#rank-body tr.player[data-id=\"{pid}\"]'); return r ? Number(r.querySelector('td.rk').firstChild.nodeValue) : null; }})()")
+    landed = pg.evaluate(f"(() => {{ const r = document.querySelector('#rank-body tr.player[data-id=\"{pid}\"]'); return r ? Number((r.querySelector('td.rk .rk-btn') || r.querySelector('td.rk')).firstChild.nodeValue) : null; }})()")
     unsaved = pg.inner_text("#eb-count").strip()
     ok(during == 0 and after == 1 and landed == want and ranks_ok() and unsaved != "All saved",
        f"3 redraws asked for mid-drag: none during the drag, {after} after the drop (merged); the drop is kept (#{landed}, chip #{want}), ranks 1..N, edit unsaved ({unsaved})")
@@ -173,7 +173,7 @@ with sync_playwright() as p:
     pid = pg.evaluate("document.querySelectorAll('.drag-float tr.player')[0].dataset.id")
     took = round(time.time() - t0, 1)
     pg.mouse.up(); pg.wait_for_timeout(600)
-    landed = pg.evaluate(f"(() => {{ const r = document.querySelector('#rank-body tr.player[data-id=\"{pid}\"]'); return r ? Number(r.querySelector('td.rk').firstChild.nodeValue) : null; }})()")
+    landed = pg.evaluate(f"(() => {{ const r = document.querySelector('#rank-body tr.player[data-id=\"{pid}\"]'); return r ? Number((r.querySelector('td.rk .rk-btn') || r.querySelector('td.rk')).firstChild.nodeValue) : null; }})()")
     ok(reached and stopped == 0, f"Long drag from #9: reached #{reached} in {took}s at the edge, and stopped as soon as the pointer left it ({stopped}px)")
     ok(want is not None and landed == want and ranks_ok(), f"He lands where the chip showed: chip {c!r}, landed #{landed}; ranks 1..N")
     pg.click("#eb-cancel"); pg.wait_for_timeout(400)
