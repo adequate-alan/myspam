@@ -14,12 +14,18 @@ real arrow clicks and a real mouse drag:
   5. deliberate edits kept: a tier rename, a value edit, a tier drop and a new empty tier, then 40 moves undone
   6. the UI path: arrow clicks and a mouse drag, undone with the arrows
 
+Runs on the frozen test board (tests/fixture_board.py: the current code, the board from tests/fixtures/board), so a
+ranking publish never breaks it (Oct 15: Alan's publish 848b6f4 repriced the Auto tail to 1–2-point gaps, and the live
+board no longer had Auto players with room for a value edit; the suite tests how the editor works, not the live data).
+
 Run from the repo root:  python3 tests/reversal_check.py   (CHROMIUM=/path/to/chromium if needed)
 """
 import functools, http.server, os, re, socketserver, sys, threading, time
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tests"))
+import fixture_board as FB
 h = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT); h.log_message = lambda *a: None
 srv = socketserver.TCPServer(("127.0.0.1", 0), h); threading.Thread(target=srv.serve_forever, daemon=True).start()
 failures = []
@@ -68,8 +74,10 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route("https://api.github.com/**", lambda r: r.abort())
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
+    BASE = f"http://127.0.0.1:{srv.server_address[1]}"
+    FB.route(pg, BASE)   # the frozen test board, never the live rankings
     pg.add_init_script("window.__SPM_TEST_HOOKS = true;")   # the editor's functions (SPM.edit) are test-only
-    pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/#rankings"); pg.wait_for_timeout(4000)
+    pg.goto(BASE + "/#rankings"); pg.wait_for_timeout(4000)
     pg.evaluate(LIB)
     n = pg.evaluate("() => __R.rows().length")
     ok(n > 250 and pg.evaluate("() => SPM.edit.unsaved()") == 0, f"Board loaded with nothing unsaved ({n} players)")
