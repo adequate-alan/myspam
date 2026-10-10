@@ -13312,9 +13312,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const own = ownerOfSid(sid), ng = info.team ? nextGame(info.team) : null, wkNow = currentWeek();
     let trend = "–", trendSub = "";
     // trends compare completed games (an injury exit isn't a dip in form); the shown PPG stays official
-    const tp = t && t.short && t.fullG ? t.fullPpg : t && t.ppg, ptp = pt && pt.short && pt.fullG ? pt.fullPpg : pt && pt.ppg;
+    // no completed game yet this season (only injury exits) = no trend, never a verdict from the game he left
+    const tp = t && t.short ? (t.fullG ? t.fullPpg : null) : t && t.ppg, ptp = pt && pt.short && pt.fullG ? pt.fullPpg : pt && pt.ppg;
     const trendNote = (t && t.short) || (pt && pt.short) ? " · completed games" : "";
-    if (t && t.g && pt && pt.g) {
+    if (t && t.g && tp == null) { trendSub = `No completed game this season yet (${shortCount(t.short)})`; }
+    else if (t && t.g && pt && pt.g) {
       const d = tp - ptp;
       trend = Math.abs(d) < 1 ? "Steady" : d > 0 ? "Up" : "Down";
       trendSub = `vs ${fp(ptp)} PPG in ${STATS_SEASONS[1]} (${d >= 0 ? "+" : "−"}${fp(Math.abs(d))})${trendNote}`;
@@ -14029,6 +14031,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const ng = inf.team ? nflGameState(inf.team, currentWeek()) : null;
     return { inf, t, g, games, sum, pg, avgOf, hasUse, opps, rushPts,
       l3: avgPts(recentGames(inf.sid, inf.pos, 3)), l3s: recentGames(inf.sid, inf.pos, 3).filter(x => x.short).length,
+      l3full: fullAvg(recentGames(inf.sid, inf.pos, 3)),   // the summary's "recent scoring" read: completed games only
       implied: ng && ng.total != null && ng.spread != null ? ng.total / 2 - ng.spread / 2 : null, ng };
   }
   // [label, value(S), format(v), better: 1 higher / -1 lower / 0 neutral]
@@ -14044,7 +14047,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       [`${STATS_SEASONS[0]} PPG`, S => (S.g ? S.t.ppg : null), (v, S) => fp(v) + injStar(S), 1, "ppg"],
     ];
     if ((A.t && A.t.distort) || (B.t && B.t.distort)) vp.push(["PPG in completed games", S => (S.t && S.t.fullG ? S.t.fullPpg : null), v => fp(v), 1]);
-    vp.push(["Last 3 PPG", S => S.l3, (v, S) => fp(v) + (S.l3s ? `<span class="inj-star" title="Includes ${shortCount(S.l3s)}">*</span>` : ""), 1, "l3"],
+    vp.push(["Last 3 PPG", S => S.l3, (v, S) => fp(v) + (S.l3s ? `<span class="inj-star" title="Includes ${shortCount(S.l3s)}">*</span>` : ""), 1, (A.l3s || B.l3s) ? null : "l3"],
+      ...((A.l3s || B.l3s) ? [["Last 3 PPG in completed games", S => S.l3full, v => fp(v), 1, "l3"]] : []),
       ["Games played", S => S.g || null, v => v, 0]);
     const U = { RB: [
         ["Touches / game", S => S.g ? (S.sum("rush_att") + S.sum("rec")) / S.g : null, d1, 1, "vol"],
