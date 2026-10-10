@@ -2,7 +2,9 @@
 latest games, is never "Cooling" because of the weeks he missed: the trend reads his last three games played
 (▲ Rising / ▼ Falling when they run one way, else ▲ Hot / → Steady / ▼ Cooling against his usual) and availability
 is its own tag (this week's report status, or "Missed Wk N"). Also the Compare flow: My Team's Compare opens the
-drawer on the Compare tab with the search, and the drawer's Compare tab picks a player from the board.
+drawer on the Compare tab with the search, and the drawer's Compare tab picks a player from the board. And the
+drawer itself (Oct 10): a season of only injury exits gives no Season trend, and Compare reads recent scoring from
+completed games (a "Last 3 PPG in completed games" row) when a cut-short game is inside the last three.
 
 Synthetic league and synthetic stat lines only (the real stats file is used as a template for its shape).
 Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/form_trend_check.py   (SHOTS=/dir for screenshots)
@@ -36,7 +38,7 @@ mine = L1["rosters"][0]["players"]
 CASES = {}
 def case(key, sid, games, report=None, short=None):
     CASES[key] = {"sid": sid, "name": info[sid]["player"], "team": info[sid]["team"], "games": games, "report": report, "short": short}
-P = [s for s in mine if info[s]["pos"] in ("RB", "WR", "TE", "QB")][:9]
+P = [s for s in mine if info[s]["pos"] in ("RB", "WR", "TE", "QB")][:10]
 FA = next(s for s in L1["free"][2:] if info[s]["pos"] in ("RB", "WR", "TE"))   # free[0] was claimed, free[1] added
 # A: the Rashee Rice case: 2.9 → 12.3 → 15.8, then ruled out (missed week 4, Out on the week 5 report)
 case("rice", P[0], {1: (2, 9), 2: (4, 83), 3: (7, 88)}, report=("Out", "DNP", "Hamstring"))
@@ -56,6 +58,8 @@ case("short", P[6], {1: (7, 110), 2: (7, 100), 3: (1, 20), 4: (8, 100)}, short=[
 case("thin", P[7], {1: (6, 90)}, report=("IR", None, "Knee"))
 # J: small one-way drift is noise: 19.0 → 17.0 → 16.5 against a usual 17.5 stays → Steady (a direction needs 25%)
 case("noise", P[8], {1: (7, 120), 2: (7, 100), 3: (7, 95)})
+# K: his only game this season was cut short by injury (3.0 in week 1, 20% of his snaps): no completed game, so no verdict
+case("onlyshort", P[9], {1: (1, 20)}, short=[1, 0.2, 0.85, "Knee", 8.0], report=("Out", "DNP", "Knee"))
 # F: the same Rice case on a free agent (Waiver Wire)
 case("fa", FA, {1: (2, 9), 2: (4, 83), 3: (7, 88)}, report=("Out", "DNP", "Hamstring"))
 
@@ -153,6 +157,29 @@ with sync_playwright() as p:
     f = form("fa", "#fa-wrap tr")
     ok(f and f.get("trend") == "▲ Rising" and f.get("avail") == "Out", f"Waiver Wire: the same free-agent case reads ▲ Rising + Out ({f})")
     if SHOTS: pg.screenshot(path=f"{SHOTS}/form_waivers.png", full_page=True)
+
+    # --- the player drawer: injury exits never make a verdict on their own (folded in from the weekly check, Oct 10) ---
+    pg.click("#tab-myteam"); pg.wait_for_timeout(800)
+    f = form("onlyshort")
+    ok(f and f["trend"] == "No trend" and f["avail"] == "Out" and "cut short" in f["trendTip"], f"Only a cut-short game: Recent form reads No trend + Out ({f and f['trend']} · {f and f['trendTip']})")
+    pg.evaluate("sid => document.querySelector(`#myteam-body .pl-link[data-player='${sid}']`).click()", CASES["onlyshort"]["sid"]); pg.wait_for_timeout(1200)
+    tr = pg.evaluate("""() => { const c = [...document.querySelectorAll('.ov-cell')].find(x => (x.querySelector('.ov-label') || {}).textContent === 'Season trend');
+      return c ? { val: c.querySelector('.ov-val').textContent.trim(), sub: (c.querySelector('.ov-sub') || {}).textContent || '' } : null; }""")
+    ok(tr and tr["val"] == "–" and tr["sub"].startswith("No completed game this season yet") and "injury-shortened" in tr["sub"], f"Drawer: Season trend with only an injury exit is '–' with 'No completed game this season yet', never Down ({tr})")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
+    # Compare: a cut-short game inside the last three adds a "completed games" row, and the summary reads recent scoring from it
+    pg.evaluate("sid => document.querySelector(`#myteam-body .pl-link[data-player='${sid}']`).click()", CASES["short"]["sid"]); pg.wait_for_timeout(1200)
+    pg.click("[data-pp-tab=compare]"); pg.wait_for_timeout(600)
+    pg.fill("#pm-pick", CASES["noise"]["name"].split()[-1]); pg.wait_for_timeout(500)
+    pg.locator(f".pm-pick-list button:has-text('{CASES['noise']['name']}')").first.click(); pg.wait_for_timeout(1000)
+    cm = pg.evaluate("""() => { const rows = [...document.querySelectorAll('.cmp-table tr')].map(r => [...r.children].map(c => c.textContent.trim()));
+      const find = l => rows.find(r => r.some(c => c === l)); return { l3: find('Last 3 PPG'), l3full: find('Last 3 PPG in completed games'),
+      sum: (document.querySelector('.cmp-sum') || {}).textContent || '', names: [...document.querySelectorAll('.cmp-head .cmp-name')].map(e => e.textContent.trim()) }; }""")
+    ok(cm["names"] == [CASES["short"]["name"], CASES["noise"]["name"]], f"Compare opened on {cm['names']}")
+    ok(cm["l3"] and cm["l3"][0].startswith("12.7") and "*" in cm["l3"][0] and cm["l3"][2].startswith("17.5"), f"Compare: Last 3 PPG keeps the official 12.7* vs 17.5 ({cm['l3']})")
+    ok(cm["l3full"] and cm["l3full"][0] == "17.5" and cm["l3full"][2] == "17.5", f"Compare: a 'Last 3 PPG in completed games' row appears, 17.5 vs 17.5 ({cm['l3full']})")
+    ok("recent scoring" not in cm["sum"], f"Compare summary reads recent scoring from completed games, so the cut-short game gives nobody the lead ('{cm['sum'][:90]}')")
+    pg.click("[data-pm-uncompare]"); pg.wait_for_timeout(400); pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
 
     # --- Compare flow ---
     pg.click("#tab-myteam"); pg.wait_for_timeout(800)
