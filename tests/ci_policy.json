@@ -56,7 +56,8 @@
       "reversal_persist_check",
       "tier_boundary_check",
       "fixture_check",
-      "inflight_check"
+      "inflight_check",
+      "form_trend_check"
     ],
     "weights": {
       "inflight_check": 400,
@@ -73,6 +74,7 @@
       "production_check": 70,
       "drag_scroll_check": 55,
       "drawer_check": 45,
+      "form_trend_check": 40,
       "format_check": 38,
       "history_check": 35,
       "injury_check": 30,
