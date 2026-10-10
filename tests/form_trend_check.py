@@ -34,9 +34,9 @@ info = {r["sleeper_id"]: r for r in rows}
 mine = L1["rosters"][0]["players"]
 # five of my players (RB/WR/TE/QB are all fine: the lines are receiving lines, Full PPR → rec + 0.1 yd + 6 td) and one free agent
 CASES = {}
-def case(key, sid, games, report=None):
-    CASES[key] = {"sid": sid, "name": info[sid]["player"], "team": info[sid]["team"], "games": games, "report": report}
-P = [s for s in mine if info[s]["pos"] in ("RB", "WR", "TE")][:5]
+def case(key, sid, games, report=None, short=None):
+    CASES[key] = {"sid": sid, "name": info[sid]["player"], "team": info[sid]["team"], "games": games, "report": report, "short": short}
+P = [s for s in mine if info[s]["pos"] in ("RB", "WR", "TE", "QB")][:9]
 FA = next(s for s in L1["free"][2:] if info[s]["pos"] in ("RB", "WR", "TE"))   # free[0] was claimed, free[1] added
 # A: the Rashee Rice case: 2.9 → 12.3 → 15.8, then ruled out (missed week 4, Out on the week 5 report)
 case("rice", P[0], {1: (2, 9), 2: (4, 83), 3: (7, 88)}, report=("Out", "DNP", "Hamstring"))
@@ -44,10 +44,18 @@ case("rice", P[0], {1: (2, 9), 2: (4, 83), 3: (7, 88)}, report=("Out", "DNP", "H
 case("falling", P[1], {1: (8, 160), 2: (6, 120), 3: (4, 80), 4: (2, 40)})
 # C: Cooling for real: 10 / 12 / (missed) / 9 against a usual 17.5 (three games this season: last season is the baseline), back and playing
 case("cooling", P[2], {1: (4, 60), 2: (4, 80), 4: (3, 60)})
-# D: 20 → 25 then two missed weeks, not on this week's report
+# D: 20 → 25 (above his usual 17.5) then two missed weeks, not on this week's report
 case("missed", P[3], {1: (8, 120), 2: (9, 160)})
 # E: steady at his usual, Questionable this week
 case("quest", P[4], {1: (7, 100), 2: (8, 100), 3: (7, 100), 4: (8, 100)}, report=("Questionable", "LP", "Ankle"))
+# G: declining AND injured: 24 → 18 → 12, then out (a real decline is never hidden by the injury)
+case("decl_inj", P[5], {1: (8, 160), 2: (6, 120), 3: (4, 80)}, report=("Out", "DNP", "Knee"))
+# H: a game cut short by injury (3.0 in week 3, 20% of his snaps) between normal games: never a dip
+case("short", P[6], {1: (7, 110), 2: (7, 100), 3: (1, 20), 4: (8, 100)}, short=[3, 0.2, 0.85, "Ankle", 12.0])
+# I: one game, then out twice: not enough to call a trend
+case("thin", P[7], {1: (6, 90)}, report=("IR", None, "Knee"))
+# J: small one-way drift is noise: 19.0 → 17.0 → 16.5 against a usual 17.5 stays → Steady (a direction needs 25%)
+case("noise", P[8], {1: (7, 120), 2: (7, 100), 3: (7, 95)})
 # F: the same Rice case on a free agent (Waiver Wire)
 case("fa", FA, {1: (2, 9), 2: (4, 83), 3: (7, 88)}, report=("Out", "DNP", "Hamstring"))
 
@@ -64,6 +72,7 @@ for c in CASES.values():
     opp = d["schedule"][c["team"]][0][1]
     d["players"][c["sid"]] = {"n": c["name"], "p": info[c["sid"]]["pos"], "g": [line(w, c["team"], opp, *g) for w, g in sorted(c["games"].items())]}
     d["short"].pop(c["sid"], None)
+    if c["short"]: d["short"][c["sid"]] = [c["short"]]
 inj = d["injuries"]; inj["week"] = WEEK; ic = inj["cols"]
 for t in teams: inj["teams"][t] = []
 for c in CASES.values():
@@ -120,14 +129,22 @@ with sync_playwright() as p:
     f = form("falling")
     ok(f and f["cells"] == ["18.0Wk 2", "12.0Wk 3", "6.0Wk 4"] and f["trend"] == "▼ Falling" and "falling" in f["trendCls"] and not f["avail"], f"Falling case: 24 → 18 → 12 → 6 reads ▼ Falling with no availability tag ({f and f['trend']} / '{f and f['avail']}')")
     f = form("cooling")
-    ok(f and f["cells"] == ["12.0Wk 2", "OUTWk 3", "9.0Wk 4"] and f["trend"] == "▼ Cooling" and "cool" in f["trendCls"] and "usual 17.5" in f["trendTip"] and not f["avail"], f"Cooling case: 10 · 12 · 9 against a usual 17.5 still reads ▼ Cooling, a missed week in between and no tag once he's back ({f and f['trend']} · {f and f['trendTip']})")
+    ok(f and f["cells"] == ["12.0Wk 2", "OUTWk 3", "9.0Wk 4"] and f["trend"] == "▼ Cooling" and "cool" in f["trendCls"] and "usual 17.5" in f["trendTip"] and f["avail"] == "Back" and "back" in f["availCls"] and "missing Wk 3" in f["availTip"], f"Cooling case: 10 · 12 · 9 against a usual 17.5 still reads ▼ Cooling, with a 'Back' tag for the week he missed ({f and f['trend']} · {f and f['trendTip']})")
     f = form("missed")
-    ok(f and f["cells"] == ["25.0Wk 2", "OUTWk 3", "OUTWk 4"] and f["trend"] == "▲ Rising" and f["avail"] == "Missed Wk 3–4" and "out" in f["availCls"], f"Missed case: 20 → 25 then two missed weeks: ▲ Rising + 'Missed Wk 3–4' ({f and f['trend']} / {f and f['avail']})")
+    ok(f and f["cells"] == ["25.0Wk 2", "OUTWk 3", "OUTWk 4"] and f["trend"] == "▲ Hot" and "usual 17.5" in f["trendTip"] and f["avail"] == "Missed Wk 3–4" and "out" in f["availCls"], f"Missed case: 20 → 25 (two games: a level, not a direction) then two missed weeks: ▲ Hot + 'Missed Wk 3–4' ({f and f['trend']} / {f and f['avail']})")
     f = form("quest")
     ok(f and f["trend"] == "→ Steady" and f["avail"] == "Questionable" and "q" in f["availCls"].split() and "Week 5 injury report: Questionable (Ankle)" in f["availTip"] and "limited practice" in f["availTip"], f"Questionable case: → Steady with a Questionable tag from the report ({f and f['trend']} / {f and f['avail']} · {f and f['availTip']})")
+    f = form("decl_inj")
+    ok(f and f["cells"] == ["18.0Wk 2", "12.0Wk 3", "OUTWk 4"] and f["trend"] == "▼ Falling" and f["avail"] == "Out", f"Declining and injured: 24 → 18 → 12 then out still reads ▼ Falling beside Out, the injury hides no real decline ({f and f['trend']} / {f and f['avail']})")
+    f = form("short")
+    ok(f and f["cells"][1].startswith("3.0") and "*" in f["cells"][1] and f["trend"] == "→ Steady" and "Wk 1, 2, 4" in f["trendTip"] and "Wk 3 cut short by injury, not counted" in f["trendTip"] and not f["avail"], f"Cut-short game: 3.0* in week 3 is skipped, 18 · 17 · 18 reads → Steady, never Cooling ({f and f['trend']} · {f and f['trendTip']})")
+    f = form("thin")
+    ok(f and f["trend"] == "No trend" and "none" in f["trendCls"] and "Only 1 completed game" in f["trendTip"] and f["avail"] == "IR" and "ir" in f["availCls"].split(), f"Thin data: one game then IR reads 'No trend' + IR, no guess ({f and f['trend']} / {f and f['avail']})")
+    f = form("noise")
+    ok(f and f["trend"] == "→ Steady" and "within 15%" in f["trendTip"], f"Noise case: 19.0 → 17.0 → 16.5 is not a Falling trend, → Steady against his usual ({f and f['trend']} · {f and f['trendTip']})")
     # the trend never says out and the availability tag never says cooling: two signals, two elements
-    allf = [form(k) for k in ("rice", "falling", "cooling", "missed", "quest")]
-    ok(all(x and not re.search(r"out|missed", x["trend"], re.I) and not re.search(r"hot|cool|rising|falling|steady", x["avail"], re.I) for x in allf), "Trend labels never carry availability and availability tags never carry form")
+    allf = [form(k) for k in ("rice", "falling", "cooling", "missed", "quest", "decl_inj", "short", "thin")]
+    ok(all(x and not re.search(r"out|missed|back|ir\b", x["trend"], re.I) and not re.search(r"hot|cool|rising|falling|steady|trend", x["avail"], re.I) for x in allf), "Trend labels never carry availability and availability tags never carry form")
 
     # Waiver Wire shows the same two signals for a free agent
     pg.click("#tab-league"); pg.wait_for_timeout(800)

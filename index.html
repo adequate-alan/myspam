@@ -2167,7 +2167,8 @@ th.mt-wk { text-align: right; }
 .rf-trend.hot { color: var(--rb); } .rf-trend.cool { color: var(--qb); } .rf-trend.steady { color: var(--muted); }
 .rf-trend.rising { color: var(--rb); } .rf-trend.falling { color: var(--qb); }
 .rf-avail { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
-.rf-avail.out, .rf-avail.ir { color: var(--st-dnp); } .rf-avail.d { color: var(--st-d); } .rf-avail.q { color: var(--st-q); }
+.rf-avail.out, .rf-avail.ir { color: var(--st-dnp); } .rf-avail.d { color: var(--st-d); } .rf-avail.q { color: var(--st-q); } .rf-avail.back { color: var(--st-fp); }
+.rf-trend.none { color: var(--muted); font-weight: 500; }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
 .fa-opp .sc-dot { margin-right: 4px; }
 @media (max-width: 760px) { #fa-wrap .fa-wk { display: none; } }
@@ -12026,17 +12027,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     renderFA();
   });
   $("fa-search").addEventListener("input", e => { faQuery = e.target.value.trim().toLowerCase(); renderFA(); });
-  /* Recent form (reworked Oct 10: trend and availability are separate signals). The three cells are his team's last
-     three weeks, oldest to newest: his points, BYE when his team didn't play, OUT when it played without him (never 0).
-     Avg = the games he played in that window. The TREND is read from his last three games played this season, reaching
-     back past weeks he missed, completed games only (an injury exit isn't form): ▲ Rising / ▼ Falling when those games run
-     one way (each later game at least the one before; first → last 2+ points and 15%+ apart), otherwise ▲ Hot / → Steady /
-     ▼ Cooling against his usual (season PPG; last season's while this season has 3 games or fewer); no label with fewer
-     than 2 games or no baseline. AVAILABILITY is its own tag beside the trend: this week's injury-report status (Out,
-     Doubtful, Questionable, IR) or "Missed Wk N" when his team's latest game went without him. Neither signal changes the
-     other: a player ruled out is never "Cooling" because of the weeks he missed (Rashee Rice, Oct 10: 12.3 → 15.8, then
-     ruled out, read "▼ Cooling" because the shortened window averaged under his usual; now "▲ Rising" + "Out"). */
-  const RF_MIN_PTS = 2, RF_MIN_PCT = 0.15;
+  /* Recent form (reworked Oct 10, Alan: injury and availability are evaluated separately from performance trends).
+     The three cells are his team's last three weeks, oldest to newest: his points, BYE when his team didn't play, OUT when
+     it played without him (never 0). Avg = the games he played in that window. The TREND is read from his last three
+     games played this season, reaching back past weeks he missed, completed games only (a game cut short by injury is
+     skipped, never a dip): ▲ Rising / ▼ Falling when three games run one way (each later game at least the one before;
+     first → last 2+ points and 25%+ of the bigger one apart, so 22.6 → 19.7 → 19.6 is noise, 42.5 → 35.4 → 12.6 a fall;
+     two games are never a direction), otherwise ▲ Hot / → Steady / ▼ Cooling against his usual (season PPG; last
+     season's while this season has 3 games or fewer). With fewer than 2 completed games, or no baseline and no clear
+     direction, it says "No trend" (muted, with the reason) rather than guessing. AVAILABILITY is its own tag beside it:
+     this week's injury-report status (Out, Doubtful, Questionable, IR), "Missed Wk N" when his team's latest game went
+     without him, or "Back" when he played his latest game after missing one. Neither signal changes the other: a player
+     ruled out is never "Cooling" because of the weeks he missed, and a player whose games really fell before he got hurt
+     still reads "▼ Falling" beside "Out" (an injury hides no real decline). Rashee Rice, Oct 10: 12.3 → 15.8, then ruled
+     out, read "▼ Cooling" because the shortened window averaged under his usual; now "▲ Rising" + "Out". */
+  const RF_MIN_PTS = 2, RF_MIN_PCT = 0.15, RF_DIR_PCT = 0.25;
   function recentForm(sid, pos, team) { return recentFormHtml(recentFormData(sid, pos, team)); }
   function recentFormData(sid, pos, team) {
     const season = STATS_SEASONS[0], log = sid ? seasonLog(season, sid, pos) : null, byW = new Map((log ? log.games : []).map(g => [g.w, g]));
@@ -12053,31 +12058,34 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!weeks.length) return { weeks, avg: null, base: null, played: [], done: [], trend: null, avail };
     const played = weeks.filter(x => x.pts != null), avg = played.length ? played.reduce((a, x) => a + x.pts, 0) / played.length : null;
     // the trend reads his last three completed games this season (an injury exit isn't cooling off, a missed week isn't a game)
-    const done = (log ? log.games : []).filter(g => !g.short).sort((x, y) => x.w - y.w).slice(-3).map(g => ({ w: g.w, pts: g.pts }));
+    const all = (log ? log.games : []).slice().sort((x, y) => x.w - y.w);
+    const done = all.filter(g => !g.short).slice(-3).map(g => ({ w: g.w, pts: g.pts }));
+    const skipped = all.filter(g => g.short && (!done.length || g.w > done[0].w)).map(g => g.w);   // cut-short games inside or after the window
     const avgFull = done.length ? done.reduce((a, x) => a + x.pts, 0) / done.length : null;
     let base = null;
     if (log && log.games.length > 3) base = fullAvg(log.games) ?? totals(log.games).ppg;
     else { const prev = sid && STATS_SEASONS[1] ? seasonLog(STATS_SEASONS[1], sid, pos) : null; if (prev && prev.games.length >= 4) base = fullAvg(prev.games) ?? totals(prev.games).ppg; }
-    return { weeks, avg, base, played, avgFull, done, trend: formTrend(done, base), avail };
+    return { weeks, avg, base, played, avgFull, done, trend: formTrend(done, base, skipped), avail };
   }
-  // Direction first (the games run one way), else level against his usual; null when there isn't enough to say
-  function formTrend(done, base) {
-    if (done.length < 2) return null;
+  // Direction first (the games run one way), else level against his usual; "No trend" when there isn't enough to say
+  function formTrend(done, base, skipped = []) {
+    const skip = skipped.length ? ` · Wk ${skipped.join(", ")} cut short by injury, not counted` : "";
+    if (done.length < 2) return { key: "none", label: "No trend", title: `${done.length ? "Only 1 completed game" : "No completed game"} this season${skip}` };
     const pts = done.map(x => x.pts), first = pts[0], lastP = pts[pts.length - 1], span = lastP - first;
     const oneWay = sgn => pts.every((v, i) => !i || sgn * (v - pts[i - 1]) >= 0);
-    const clear = Math.abs(span) >= RF_MIN_PTS && Math.abs(span) >= RF_MIN_PCT * Math.max(Math.min(first, lastP), 1);
+    const clear = pts.length >= 3 && Math.abs(span) >= RF_MIN_PTS && Math.abs(span) >= RF_DIR_PCT * Math.max(first, lastP, 1);
     const games = `his last ${pts.length} games played (Wk ${done.map(x => x.w).join(", ")})`;
     const usual = base != null ? ` · usual ${fp(base)}` : "";
-    if (clear && oneWay(1)) return { key: "rising", label: "▲ Rising", title: `${fp(first)} → ${fp(lastP)} over ${games}${usual}` };
-    if (clear && oneWay(-1)) return { key: "falling", label: "▼ Falling", title: `${fp(first)} → ${fp(lastP)} over ${games}${usual}` };
-    if (base == null) return null;
-    const avgFull = pts.reduce((a, b) => a + b, 0) / pts.length, d = avgFull - base;
-    const big = Math.abs(d) >= RF_MIN_PTS && Math.abs(d) >= RF_MIN_PCT * Math.max(base, 1);
-    if (!big) return { key: "steady", label: "→ Steady", title: `${fp(avgFull)} over ${games}, within 15% of his usual ${fp(base)}` };
-    return d > 0 ? { key: "hot", label: "▲ Hot", title: `${fp(avgFull)} over ${games}, up from his usual ${fp(base)}` }
-      : { key: "cool", label: "▼ Cooling", title: `${fp(avgFull)} over ${games}, down from his usual ${fp(base)}` };
+    if (clear && oneWay(1)) return { key: "rising", label: "▲ Rising", title: `${fp(first)} → ${fp(lastP)} over ${games}${usual}${skip}` };
+    if (clear && oneWay(-1)) return { key: "falling", label: "▼ Falling", title: `${fp(first)} → ${fp(lastP)} over ${games}${usual}${skip}` };
+    const avgFull = pts.reduce((a, b) => a + b, 0) / pts.length;
+    if (base == null) return { key: "none", label: "No trend", title: `${pts.map(fp).join(" · ")} over ${games}: no clear direction and no season baseline yet${skip}` };
+    const d = avgFull - base, big = Math.abs(d) >= RF_MIN_PTS && Math.abs(d) >= RF_MIN_PCT * Math.max(base, 1);
+    if (!big) return { key: "steady", label: "→ Steady", title: `${fp(avgFull)} over ${games}, within 15% of his usual ${fp(base)}${skip}` };
+    return d > 0 ? { key: "hot", label: "▲ Hot", title: `${fp(avgFull)} over ${games}, up from his usual ${fp(base)}${skip}` }
+      : { key: "cool", label: "▼ Cooling", title: `${fp(avgFull)} over ${games}, down from his usual ${fp(base)}${skip}` };
   }
-  // Availability, separate from form: this week's report status, else the latest team games he missed
+  // Availability, separate from form: this week's report status, else the latest team games he missed, else back from a miss
   function availability(sid, team, weeks) {
     const missed = [];
     for (const x of weeks) { if (x.tag === "OUT") missed.push(x.w); else break; }   // newest first; stop at a game he played or a bye
@@ -12088,7 +12096,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const tip = [`Week ${wk} injury report: ${st}${inj.injury ? ` (${inj.injury})` : ""}`, PRACTICE_TEXT[inj.practice] || "", missed.length ? `missed ${wkText}` : ""].filter(Boolean).join(" · ");
       return { key: ST_CLASS[st] || "out", text: st, tip };
     }
-    return missed.length ? { key: "out", text: `Missed ${wkText}`, tip: `Didn't play ${wkText}: his team played without him` } : null;
+    if (missed.length) return { key: "out", text: `Missed ${wkText}`, tip: `Didn't play ${wkText}: his team played without him` };
+    const back = weeks.length > 1 && weeks[0].pts != null ? weeks.slice(1).filter(x => x.tag === "OUT").map(x => x.w) : [];
+    if (back.length) return { key: "back", text: "Back", tip: `Played Week ${weeks[0].w} after missing Wk ${back.sort((a, b) => a - b).join(", ")}` };
+    return null;
   }
   function recentFormHtml({ weeks, avg, trend, avail }) {
     if (!weeks.length) return `<span class="muted">–</span>`;
