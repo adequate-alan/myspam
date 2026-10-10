@@ -115,6 +115,7 @@ jobs:
           python project_players.py
           python merge_projections.py ../index.html --json ../data/projections.json
           python merge_projections.py ../index.html
+          python snapshot_projections.py
           python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
@@ -140,6 +141,7 @@ jobs:
           if [ -d data/rank_snapshots ]; then git add data/rank_snapshots; fi
           if [ -f data/depth_charts.json ]; then git add data/depth_charts.json; fi
           if [ -f data/projections.json ]; then git add data/projections.json; fi
+          if [ -d data/projections ]; then git add data/projections; fi
           if [ -f data/market/redraft.json ]; then git add data/market/redraft.json; fi
           git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'market' && 'Market values refresh' || steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
           git pull --rebase origin main && git push

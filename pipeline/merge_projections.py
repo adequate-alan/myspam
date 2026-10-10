@@ -62,7 +62,7 @@ def merge(site_path, proj_path="projections.csv"):
 def write_json(site_path, out_path, proj_path="projections.csv"):
     """ROS projections for the browser (keyed by Sleeper ID): never touches RANKINGS_CSV, so values can't move.
     `ppg` = ROS PPG in the site's scoring; `f` = [games of evidence, base PPG (role × efficiency, before environment and
-    schedule), environment, schedule, next-4 environment, next-4 schedule, healthy PPG, prior-season games];
+    schedule), environment, schedule, next-4 environment, next-4 schedule, healthy PPG, prior-season games, confidence 0-1];
     `line` = the projected per-game stat line, which the browser scores with the league's own scoring."""
     import json, datetime
     find = _lookup(proj_path)
@@ -75,7 +75,7 @@ def write_json(site_path, out_path, proj_path="projections.csv"):
             sid = row["sleeper_id"]
             ppg[sid] = round(float(r.proj_ppg), 2)
             f[sid] = [round(float(r.g_eff), 2), round(float(r.base_ppg), 2), round(float(r.env), 3), round(float(r.sched), 3),
-                      round(float(r.env4), 3), round(float(r.sched4), 3), round(float(r.healthy_ppg), 2), int(r.prior_g)]
+                      round(float(r.env4), 3), round(float(r.sched4), 3), round(float(r.healthy_ppg), 2), int(r.prior_g), round(float(r.conf), 3)]
             line[sid] = {k: round(v, 2) for k, v in json.loads(r.line_json).items()}
         elif r is None: missing.append(f'{row["pos"]} {row["player"]}')
     json.dump({"updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"), "ppg": ppg, "f": f, "line": line},
