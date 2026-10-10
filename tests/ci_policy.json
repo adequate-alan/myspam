@@ -45,6 +45,7 @@
       "format_check",
       "value_curve_check",
       "injury_check",
+      "injury_trend_check",
       "league_hub_check",
       "market_edge_check",
       "production_check",
@@ -86,7 +87,8 @@
       "editor_check": 25,
       "drag_check": 22,
       "value_state_check": 20,
-      "value_curve_check": 3
+      "value_curve_check": 3,
+      "injury_trend_check": 40
     },
     "exclusive": [
       "drag_check",
