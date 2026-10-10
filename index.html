@@ -3147,6 +3147,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .gl-fin { font-size: 0.76rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .gl-row.up td { color: var(--muted); }
 .gl-table .gl-row.off td.gl-result, .gl-table .gl-row.off td.gl-opp { text-align: left; }
+.gl-table .gl-row.dnp td.gl-fin { text-align: left; }
 .gl-table.inj-table th, .gl-table.inj-table td { text-align: left; }
 .inj-table tr.tier td { font-size: 0.68rem; font-weight: 650; padding: 6px 16px 5px; color: var(--muted); background: color-mix(in srgb, var(--muted) 6%, transparent); border-color: var(--line-soft); }
 .pr-full { margin-top: 14px; }
@@ -5343,7 +5344,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T02:00Z";
+  const BUILD_ID = "2026-10-15T03:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -13691,7 +13692,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       } else if (r[4] == null) {
         rows.push(`<tr class="gl-row off up"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(r[1], "xs")}${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result" colspan="${span - 2}">${esc(kickoffText(r[3], r[6]))}</td></tr>`);
       } else {
-        rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp">${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result" colspan="${span - 2}">Did not play</td></tr>`);
+        // Did not play: still show how his team's game went (Alan, Oct 15), with DNP where his points would be
+        const res = `${r[4] > r[5] ? "W" : r[4] < r[5] ? "L" : "T"} ${r[4]}–${r[5]}`;
+        rows.push(`<tr class="gl-row off dnp"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(r[1], "xs")}${r[2] ? "vs" : "@"} ${esc(r[1])}</td><td class="gl-result"><span class="gl-res ${res[0]}">${esc(res)}</span></td><td class="gl-pts">DNP</td><td class="gl-fin" colspan="${span - 4}">Did not play</td></tr>`);
       }
     }
     const t = totals(log.games), tg = { ...t, w: "", tm: "" };
