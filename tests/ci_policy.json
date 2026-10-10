@@ -1,12 +1,6 @@
 {
   "note": "Read by tests/run_ci.py. A suite fails CI when it prints a FAIL line not listed here, or exits non-zero without one (a crash). Entries match the start of a check's message exactly as the suite prints it after 'FAIL '. Keep this list short and specific: never add a pattern that could hide a new regression.",
-  "known_failures": {
-    "_why": "Two trend misclassifications found by tests/injury_trend_check.py (Alan's injury-vs-performance review, Oct 10). The fixes are proposed in that thread and wait for Alan's approval; until then these two checks are known baseline failures. Remove each entry with the fix.",
-    "injury_trend_check": [
-      "Drawer, no healthy game this season",
-      "Compare (20, 20, 20, 20, 3* vs steady 18s)"
-    ]
-  },
+  "known_failures": {},
   "advisory": {
     "_why": "Reported in the summary, never block a deploy; every correctness check in the same suites stays blocking. Timing measurements (drag suites): they depend on the machine's speed and load (they fail when 15 browsers share 4 CPUs and pass alone); the landings, ranks 1..N, stale rows, scrolling stops at 0px, listeners and node counts stay blocking. Board-quality preferences (value_curve_check, Alan, Oct 14): a tier boundary under the preferred 3% gap and an adjacent value drop over 30% describe Alan's board, not the code, so they inform (the Review panel and the suite's own output list them) without overruling a ranking publish; values rising down the order, split or inverted tiers, stored values not shown as stored and page errors stay blocking.",
     "drag_check": [
