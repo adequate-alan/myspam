@@ -4141,6 +4141,9 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .pm-head .pm-ros .pd-item.ros .pr-k { color: var(--text-secondary); }
 .pm-head .pm-ros .pr-conf { font: 600 0.66rem/1 var(--font-body); letter-spacing: 0.04em; margin-left: 8px; padding: 2px 6px; border-radius: 999px; cursor: help; color: var(--text-muted); border: 1px solid var(--border); }
 .pm-head .pm-ros .pr-conf.low { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.pm-head .pm-ros .pd-item.n4 b { font-size: 0.95rem; color: var(--text-secondary); }
+.pm-head .pm-ros .pr-n4tag { font: 600 0.68rem/1 var(--font-body); margin-left: 6px; color: var(--text-muted); cursor: help; }
+.pm-head .pm-ros .pr-n4tag.down { color: var(--qb); } .pm-head .pm-ros .pr-n4tag.up { color: var(--rb); }
 .pp-glance.pp-ros .ros-why { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 0.8rem; }
 .pm-valline .pv-k { font: 600 0.7rem/1 var(--font-body); letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; }
 .pm-valline b { font: 700 1.15rem/1.2 var(--font-display); color: var(--text-primary); font-variant-numeric: tabular-nums; }
@@ -5167,12 +5170,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* Weekly projections (data/projections.json, refreshed by the Tuesday job) feed weekly points only. The value model
      keeps the projection columns in RANKINGS_CSV, which change only when someone asks (Alan, Oct 5: nothing scheduled
      changes rankings or values). */
-  let PROJ_WEEKLY = null, PROJ_ROS = null;   // PROJ_ROS: the model's per-player factors (data/projections.json `f`)
+  let PROJ_WEEKLY = null, PROJ_ROS = null, PROJ_LINE = null;   // the model's per-player factors (`f`) and projected stat lines (`line`)
   const projPPGOf = p => (p ? (PROJ_WEEKLY && PROJ_WEEKLY[p.sleeperId] != null ? PROJ_WEEKLY[p.sleeperId] : p.projPPG) : null);
   // ROS PPG (Alan, Oct 14): AM's rest-of-season projected points per game in the scoring on the page (projRatios rescoring,
   // as the weekly projections do). rosRank = his place among everyone at his position with a projection.
-  function rosPPG(p, R) {
-    const base = projPPGOf(p); if (base == null || !p) return null;
+  // With the model's projected stat line (Oct 14) the number is that line scored with the page's scoring, times the
+  // environment and schedule factors (rest of season, or the next 4 games with horizon "n4"); older files without a
+  // line fall back to the base-scoring PPG rescored with projRatios.
+  function rosPPG(p, R, horizon) {
+    if (!p) return null;
+    const f = PROJ_ROS && PROJ_ROS[p.sleeperId], l = PROJ_LINE && PROJ_LINE[p.sleeperId];
+    if (f && l && f.length >= 6) { const pts = gamePoints(l, p.pos, scoringNow()); return horizon === "n4" ? pts * f[4] * f[5] : pts * f[2] * f[3]; }
+    const base = projPPGOf(p); if (base == null) return null;
     R = R || projRatios(scoringNow());
     return base * (R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1);
   }
@@ -5333,7 +5342,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-14T23:00Z";
+  const BUILD_ID = "2026-10-15T00:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9015,7 +9024,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const get = async url => { try { const r = await fetch(url); return r.ok ? r.json() : null; } catch (e) { return null; } };
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
     if (!comps) comps = await get("data/curve_components.json");
-    if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; }
+    if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; }
   }
 
   /* League summaries */
@@ -13075,6 +13084,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (d != null) a.push(`<span class="pr-delta ${d >= 0.05 ? "up" : d <= -0.05 ? "down" : ""}" title="ROS PPG minus his actual season PPG: what AM expects to change going forward">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} vs season</span>`);
       const conf = rosConfidence(p);
       if (conf) a.push(`<span class="pr-conf ${conf.cls}" title="${esc(conf.tip)}">${conf.label}</span>`);
+      const n4 = rosPPG(p, null, "n4"), F = rosFactors(p);
+      if (n4 != null && F) {
+        const r = n4 / ros, tag = r < 0.97 ? "Tough stretch" : r > 1.03 ? "Soft stretch" : "";
+        const why = [F.sched4 < 0.98 ? "tougher opponents" : F.sched4 > 1.02 ? "softer opponents" : "", F.env4 < 0.98 ? "lower team totals" : F.env4 > 1.02 ? "higher team totals" : ""].filter(Boolean).join(", ");
+        a.push(it("n4", "Next 4", fp(n4), `Projected points per game over his next ${NEXT_N_LABEL} games: the same role and efficiency as ROS PPG, with the environment and schedule of those games only${why ? ` (${why})` : ""}`) + (tag ? `<span class="pr-n4tag ${r < 1 ? "down" : "up"}" title="${esc(`Next 4 vs ROS PPG: ${r >= 1 ? "+" : "−"}${Math.abs(100 * (r - 1)).toFixed(0)}%`)}">${tag}</span>` : ""));
+      }
     } else if (p) a.push(it("ros nr", "ROS PPG", "—", "No rest-of-season projection yet"));
     if (ppg != null) b.push(it("sppg", "Season PPG", fp(ppg), `Actual points per game this season over ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName}), injury-shortened games included`));
     if (ppg != null) b.push(it("stot", "Total", fp(curT.pts), `Total fantasy points so far this season: ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName})`));
@@ -13086,16 +13101,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // environment, schedule, healthy PPG], base scoring; every factor is a ratio, so it holds in any scoring).
   function rosFactors(p) {
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId], proj = p ? projPPGOf(p) : null;
-    if (!f || proj == null || !(f[5] > 0)) return null;
-    const [g, roleX, eff, env, sched, hppg] = f, L = Math.log;
+    if (!f || f.length < 8 || proj == null || !(f[6] > 0)) return null;
+    const [g, base, env, sched, env4, sched4, hppg, priorG] = f, L = Math.log;
+    const early = g < 4 && priorG >= 4;   // last season's role still carries most of the weight
     const items = [
-      { k: "role", v: L(roleX / hppg), up: "usage supports more than he has scored", down: "TD / efficiency regression" },
-      { k: "eff", v: L(eff), up: "own efficiency partly credited", down: "own low efficiency partly carried" },
+      { k: "role", v: L(base / hppg), up: early ? "last season's role and efficiency weigh in above this year's points" : "projected opportunities and efficiency support more than he has scored",
+        down: early ? "last season's role and efficiency weigh in below this year's points" : "TD / efficiency regression toward his projected stat line" },
       { k: "env", v: L(env), up: "team expected to score more", down: "team expected to score less" },
       { k: "sched", v: L(sched), up: "softer remaining schedule", down: "tougher remaining schedule" }];
-    const total = L(proj / hppg), rest = total - items.reduce((t, i) => t + i.v, 0);
-    items.push({ k: "sample", v: rest, up: "small sample, pulled toward the position average", down: "small sample, pulled toward the position average" });
-    return { g, proj, hppg, total, items };
+    return { g, proj, hppg, total: L(proj / hppg), items, env4, sched4 };
   }
   // One short reason line for the Overview (Alan, Oct 14): why ROS PPG sits above or below his healthy PPG; never a paragraph.
   function rosWhy(p) {
@@ -13107,6 +13121,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return `${dir > 0 ? "↑" : "↓"} ${what}`;
   }
   // Sample-size tag on ROS PPG (Alan, Oct 14): games of evidence this season (an injury-shortened game counts as a fraction).
+  const NEXT_N_LABEL = "4";
   function rosConfidence(p) {
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId]; if (!f) return null;
     const g = f[0], tip = `${g} game${g === 1 ? "" : "s"} of evidence this season (an injury-shortened game counts as a fraction of a game)`;

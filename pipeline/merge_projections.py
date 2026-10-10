@@ -5,8 +5,8 @@
 
 Players are matched on Sleeper ID; rows without one fall back to position + normalized name (ALIASES for spellings
 that still differ). The JSON carries `ppg` (ROS PPG by Sleeper ID, what the site's weekly projections and the
-ROS PPG line read) and `f` (the model's factors per player: [games of evidence, role xPPG, efficiency, environment,
-schedule, healthy PPG], all in the site's base scoring; the drawer's "why" line and confidence tag read them)."""
+ROS PPG line read), `f` (the model's factors per player, see write_json) and `line` (the projected per-game stat line,
+scored in the browser with the league's own scoring)."""
 import csv, io, re, sys, pandas as pd
 from project_players import norm
 
@@ -60,20 +60,25 @@ def merge(site_path, proj_path="projections.csv"):
     return missing
 
 def write_json(site_path, out_path, proj_path="projections.csv"):
-    """ROS projections for the browser (keyed by Sleeper ID): never touches RANKINGS_CSV, so values can't move."""
+    """ROS projections for the browser (keyed by Sleeper ID): never touches RANKINGS_CSV, so values can't move.
+    `ppg` = ROS PPG in the site's scoring; `f` = [games of evidence, base PPG (role × efficiency, before environment and
+    schedule), environment, schedule, next-4 environment, next-4 schedule, healthy PPG, prior-season games];
+    `line` = the projected per-game stat line, which the browser scores with the league's own scoring."""
     import json, datetime
     find = _lookup(proj_path)
     _, _, lines = _rankings(site_path)
-    head = next(csv.reader([lines[0]])); ppg, f, missing = {}, {}, []
+    head = next(csv.reader([lines[0]])); ppg, f, line, missing = {}, {}, {}, []
     for l in lines[1:]:
         row = dict(zip(head, next(csv.reader([l]))))
         r = find(row)
         if r is not None and row.get("sleeper_id"):
-            ppg[row["sleeper_id"]] = round(float(r.proj_ppg), 2)
-            f[row["sleeper_id"]] = [round(float(r.g_eff), 2), round(float(r.role_x), 2), round(float(r.eff), 3),
-                                    round(float(r.env), 3), round(float(r.sched), 3), round(float(r.healthy_ppg), 2)]
+            sid = row["sleeper_id"]
+            ppg[sid] = round(float(r.proj_ppg), 2)
+            f[sid] = [round(float(r.g_eff), 2), round(float(r.base_ppg), 2), round(float(r.env), 3), round(float(r.sched), 3),
+                      round(float(r.env4), 3), round(float(r.sched4), 3), round(float(r.healthy_ppg), 2), int(r.prior_g)]
+            line[sid] = {k: round(v, 2) for k, v in json.loads(r.line_json).items()}
         elif r is None: missing.append(f'{row["pos"]} {row["player"]}')
-    json.dump({"updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"), "ppg": ppg, "f": f},
+    json.dump({"updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"), "ppg": ppg, "f": f, "line": line},
               open(out_path, "w"), separators=(",", ":"))
     return missing
 
