@@ -152,32 +152,38 @@ with sync_playwright() as p:
         rf = row.locator(".rf").first
         if not rf.count(): return {"text": row.inner_text(), "trend": "", "tags": []}
         t = rf.locator(".rf-trend")
+        a = rf.locator(".rf-avail")
         return {"text": re.sub(r"\s+", " ", rf.inner_text()), "trend": re.sub(r"^[▲▼→]\s*", "", t.inner_text()) if t.count() else "",
+                "avail": a.inner_text() if a.count() else "",
                 "tags": [x.inner_text() for x in rf.locator(".rf-tag").all()], "stars": rf.locator(".inj-star").count()}
+    # Since Oct 10 (PR #9) the trend reads his games played (▲ Rising / ▼ Falling when three run one way, else Hot /
+    # Steady / Cooling against his usual, "No trend" with too little data) and availability is its own tag (.rf-avail:
+    # Out / Questionable / IR / Missed Wk N / Back). Two signals, two elements: a trend label never carries availability.
+    UP, DOWN, NONE = ("Rising", "Hot"), ("Falling", "Cooling"), ("No trend", "")
     f = form_of("up_hurt")
-    ok(f and f["trend"] == "Hot" and f["tags"] == ["OUT"], f"Improving then hurt (10 → 22, OUT in week 5): Recent form reads Hot, the missed game is OUT, not a decline: {f}")
+    ok(f and f["trend"] in UP and f["tags"] == ["OUT"] and f["avail"].upper() == "MISSED WK 5", f"Improving then hurt (10 → 22, OUT in week 5): Recent form reads Rising / Hot with a 'Missed Wk 5' tag, the missed game is OUT, not a decline: {f}")
     f = form_of("cut_short")
     ok(f is None, "cut_short is a free agent, not on my roster")
     f = form_of("decline_hurt")
-    ok(f and f["trend"] == "Cooling" and f["stars"] == 1, f"Declining AND hurt (24 → 8, left week 5 early, Questionable): still Cooling, the injury doesn't hide it: {f}")
+    ok(f and f["trend"] in DOWN and f["stars"] == 1 and f["avail"].upper() == "QUESTIONABLE", f"Declining AND hurt (24 → 8, left week 5 early, Questionable): still Falling / Cooling beside a Questionable tag, the injury doesn't hide it: {f}")
     f = form_of("no_healthy")
-    ok(f and f["trend"] == "" and f["tags"] == ["OUT", "OUT", "OUT"], f"No healthy game (hurt in week 1, out since): no trend, three OUT weeks: {f}")
+    ok(f and f["trend"] in NONE and f["tags"] == ["OUT", "OUT", "OUT"] and f["avail"].upper() == "OUT", f"No healthy game (hurt in week 1, out since): no trend, three OUT weeks, an Out tag: {f}")
     f = form_of("returning")
-    ok(f and f["trend"] == "" and f["tags"] == ["OUT", "OUT"], f"Returning from injury (one game back): no trend yet, not Cooling: {f}")
+    ok(f and f["trend"] not in DOWN and f["tags"] == ["OUT", "OUT"] and f["avail"].upper() == "BACK", f"Returning from injury (15, 15, out, out, 18 vs 16 last season): never Falling / Cooling, with a 'Back' tag: {f}")
     f = form_of("status_only")
-    ok(f and f["trend"] == "Steady", f"Steady player listed Out this week and on IR: Steady, the status changes nothing: {f}")
+    ok(f and f["trend"] == "Steady" and f["avail"].upper() in ("OUT", "IR"), f"Steady player listed Out this week and on IR: Steady, the status is its own tag and changes nothing: {f}")
     f = form_of("one_game")
-    ok(f and f["trend"] == "", f"One healthy game then hurt: no trend: {f}")
+    ok(f and f["trend"] in NONE and f["avail"].upper() == "OUT", f"One healthy game then hurt: no trend, an Out tag: {f}")
     f = form_of("decline")
-    ok(f and f["trend"] == "Cooling" and f["stars"] == 0, f"Control, healthy decline (24 → 8): Cooling: {f}")
+    ok(f and f["trend"] in DOWN and f["stars"] == 0 and not f["avail"], f"Control, healthy decline (24 → 8): Falling / Cooling, no availability tag: {f}")
     f = form_of("steady")
-    ok(f and f["trend"] == "Steady", f"Control, steady 18s: Steady: {f}")
+    ok(f and f["trend"] == "Steady" and not f["avail"], f"Control, steady 18s: Steady, no availability tag: {f}")
 
     # ---------- Recent form on the Waiver Wire (free agent cut short last week) ----------
     pg.click("#tab-league"); pg.wait_for_timeout(1200)
     pg.click("[data-lsub=waivers]"); pg.wait_for_timeout(1500)
     f = form_of("cut_short", "#fa-wrap")
-    ok(f and f["trend"] == "Steady" and f["stars"] == 1, f"Waiver Wire, steady player who left week 5 early (20, 20, 3*): Steady, not Cooling: {f}")
+    ok(f and f["trend"] == "Steady" and f["stars"] == 1, f"Waiver Wire, steady player who left week 5 early (20, 20, 3*): Steady, the cut-short game is skipped, never Cooling: {f}")
 
     # ---------- the drawer's Season trend and weekly chart ----------
     def open_player(k):
@@ -195,7 +201,7 @@ with sync_playwright() as p:
     open_player("decline_hurt"); t = season_trend()
     ok(t and t["v"] == "Down", f"Drawer, declining AND hurt: Season trend Down (the completed games support it): {t}")
     open_player("no_healthy"); t = season_trend()
-    ok(t and t["v"] not in ("Down", "Up"), f"Drawer, no healthy game this season (2 points in an injury exit, 15 PPG last season): no Up / Down label: {t}", pending=True)
+    ok(t and t["v"] not in ("Down", "Up"), f"Drawer, no healthy game this season (2 points in an injury exit, 15 PPG last season): no Up / Down label: {t}")
     open_player("one_game"); t = season_trend()
     ok(t and t["v"] != "Down", f"Drawer, one healthy 20-point game then hurt (20 PPG last season): not Down: {t}")
     open_player("returning"); t = season_trend()
@@ -213,7 +219,7 @@ with sync_playwright() as p:
     summ = pg.locator("#player-modal .cmp-sum").inner_text() if pg.locator("#player-modal .cmp-sum").count() else ""
     last = NAME["steady"].split()[-1]   # the summary uses compact names
     claims_b = any(last in para and "recent scoring" in para for para in summ.split("\n\n"))
-    ok(not claims_b, f"Compare (20, 20, 20, 20, 3* vs steady 18s): the summary doesn't give the steady player the 'recent scoring' edge from an injury exit: {summ!r}", pending=True)
+    ok(not claims_b, f"Compare (20, 20, 20, 20, 3* vs steady 18s): the summary doesn't give the steady player the 'recent scoring' edge from an injury exit: {summ!r}")
 
     ok(not errs, f"No page errors: {errs[:3]}")
     br.close()
