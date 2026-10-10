@@ -25,7 +25,7 @@ Run from the repo root:  python3 tests/ci_pipeline_check.py      (needs PyYAML; 
 6. Pull requests can't deploy, publish or write: no job that runs for a pull request can push, deploy, save the
    verified-code record or use a secret.
 """
-import json, os, re, shutil, subprocess, sys, tempfile
+import json, os, re, shutil, subprocess, sys, tempfile, glob
 import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -217,6 +217,60 @@ try:
     rc, o = ci({"value_curve_check": (["PASS a", "PASS Synthetic baseline failure"], 0)})
     ok(rc == 0 and "no longer fails" in o, "run_ci: a known failure that now passes is reported")
 
+    # the in-job retry (Alan, Oct 15): a browser / server crash is retried once, that suite only; nothing else is
+    NAV = ("Traceback (most recent call last):", "playwright._impl._errors.TimeoutError: Page.goto: Timeout 30000ms exceeded.",
+           "Call log:", '  - navigating to "http://127.0.0.1:57395/#rankings", waiting until "load"')
+    def flaky_suite(name, first_lines, first_rc, then_lines=("PASS a", "PASS b"), then_rc=0, runs_file=None):
+        runs_file = runs_file or os.path.join(tmp, f"runs-{name}")
+        if os.path.exists(runs_file): os.remove(runs_file)   # each case counts its own runs
+        open(os.path.join(fake, "tests", name + ".py"), "w").write(
+            f"import os, sys\nn = int(open({runs_file!r}).read()) if os.path.exists({runs_file!r}) else 0\nopen({runs_file!r}, 'w').write(str(n + 1))\n"
+            f"lines, rc = ({list(first_lines)!r}, {first_rc}) if n == 0 else ({list(then_lines)!r}, {then_rc})\n"
+            "for l in lines: print(l)\nsys.exit(rc)\n")
+        return runs_file
+    def runs(f): return int(open(f).read()) if os.path.exists(f) else 0
+    def ci_only(names):
+        policy["suites"]["fast"] = list(names); json.dump(policy, open(os.path.join(fake, "tests/ci_policy.json"), "w"))
+        r = subprocess.run([sys.executable, "tests/run_ci.py", "fast", "--logs", os.path.join(tmp, "logs")], cwd=fake, capture_output=True, text=True)
+        return r.returncode, r.stdout
+    for f in glob.glob(os.path.join(tmp, "logs", "*")): os.remove(f)
+    rf = flaky_suite("injury_check", ("PASS a",) + NAV, 1)
+    rc, o = ci_only(["injury_check"])
+    led = json.load(open(os.path.join(tmp, "logs", "flaky.json"))) if os.path.exists(os.path.join(tmp, "logs", "flaky.json")) else []
+    ok(rc == 0 and runs(rf) == 2 and "retry injury_check" in o and "passed after a retry (flaky)" in o and "[pass] injury_check: 2 passed" in o
+       and led and led[0]["suite"] == "injury_check" and "navigating to" in led[0]["reason"] and os.path.exists(os.path.join(tmp, "logs", "injury_check.attempt1.log")),
+       f"run_ci: a Playwright navigation timeout is retried once and the retry's pass counts, reported as flaky and written to flaky.json (rc {rc}, runs {runs(rf)})")
+    rf = flaky_suite("injury_check", ("PASS a",) + NAV, 1, then_lines=("PASS a",) + NAV, then_rc=1)
+    rc, o = ci_only(["injury_check"])
+    ok(rc == 1 and runs(rf) == 2 and "crashed" in o and "NEW FAILURE" in o, f"run_ci: the same crash twice blocks (rc {rc}, runs {runs(rf)})")
+    rf = flaky_suite("injury_check", ("PASS a", "FAIL Daniels week 2 flagged"), 1)
+    rc, o = ci_only(["injury_check"])
+    ok(rc == 1 and runs(rf) == 1 and "retry" not in o, f"run_ci: an assertion failure is never retried (runs {runs(rf)})")
+    rf = flaky_suite("injury_check", ("PASS a", "Traceback (most recent call last):", "KeyError: 'snap'"), 1)
+    rc, o = ci_only(["injury_check"])
+    ok(rc == 1 and runs(rf) == 1 and "crashed" in o and "retry" not in o, f"run_ci: a crash in the suite's own code is never retried (runs {runs(rf)})")
+    for first in (("Traceback (most recent call last):", "playwright._impl._errors.Error: BrowserType.launch: Target page, context or browser has been closed"),
+                  ("Traceback (most recent call last):", "playwright._impl._errors.TimeoutError: Page.wait_for_selector: Timeout 30000ms exceeded."),
+                  ("Traceback (most recent call last):", "ConnectionResetError: [Errno 104] Connection reset by peer")):
+        rf = flaky_suite("injury_check", ("PASS a",) + first, 1)
+        rc, o = ci_only(["injury_check"])
+        ok(rc == 0 and runs(rf) == 2, f"run_ci: retried once: {first[-1][:70]}")
+    rf = flaky_suite("injury_check", ("PASS a", "FAIL Daniels week 2 flagged"), 1)   # a FAIL line plus an infrastructure-looking tail still blocks, unretried
+    open(os.path.join(fake, "tests", "injury_check.py"), "a").write("print('Call log: navigating to x, waiting until load')\n")
+    rc, o = ci_only(["injury_check"]); ok(rc == 1 and runs(rf) == 1, "run_ci: a FAIL line wins over an infrastructure-looking tail: no retry, blocks")
+    # the targeted groups: the independent suites and the timing-sensitive ones can run on two runners
+    policy["suites"]["exclusive"] = ["drag_check"]; policy["suites"]["full"] = ["s1", "s2", "drag_check"]
+    for nm in ("s1", "s2", "drag_check"): suite(nm, ["PASS a"], 0)
+    json.dump(policy, open(os.path.join(fake, "tests/ci_policy.json"), "w"))
+    def tg(group, suites="s1,s2,drag_check"):
+        r = subprocess.run([sys.executable, "tests/run_ci.py", "targeted", "--suites", suites, "--group", group, "--logs", os.path.join(tmp, "logs")], cwd=fake, capture_output=True, text=True)
+        return r.returncode, r.stdout
+    rc, o = tg("shared"); ok(rc == 0 and "[pass] s1" in o and "[pass] s2" in o and "drag_check" not in o, "run_ci targeted --group shared: the independent suites only")
+    rc, o = tg("exclusive"); ok(rc == 0 and "[pass] drag_check" in o and "[pass] s1" not in o, "run_ci targeted --group exclusive: the timing-sensitive suites only")
+    rc, o = tg("exclusive", "s1,s2"); ok(rc == 0 and "nothing to run" in o, "run_ci targeted --group exclusive with none listed: exits 0, nothing run")
+    rc, o = tg("all"); ok(rc == 0 and o.count("[pass]") == 3, "run_ci targeted --group all: everything")
+    policy["suites"]["full"] = json.load(open(os.path.join(ROOT, "tests/ci_policy.json")))["suites"]["full"]
+
     # run_ci scheduling (Oct 14): independent suites run in parallel with --jobs, the exclusive (timing) suites run alone
     # afterwards, a heartbeat shows what is running, a suite over the timeout is a failure; nothing is skipped
     import time as _time
@@ -365,6 +419,7 @@ try:
     rp = os.path.join(tmp2, "r"); os.makedirs(os.path.join(rp, "tests")); os.makedirs(os.path.join(rp, ".github/workflows"))
     for f in ("index.html", "tests/release_tier.py", "tests/release_fingerprint.py", "tests/drawer_check.py", ".github/workflows/site.yml"):
         shutil.copy(os.path.join(ROOT, f), os.path.join(rp, f))
+    shutil.copy(os.path.join(ROOT, "tests/ci_policy.json"), os.path.join(rp, "tests/ci_policy.json"))
     open(os.path.join(rp, "README.md"), "w").write("readme\n"); open(os.path.join(rp, ".gitignore"), "w").write("__pycache__/\n")
     G = lambda *a: subprocess.run(["git", *a], cwd=rp, capture_output=True, text=True, check=True).stdout.strip()
     G("init", "-q"); G("add", "-A"); G("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base")
@@ -385,7 +440,13 @@ try:
         for i, fn in edits: lines[i - 1] = fn(lines[i - 1])
         open(os.path.join(rp, "index.html"), "w").write("\n".join(lines))
         for f, txt in (files or {}).items():
-            os.makedirs(os.path.dirname(os.path.join(rp, f)) or rp, exist_ok=True); open(os.path.join(rp, f), "a").write(txt)
+            os.makedirs(os.path.dirname(os.path.join(rp, f)) or rp, exist_ok=True)
+            if f == "tests/ci_policy.json":   # structured edits: register a suite, or change an advisory pattern
+                pol = json.load(open(os.path.join(rp, f)))
+                if txt == "SUITE+": pol["suites"]["full"].append("new_thing_check"); pol["suites"]["weights"]["new_thing_check"] = 40
+                else: pol["advisory"].setdefault("drag_check", []).append("Something new")
+                json.dump(pol, open(os.path.join(rp, f), "w"), indent=1)
+            else: open(os.path.join(rp, f), "a").write(txt)
         G("add", "-A"); G("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", msg, "--allow-empty")
         c = RT.classify(BASE, "HEAD", force); G("checkout", "-q", "-f", BASE); G("clean", "-qfd")
         return c
@@ -404,7 +465,21 @@ try:
         ("render code of the drawer (ppSchedule)", [(in_fn("ppSchedule"), code)], {}, "targeted", ["drawer_check", "xss_check"]),
         ("a class name in a lowercase string is code, not copy", [(line_of(lambda i: F0[i] == "tradeCard" and 'class="th-age' in L0[i - 1]), lambda l: l.replace('class="th-age', 'class="th-agex', 1))], {}, "targeted", None),
         ("a test file only", [], {"tests/drawer_check.py": "\n# x\n"}, "targeted", ["drawer_check"]),
-        ("two UI features at once", [(in_fn("tradeCard"), code), (in_fn("renderTrade"), code)], {}, "full", []),
+        ("two UI features of one family (tradeCard + renderTrade, league): their suites together", [(in_fn("tradeCard"), code), (in_fn("renderTrade"), code)], {}, "targeted",
+            sorted({"form_trend_check", "league_hub_check", "trade_history_check", "xss_check", "roster_fit_check", "trade_target_check"})),
+        ("UI features from different areas (tradeCard + ppSchedule)", [(in_fn("tradeCard"), code), (in_fn("ppSchedule"), code)], {}, "full", []),
+        # the editor family (Alan, Oct 15): a control that reuses the movement functions runs the editor's suites, not the drawer's, league's or market's
+        ("Move to rank's apply (mvApply): the editor lane", [(in_fn("mvApply"), code)], {}, "targeted", sorted(RT.RISK["editor-ui"][1])),
+        ("the board's click handler (on:rank-body:click)", [(in_fn("on:rank-body:click"), code)], {}, "targeted", sorted(RT.RISK["editor-ui"][1])),
+        ("the popover's keydown handler (on:mvPop:keydown)", [(in_fn("on:mvPop:keydown"), code)], {}, "targeted", sorted(RT.RISK["editor-ui"][1])),
+        ("editor control + the drop preview (mvApply + showDrop): one family, their suites", [(in_fn("mvApply"), code), (in_fn("showDrop"), code)], {}, "targeted",
+            sorted(set(RT.RISK["editor-ui"][1]) | set(RT.RISK["drag-ui"][1]))),
+        ("editor control + the board rows (mvApply + renderRankings): one family", [(in_fn("mvApply"), code), (in_fn("renderRankings"), code)], {}, "targeted",
+            sorted(set(RT.RISK["editor-ui"][1]) | set(RT.RISK["rankings-ui"][1]))),
+        ("editor control + the drawer (mvApply + ppSchedule): different areas", [(in_fn("mvApply"), code), (in_fn("ppSchedule"), code)], {}, "full", []),
+        ("the movement function itself (moveOverall)", [(in_fn("moveOverall"), code)], {}, "full", []),
+        ("movePlayer's insertion rule", [(in_fn("movePlayer"), code)], {}, "full", []),
+        ("a document-level listener (on:document:pointerdown, shared by several features)", [(in_fn("on:document:pointerdown"), code)], {}, "full", []),
         ("Architecture C value state (stateValues)", [(in_fn("stateValues"), code)], {}, "full", []),
         ("publishing (publishLive)", [(in_fn("publishLive"), code)], {}, "full", []),
         ("a shared helper (esc)", [(in_fn("esc") if any(F0[i] == "esc" and L0[i-1].strip() and not re.match(r"^  (const|function)", L0[i-1]) for i in range(1, len(L0)+1)) else line_of(lambda i: F0[i] == "esc"), code)], {}, "full", []),
@@ -412,6 +487,13 @@ try:
         ("page markup", [(line_of(lambda i: R0[i] == "markup" and "<nav" in L0[i - 1]), lambda l: l.replace("<nav", "<nav data-x", 1))], {}, "full", []),
         ("a function not in the map", [(line_of(lambda i: R0[i] == "js" and F0[i] is not None and F0[i] not in RT.FN and L0[i - 1].strip() and not L0[i - 1].strip().startswith("//") and not re.match(r"^  (async\s+)?(function|const|let|var)\b", L0[i - 1])), code)], {}, "full", []),
         ("the workflow", [], {".github/workflows/site.yml": "\n# x\n"}, "full", []),
+        ("the policy registering a new suite (its name and weight only; the suite file itself is a test-file change)", [], {"tests/ci_policy.json": "SUITE+", "tests/new_thing_check.py": "\n# x\n"}, "targeted", ["new_thing_check"]),
+        ("the policy registering a suite with nothing else changed: fast", [], {"tests/ci_policy.json": "SUITE+"}, "fast", []),
+        ("the policy changing anything else (an advisory pattern)", [], {"tests/ci_policy.json": "ADVISORY+"}, "full", []),
+        # the Move to rank change as it was (Oct 15): editor control + drop preview + board rows + its tests + the policy entry → the editor family's suites
+        ("Move to rank as a whole (mvApply + showDrop + renderRankings + tests + the policy entry)", [(in_fn("mvApply"), code), (in_fn("showDrop"), code), (in_fn("renderRankings"), code)],
+            {"tests/ci_policy.json": "SUITE+", "tests/move_to_rank_check.py": "\n# x\n", "tests/drag_check.py": "\n# x\n", "CLAUDE.md": "\nx\n"}, "targeted",
+            sorted(set(RT.RISK["editor-ui"][1]) | set(RT.RISK["drag-ui"][1]) | set(RT.RISK["rankings-ui"][1]))),
         ("CSS with a 'CI: full' commit trailer", [(css_line, lambda l: l + " ")], {}, "full", []),
     ]
     for label, edits, files, want, suites in cases:

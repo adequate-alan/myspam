@@ -5376,7 +5376,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T10:00Z";
+  const BUILD_ID = "2026-10-15T12:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -8073,13 +8073,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const inp = $("mv-input"); inp.value = String(MV.mode === "overall" ? me.rank : me.posNum);
     mvPop.hidden = false; mvRender(); inp.focus(); inp.select();
     window.addEventListener("scroll", mvPlace, { passive: true }); window.addEventListener("resize", mvPlace);
+    document.addEventListener("pointerdown", mvOutside);
   }
+  function mvOutside(e) { if (!mvPop.hidden && !e.target.closest("#mv-pop") && !e.target.closest(".rk-btn")) mvClose(); }
   function mvClose(refocus) {
     if (mvPop.hidden) return;
     mvPop.hidden = true;
     const b = MV.btn; MV.id = null; MV.btn = null;
     if (b && document.contains(b)) { b.setAttribute("aria-expanded", "false"); if (refocus) b.focus({ preventScroll: true }); }
     window.removeEventListener("scroll", mvPlace); window.removeEventListener("resize", mvPlace);
+    document.removeEventListener("pointerdown", mvOutside);
   }
   function mvApply() {
     const me = byId.get(MV.id); if (!me) { mvClose(); return; }
@@ -8109,7 +8112,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (i >= 0 && (e.shiftKey ? i === 0 : i === f.length - 1)) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
     }
   });
-  document.addEventListener("pointerdown", e => { if (!mvPop.hidden && !e.target.closest("#mv-pop") && !e.target.closest(".rk-btn")) mvClose(); });
 
   /* Clicks: arrows, value editing, back-to-auto */
   $("rank-body").addEventListener("click", e => {
