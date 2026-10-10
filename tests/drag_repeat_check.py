@@ -37,7 +37,7 @@ def ok(cond, msg):
     print(("PASS " if cond else "FAIL ") + msg)
     if not cond: failures.append(msg)
 
-ROWS = """() => [...document.querySelectorAll('#rank-body tr.player')].map(r => ({ id: r.dataset.id, rk: ((r.querySelector('td.rk') || {}).firstChild || {}).nodeValue }))"""
+ROWS = """() => [...document.querySelectorAll('#rank-body tr.player')].map(r => ({ id: r.dataset.id, rk: (((r.querySelector('td.rk .rk-btn') || r.querySelector('td.rk')) || {}).firstChild || {}).nodeValue }))"""
 SNAP_OK = """() => {
   const s = SPM.rankingSnapshot(), v = Object.values(s), ranks = v.map(a => a[0]).filter(x => x != null).sort((a, b) => a - b);
   const seq = ranks.every((r, i) => r === i + 1);
@@ -130,7 +130,7 @@ with sync_playwright() as p:
         landed = True
         if m:
             want = int(m.group(3))
-            now = pg.evaluate(f"(() => {{ const r = document.querySelector('#rank-body tr.player[data-id=\"{pid}\"]'); return r ? Number((r.querySelector('td.rk').firstChild || {{}}).nodeValue) : null; }})()")
+            now = pg.evaluate(f"(() => {{ const r = document.querySelector('#rank-body tr.player[data-id=\"{pid}\"]'); return r ? Number(((r.querySelector('td.rk .rk-btn') || r.querySelector('td.rk')).firstChild || {{}}).nodeValue) : null; }})()")
             landed = now == want
         costs.append(cost); results.append((c, landed))
         return c, landed

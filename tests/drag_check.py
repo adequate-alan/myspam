@@ -35,7 +35,7 @@ INSTR = r"""() => {
   };
   requestAnimationFrame(loop);
 }"""
-ROWS = "() => [...document.querySelectorAll('#rank-body tr.player')].map(r => ({ id: r.dataset.id, rk: (r.querySelector('td.rk').firstChild || {}).nodeValue }))"
+ROWS = "() => [...document.querySelectorAll('#rank-body tr.player')].map(r => ({ id: r.dataset.id, rk: ((r.querySelector('td.rk .rk-btn') || r.querySelector('td.rk')).firstChild || {}).nodeValue }))"
 
 with sync_playwright() as p:
     kw = {"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}
@@ -90,7 +90,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(100)
     c = chip(); target = int(c.split("#")[-1]); did = pg.evaluate("document.querySelector('.drag-float tr.player').dataset.id")
     # the probe is armed by the pointerup itself: the first frame painted after the release
-    pg.evaluate("() => { window.__first = null; document.addEventListener('pointerup', () => { const t0 = performance.now(); requestAnimationFrame(() => { const rows = [...document.querySelectorAll('#rank-body tr.player')]; const i = rows.findIndex(r => r.dataset.id === '" + did + "'); window.__first = { ms: performance.now() - t0, i: i + 1, rk: rows[i].querySelector('td.rk').firstChild.nodeValue, float: !!document.querySelector('.drag-float') }; }); }, { capture: true, once: true }); }")
+    pg.evaluate("() => { window.__first = null; document.addEventListener('pointerup', () => { const t0 = performance.now(); requestAnimationFrame(() => { const rows = [...document.querySelectorAll('#rank-body tr.player')]; const i = rows.findIndex(r => r.dataset.id === '" + did + "'); window.__first = { ms: performance.now() - t0, i: i + 1, rk: (rows[i].querySelector('td.rk .rk-btn') || rows[i].querySelector('td.rk')).firstChild.nodeValue, float: !!document.querySelector('.drag-float') }; }); }, { capture: true, once: true }); }")
     pg.mouse.up(); pg.wait_for_timeout(1200)
     r = stop(); first = pg.evaluate("window.__first"); after = pg.evaluate(ROWS)
     i = next(k for k, row in enumerate(after) if row["id"] == did)
