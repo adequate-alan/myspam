@@ -2177,7 +2177,7 @@ th.mt-wk { text-align: right; }
 .tx-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 14px; }
 .tx-filters .method-note { margin: 0; flex-basis: 100%; }
 .tx-selects { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.st-mgr { color: var(--muted); font-size: 0.84rem; white-space: nowrap; }
+.st-table td.st-mgr { color: var(--muted); font-size: 0.84rem; white-space: nowrap; }
 .st-table .bm small { font-size: 0.66rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
 .mv-tags { display: inline-flex; gap: 6px; }
 .mv-tag { padding: 3px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-2); }
@@ -2306,7 +2306,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-pct.B { text-align: right; }
 .mx-bar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--line-soft); }
 .mx-bar-a { background: var(--accent-primary); }
-.mx-bar-b { flex: 1; background: color-mix(in srgb, var(--gold) 70%, transparent); margin-left: 2px; }
+.mx-bar-b { flex: 1; background: color-mix(in srgb, var(--muted) 55%, transparent); margin-left: 2px; }   /* neutral vs red (red + neutrals theme) */
 .mx-bar-lbl.mx-partial { color: var(--warn); cursor: help; }   /* partial: the bar stays, muted and striped, and says what's missing */
 .mx-bar.partial .mx-bar-a, .mx-bar.partial .mx-bar-b { opacity: .5; background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--surface) 55%, transparent) 4px 7px); }
 .mx-bar-row.partial .mx-pct { color: var(--muted); font-weight: 600; }
@@ -3080,9 +3080,10 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tw-game b { font-size: 1.15rem; font-weight: 780; color: var(--cream); letter-spacing: -0.01em; }
 .tw-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .tw-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.tw-label { font-size: 0.56rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-label { font-size: 0.56rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); line-height: 1.3; }
+.tw-stat .tw-label, .tw-stat .tw-sub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .tw-val { font-size: 1rem; font-weight: 720; color: var(--cream); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tw-sub { font-size: 0.66rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tw-sub { font-size: 0.66rem; color: var(--muted); line-height: 1.3; }
 .tw-def { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 .tw-def .tw-label { margin-right: 2px; }
 .rk-chip { --rk: var(--gold); display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; }
@@ -3116,9 +3117,9 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .pr-me { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 14px; }
 .pr-scope { font-size: 0.78rem; color: var(--muted); }
 .pr-sec { margin-bottom: 18px; }
-.pr-team { display: flex; align-items: center; gap: 10px; padding: 9px 14px; margin-bottom: 8px; border-radius: var(--radius-sm); border: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--tc) 8%, var(--surface)); box-shadow: inset 3px 0 0 var(--tc); }
-.pr-team b { font-size: 0.98rem; font-weight: 760; color: var(--cream); }
+.pr-team.tm { display: flex; align-items: center; gap: 10px; padding: 9px 14px; margin-bottom: 8px; border-radius: var(--radius-sm); border: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--tc) 8%, var(--surface)); box-shadow: inset 3px 0 0 var(--tc); }   /* .tm scopes it: Power Rankings rows use .pr-team too (Oct 11) */
+.pr-team.tm b { font-size: 0.98rem; font-weight: 760; color: var(--cream); }
 .pr-opp { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .pr-wk { margin-left: auto; font-size: 0.72rem; color: var(--muted); }
 .gl-table.inj-table tr.pr-group td { padding: 6px 12px 5px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); background: color-mix(in srgb, var(--muted) 6%, transparent); text-align: left; }
@@ -3546,6 +3547,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .th-card { padding: 12px 14px; }
   .pr-rank { grid-area: rank; align-self: start; padding-top: 6px; }
   .pr-team { grid-area: team; }
+  .pr-name { white-space: normal; line-height: 1.25; }
   .pr-strength { grid-area: strength; flex-direction: row; align-items: center; gap: 12px; }
   .pr-strength .pr-bar { flex: 1; }
   .pr-score { min-width: 56px; font-size: 0.9rem; }
@@ -4057,7 +4059,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .mv-mode { border: 0; background: none; color: var(--text-muted); font: 600 0.68rem/1 var(--font-body); letter-spacing: .05em; text-transform: uppercase; padding: 6px 10px; border-radius: 5px; cursor: pointer; }
 .mv-mode[aria-checked="true"] { background: var(--surface); color: var(--text-strong); box-shadow: inset 0 -2px 0 var(--accent-primary); }
 .mv-mode:disabled { opacity: .4; cursor: default; } .mv-mode:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
-.mv-row { display: flex; align-items: center; gap: 8px; margin: 0; }
+.mv-pop .mv-row { display: flex; align-items: center; gap: 8px; margin: 0; }   /* scoped: the Transactions feed's move rows are .mv-row too (Oct 11) */
 .mv-lab { font-size: 0.7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
 .mv-pop .mv-input { width: 84px; text-align: left; }
 .mv-now, .mv-to { margin: 7px 0 0; font-size: 0.78rem; line-height: 1.35; color: var(--text-muted); } .mv-to { color: var(--text-primary); } .mv-to.err { color: var(--warn); }
@@ -5381,7 +5383,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T12:30Z";
+  const BUILD_ID = "2026-10-15T15:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
