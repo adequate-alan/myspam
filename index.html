@@ -2405,6 +2405,33 @@ th.fa-proj { text-align: right; }
    last resort instead of clipping. */
 .mx-detail { overflow-x: auto; }
 @media (max-width: 600px) {
+  /* Phones (Alan, Oct 11): no sideways scrolling for essential information. Standings keep Rank · Team · Record · Playoff odds, with
+     PF, PA, streak and AM Power Rank as a muted line under the team (the row still opens the team's breakdown). The Waiver Wire keeps
+     Rk · Player · Pos · PPG · Fit; Wk proj, Recent form and Matchup live in the player drawer the row opens. Desktop is unchanged. */
+  .st-table th:nth-child(5), .st-table td:nth-child(5), .st-table th:nth-child(6), .st-table td:nth-child(6), .st-table th:nth-child(7), .st-table td:nth-child(7),
+  .st-table th:nth-child(8), .st-table td:nth-child(8), .st-table th:nth-child(9), .st-table td:nth-child(9) { display: none; }
+  .st-table .st-sub { display: block; margin-top: 2px; font-size: 0.66rem; font-weight: 500; color: var(--muted); white-space: normal; }
+  .st-table .pl-name { white-space: normal; }
+  .st-table .pl-cell .face { display: none; }   /* the name gets the width; the team's avatar is in the breakdown the row opens */
+  .st-table tbody td, .st-table thead th { padding-inline: 6px; }
+  .st-table tbody td:first-child, .st-table thead th:first-child { padding-left: 10px; }
+  .st-table td.st-odds { min-width: 0; padding-right: 10px; }
+  .st-odds-bar { width: 44px; }
+  .st-table thead th.st-odds-h { white-space: normal; line-height: 1.3; width: 72px; }
+  .st-table thead th:nth-child(4) { width: 52px; }
+  #fa-wrap .fa-proj, #fa-wrap .fa-l3 { display: none; }
+  #fa-wrap th.fa-num + th.fa-num, #fa-wrap td.fa-num + td.fa-num, #fa-wrap .fa-fit { display: table-cell; }
+  #fa-wrap .fa-fit-t { white-space: normal; }
+  #fa-wrap .fa-table tbody td, #fa-wrap .fa-table thead th { padding-inline: 6px; }   /* the 16px desktop padding (same specificity as the phone rule below) would keep the five columns at 467px */
+  #fa-wrap .fa-table tbody td:first-child, #fa-wrap .fa-table thead th:first-child { padding-left: 10px; }
+  #fa-wrap .fa-table .pos-col { padding-right: 2px !important; }
+  #fa-wrap .fa-table tbody td:last-child, #fa-wrap .fa-table thead th:last-child { padding-right: 12px; }
+  #fa-wrap td.rk { width: 30px; }
+  #fa-wrap .pos-col { width: 1%; }
+  #fa-wrap td.fa-fit { max-width: 96px; }
+  #fa-wrap .pl-cell .face { display: none; }   /* the photo gives the name room to wrap between words; the drawer the row opens has it */
+  #fa-wrap .fa-trend { white-space: normal; }
+  #fa-wrap .fa-fit-t { font-size: 0.72rem; line-height: 1.2; }
   .mx-row { gap: 4px 6px; padding: 12px 10px 6px; }
   .mx-tname b { white-space: normal; overflow-wrap: anywhere; line-height: 1.15; font-size: 0.92rem; }
   .mx-tname span { white-space: normal; font-size: 0.7rem; }
@@ -2557,6 +2584,10 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
   .ro-am small { display: none; } .ro-rk { width: auto; }   /* Impeccable pass (Oct 11): the overall rank beside the AM chip pushed PPG off screen at 390px; it stays in the cell's tooltip */
   .ro-g { white-space: normal; }
   .ro-week .select { min-width: 0; }
+  .ro-table td, .ro-table thead th { padding-inline: 4px; }   /* Oct 11: fits 375px phones too */
+  .ro-table .ro-slot { width: 44px; padding-left: 8px !important; }
+  .ro-pl .pl-name { white-space: normal; }
+  .ro-wk { width: 56px; }
 }
 .pr-head {
   white-space: nowrap; padding: 0 18px 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
@@ -2700,6 +2731,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .st-table .bm { font-size: 0.8rem; margin-left: 0; }
 .st-row:hover td { background: var(--surface-hover); }
 .st-row.mine td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+.st-sub { display: none; }   /* phones only: PF · PA · streak · AM PR under the team (Alan, Oct 11: phones keep Rank, Team, Record and Playoff odds) */
 /* Player modal: Depth Chart tab */
 .dc-table th.dc-slot { text-align: left; white-space: nowrap; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink-2); text-transform: none; }
 .dc-table td, .dc-table thead th { white-space: nowrap; text-align: left !important; }
@@ -2726,7 +2758,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .st-odds-bar { display: block; margin: 4px 0 0 auto; width: 64px; height: 4px; border-radius: 2px; background: var(--line-soft); overflow: hidden; }
 .st-odds-bar span { display: block; height: 100%; background: var(--muted); }
 .st-odds.hi .st-odds-bar span { background: var(--rb); }
-.st-odds.mid .st-odds-bar span { background: var(--gold); }
+.st-odds.mid .st-odds-bar span { background: var(--ink-2); }   /* Oct 11: mid odds are a statistic, not a selection; brand red stays for identity and selection */
 /* trade history */
 .th-feed { display: flex; flex-direction: column; gap: 14px; }
 .th-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 14px 18px 12px; }
@@ -5386,7 +5418,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T16:30Z";
+  const BUILD_ID = "2026-10-15T17:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -11259,7 +11291,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     };
     const row = (r, rk) => `<tr class="st-row${r.t.mine ? " mine" : ""}" data-standing-team="${r.t.rosterId}" tabindex="0">
           <td class="rk">${rk}</td>
-          <td><div class="pl-cell">${teamFace(r.t, "sm")}<div class="pl-text"><span class="pl-name">${esc(r.t.name)}</span>${r.t.mine ? `<span class="owner mine">You</span>` : ""}</div></div></td>
+          <td><div class="pl-cell">${teamFace(r.t, "sm")}<div class="pl-text"><span class="pl-name">${esc(r.t.name)}</span>${r.t.mine ? `<span class="owner mine">You</span>` : ""}<span class="st-sub">PF ${r.st.pf ? pts(r.st.pf) : "–"} · PA ${r.st.pa ? pts(r.st.pa) : "–"} · ${esc(streakText(r.st.streak))} · AM PR ${ordinal(r.x.power)}</span></div></div></td>
           <td class="st-mgr">${esc(r.t.manager)}</td>
           <td class="num">${esc(recordText(r.st) || "0-0")}</td><td class="num">${r.st.pf ? pts(r.st.pf) : "–"}</td><td class="num">${r.st.pa ? pts(r.st.pa) : "–"}</td>
           <td class="num">${esc(streakText(r.st.streak))}</td><td class="num"><b>${ordinal(r.x.power)}</b></td><td class="num">${vs(r)}</td>${oddsCell(po, r.t.rosterId)}</tr>`;
