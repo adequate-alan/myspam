@@ -2860,7 +2860,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .pr-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .pr-row.mine { box-shadow: inset 3px 0 0 var(--gold); }
 .pr-rank { font-size: 1.15rem; font-weight: 800; font-stretch: 112%; color: var(--rank); font-variant-numeric: tabular-nums; }
-.pr-item:nth-child(-n+3) .pr-rank { color: var(--gold); }
+.pr-item:nth-child(-n+3) .pr-rank { color: var(--heading); }   /* Oct 11: a rank is a statistic; red stays for team identity and selection (it read the retired gold token) */
 .pr-team { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .pr-text { display: flex; flex-direction: column; min-width: 0; }
 .pr-name { font-weight: 700; font-size: 0.98rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5418,7 +5418,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T17:10Z";
+  const BUILD_ID = "2026-10-15T17:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
