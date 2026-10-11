@@ -2453,6 +2453,7 @@ th.fa-proj { text-align: right; }
   .mx-table td:nth-child(3) { display: none; }
   .mx-table td.mx-game { grid-column: 2; grid-row: 2; display: flex; align-items: center; gap: 6px; font-size: 0.7rem; white-space: nowrap; overflow: hidden; }
   .mx-table td.mx-game small { display: inline; font-size: 0.66rem; }
+  .mx-table td.mx-game .mx-opp + small::before { content: "· "; }
   .mx-table td.mx-pts { grid-column: 3; grid-row: 1 / span 2; text-align: right; }
   .mx-table tr.mx-empty td[colspan] { grid-column: 2; grid-row: 1 / span 2; }
   .mx-pl .pl-head { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
@@ -2582,7 +2583,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
   .ro-table th.ro-num, .ro-table td.ro-num { display: none; }
   .ro-table th.ro-num:last-child, .ro-table td.ro-num:last-child { display: table-cell; }
   .ro-am small { display: none; } .ro-rk { width: auto; }   /* Impeccable pass (Oct 11): the overall rank beside the AM chip pushed PPG off screen at 390px; it stays in the cell's tooltip */
-  .ro-g { white-space: normal; }
+  .ro-g { white-space: normal; display: block; line-height: 1.5; } .ro-g .vs-line { vertical-align: middle; }
   .ro-week .select { min-width: 0; }
   .ro-table td, .ro-table thead th { padding-inline: 4px; }   /* Oct 11: fits 375px phones too */
   .ro-table .ro-slot { width: 44px; padding-left: 8px !important; }
@@ -3133,6 +3134,12 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tlogo { width: 22px; height: 22px; object-fit: contain; flex: none; vertical-align: middle; }
 .tlogo.xs { width: 16px; height: 16px; margin-right: 6px; } .tlogo.sm { width: 20px; height: 20px; } .tlogo.md { width: 28px; height: 28px; }
 .tlogo.broken { display: none; }
+.vs-line { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.vs-line .tlogo.xs { width: 16px; height: 16px; margin: 0; }
+.vs-line .vs-ha { color: var(--muted); font-weight: 500; }
+.vs-line .vs-opp { font-weight: 600; }
+.ro-g .vs-line .tlogo.xs { width: 14px; height: 14px; margin: 0; }
+.ro-g .ro-gs { margin: 0 4px; }
 .pm-head.tm { box-shadow: inset 0 3px 0 var(--tc); }
 .pm-head.tm .face.xl { box-shadow: inset 0 0 0 1px var(--line), 0 0 0 3px var(--surface), 0 0 0 5px color-mix(in srgb, var(--tc) 70%, transparent); }
 .pp-meta .tlogo { margin-right: -4px; }
@@ -5410,6 +5417,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const teamStyle = abbr => { const a = teamAccent(abbr); return a ? `--tc-d:${a.d};--tc-l:${a.l}` : ""; };
   const teamLogo = (abbr, size = "") => { const m = teamMeta(abbr); return m ? `<img class="tlogo${size ? " " + size : ""}" src="${m.logo}" alt="${esc(m.nick)}" title="${esc(m.name)}" loading="lazy" decoding="async" onerror="this.classList.add('broken')">` : ""; };
+  /* Game line for player listings (Alan, Oct 11): his own team's logo first, then vs/@, then the opponent's logo and
+     abbreviation, so the opponent's logo never reads as the player's team (his abbreviation stays beside his name). */
+  const vsLine = (team, opp, home) => `<span class="vs-line" title="${esc(`${team || ""} ${home ? "vs" : "@"} ${opp}`.trim())}">${team ? teamLogo(team, "xs") : ""}<span class="vs-ha">${home ? "vs" : "@"}</span>${teamLogo(opp, "xs")}<b class="vs-opp">${esc(opp)}</b></span>`;
   // Masthead height, so sticky table headers sit just under it
   (() => { const m = document.querySelector(".masthead"); if (!m) return;
     const set = () => document.documentElement.style.setProperty("--mast-h", m.offsetHeight + "px");
@@ -5418,7 +5428,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T17:50Z";
+  const BUILD_ID = "2026-10-15T18:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -11872,7 +11882,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         : `<tr class="${x.proj.kind === "out" ? "out" : x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
             <td><div class="mx-pl">${face(x.e.sid, x.e.name, "xs")}<span class="mx-pl-t"><span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.e.sid, x.e.name, "mx-name") : `<span class="mx-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span></span></div></td>
             <td><span class="pos ${esc(x.e.pos)}">${esc(x.e.pos || "–")}</span></td>
-            <td class="mx-game">${x.g.oppTeam ? `<span class="mx-opp">${teamLogo(x.g.oppTeam, "xs")}${x.g.home ? "vs" : "@"} ${esc(x.g.oppTeam)}</span>` : ""}<small class="${x.proj.kind === "out" ? "out" : x.g.kind}">${esc(x.proj.kind === "out" ? "Out" : x.g.text || "")}</small></td>
+            <td class="mx-game">${x.g.oppTeam ? `<span class="mx-opp">${vsLine(x.e.team, x.g.oppTeam, x.g.home)}</span>` : ""}<small class="${x.proj.kind === "out" ? "out" : x.g.kind}">${esc(x.proj.kind === "out" ? "Out" : x.g.text || "")}</small></td>
             ${ptsCell(x)}</tr>`;
       const lineup = s => { const top = s.starters.filter(x => !x.empty && (x.g.kind === "final" || x.g.kind === "live")).sort((a, b) => b.pts - a.pts)[0];
         return `<div class="mx-lineup"><h4>${teamFace(s.team, "xs")}${esc(s.team.name)}${top ? `<small>Top: ${esc(compactName(top.e.name))} ${fp(top.pts)}</small>` : ""}<span>${fp(s.pts)}${state !== "final" ? `<small class="mx-lu-proj" title="${esc(LIVE_PROJ_TIP)}">Live proj ${fp(s.proj)}${s.partial ? "*" : ""}</small>` : ""}</span></h4>
@@ -11998,7 +12008,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (!g || g.kind === "none") return e.team ? "" : `<span class="ro-g muted">No NFL team</span>`;
       if (g.kind === "bye") return `<span class="ro-g muted">Bye week</span>`;
       const status = e.o.kind === "out" ? `<span class="out">Out</span>` : g.kind === "final" ? esc(g.text) : g.kind === "live" ? `<span class="live">Live</span>` : esc(g.text);
-      return `<span class="ro-g">${teamLogo(g.oppTeam, "xs")}${g.home ? "vs" : "@"} ${esc(g.oppTeam)} · ${status}</span>`;
+      return `<span class="ro-g">${vsLine(e.team, g.oppTeam, g.home)}<span class="ro-gs">·</span>${status}</span>`;
     };
     // Questionable / Doubtful beside the name (Out already shows as OUT in the week column)
     const inj = e => { if (!rep) return ""; const r = injuryOf(e.team, e.sid), s = r && r.status; const k = s && { Questionable: "Q", Doubtful: "D" }[s]; return k ? `<span class="st-badge ro-inj ${statusCls(s)}" title="${esc(s)}${r.injury ? " · " + esc(r.injury.toLowerCase()) : ""}">${k}</span>` : ""; };
@@ -12634,14 +12644,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     seasonRankCache = { key, map };
     return map;
   }
-  // Matchup cell: opponent logo, vs/@, kickoff, and a quiet matchup word
+  // Matchup cell: his team logo, vs/@, opponent logo and abbreviation, kickoff, and a quiet matchup word
   function faMatch(p) {
     const g = nflGameState(p.team, currentWeek());
     if (g.kind === "none") return `<span class="muted">—</span>`;
     if (g.kind === "bye") return `<span class="muted">Bye</span>`;
     const x = g.kind === "upcoming" ? ((defenseVsPos() || {})[p.pos] || {})[g.oppTeam] : null;   // the matchup word only matters before kickoff
     const word = x ? { good: "Good", neutral: "Neutral", tough: "Tough" }[x.grade] : "";
-    return `<span class="fa-mx"><span class="fa-mx-top">${teamLogo(g.oppTeam, "xs")}${g.home ? "vs" : "@"} <b>${esc(g.oppTeam)}</b></span>
+    return `<span class="fa-mx"><span class="fa-mx-top">${vsLine(p.team, g.oppTeam, g.home)}</span>
       <span class="fa-mx-sub ${g.kind}">${esc(g.text)}${word ? ` · <span class="fa-mx-v ${x.grade}" title="${esc(VERDICT[x.grade])}">${word}</span>` : ""}</span></span>`;
   }
   /* Trending adds: Sleeper's documented, keyless trending endpoint (adds across all Sleeper leagues in the last
