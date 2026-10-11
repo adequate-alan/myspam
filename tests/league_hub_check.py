@@ -15,6 +15,17 @@ sids = [r["sleeper_id"] for r in rows if r["sleeper_id"]]
 name_of = {r["sleeper_id"]: r["player"] for r in rows}
 NOW = int(time.time() * 1000)
 
+# Game line (Alan, Oct 11): his own team's logo, vs/@, the opponent's logo and abbreviation; never the opponent's logo alone
+VS_JS = """sel => [...document.querySelectorAll(sel)].map(v => {
+  const row = v.closest('tr'), own = row ? ((row.querySelector('.pl-team') || {}).textContent || '').trim() : '';
+  return { n: v.querySelectorAll('img.tlogo').length, first: (v.getAttribute('title') || '').split(' ')[0],
+           ha: (v.querySelector('.vs-ha') || {}).textContent, opp: (v.querySelector('.vs-opp') || {}).textContent, own };
+})"""
+def vs_ok(pg, sel, what):
+    rows = pg.evaluate(VS_JS, sel)
+    bad = [r for r in rows if r["n"] != 2 or r["ha"] not in ("vs", "@") or not r["opp"] or r["first"] != r["own"] or r["opp"] == r["own"]]
+    ok(len(rows) >= 5 and not bad, f"{what}: the logo of the team beside his name, vs/@, then the opponent's logo and abbreviation ({len(rows)} rows, {len(bad)} wrong{': ' + str(bad[:2]) if bad else ''})")
+
 def make_league(lid, name, teams, positions, scoring, divisions=None):
     pool = [x for x in sids if x != "7600"][:teams * 12]   # Pat Freiermuth (PIT, played Thursday of week 4) stays available
     rosters = [{"roster_id": i + 1, "owner_id": f"{lid}u{i+1}", "co_owners": [], "players": pool[i::teams], "starters": [], "reserve": [], "taxi": [],
@@ -319,6 +330,7 @@ with sync_playwright() as p:
     ok(pg.locator(".mx-card.open .mx-table tr").count() >= 16, "Lineups list every starter")
     # by game state (the test runs against the real clock): upcoming = projection, live = points + Live proj, final = points
     ok(pg.locator(".mx-card.open .mx-pts.up b, .mx-card.open .mx-pts.live b, .mx-card.open .mx-pts.final b").count() >= 10, "Every starter shows his projection or points")
+    vs_ok(pg, ".mx-card.open .mx-opp .vs-line", "Matchups lineup game line")
     if SHOTS: pg.screenshot(path=f"{SHOTS}/hub_matchups.png", full_page=True)
     pg.evaluate("() => { const s = document.getElementById('mx-week'); s.value = '3'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(1200)
     ok(pg.locator(".mx-card.final").count() == 6 and pg.locator(".mx-res.win").count() >= 5 and pg.locator(".mx-bar").count() == 0, "A past week: final scores, the winner marked, no projection bar")
@@ -443,6 +455,7 @@ with sync_playwright() as p:
     slots = [t.strip() for t in pg.locator(".ro-row:not(.bn):not(.inactive) .ro-sl").all_inner_texts()]
     ok(slots == ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SF"], f"Starter slots in league order with AM slot colors: {slots}")
     ok(pg.locator(".ro-row:not(.bn) td.ro-wk").count() >= 9 and pg.locator(".ro-row .ro-g").count() >= 9, "Each starter shows his week and the matchup under his name")
+    vs_ok(pg, ".ro-row .ro-g .vs-line", "Rosters game line")
     ok(pg.locator(".ro-sw").count() == 14 and "3 played" in pg.inner_text(".ro-sched .rail-title"), f"Season schedule lists every regular-season week (playoffs start week 15) with 3 played ({pg.locator('.ro-sw').count()})")
     ok(pg.locator(".ro-res.w, .ro-res.l, .ro-res.t").count() == 3, "Played weeks show W/L")
     pg.locator(".ro-row:not(.bn)").first.click(); pg.wait_for_timeout(300)
