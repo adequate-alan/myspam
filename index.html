@@ -2208,7 +2208,7 @@ th.mt-wk { text-align: right; }
 .mv-faab-amt { display: inline-flex; align-items: baseline; gap: 3px; font-weight: 750; color: var(--ink); font-variant-numeric: tabular-nums; }
 .mv-faab-amt small { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); }
 .mv-faab-amt.zero { color: var(--muted); font-weight: 600; }
-.mv-faab-amt.big { color: var(--gold); font-size: 0.98rem; }
+.mv-faab-amt.big { color: var(--heading); font-size: 0.98rem; }
 .mv-when { text-align: right; font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
 .mv-tag.trade { margin-right: 8px; color: var(--gold); border-color: color-mix(in srgb, var(--gold) 55%, transparent); background: color-mix(in srgb, var(--gold) 10%, transparent); }
 .th-card.tx-trade-card { border-color: color-mix(in srgb, var(--gold) 40%, var(--line)); box-shadow: inset 3px 0 0 var(--gold), 0 8px 22px -16px var(--shadow-color); }
@@ -2241,8 +2241,8 @@ th.mt-wk { text-align: right; }
 .rail-pl { font-weight: 600; }
 .rail-bids { all: unset; cursor: pointer; color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
 .rail-empty { margin: 0 0 4px; font-size: 0.76rem; color: var(--muted); }
-.mv-bidders { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); color: var(--gold); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.mv-bidders:hover { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+.mv-bidders { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.mv-bidders:hover { background: var(--surface-2); color: var(--heading); }
 .mv-bidders:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 dialog.bids-dialog { padding: 0; border: 0; background: transparent; color: var(--ink); max-width: none; }
 dialog.bids-dialog::backdrop { background: var(--backdrop); }
@@ -2294,7 +2294,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-sc.win .mx-score, .mx-card.live .mx-score, .mx-card.upcoming .mx-score { color: var(--heading); }
 .mx-card.upcoming .mx-score { color: var(--ink-2); }
 .mx-proj { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-.mx-proj b { font-size: 1.02rem; font-weight: 800; margin-left: 3px; letter-spacing: 0; color: var(--gold); font-variant-numeric: tabular-nums; }
+.mx-proj b { font-size: 1.02rem; font-weight: 800; margin-left: 3px; letter-spacing: 0; color: var(--heading); font-variant-numeric: tabular-nums; }
 .mx-res { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .mx-res.win { color: var(--rb); }
 .mx-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -2341,11 +2341,12 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-pts b { font-weight: 750; color: var(--heading); }
 .mx-pts small { display: block; font-size: 0.64rem; color: var(--muted); }
 .mx-pts.up { color: var(--muted); }
-.mx-pts.up b { color: var(--gold); font-weight: 650; }
+.mx-pts.up b { color: var(--heading); font-weight: 650; }
 .mx-livetag { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rb); }
 .mx-table tr.bye, .mx-table tr.out { opacity: 0.65; }
 #fa-wrap { max-width: 1180px; margin-inline: auto; }   /* centered in the page on wide screens, like Transactions */
 .fa-table td { padding-top: 8px; padding-bottom: 8px; }
+#fa-wrap .fa-table tbody td, #fa-wrap .fa-table thead th { padding-inline: 16px; }   /* Impeccable pass (Oct 11): 20/22px cell padding made the 10 columns 1210px wide in the 1180px wrap, clipping the Fit column */
 .fa-proj { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .fa-proj b { font-size: 0.98rem; font-weight: 800; color: var(--heading); }
 .fa-proj.bye, .fa-proj.none, .fa-proj.pending, .fa-proj.dnp { color: var(--muted); }
@@ -2381,6 +2382,7 @@ th.fa-proj { text-align: right; }
 .fa-fit-t.start { color: var(--rb); font-weight: 600; }
 .fa-fit-t.deep { color: var(--muted); }
 #fa-wrap .controls { flex-wrap: wrap; gap: 10px; }
+@media (max-width: 1240px) { .fa-fit-t { white-space: normal; } }   /* below the 1180px wrap the Fit text wraps instead of pushing the table past the edge */
 @media (max-width: 900px) {
   .mx-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "ta mid tb" "sa mid sb"; gap: 4px 8px; padding: 12px 12px 6px; }
   .mx-team.A { grid-area: ta; } .mx-team.B { grid-area: tb; } .mx-sc.A { grid-area: sa; } .mx-sc.B { grid-area: sb; } .mx-mid { grid-area: mid; }
@@ -2552,6 +2554,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 @media (max-width: 560px) {
   .ro-table th.ro-num, .ro-table td.ro-num { display: none; }
   .ro-table th.ro-num:last-child, .ro-table td.ro-num:last-child { display: table-cell; }
+  .ro-am small { display: none; } .ro-rk { width: auto; }   /* Impeccable pass (Oct 11): the overall rank beside the AM chip pushed PPG off screen at 390px; it stays in the cell's tooltip */
   .ro-g { white-space: normal; }
   .ro-week .select { min-width: 0; }
 }
@@ -2837,7 +2840,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .pr-bar span { display: block; height: 100%; background: var(--gold); opacity: 0.85; border-radius: 2px; }
 .pr-pos { display: flex; flex-direction: column; gap: 5px; }
 .pr-pos-item { display: flex; align-items: center; gap: 8px; }
-.pr-pos-label { width: 52px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pr-pos-label { width: 58px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .pr-pos .pos { min-width: 34px; height: 19px; font-size: 0.64rem; }
 .pr-place { font-size: 0.8rem; font-weight: 750; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .pr-pos-label { color: color-mix(in srgb, var(--muted) 85%, transparent); }
@@ -5383,7 +5386,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T15:00Z";
+  const BUILD_ID = "2026-10-15T16:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
