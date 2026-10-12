@@ -221,6 +221,7 @@ with sync_playwright() as p:
       return { n: a.length, same: diff < 0 && a.length === b.length, diff, a: diff >= 0 ? (a[diff] || '').slice(0, 300) : '', b: diff >= 0 ? (b[diff] || '').slice(0, 300) : '' };
     }"""
     def fresh(label):
+        pg.mouse.move(1, 1); pg.wait_for_timeout(250)   # no hover card open: a hovered element lends its title to the card (Oct 12)
         r = pg.evaluate(FRESH)
         ok(r["same"], f"Reused rows = a fresh render: {label} ({r['n']} rows)" + ("" if r["same"] else f" first difference at row {r['diff']}: {r['a']!r} vs {r['b']!r}"))
     def sel(id_, v): pg.evaluate(f"() => {{ const s = document.getElementById('{id_}'); s.value = {json.dumps(v)}; s.dispatchEvent(new Event('change')); }}"); pg.wait_for_timeout(400)
