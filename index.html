@@ -830,7 +830,7 @@ const TRADE_VERDICTS = [
   --custom-panel: #F1F2F4;
   --custom-border: #CBCED4;
   --pos-qb: #CC3F2B;
-  --pos-rb: #0F8A55;
+  --pos-rb: #0C7F4E;
   --pos-wr: #2463C8;
   --pos-te: #6A3DCC;
   --pos-flex: #A3680A;
@@ -1059,6 +1059,40 @@ td.val.val-2 .num-2 { font-size: 0.8rem; font-weight: 600; color: var(--muted); 
   #rk-head-row .hd-lg { display: none; }
 }
 @media (min-width: 761px) { #rk-head-row .hd-sm { display: none; } }
+/* Week view (Alan, Oct 12): one week's stat lines; fantasy points lead, stat columns are compact and sortable from the header */
+#rank-body tr.player.wkrow > td:has(> .pl-cell) { width: 32%; }
+#panel-rankings table th.pos-col.wk-pos, #panel-rankings table tr.wkrow td.pos-col { width: 1%; padding-right: 14px !important; }
+#panel-rankings td.wk-fp { width: 18%; min-width: 150px; }
+#panel-rankings th.wk-st, #panel-rankings td.wk-st { width: 1%; white-space: nowrap; text-align: right; padding-inline: 9px; }
+#panel-rankings td.wk-st:last-child, #panel-rankings th.wk-st:last-child { padding-right: 20px; }
+.wk-sort { all: unset; box-sizing: border-box; cursor: pointer; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; white-space: nowrap; }
+.wk-sort:hover { color: var(--text-strong, var(--ink)); }
+.wk-sort:focus-visible { outline: 2px solid var(--focus-line, var(--gold)); outline-offset: 2px; border-radius: 3px; }
+#rk-head-row th.on .wk-sort { color: var(--text-strong, var(--ink)); }
+.wk-n { font-size: 0.86rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink-2, var(--ink)); }
+.wk-n.z { color: var(--muted); font-weight: 500; }
+td.wk-st.on .wk-n { font-weight: 700; color: var(--text-strong, var(--ink)); }
+.wk-sub { display: block; margin-top: 2px; font-size: 0.6rem; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wk-dash { color: var(--muted); }
+.prodbar.proj .fill { opacity: .45; }
+.prodbar.proj .pnum { color: var(--ink-2, var(--muted)); font-weight: 600; }
+.prodbar .psub.wk-live { color: var(--rb); }
+.wk-status { display: inline-block; font-size: 0.66rem; font-weight: 650; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+.wk-status.dnp { color: color-mix(in srgb, var(--st-dnp) 78%, var(--ink)); }
+.wk-status.out { color: color-mix(in srgb, var(--st-out) 62%, var(--ink)); }
+#rank-body tr.wkrow.none .pl-name, #rank-body tr.wkrow.none .face { opacity: .78; }
+@media (max-width: 1180px) { #panel-rankings .wk-lo:not(.on) { display: none; } }
+@media (max-width: 760px) {
+  #panel-rankings .wk-st:not(.on) { display: none; }
+  #panel-rankings td.wk-fp { min-width: 0; width: auto; }
+  #rank-body tr.player.wkrow > td:has(> .pl-cell) { width: auto; }
+  #panel-rankings tbody tr.player td.wk-st, #panel-rankings thead th.wk-st, #panel-rankings thead th.wk-fp { padding-inline: 4px 8px; }
+  #rk-head-row .wk-sort { white-space: normal; }
+}
+@media (max-width: 600px) {   /* phones: the photo steps aside so names wrap and the sorted stat fits beside the points */
+  #rank-body tr.wkrow .face { display: none; }
+  #rank-body tr.wkrow .spam-rk { letter-spacing: 0.04em; }
+}
 .chip-btn { height: 36px; padding: 0 1px; }
 .chip-btn::after { bottom: -1px; }
 .controls .search { margin-bottom: 8px; }
@@ -1377,8 +1411,9 @@ body.editing #panel-rankings td.val { min-width: 330px; }
   color: var(--muted); font: 700 0.56rem/1 Georgia, serif; font-style: italic; letter-spacing: 0; text-transform: none; cursor: help;
 }
 .info:hover, .info:focus-visible { color: var(--cream); border-color: var(--gold); outline: none; }
-/* the "i" stays 15px but takes a 24px target (WCAG 2.5.8); its text opens in the shared hover card (data-info) */
-.info::before { content: ""; position: absolute; inset: -5px; border-radius: 50%; }
+/* the "i" stays 15px but takes a 43px target (alan: 40–44px; WCAG 2.5.8 asks 24px); its text opens in the shared hover card (data-info) */
+.info::before { content: ""; position: absolute; inset: var(--info-hit, -14px); border-radius: 50%; }
+.info ~ :is(a, button) { position: relative; z-index: 1; }   /* a link or button right beside the "i" keeps every pixel of its own target */
 .side-needs { margin: 0; font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .side-needs b { color: var(--ink-2); font-weight: 650; }
 .roster-toggle {
@@ -1429,11 +1464,11 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .ba-chip.up, .ba-power.up { border-color: color-mix(in srgb, var(--rb) 45%, transparent); }
 .ba-chip.up b, .ba-power.up b { color: var(--rb); }
 .ba-chip.down, .ba-power.down { border-color: color-mix(in srgb, var(--st-dnp) 40%, transparent); }
-.ba-chip.down b, .ba-power.down b { color: var(--st-dnp); }
+.ba-chip.down b, .ba-power.down b { color: var(--st-dnp-text); }
 .ba-chip.same { opacity: 0.75; }
 .ba-ch { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; color: var(--ink-2); }
 .ba-ch li::before { content: "•"; margin-right: 6px; color: var(--muted); }
-.ba-ch li.lc-in::before { color: var(--rb); } .ba-ch li.lc-out::before { color: var(--st-dnp); }
+.ba-ch li.lc-in::before { color: var(--rb); } .ba-ch li.lc-out::before { color: var(--st-dnp-text); }
 .ba-none { margin: 0; font-size: 0.76rem; color: var(--muted); }
 .btn.balance-btn { align-self: flex-start; border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); color: var(--gold-bright); }
 .btn.balance-btn[aria-expanded="true"] { background: color-mix(in srgb, var(--gold) 10%, var(--control)); }
@@ -1621,7 +1656,7 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 #panel-finder .tf-card.good-fit { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--rb) 70%, transparent), 0 6px 18px -14px var(--shadow-color); }
 #panel-finder .tf-card.bad-fit { opacity: 0.62; background: var(--surface); box-shadow: none; }
 #panel-finder .tf-card.bad-fit:hover, #panel-finder .tf-card.bad-fit:focus-within { opacity: 1; }
-#panel-finder .tf-card.bad-fit .tf-verdict-big { color: var(--st-dnp, var(--accent-primary)); }
+#panel-finder .tf-card.bad-fit .tf-verdict-big { color: var(--st-dnp-text); }
 #panel-finder .tf-act { all: unset; cursor: pointer; font-size: 0.7rem; font-weight: 600; color: var(--muted); padding: 3px 0; }
 #panel-finder .tf-act:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 #panel-finder .tf-act:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
@@ -1640,15 +1675,15 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 #panel-finder .tf-foot { padding-top: 2px; justify-content: space-between; gap: 16px; }
 
 /* Power Rankings row polish: whole-row hover, your-team accent, quieter method note */
-:root, :root[data-theme="dark"] { --mine-accent: #E4002B; }
-:root[data-theme="light"] { --mine-accent: #E4002B; }
+:root, :root[data-theme="dark"] { --mine-accent: #E4002B; --mine-text: #FF3D5E; }
+:root[data-theme="light"] { --mine-accent: #E4002B; --mine-text: #C80027; }
 #league-body .pr-row:hover { background: var(--row-hover); }
 #league-body .pr-row:hover .pr-name, #league-body .pr-row:hover .pr-score { color: var(--heading); }
 #league-body .pr-row:hover .pr-score { color: var(--text-strong); }
 #league-body .pr-row:hover .pr-bar span { opacity: 1; }
 #league-body .pr-item.mine > .pr-row { box-shadow: inset 3px 0 0 var(--mine-accent); background: color-mix(in srgb, var(--mine-accent) 6%, transparent); }
 #league-body .pr-item.mine > .pr-row:hover, #league-body .pr-item.mine.open > .pr-row { background: color-mix(in srgb, var(--mine-accent) 10%, var(--row-hover)); }
-#league-body .pr-item.mine .pr-name .owner.mine { color: var(--mine-accent); }
+#league-body .pr-item.mine .pr-name .owner.mine { color: var(--mine-text); }
 #league-body .pr-stars .face[data-player]:hover { position: relative; z-index: 1; }
 #league-body .lg-toolbar .method-note { font-size: 0.74rem; color: color-mix(in srgb, var(--muted) 85%, transparent); }
 
@@ -1792,7 +1827,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
   display: inline; margin-left: 10px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--muted); white-space: nowrap;
 }
-.owner.mine { color: var(--gold); }
+.owner.mine { color: var(--mine-text); }
 .owner.fa { color: var(--cream); opacity: 0.75; }
 .owner.status { margin-left: 0; }
 /* Player identity, everywhere a player is listed:
@@ -1807,7 +1842,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
   font-size: 0.6rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
 }
 .own-tag .own-by { font-weight: 500; margin-right: 4px; opacity: 0.8; }
-.own-tag.mine { color: var(--mine-accent); font-weight: 750; }
+.own-tag.mine { color: var(--mine-text); font-weight: 750; }
 .own-tag.fa { color: color-mix(in srgb, var(--rb) 60%, var(--muted)); }
 .own-tag.inline { display: inline; margin-top: 0; }
 #rank-body .own-tag { font-size: 0.57rem; margin-top: 2px; }
@@ -1818,7 +1853,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
 #rank-body tr.player.mine td:first-child { box-shadow: inset 2px 0 0 var(--mine-accent); }
 #rank-body .own-tag.mine::before { content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 5px; border-radius: 50%; background: var(--mine-accent); vertical-align: 1px; }   /* other owners stay secondary on the board; My team keeps full gold */
 .tier-tag { display: inline-block; margin-left: 6px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--line-soft); background: none; font-size: 0.58rem; font-weight: 600; letter-spacing: 0.05em; color: var(--muted); vertical-align: middle; cursor: default; }
-.tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 40%, transparent); }
+.tier-tag.tagged { color: var(--st-dnp-text); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 40%, transparent); }
 .rr-jump { all: unset; cursor: pointer; }
 .rr-jump:hover { text-decoration: underline; text-underline-offset: 2px; }
 .rr-jump:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 2px; }
@@ -1917,7 +1952,6 @@ button.tr-player:hover:not(:disabled) { background: var(--surface-2); }
 .theme-toggle:hover { border-color: var(--border-strong); background: var(--hover-bg); }
 .theme-toggle:active { transform: rotate(-18deg) scale(0.94); }
 .theme-toggle .ti-moon { display: none; }
-:root[data-theme="light"] .theme-toggle { color: var(--accent-primary); }
 :root[data-theme="light"] .theme-toggle .ti-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .ti-moon { display: block; }
 /* smooth swap when the theme changes (not on first paint) */
@@ -1927,7 +1961,7 @@ html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *
 
 /* ---------- League settings (by hand) and league imports ---------- */
 .fmt-chip {
-  display: inline-flex; align-items: baseline; gap: 9px; max-width: min(460px, 100%);
+  display: inline-flex; align-items: center; gap: 9px; max-width: min(460px, 100%);
   background: none; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 11px;
   cursor: pointer; color: var(--cream); transition: border-color 0.18s ease, background 0.18s ease;
 }
@@ -2061,7 +2095,7 @@ dialog.signin label.signin-remember { margin: 10px 0 0; text-transform: none; le
 .st-rank small { margin-left: 5px; font-size: 0.72rem; font-weight: 600; color: var(--muted); }
 .st-rank.good { color: var(--rb); } .st-rank.tough { color: var(--qb); }
 .strength.rk-first .st-note { font-size: 0.68rem; color: color-mix(in srgb, var(--muted) 85%, transparent); }
-.mt-table tr.mt-sec td { background: color-mix(in srgb, var(--accent-primary) 10%, var(--surface)); border-top: 2px solid color-mix(in srgb, var(--accent-primary) 35%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--accent-primary) 22%, transparent); padding-block: 8px; }
+.mt-table tr.mt-sec td { background: var(--surface-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line-soft); padding-block: 8px; }
 .mt-sec-n { margin-left: 8px; font-size: 0.7rem; font-weight: 600; color: var(--muted); }
 .mt-side .mt-card { background: none; padding: 10px 14px; }
 .mt-side { gap: 8px; }
@@ -2115,7 +2149,7 @@ th.mt-wk { text-align: right; }
 .mt-wk.final b { color: var(--heading); }
 .mt-wk small { display: block; font-size: 0.64rem; color: var(--muted); }
 .mt-wk.off { color: var(--muted); font-size: 0.74rem; font-weight: 700; }
-.mt-wk.out { color: var(--st-out, var(--st-dnp)); font-size: 0.74rem; font-weight: 800; }
+.mt-wk.out { color: var(--st-out-text); font-size: 0.74rem; font-weight: 800; }
 .mt-live { color: var(--rb); font-weight: 700; }
 .tc-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .tc-list li { display: flex; flex-direction: column; gap: 1px; font-size: 0.8rem; }
@@ -2159,19 +2193,19 @@ th.mt-wk { text-align: right; }
 .rf-wk { font-size: 0.6rem; font-weight: 450; color: var(--muted); white-space: nowrap; }
 .rf-tag { line-height: 1.55; }
 .rf-tag { font-size: 0.62rem; font-weight: 750; letter-spacing: 0.06em; color: var(--muted); }
-.rf-tag.out { color: var(--st-dnp); }
+.rf-tag.out { color: var(--st-dnp-text); }
 .rf-sub { margin-top: 2px; font-size: 0.68rem; color: var(--muted); }
 .rf-trend { font-weight: 700; }
 .rf-trend.hot { color: var(--rb); } .rf-trend.cool { color: var(--qb); } .rf-trend.steady { color: var(--muted); }
 .rf-trend.rising { color: var(--rb); } .rf-trend.falling { color: var(--qb); }
 .rf-avail { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
-.rf-avail.out, .rf-avail.ir { color: var(--st-dnp); } .rf-avail.d { color: var(--st-d); } .rf-avail.q { color: var(--st-q); } .rf-avail.back { color: var(--st-fp); }
+.rf-avail.out, .rf-avail.ir { color: var(--st-dnp-text); } .rf-avail.d { color: var(--st-d); } .rf-avail.q { color: var(--st-q); } .rf-avail.back { color: var(--st-fp); }
 .rf-trend.none { color: var(--muted); font-weight: 500; }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
 .fa-opp .sc-dot { margin-right: 4px; }
 @media (max-width: 760px) { #fa-wrap .fa-wk { display: none; } }
 /* League hub: eyebrow, filters, transactions, matchups, waiver wire */
-.lg-eyebrow { display: block; margin-bottom: 4px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.lg-eyebrow { display: block; margin-bottom: 4px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .tx-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 14px; }
 .tx-filters .method-note { margin: 0; flex-basis: 100%; }
 .tx-selects { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -2181,7 +2215,7 @@ th.mt-wk { text-align: right; }
 .mv-tag { padding: 3px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-2); }
 .mv-tag.waiver { color: var(--wr); border-color: color-mix(in srgb, var(--wr) 45%, transparent); background: color-mix(in srgb, var(--wr) 8%, transparent); }
 .mv-tag.free_agent { color: var(--rb); border-color: color-mix(in srgb, var(--rb) 45%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
-.mv-tag.drop { color: var(--st-dnp, var(--accent-primary)); border-color: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 45%, transparent); background: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 7%, transparent); }
+.mv-tag.drop { color: var(--st-dnp-text); border-color: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 45%, transparent); background: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 7%, transparent); }
 .tx-feed, .tx-older, .tx-feed ~ .count { max-width: 960px; }
 .tx-feed { display: flex; flex-direction: column; gap: 22px; }
 .tx-week { display: flex; flex-direction: column; gap: 10px; }
@@ -2199,7 +2233,7 @@ th.mt-wk { text-align: right; }
 .mv-p { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
 .mv-p i { font-style: normal; font-weight: 800; width: 10px; text-align: center; }
 .mv-p.add i { color: var(--rb); }
-.mv-p.drop i { color: var(--st-dnp, var(--accent-primary)); }
+.mv-p.drop i { color: var(--st-dnp-text); }
 .mv-p.drop .mv-name { color: var(--ink-2); font-weight: 550; }
 .mv-p .mv-name { font-size: 0.84rem; }
 .mv-p .pos { font-size: 0.6rem; padding: 1px 5px; }
@@ -2230,7 +2264,7 @@ th.mt-wk { text-align: right; }
 .rail-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; border-top: 1px solid var(--line-soft); }
 .rail-list li:first-child { border-top: 0; }
 .rail-list li.mine { box-shadow: inset 2px 0 0 var(--gold); padding-left: 6px; }
-.rail-list li.mine .rail-name { color: var(--mine-accent); font-weight: 650; }
+.rail-list li.mine .rail-name { color: var(--mine-text); font-weight: 650; }
 .rail-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
 .rail-name small { display: block; font-size: 0.68rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .rail-v { font-variant-numeric: tabular-nums; font-weight: 650; color: var(--ink-2); white-space: nowrap; }
@@ -2303,8 +2337,9 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-pct { font-size: 0.86rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .mx-pct.B { text-align: right; }
 .mx-bar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--line-soft); }
-.mx-bar-a { background: var(--accent-primary); }
-.mx-bar-b { flex: 1; background: color-mix(in srgb, var(--muted) 55%, transparent); margin-left: 2px; }   /* neutral vs red (red + neutrals theme) */
+.mx-bar-a { background: color-mix(in srgb, var(--text-secondary) 80%, transparent); }
+.mx-bar-b { flex: 1; background: color-mix(in srgb, var(--muted) 45%, transparent); margin-left: 2px; }
+.mx-bar-a.mine, .mx-bar-b.mine { background: var(--mine-accent); }   /* red only for your side (Oct 12 audit) */   /* neutral vs red (red + neutrals theme) */
 .mx-bar-lbl.mx-partial { color: var(--warn); cursor: help; }   /* partial: the bar stays, muted and striped, and says what's missing */
 .mx-bar.partial .mx-bar-a, .mx-bar.partial .mx-bar-b { opacity: .5; background-image: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--surface) 55%, transparent) 4px 7px); }
 .mx-bar-row.partial .mx-pct { color: var(--muted); font-weight: 600; }
@@ -2333,7 +2368,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-opp { display: inline-flex; align-items: center; gap: 4px; }
 .mx-game small { display: block; font-size: 0.64rem; color: var(--muted); }
 .mx-game small.live { color: var(--rb); font-weight: 650; }
-.mx-game small.out, .mx-pts.off { color: var(--st-out, var(--st-dnp)); }
+.mx-game small.out, .mx-pts.off { color: var(--st-out-text); }
 .mx-game small.bye { color: var(--muted); }
 .mx-pts { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .mx-pts b { font-weight: 750; color: var(--heading); }
@@ -2351,13 +2386,13 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .fa-proj small { display: block; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .fa-proj.final b { color: var(--ink); }
 .fa-mx-sub.live { color: var(--rb); font-weight: 650; }
-.fa-proj.out { color: var(--st-out, var(--st-dnp)); font-weight: 700; font-size: 0.78rem; }
+.fa-proj.out { color: var(--st-out-text); font-weight: 700; font-size: 0.78rem; }
 .fa-mx { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
 .fa-mx-top { display: inline-flex; align-items: center; gap: 5px; font-size: 0.84rem; color: var(--ink-2); }
 .fa-mx-top b { color: var(--ink); }
 .fa-mx-sub { font-size: 0.68rem; color: var(--muted); }
 .fa-mx-v.good { color: var(--rb); }
-.fa-mx-v.tough { color: var(--st-dnp, var(--accent-primary)); }
+.fa-mx-v.tough { color: var(--st-dnp-text); }
 .fa-srk { white-space: nowrap; }
 .fa-srk-b { font-size: 0.7rem; font-weight: 700; color: var(--ink-2); padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, var(--c) 12%, transparent); }
 .fa-num { text-align: right; white-space: nowrap; }
@@ -2365,7 +2400,7 @@ td.fa-num { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 
 th.fa-proj { text-align: right; }
 .fa-fitlbl { margin-left: auto; }
 .fa-avail { font-size: 0.7rem; color: var(--muted); }
-.fa-avail.waivers { color: var(--mine-accent); }
+.fa-avail.waivers { color: var(--warn); }
 /* Waiver Wire polish (Alan, Oct 4): whole row opens the player page; secondary signals stay quiet */
 .fa-row { cursor: pointer; }
 .fa-row:hover td { background: var(--hover-bg); }
@@ -2515,7 +2550,7 @@ th.fa-proj { text-align: right; }
 .ro-inj { padding: 0 6px; font-size: 0.6rem; }
 .ro-g { display: flex; align-items: center; font-size: 0.7rem; color: var(--muted); white-space: nowrap; margin-top: 1px; }
 .ro-g .tlogo.xs { width: 14px; height: 14px; margin-right: 4px; }
-.ro-g .live { color: var(--rb); font-weight: 650; } .ro-g .out { color: var(--st-out, var(--st-dnp)); font-weight: 650; }
+.ro-g .live { color: var(--rb); font-weight: 650; } .ro-g .out { color: var(--st-out-text); font-weight: 650; }
 .ro-wk { width: 92px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ro-wk b { font-size: 0.98rem; font-weight: 800; color: var(--heading); }
 .ro-wk small { display: block; font-size: 0.58rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -2524,7 +2559,7 @@ th.fa-proj { text-align: right; }
 .ro-wk .ro-live { color: var(--rb); }
 .ro-wk small.ro-lp { letter-spacing: 0.02em; text-transform: none; font-size: 0.66rem; }
 .ro-wk.off, .ro-wk.none, .ro-wk.dnp { color: var(--muted); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; }
-.ro-wk.out { color: var(--st-out, var(--st-dnp)); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; }
+.ro-wk.out { color: var(--st-out-text); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; }
 /* rank cells (Alan, Oct 8): AM rank = the compact tinted chip (primary), Szn rk = a quieter dot + text (secondary) */
 .rk-chip { display: inline-block; min-width: 40px; padding: 3px 7px; border-radius: 5px; font-family: var(--font-display, inherit); font-size: 0.72rem; font-weight: 700; line-height: 1.2; text-align: center; color: var(--ink); font-variant-numeric: tabular-nums;
   background: color-mix(in srgb, var(--c, var(--muted)) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, var(--muted)) 26%, transparent); }
@@ -2559,7 +2594,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .ro-sw.sel { box-shadow: inset 2px 0 0 var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 6%, transparent); }
 .ro-res { display: inline-grid; place-items: center; width: 22px; height: 20px; border-radius: 4px; font-size: 0.64rem; font-weight: 800; color: var(--muted); }
 .ro-res.w { color: var(--rb); background: color-mix(in srgb, var(--rb) 15%, transparent); }
-.ro-res.l { color: var(--st-dnp); background: color-mix(in srgb, var(--st-dnp) 14%, transparent); }
+.ro-res.l { color: var(--st-dnp-text); background: color-mix(in srgb, var(--st-dnp) 14%, transparent); }
 .ro-res.t { color: var(--ink-2); background: color-mix(in srgb, var(--muted) 15%, transparent); }
 .ro-res.now { width: auto; padding: 0 4px; font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-primary); }
 .ro-sw-sc { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
@@ -2747,7 +2782,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .st-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .st-top-row .method-note { flex: 1 1 320px; margin-bottom: 10px; }
 .st-view { flex: none; margin-bottom: 10px; }
-.st-table tr.st-div th { text-align: left; padding: 14px 12px 7px; background: color-mix(in srgb, var(--accent-primary) 9%, var(--surface)); border-bottom: 1px solid var(--line-soft); font-size: 0.86rem; font-weight: 750; letter-spacing: 0; text-transform: none; color: var(--heading); }
+.st-table tr.st-div th { text-align: left; padding: 14px 12px 7px; background: var(--surface-2); border-bottom: 1px solid var(--line-soft); font-size: 0.86rem; font-weight: 750; letter-spacing: 0; text-transform: none; color: var(--heading); }
 .st-div-name { display: inline-flex; align-items: center; gap: 8px; }
 .st-div-name img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
 .st-odds-h { text-align: right; }
@@ -2868,7 +2903,8 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .pr-strength { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .pr-score { font-size: 0.98rem; font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; }
 .pr-bar { height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
-.pr-bar span { display: block; height: 100%; background: var(--gold); opacity: 0.85; border-radius: 2px; }
+.pr-bar span { display: block; height: 100%; background: var(--text-secondary); opacity: 0.7; border-radius: 2px; }
+.pr-item.mine .pr-bar span { background: var(--mine-accent); opacity: 0.85; }
 .pr-pos { display: flex; flex-direction: column; gap: 5px; }
 .pr-pos-item { display: flex; align-items: center; gap: 8px; }
 .pr-pos-label { width: 58px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
@@ -3190,8 +3226,8 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .pr-player .st-badge { margin-left: 8px; }
 .pr-inj { color: var(--ink-2); }
 /* Status colours, the same everywhere */
-:root, :root[data-theme="dark"] { --st-fp: #3F9D62; --st-lp: #D8901E; --st-dnp: #C9373F; --st-out: #93202A; --st-q: #D9A520; --st-d: #D85A2B; --st-ir: #8F4A4F; --st-ink: #FFFFFF; --st-ink-amber: #1A1314; }
-:root[data-theme="light"] { --st-fp: #2F8550; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
+:root, :root[data-theme="dark"] { --st-dnp-text: #E2625D; --st-out-text: #E8706A; --st-fp: #3F9D62; --st-lp: #D8901E; --st-dnp: #C9373F; --st-out: #93202A; --st-q: #D9A520; --st-d: #D85A2B; --st-ir: #8F4A4F; --st-ink: #FFFFFF; --st-ink-amber: #1A1314; }
+:root[data-theme="light"] { --st-dnp-text: var(--st-dnp); --st-out-text: var(--st-out); --st-fp: #2F8550; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
 .st-blk { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 24px; padding: 0 6px; border-radius: 5px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; color: var(--st-ink); background: var(--st, var(--surface-2)); }
 .st-blk.none { --st: transparent; color: var(--muted); font-weight: 500; }
 .st-blk.fp { --st: var(--st-fp); } .st-blk.lp { --st: var(--st-lp); color: var(--st-ink-amber); } .st-blk.dnp { --st: var(--st-dnp); }
@@ -3520,7 +3556,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tf3-ul { list-style: none; margin: 0; padding: 0; }
 
 /* ---------- Footer, dialog, toast ---------- */
-footer { border-top: 1px solid var(--line-soft); padding-block: 16px 32px; color: color-mix(in srgb, var(--muted) 75%, transparent); font-size: 0.7rem; }
+footer { border-top: 1px solid var(--line-soft); padding-block: 16px 32px; color: var(--muted); font-size: 0.7rem; }
 .footer-row { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; }
 .footer-link { background: none; border: 0; padding: 0; color: var(--muted); font-size: 0.78rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .footer-link:hover { color: var(--cream); }
@@ -3742,7 +3778,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
    amber, never brand red; negatives use a softer brick red so they never read as a brand accent. ---------- */
 :root, :root[data-theme="dark"] {
   --navy: #24272D; --navy-hi: #2E3138; --navy-tint: rgba(255, 255, 255, 0.05); --navy-ink: #D5D8DE; --red-tint: rgba(228, 0, 43, 0.12);
-  --focus-line: #4A4E57; --rail-bg: #101216; --rail-line: #1C1F24;
+  --focus-ring: #A7ABB3; --focus-line: #4A4E57; --rail-bg: #101216; --rail-line: #1C1F24;
   --nav-idle: #A7ABB3; --nav-on: #F6F7F9; --nav-line: #E4002B;
   --eb-bg: rgba(255, 255, 255, 0.03); --eb-line: #24272D; --eb-ink: #A7ABB3; --eb-strong: #E3E5EA; --eb-dot: #737984;
   --vt-bg: rgba(255, 255, 255, 0.04); --vt-ink: #A7ABB3; --vt-line: transparent; --vt-on: rgba(255, 255, 255, 0.09); --vt-on-ink: #F6F7F9; --vt-on-line: transparent;
@@ -3751,7 +3787,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 }
 :root[data-theme="light"] {
   --navy: #101114; --navy-hi: #2A2D33; --navy-tint: rgba(16, 17, 20, 0.05); --navy-ink: #25272C; --red-tint: rgba(228, 0, 43, 0.07);
-  --focus-line: #9699A1; --rail-bg: #FFFFFF; --rail-line: #D2D6DD;
+  --focus-ring: #50545C; --focus-line: #9699A1; --rail-bg: #FFFFFF; --rail-line: #D2D6DD;
   --nav-idle: #62656C; --nav-on: #101114; --nav-line: #E4002B;
   --eb-bg: #FFFFFF; --eb-line: #D2D6DD; --eb-ink: #62656C; --eb-strong: #101114; --eb-dot: #9699A1;
   --vt-bg: rgba(16, 17, 20, 0.045); --vt-ink: #62656C; --vt-line: transparent; --vt-on: #FFFFFF; --vt-on-ink: #101114; --vt-on-line: transparent;
@@ -3904,12 +3940,12 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   background: color-mix(in srgb, var(--muted) 12%, var(--pos-fill-base)); color: color-mix(in srgb, var(--muted) 85%, transparent);
   font-family: var(--font-body); font-weight: 550; font-size: 0.56rem; letter-spacing: 0.04em; padding: 0 4px; line-height: 15px;
 }
-.tier-tag.tagged { color: var(--st-dnp, var(--rose)); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 35%, transparent); background: none; }
+.tier-tag.tagged { color: var(--st-dnp-text); border-color: color-mix(in srgb, var(--st-dnp, var(--rose)) 35%, transparent); background: none; }
 /* value bars: the same palette, toned down further so the badge stays the strongest position cue */
 .valbar .fill { background: linear-gradient(90deg, color-mix(in srgb, var(--c, var(--ink)) 10%, transparent), color-mix(in srgb, var(--c, var(--ink)) 42%, transparent)); }
 /* Visual polish (Alan, Oct 8): tier tags quieter still (no border, lighter text), one icon weight (1.8 outline strokes),
    a subtle drag handle that brightens on hover, a lighter theme toggle, tabular figures for every number column */
-.tier-tag, #rank-body .tier-tag { border-color: transparent; background: color-mix(in srgb, var(--muted) 10%, var(--pos-fill-base)); color: color-mix(in srgb, var(--muted) 75%, transparent); font-weight: 500; }
+.tier-tag, #rank-body .tier-tag { border-color: transparent; background: color-mix(in srgb, var(--muted) 10%, var(--pos-fill-base)); color: var(--muted); font-weight: 500; }
 .handle { opacity: 0.45; font-size: 0.9rem; transition: opacity .16s var(--ease, ease), color .16s var(--ease, ease); }
 tr.player:hover .handle { opacity: 0.75; }
 .handle:hover:not(:disabled), .handle:focus-visible, tr.dragging .handle { opacity: 1; }
@@ -3985,7 +4021,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .eb-stat { display: inline-flex; align-items: center; gap: 6px; padding: 2px 12px; margin: 0; border: 0; border-left: 1px solid var(--eb-line); background: none; color: var(--eb-ink); font: 500 0.74rem/1.4 var(--font-body); cursor: pointer; border-radius: 0; transition: color .15s var(--ease); white-space: nowrap; }
 .eb-mid > #eb-who:empty + .eb-stat { border-left: 0; padding-left: 0; }
 .eb-stat:hover, .eb-stat[aria-expanded="true"] { color: var(--eb-strong); }
-.eb-stat:focus-visible { outline: 2px solid var(--focus-line); outline-offset: 2px; border-radius: 4px; }
+.eb-stat:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 4px; }
 .eb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--eb-ink); opacity: .55; flex: none; }
 .eb-stat.sev-low .eb-dot { background: var(--warn); opacity: .7; }
 .eb-stat.sev-high .eb-dot { background: var(--warn); opacity: 1; box-shadow: 0 0 0 3px var(--warn-tint); }
@@ -4290,7 +4326,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #rank-body tr.player:hover .own-tag:not(.mine):not(.fa) { opacity: 1; }
 #rank-body .own-tag .own-by { opacity: 1; }
 #rank-body .own-tag.fa { opacity: 1; color: color-mix(in srgb, var(--rb) 70%, var(--ink-2)); }
-#rank-body .own-tag.mine { display: flex; width: fit-content; align-items: center; gap: 5px; padding: 0; background: none; color: var(--mine-accent); font-weight: 650; }
+#rank-body .own-tag.mine { display: flex; width: fit-content; align-items: center; gap: 5px; padding: 0; background: none; color: var(--mine-text); font-weight: 650; }
 #rank-body .own-tag.mine::before { margin-right: 0 !important; }
 /* position: the filled badge, then the tier as plain metadata */
 #panel-rankings table .pos-col { padding-left: 16px; white-space: nowrap; }
@@ -4377,7 +4413,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .btn.primary, .btn.primary:hover:not(:disabled) { box-shadow: none; }
 .btn.secondary { background: var(--fill-2); border-color: transparent; color: var(--ink); }
 .btn.secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 12%, transparent); border-color: transparent; }
-:focus-visible { outline-color: var(--focus-line); }
+:focus-visible { outline-color: var(--focus-ring); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 
 /* ---------- Light theme contrast (Alan, Oct 9): dark stays the flagship; light gets real surface separation instead of
@@ -4445,7 +4481,44 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .hc .hc-more { display: block; width: 100%; min-height: 36px; margin-top: 8px; border: 0; border-radius: var(--r-sm, 6px); background: var(--fill-1); color: var(--text-secondary); font: 600 0.78rem var(--font-body); cursor: pointer; }
 .hc .hc-more:hover, .hc .hc-more:focus-visible { background: var(--fill-2); color: var(--ink); }
 
-[data-hc]:focus-visible { outline: 2px solid var(--focus-line, var(--text-secondary)); outline-offset: 2px; border-radius: 3px; }
+/* ---- Site audit, Oct 12 (Impeccable audit + critique): phone fixes ----
+   Rankings board on phones: Value is never clipped. The owner line truncates instead of setting the player
+   column's minimum width, the NFL team mark can drop under a long name, and the editor columns shed the
+   610px minimum that pushed Position and Value off a 375px screen. */
+@media (max-width: 560px) {
+  #rank-body .pl-text { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; }
+  #rank-body .pl-text > .own-tag { flex: 1 0 100%; }
+  #rank-body .own-tag, #rank-body .own-tag.mine { width: 0; min-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #rank-body .own-tag .own-by { display: none; }   /* "MANAGER11" rather than "OWNED BY MANAGE…"; the full name stays in the tooltip */
+  #rank-body .own-tag { letter-spacing: 0.05em; }
+  body:not(.editing) #panel-rankings td.rk { padding-left: 10px; }
+  body.editing #panel-rankings .table-scroll table { min-width: 0; }
+  body.editing #panel-rankings td.val { min-width: 0; }
+  body.editing #panel-rankings .pl-name { white-space: normal; }
+  body.editing #panel-rankings tbody td, body.editing #panel-rankings thead th { padding-inline: 6px; }
+  body.editing #panel-rankings td.edit-col, body.editing #panel-rankings thead th#edit-head { width: 30px; padding: 0 0 0 4px; }
+  /* header without a league: logo + theme, then League settings + Connect league, then Last updated (Connect
+     league sat past the right edge of the screen) */
+  .mast-right { display: contents; }
+  .masthead-top { justify-content: flex-start; }
+  .masthead-top .brand { order: 0; }
+  .masthead-top .theme-toggle { order: 1; margin-left: auto; }
+  body:not(.has-league) .masthead-top::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
+  .masthead-top .fmt-chip, .masthead-top .league-slot { order: 3; }
+  body:not(.has-league) .masthead-top .fmt-chip, body:not(.has-league) .masthead-top .league-slot { flex: 1 1 0; min-width: 0; }
+  body:not(.has-league) .masthead-top .connect-btn { width: 100%; height: 36px; }
+  .masthead-top .mast-right .meta { order: 4; flex-basis: 100%; margin: 2px 0 0; }
+  .masthead .tabs { order: 5; }
+  /* name, then the NFL team right after it when the name wraps (it sat alone at the far right) */
+  #fa-wrap .pl-head, #panel-myteam .pl-head, .ro-pl .pl-head { display: block; }
+  #fa-wrap .pl-head .pl-team, #panel-myteam .pl-head .pl-team, .ro-pl .pl-head .pl-team { display: inline; margin-left: 6px; }
+}
+@media (max-width: 400px) { #rank-body .face { width: 30px; height: 30px; } #rank-body .pl-cell { gap: 8px; } }
+/* drawer: "Next 4" gets the same separator as the other figures on its line */
+.pm-head .pm-ros > .pd-item.n4::before { content: "·"; margin: 0 9px; color: var(--text-muted); font-weight: 400; }
+.pm-head .pm-ros .pd-item.n4 .pr-n4tag { white-space: nowrap; }
+
+[data-hc]:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
 
 @media (prefers-reduced-motion: reduce) { .hc { transition: none; } }
 :is(.hc, .hc-inline) .hc-li { position: relative; padding-left: 10px; color: var(--text-secondary); font-size: 0.74rem; }
@@ -4555,7 +4628,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <span class="fmt-note" id="fmt-note"></span>
       </div>
       <div class="rk-sort" id="rk-sort-wrap" role="group" aria-label="Sort the board">
-        <label class="owner-filter rk-sort-lab"><span>Sort</span>
+        <label class="owner-filter rk-sort-lab" id="rk-week-lab"><span>Week</span>
+          <select class="select" id="rk-week" aria-label="Week">
+            <option value="">Full season</option>
+          </select>
+        </label>
+        <label class="owner-filter rk-sort-lab" id="rk-wsort-lab" hidden><span>Sort</span>
+          <select class="select" id="rk-wsort" aria-label="Sort this week by"></select>
+        </label>
+        <label class="owner-filter rk-sort-lab" id="rk-sort-lab"><span>Sort</span>
           <select class="select" id="rk-sort" aria-label="Sort">
             <option value="spam">AM Rank</option>
             <option value="ppg">Season PPG</option>
@@ -5506,7 +5587,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T22:00Z";
+  const BUILD_ID = "2026-10-16T13:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5593,7 +5674,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const b = e.target.closest("button"); if (!b) return;
     posFilter = b.dataset.pos;
     $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
-    if (RK.sort !== "spam") saveRk();
+    if (RK.sort !== "spam" || RK.week != null) saveRk();
     renderRankings();
   });
   $("rank-search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderRankings(); });
@@ -5604,27 +5685,52 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const RK_HEAD = $("rk-head-row").innerHTML;
   const PROD_MODES = { ppg: { label: "Season PPG", short: "PPG", unit: "PPG" }, l3: { label: "Last 3 PPG", short: "L3", unit: "PPG", n: 3 },
     l5: { label: "Last 5 PPG", short: "L5", unit: "PPG", n: 5 }, pts: { label: "Season Points", short: "Pts", unit: "pts" } };
-  const prodOn = () => !!PROD_MODES[RK.sort] && posFilter !== "PICK";
+  const prodOn = () => !!PROD_MODES[RK.sort] && posFilter !== "PICK" && RK.week == null;
   // Market edge sorts (Alan, Oct 8): AM vs the market / expert consensus, never blended (see mkAll)
   const MK_MODES = { mkbuy: { label: "Biggest buy" }, mksell: { label: "Biggest sell" }, mkcons: { label: "AM vs consensus" }, mkfc: { label: "AM vs FantasyCalc", src: "fc" }, mkfl: { label: "AM vs Flock", src: "fl" } };
-  const mkOn = () => !!MK_MODES[RK.sort] && posFilter !== "PICK";
-  const saveRk = () => { try { localStorage.setItem("spm_rk_sort", JSON.stringify(RK.sort === "spam" ? { sort: "spam" } : { ...RK, pos: posFilter })); } catch (e) {} };
+  const mkOn = () => !!MK_MODES[RK.sort] && posFilter !== "PICK" && RK.week == null;
+  /* Week view (Alan, Oct 12): Week → Week N shows every AM-ranked player's actual stat line from that NFL week (or his
+     live points / projection / status when the week isn't complete), sortable by fantasy points or any stat. A
+     statistics filter only: it never touches ranks, tiers, values, publishing or history. RK.week null = Full season
+     (the sorts above); RK.wsort = the week view's sort key (Fantasy points by default). */
+  RK.week = null; RK.wsort = "pts";
+  const wkOn = () => RK.week != null && posFilter !== "PICK";
+  const saveRk = () => { try { localStorage.setItem("spm_rk_sort", JSON.stringify(RK.sort === "spam" && RK.week == null ? { sort: "spam" } : { ...RK, pos: posFilter })); } catch (e) {} };
   function syncRkControls() {
+    const wk = RK.week != null;
+    wkWeekOptions();
+    $("rk-week").value = wk ? String(RK.week) : "";
+    $("rk-sort-lab").hidden = wk; $("rk-wsort-lab").hidden = !wk;
+    if (wk) { if (!$("rk-wsort").options.length) $("rk-wsort").innerHTML = Object.entries(WK_STATS).map(([k, s]) => `<option value="${k}">${esc(s.label)}</option>`).join(""); $("rk-wsort").value = RK.wsort; }
     $("rk-sort").value = RK.sort;
-    $("rk-prod-opts").hidden = !PROD_MODES[RK.sort];
+    $("rk-prod-opts").hidden = !PROD_MODES[RK.sort] && !wk;
+    $("rk-min").hidden = wk;
     $("rk-min").value = String(rkMin());
     const b = $("rk-dir"); b.textContent = RK.dir === "desc" ? "High → Low" : "Low → High";
     b.title = RK.dir === "desc" ? "Highest first · click for lowest first" : "Lowest first · click for highest first";
   }
   $("rk-sort").addEventListener("change", e => { RK.sort = e.target.value; syncRkControls(); saveRk(); renderRankings(); });
   $("rk-min").addEventListener("change", e => { RK.min = Number(e.target.value); saveRk(); renderRankings(); });
+  $("rk-week").addEventListener("change", e => {
+    const w = e.target.value === "" ? null : Number(e.target.value);
+    if (w != null && RK.week == null) { RK.wsort = "pts"; RK.dir = "desc"; }   // a week opens on its highest scorers
+    RK.week = w; syncRkControls(); saveRk(); renderRankings();
+  });
+  $("rk-wsort").addEventListener("change", e => { RK.wsort = e.target.value; RK.dir = "desc"; syncRkControls(); saveRk(); renderRankings(); });
+  // the week view's column headers sort too (click again to flip the direction)
+  $("rk-head-row").addEventListener("click", e => {
+    const b = e.target.closest("[data-wk-sort]"); if (!b || !wkOn()) return;
+    const k = b.dataset.wkSort;
+    if (RK.wsort === k) RK.dir = RK.dir === "desc" ? "asc" : "desc"; else { RK.wsort = k; RK.dir = "desc"; }
+    syncRkControls(); saveRk(); renderRankings();
+  });
   $("rk-dir").addEventListener("click", () => { RK.dir = RK.dir === "desc" ? "asc" : "desc"; syncRkControls(); saveRk(); renderRankings(); });
   // Rail risers/fallers: jump to that player's row on the board (All players, no search or owner filter) and flash it
   document.addEventListener("click", e => {
     const j = e.target.closest("[data-jump]"); if (!j) return;
     const id = j.dataset.jump;
     posFilter = "ALL"; query = ""; $("rank-search").value = "";
-    if (RK.sort !== "spam") { RK.sort = "spam"; syncRkControls(); saveRk(); }   // risers/fallers are about AM rank
+    if (RK.sort !== "spam" || RK.week != null) { RK.sort = "spam"; RK.week = null; syncRkControls(); saveRk(); }   // risers/fallers are about AM rank
     $("pos-chips").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.pos === "ALL"));
     if (LG.ownerFilter !== "all") { LG.ownerFilter = "all"; const o = $("owner-filter"); if (o) { o.value = "all"; } }
     renderRankings();
@@ -5797,6 +5903,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     DRAG_STATE.pending = false;
     $("rk-sort-wrap").hidden = posFilter === "PICK";
     $("mk-bar").hidden = !mkOn();
+    if (wkOn()) return renderWeek();
     if (prodOn()) return renderProd();
     if (mkOn()) return renderMkt();
     if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
@@ -5976,6 +6083,154 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (under) notes.push(`${under} under ${min} games hidden`);
     if (none) notes.push(`${none} without a game this season`);
     notes.push("AM-ranked players only");
+    $("rank-count").textContent = notes.join(" · ");
+    updateEditorBar();
+    queueRail();
+    if ($("player-modal").open) markCurrent();
+  }
+  /* Week view (Alan, Oct 12): one NFL week's actual stat lines for every AM-ranked player, scored with the selected
+     league's scoring (gamePoints on the raw line, so PPR, TE premium and custom rules apply), sortable by fantasy points
+     or any stat. Rows fall into three groups, never mixed in one ranking: actual (a stat line from a completed game, or
+     Sleeper's live points for a rostered player), projected (his game hasn't been played: the shared weekOutlook
+     projection, labelled Proj or Live) and no stats (Bye, DNP, Out, points pending). A statistics filter only: ranks,
+     tiers and values never change. */
+  const WK_STATS = {
+    pts: { label: "Fantasy points", short: "FPTS" },
+    pass_yd: { label: "Passing yards", short: "Pass yds" }, pass_td: { label: "Passing TDs", short: "Pass TD" },
+    pass_int: { label: "Interceptions", short: "INT" }, pass_att: { label: "Pass attempts", short: "Att" },
+    rush_att: { label: "Carries", short: "Car" }, rush_yd: { label: "Rushing yards", short: "Rush yds" }, rush_td: { label: "Rushing TDs", short: "Rush TD" },
+    rec_tgt: { label: "Targets", short: "Tgt" }, rec: { label: "Receptions", short: "Rec" }, rec_yd: { label: "Receiving yards", short: "Rec yds" }, rec_td: { label: "Receiving TDs", short: "Rec TD" },
+    td: { label: "Total TDs", short: "TD", tip: "Passing, rushing and receiving touchdowns", f: g => (g.pass_td || 0) + (g.rush_td || 0) + (g.rec_td || 0) },
+    scrim: { label: "Scrimmage yards", short: "Scrim", tip: "Rushing + receiving yards", f: g => (g.rush_yd || 0) + (g.rec_yd || 0) },
+    snap: { label: "Snap share", short: "Snap %", tip: "Share of his team's offensive snaps", pct: true },
+  };
+  const WK_COLS = { ALL: ["pass_yd", "rush_yd", "rec", "rec_yd", "td"], QB: ["pass_att", "pass_yd", "pass_td", "pass_int", "rush_att", "rush_yd", "rush_td"],
+    RB: ["rush_att", "rush_yd", "rush_td", "rec_tgt", "rec", "rec_yd", "rec_td"], WR: ["rec_tgt", "rec", "rec_yd", "rec_td", "rush_yd", "snap"], TE: ["rec_tgt", "rec", "rec_yd", "rec_td", "snap"] };
+  const wkStat = (g, k) => (WK_STATS[k].f ? WK_STATS[k].f(g) : g[k] ?? 0);
+  // Week menu: Full season + every week on this season's schedule (now / projected marked), filled once the stats are in
+  function wkWeekOptions() {
+    const d = statsCache[STATS_SEASONS[0]], sel = $("rk-week");
+    if (!d || !d.schedule) return;
+    const last = Math.max(0, ...Object.values(d.schedule).flatMap(rows => rows.map(r => r[0]))), cur = currentWeek();
+    const html = `<option value="">Full season</option>` + Array.from({ length: last }, (_, i) => i + 1)
+      .map(w => `<option value="${w}">Week ${w}${w === cur ? " · now" : cur != null && w > cur ? " · proj" : ""}</option>`).join("");
+    if (sel.dataset.weeks !== html) { sel.innerHTML = html; sel.dataset.weeks = html; }
+    sel.value = RK.week != null ? String(RK.week) : "";
+  }
+  // Sleeper's points so far for every player rostered in the connected league this week (Matchups' cache; live games only)
+  function wkSleeperPts(week) {
+    const d = activeData(); if (!d || typeof LT === "undefined" || slSource() !== "sleeper") return null;
+    const id = d.league.league_id, have = LT.mx[mxKey(id, week)];
+    if (!have) { if (!LT.mxError[id] && LT.mxLoading !== mxKey(id, week)) loadMatchups(week).then(() => { if (wkOn() && RK.week === week && LT.mx[mxKey(id, week)]) renderRankings(); }); return null; }
+    const m = new Map(); have.list.forEach(x => Object.entries(x.players_points || {}).forEach(([sid, v]) => m.set(String(sid), Number(v))));
+    return m;
+  }
+  // One player's week: { grp: "act" | "proj" | "none", kind, v (fantasy points: actual, or projected), g (stat line), short, status, tip }
+  function wkRow(p, week, d, sc, cur, slPts) {
+    const sid = String(p.sleeperId), pl = d.players[sid], a = pl && pl.g.find(r => r[0] === week);
+    let g = null;
+    if (a) { g = {}; d.cols.forEach((c, i) => { g[c] = a[i]; }); }
+    const team = (g && g.tm) || p.team;
+    if (g && enteredGame(g)) {
+      const st = nflGameState(team, week), live = week >= (cur ?? Infinity) && st.kind === "live";
+      return { grp: "act", kind: live ? "live" : "final", v: gamePoints(g, p.pos, sc), g, short: shortMap(d, sid).get(week) || null };
+    }
+    const o = weekOutlook({ sid, pos: p.pos, team, p, name: p.name }, week, { sc, pts: slPts && slPts.has(sid) ? slPts.get(sid) : undefined });
+    if (o.kind === "bye") return { grp: "none", kind: "bye", status: "Bye", tip: `${team || "His team"} had a bye in Week ${week}` };
+    if (o.kind === "final") {
+      if (o.pending) return { grp: "none", kind: "pending", status: "Pending", tip: "His game is final; his stat line isn't in the stats file yet" };
+      if (o.dnp || o.pts == null) return { grp: "none", kind: "dnp", status: "DNP", tip: `Did not play in Week ${week}${o.game && o.game.opp ? ` (${o.game.opp})` : ""}: no stats or offensive snaps` };
+      return { grp: "act", kind: "final", v: o.pts, g: null, sl: true };   // Sleeper's final points, stat line not in yet
+    }
+    if (o.kind === "out") return { grp: "none", kind: "out", status: "Out", tip: o.season ? "Out for the season" : "Ruled out on this week's injury report" };
+    if (o.kind === "live" && o.pts != null && slPts && slPts.has(sid)) return { grp: "act", kind: "live", v: o.pts, g: null, sl: true, proj: o.proj };
+    if (!team) return { grp: "none", kind: "none", status: "—", tip: "Not on an NFL team" };
+    if (o.missing || o.proj == null) return { grp: "none", kind: "none", status: o.kind === "live" ? "Live" : "—", tip: o.kind === "live" ? "Game in progress; no live points for him here" : "No projection for this week" };
+    return { grp: "proj", kind: o.kind === "live" ? "live" : "proj", v: o.proj, fallback: o.fallback, game: o.game };
+  }
+  function renderWeek() {
+    const season = STATS_SEASONS[0], d = statsCache[season], head = $("rk-head-row"), week = RK.week, key = RK.wsort;
+    document.body.classList.remove("editing");
+    if (!d || !d.players) {
+      if (statsCache[season] === undefined) loadSeason(season).then(() => { syncRkControls(); if (wkOn()) renderRankings(); });
+      head.innerHTML = RK_HEAD; delete head.dataset.prod;
+      $("rank-body").innerHTML = `<tr><td class="empty" colspan="4">${statsCache[season] === null ? "This season's stats couldn't be loaded." : "Loading this season's stats…"}</td></tr>`;
+      $("rank-count").textContent = ""; return;
+    }
+    const cols = (WK_COLS[posFilter] || WK_COLS.ALL).slice();
+    if (key !== "pts" && !cols.includes(key)) cols.push(key);
+    const arrow = k => (k === key ? (RK.dir === "desc" ? " ↓" : " ↑") : "");
+    const th = (k, cls) => { const S = WK_STATS[k];
+      return `<th scope="col" class="${cls}${k === key ? " on" : ""}"${k === key ? ` aria-sort="${RK.dir === "desc" ? "descending" : "ascending"}"` : ""}><button type="button" class="wk-sort" data-wk-sort="${k}" title="${esc((S.tip ? S.tip + " · " : "") + "Sort by " + S.label.toLowerCase())}">${esc(S.short)}${arrow(k)}</button></th>`; };
+    const sig = `wk|${week}|${posFilter}|${key}|${RK.dir}|${cols.join(",")}`;
+    if (head.dataset.prod !== sig) {
+      head.innerHTML = `<th scope="col" id="edit-head" hidden></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col wk-pos">Pos</th>${th("pts", "prod-col wk-fp")}${cols.map((k, i) => th(k, `wk-st${i >= 4 ? " wk-lo" : ""}`)).join("")}`;
+      head.dataset.prod = sig;
+    }
+    const sc = scoringNow(), cur = currentWeek(), slPts = cur != null && week === cur ? wkSleeperPts(week) : null;
+    const spamRk = p => (leagueView() ? LG.adjRank.get(p.id) : p.rank) ?? 1e9;
+    const pool = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && (posFilter === "ALL" || p.pos === posFilter));
+    const rows = pool.map(p => ({ p, ...wkRow(p, week, d, sc, cur, slPts) }));
+    const sortV = r => (key === "pts" ? r.v : r.g ? wkStat(r.g, key) : null);
+    const cmp = (a, b) => { const x = sortV(a), y = sortV(b);
+      if (x == null || y == null) return (x == null) - (y == null) || (b.v ?? -1e9) - (a.v ?? -1e9) || spamRk(a.p) - spamRk(b.p);
+      return (y - x) || ((b.v ?? 0) - (a.v ?? 0)) || (spamRk(a.p) - spamRk(b.p)); };
+    const NONE_ORDER = { dnp: 0, out: 1, pending: 2, none: 3, bye: 4 };
+    const groups = { act: rows.filter(r => r.grp === "act").sort(cmp), proj: rows.filter(r => r.grp === "proj").sort(cmp),
+      none: rows.filter(r => r.grp === "none").sort((a, b) => NONE_ORDER[a.kind] - NONE_ORDER[b.kind] || spamRk(a.p) - spamRk(b.p)) };
+    // the rank is the High → Low place and stays when the direction flips; Low → High keeps rows without that stat last
+    const asc = (a, b) => { const x = sortV(a), y = sortV(b); return x == null || y == null ? (x == null) - (y == null) : (x - y) || ((a.v ?? 0) - (b.v ?? 0)) || (spamRk(a.p) - spamRk(b.p)); };
+    ["act", "proj"].forEach(k => { groups[k].forEach((r, i) => { r.rank = i + 1; }); if (RK.dir === "asc") groups[k].sort(asc); });
+    const top = Math.max(0, ...groups.act.map(r => r.v), ...groups.proj.map(r => r.v));
+    const filtered = LG.active && LG.ownerFilter !== "all";
+    const keep = r => (!filtered || ownerMatch(r.p)) && (!query || (r.p.name + " " + r.p.team).toLowerCase().includes(query));
+    const ncols = 5 + cols.length, out = [];
+    const band = (label, meta) => `<tr class="tier wk-band"><td colspan="${ncols}"><div class="tier-band"><span class="tier-label">${esc(label)}</span>${meta ? `<span class="tier-meta">${esc(meta)}</span>` : ""}</div></td></tr>`;
+    const cell = (r, k, i) => {
+      const cls = `wk-st${i >= 4 ? " wk-lo" : ""}${k === key ? " on" : ""}`;
+      if (!r.g) return `<td class="${cls}"><span class="wk-dash">—</span></td>`;
+      const v = wkStat(r.g, k), txt = WK_STATS[k].pct ? (v > 0 ? Math.round(v * 100) + "%" : "—") : String(Math.round(v * 10) / 10);
+      return `<td class="${cls}"><span class="wk-n${v ? "" : " z"}">${txt}</span>${k === "pass_att" && r.g.pass_att ? `<span class="wk-sub">${r.g.pass_cmp || 0} cmp</span>` : ""}</td>`;
+    };
+    const rowHtml = r => {
+      const p = r.p, own = LG.active && LG.ownerOf.get(p.id);
+      const cmpA = CMP.on && String(p.sleeperId) === String(PP.sid);
+      const sr = spamRk(p), spamTxt = sr < 1e9 ? `AM #${sr}` : "AM —";
+      let fpCell;
+      if (r.grp === "none") fpCell = `<span class="wk-status ${r.kind}" title="${esc(r.tip || "")}">${esc(r.status)}</span>`;
+      else {
+        const pct = top > 0 ? Math.max(0, r.v) / top * 100 : 0;
+        const star = r.short ? `<span class="inj-star" title="${esc(`Left Week ${week} early with an injury${r.short.inj ? " (" + r.short.inj + ")" : ""}; the game still counts`)}">*</span>` : "";
+        const sub = r.grp === "proj" ? (r.kind === "live" ? `<span class="psub wk-live" title="Game in progress; no live points for him here, so this is his projection for the game">Live · proj</span>`
+            : `<span class="psub" title="${esc(`Projection: his game hasn't been played${r.game && r.game.opp ? ` (${r.game.opp}${r.game.text ? " · " + r.game.text : ""})` : ""}${r.fallback ? " · season PPG, no AM projection" : ""}`)}">Proj${r.fallback ? " · PPG" : ""}</span>`)
+          : r.kind === "live" ? `<span class="psub wk-live" title="Points so far from Sleeper; his game is still in progress">Live</span>`
+          : `<span class="psub" title="${esc(r.sl ? "Final points from Sleeper; his stat line isn't in yet" : `Actual stats from Week ${week}`)}">Final</span>`;
+        fpCell = `<div class="prodbar${r.grp === "proj" ? " proj" : ""}" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))"><div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div><span class="pnum">${fp(r.v)}${star}</span>${sub}</div>`;
+      }
+      return `<tr class="player prod wkrow ${r.grp}${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA ? ` title="Compare with ${esc(CMP.name)}"` : ""}>
+        <td class="rk">${r.rank ?? "–"}</td>
+        <td><div class="pl-cell">${CMP.on ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted AM rank" : "AM Board rank"}: unchanged by the week view">${spamTxt}</span></td>
+        <td class="prod-col wk-fp${key === "pts" ? " on" : ""}">${fpCell}</td>${cols.map((k, i) => cell(r, k, i)).join("")}
+      </tr>`;
+    };
+    const shown = { act: groups.act.filter(keep), proj: groups.proj.filter(keep), none: groups.none.filter(keep) };
+    shown.act.forEach(r => out.push(rowHtml(r)));
+    if (shown.proj.length) out.push(band(groups.act.length ? "Not played yet · projections" : `Week ${week} hasn't been played · projections`, "Projected fantasy points, no stats yet"));
+    shown.proj.forEach(r => out.push(rowHtml(r)));
+    if (shown.none.length) out.push(band("No stats this week", "Bye, did not play, out or stats pending"));
+    shown.none.forEach(r => out.push(rowHtml(r)));
+    $("rank-body").innerHTML = out.length ? out.join("") : `<tr><td class="empty" colspan="${ncols}">${query ? `No players match “${esc(query)}”.` : "No AM-ranked players here."}</td></tr>`;
+    const n = k => rows.filter(r => r.kind === k).length, liveN = rows.filter(r => r.kind === "live").length;
+    const state = !groups.act.length ? "projections" : groups.proj.length || liveN ? "in progress" : "final";
+    const notes = [`Week ${week} · ${state === "final" ? "final stats" : state === "in progress" ? "in progress: actual stats where games are final" : "not played yet"}`, `fantasy points in ${scoringLabel()}`];
+    if (groups.act.length) notes.push(`${groups.act.length} with stats`);
+    if (liveN) notes.push(`${liveN} live`);
+    if (groups.proj.length && groups.act.length) notes.push(`${groups.proj.length} projected`);
+    if (n("dnp")) notes.push(`${n("dnp")} did not play`);
+    if (n("bye")) notes.push(`${n("bye")} on bye`);
+    if (n("out")) notes.push(`${n("out")} out`);
+    notes.push("AM-ranked players only · ranks and values unchanged");
     $("rank-count").textContent = notes.join(" · ");
     updateEditorBar();
     queueRail();
@@ -11946,7 +12201,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const shareA = showBar ? Math.round(1000 * A.proj / tot) / 10 : 0;
       const left = s => state === "upcoming" ? `${s.toPlay} to play` : `${s.done} played · ${s.playing} active · ${s.toPlay} remaining`;
       const bar = showBar ? `<div class="mx-bar-row${partial ? " partial" : ""}"${partial ? ` title="${esc(missTip)}"` : ""}><span class="mx-pct A">${shareA.toFixed(1)}%</span>
-          <div class="mx-bar${partial ? " partial" : ""}" role="img" aria-label="${partial ? "Partial projection" : "Projected matchup"}: ${shareA.toFixed(1)}% to ${(100 - shareA).toFixed(1)}%"><span class="mx-bar-a" style="width:${shareA}%"></span><span class="mx-bar-b"></span></div>
+          <div class="mx-bar${partial ? " partial" : ""}" role="img" aria-label="${partial ? "Partial projection" : "Projected matchup"}: ${shareA.toFixed(1)}% to ${(100 - shareA).toFixed(1)}%"><span class="mx-bar-a${A.team.mine ? " mine" : ""}" style="width:${shareA}%"></span><span class="mx-bar-b${B.team.mine ? " mine" : ""}"></span></div>
           <span class="mx-pct B">${(100 - shareA).toFixed(1)}%</span></div>${partial
             ? `<div class="mx-bar-lbl mx-partial" title="${esc(missTip)}">Partial projection · ${miss.length} starter${miss.length === 1 ? "" : "s"} missing</div>`
             : `<div class="mx-bar-lbl">Projected matchup</div>`}`
@@ -13154,8 +13409,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem("spm_rk_sort") || "null"); } catch (e) {}
-    if (!saved || !(PROD_MODES[saved.sort] || MK_MODES[saved.sort])) return;
-    RK.sort = saved.sort; RK.dir = saved.dir === "asc" ? "asc" : "desc";
+    loadSeason(STATS_SEASONS[0]).then(() => wkWeekOptions());   // the Week menu lists the season's weeks once the schedule is in
+    if (!saved || !(PROD_MODES[saved.sort] || MK_MODES[saved.sort] || Number.isInteger(saved.week))) return;
+    if (PROD_MODES[saved.sort] || MK_MODES[saved.sort]) RK.sort = saved.sort;
+    RK.dir = saved.dir === "asc" ? "asc" : "desc";
+    if (Number.isInteger(saved.week) && saved.week >= 1 && saved.week <= 22) { RK.week = saved.week; RK.wsort = WK_STATS[saved.wsort] ? saved.wsort : "pts"; }
     RK.min = [0, 2, 3, 4].includes(saved.min) ? saved.min : null;
     if (filters.includes(saved.pos) && saved.pos !== "PICK") {
       posFilter = saved.pos;
@@ -13417,7 +13675,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (n4 != null && F) {
         const r = n4 / ros, tag = r < 0.97 ? "Tough stretch" : r > 1.03 ? "Soft stretch" : "";
         const why = [F.sched4 < 0.98 ? "tougher opponents" : F.sched4 > 1.02 ? "softer opponents" : "", F.env4 < 0.98 ? "lower team totals" : F.env4 > 1.02 ? "higher team totals" : ""].filter(Boolean).join(", ");
-        a.push(it("n4", "Next 4", fp(n4), `Projected points per game over his next ${NEXT_N_LABEL} games: the same role and efficiency as ROS PPG, with the environment and schedule of those games only${why ? ` (${why})` : ""}`) + (tag ? `<span class="pr-n4tag ${r < 1 ? "down" : "up"}" title="${esc(`Next 4 vs ROS PPG: ${r >= 1 ? "+" : "−"}${Math.abs(100 * (r - 1)).toFixed(0)}%`)}">${tag}</span>` : ""));
+        a.push(it("n4", "Next 4", fp(n4), `Projected points per game over his next ${NEXT_N_LABEL} games: the same role and efficiency as ROS PPG, with the environment and schedule of those games only${why ? ` (${why})` : ""}`) + (tag ? `<span class="pr-n4tag ${r < 1 ? "down" : "up"}" title="${esc(`Next 4 vs ROS PPG: ${r >= 1 ? "+" : "−"}${Math.abs(100 * (r - 1)).toFixed(0)}%`)}">${tag}</span>` : "").replace(/<\/span>(<span class="pr-n4tag[^]*<\/span>)$/, "$1</span>"));
       }
     } else if (p) a.push(it("ros nr", "ROS PPG", "—", "No rest-of-season projection yet"));
     if (ppg != null) b.push(it("sppg", "Season PPG", fp(ppg), `Actual points per game this season over ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName}), injury-shortened games included`));
