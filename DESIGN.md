@@ -2,8 +2,11 @@
 name: Adequate
 description: Fantasy football rankings, values and trade tools. A dense, readable analytics board.
 colors:
-  am-red: "#E4002B"
-  am-red-hover: "#F01B43"
+  am-red: "#C83B4B"
+  am-red-hover-dark: "#CB4756"
+  am-red-hover-light: "#B63342"
+  am-red-text-dark: "#EB5F6F"
+  am-red-text-light: "#B83443"
   dark-page: "#08090B"
   dark-surface: "#14161B"
   dark-raised: "#1F2228"
@@ -106,7 +109,7 @@ These are explicitly rejected:
 The palette has three kinds of color only: AM red, the semantic position colors, and grayscale. Every value lives as a CSS token at the top of `index.html`; never hard-code a color.
 
 ### Primary
-- **AM Red** (#E4002B; hover #F01B43). Used for:
+- **AM Red** (muted crimson #C83B4B since Oct 12, was #E4002B; hover #CB4756 dark / #B63342 light; tokens `--am-red`, `--am-red-hover`, `--am-red-text`). Used for:
   - the active nav underline and every selected state (a red underline on a neutral fill)
   - primary buttons
   - the wordmark period
@@ -114,7 +117,7 @@ The palette has three kinds of color only: AM red, the semantic position colors,
   - the selected player row (a faint wash plus a thin left edge)
   - major calls to action
 
-  Red as *text* goes through `--mine-text`, `--st-dnp-text` and `--st-out-text` so it clears 4.5:1.
+  Red as *text* never uses the fill: it goes through `--am-red-text` (#EB5F6F dark, #B83443 light; `--mine-text` for your team) or `--st-dnp-text` / `--st-out-text`, so it clears 4.5:1 on every surface. White on the fill is 5.0:1.
 
 ### Semantic: positions
 These colors are one palette shared by badges, value meters and lineup slots: QB coral #E8735F, RB emerald #2FB67E, WR blue #4F8EE0, TE violet #9D7FE0, FLEX amber #DDA23C, SF rose #D16C8C. Bench, IR and draft picks are gray. Light mode uses deeper versions (QB #C24A38, RB #1A8A5A, WR #2E69BD, TE #6E4CC2, FLEX #A06F17, SF #A8486A).
