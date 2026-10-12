@@ -3017,6 +3017,29 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .mk-bar-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .mk-fmt { margin: 0; font-size: 0.8rem; color: var(--text-secondary); }
 .mk-fresh { margin: 0; }
+/* Market rankings freshness (Alan, Oct 11): one quiet row per source, details on demand */
+.mk-status { display: grid; gap: 3px; }
+.mk-st-row { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) auto; align-items: baseline; gap: 2px 10px; font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; }
+.mk-st-name { font-weight: 600; color: var(--text-secondary); }
+.mk-st-txt { min-width: 0; overflow-wrap: anywhere; }
+.mk-st-fmt { opacity: .85; }
+.mk-st-row .mk-st-tag { justify-self: end; }
+@media (max-width: 600px) { .mk-st-row { grid-template-columns: minmax(0, 1fr) auto; } .mk-st-txt { grid-column: 1 / -1; grid-row: 2; } }
+.mk-st-tag { font: 600 0.6rem/1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; }
+.mk-st-tag.ok { color: var(--text-secondary); }
+.mk-st-tag.stale { color: var(--warn, #DDA23C); border-color: color-mix(in srgb, var(--warn, #DDA23C) 45%, transparent); }
+.mk-st-tag.fail { color: var(--danger-text, #E0806F); border-color: color-mix(in srgb, var(--danger-text, #E0806F) 45%, transparent); }
+.mk-st-foot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+.mk-st-foot .btn.link.inline { font-size: 0.7rem; padding: 0; }
+.mk-st-sub { color: var(--text-muted); font-weight: 400; }
+.mk-st-err { color: var(--danger-text, #E0806F); }
+.mk-st-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 10px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.mk-st-card h4 { margin: 0 0 4px; font: 600 0.74rem var(--font-display); color: var(--text-secondary); }
+.mk-st-card h4 span { font-weight: 500; color: var(--text-muted); margin-left: 4px; }
+.mk-st-card dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; font-size: 0.7rem; line-height: 1.4; }
+.mk-st-card dt { margin: 0; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; font-size: 0.6rem; padding-top: 2px; }
+.mk-st-card dd { margin: 0; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) { .mk-st-card dl { grid-template-columns: 1fr; gap: 1px; } .mk-st-card dd { margin-bottom: 4px; } }
 .mk-import { display: grid; gap: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .mk-imp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .mk-paste { width: 100%; min-height: 70px; resize: vertical; font: 0.78rem/1.4 var(--font-body); color: var(--text-primary); background: var(--bg, transparent); border: 1px solid var(--border); border-radius: var(--r-sm, 6px); padding: 8px; box-sizing: border-box; }
@@ -5485,7 +5508,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T21:00Z";
+  const BUILD_ID = "2026-10-15T21:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5961,7 +5984,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if ($("player-modal").open) markCurrent();
   }
   // Market edge view of the board: same rows, ordered by AM vs market; nothing on the board changes
-  let MK_UI = { open: false, msg: "" };
+  let MK_UI = { open: false, msg: "", details: false };
   function renderMkt() {
     if (typeof MK_READY === "undefined" || !MK_READY) { setTimeout(renderRankings, 0); return; }   // the market module loads further down the script
     const M = MK_MODES[RK.sort], head = $("rk-head-row");
@@ -6016,7 +6039,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <p class="mk-fmt"><b>AM ROS</b> vs <b>${srcs.length ? srcs.map(s => esc(s.name)).join(" + ") : "no market source"}</b> · ${esc(formatLabel(F.vl))}</p>
         <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}">${fl ? (fl.site ? "Flock rankings (built in)" : "Flock rankings") : "Import Flock rankings"}</button>
       </div>
-      <p class="mk-fresh">${srcs.length ? esc(mkFresh(srcs)) : "FantasyCalc values load with the page; Flock rankings come from an import in this browser."} ${mkCredit(srcs)}</p>
+      ${mkStatusHtml(srcs)}
       ${MK_UI.open ? `<div class="mk-import">
         <p class="pp-note">${fl && fl.site ? "Using the Flock list built into the site (data/market/flock.json). An import here replaces it in this browser only. " : "An import stays in this browser only. "}Use a Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or paste a ranked list.</p>
         <div class="mk-imp-row">
@@ -6031,6 +6054,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   $("mk-bar").addEventListener("click", e => {
     if (e.target.closest("[data-mk-flock]")) { MK_UI.open = !MK_UI.open; MK_UI.msg = ""; renderMkBar(mkAll()); return; }
+    if (e.target.closest("[data-mk-details]")) { MK_UI.details = !MK_UI.details; renderMkBar(mkAll()); if (MK_UI.details) { const d = $("mk-st-detail"); if (d) d.scrollIntoView({ block: "nearest" }); } return; }
     if (e.target.closest("[data-mk-clear]")) { flockClear(); MK_UI.msg = "Flock rankings removed from this browser."; renderRankings(); return; }
     if (e.target.closest("[data-mk-import]")) {
       const text = $("mk-paste").value;
@@ -6092,7 +6116,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (hi.length || lo.length) parts.push(`<section class="rr-sec rr-moves rr-ins"><h3 class="rr-label">Ranking insights <span class="rr-when">AM vs market</span></h3>
           ${hi.length ? `<p class="rr-sublabel">AM higher than the market</p><ul class="rr-list">${hi.map(gRow).join("")}</ul>` : ""}
           ${lo.length ? `<p class="rr-sublabel">Market higher than AM</p><ul class="rr-list">${lo.map(gRow).join("")}</ul>` : ""}
-          <p class="rr-src" title="${esc(mkFresh(all.srcs))}">${esc(all.srcs.map(s => `${s.name} ${ago(Date.parse(s.at))}${s.notes.length ? " (approx.)" : ""}`).join(" · "))} · ${mkCredit(all.srcs)}</p></section>`);
+          <p class="rr-src" title="${esc(mkFresh(all.srcs))}">${esc(all.srcs.map(s => `${s.name} ${s.id === "fl" ? (s.site ? "exported" : "imported") : "synced"} ${ago(Date.parse(s.at))}${s.notes.length ? " (approx.)" : ""}`).join(" · "))} · ${mkCredit(all.srcs)}</p></section>`);
       }
     } catch (e) {}
     el.innerHTML = parts.join("");
@@ -12652,8 +12676,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // calibration layer: Vegas, matchup and props move the weekly projection; missing props change nothing
     const g0 = { oppTeam: "KC", week: 99, total: 47, spread: 0 }, sc0 = scOf({}), we = entry(wr), te0 = entry(te);
     const cp = (e, g, o = {}) => Math.round(10 * contextProjection(e, g, o.sc || sc0, { props: o.props === undefined ? null : o.props, ctx: o.ctx }).pts) / 10;
-    const hiLo = [cp(we, { ...g0, total: 56, spread: -7 }), cp(we, { ...g0, total: 38, spread: 7 })];
-    check(`${wr.name}: a higher Vegas team total raises his projection`, hiLo, hiLo[0] > hiLo[1]);
+    // the Vegas term needs 2+ of his team's upcoming games with posted lines (its baseline); lines are usually posted a week
+    // ahead, so pick the best WR whose team has them, and with none anywhere check that no baseline means no adjustment
+    const lined = p => teamGames(STATS_SEASONS[0], p.team).filter(r => r[4] == null && r[7] != null && r[8] != null).length >= 2;
+    const vw = players.filter(p => p.pos === "WR" && p.projPPG != null && p.sleeperId && p.team && lined(p) && (statsCache[STATS_SEASONS[0]].players[p.sleeperId] || {}).g).sort((a, b) => a.posNum - b.posNum)[0];
+    const ve = vw ? entry(vw) : we, hiLo = [cp(ve, { ...g0, total: 56, spread: -7 }), cp(ve, { ...g0, total: 38, spread: 7 })];
+    if (vw) check(`${vw.name}: a higher Vegas team total raises his projection`, hiLo, hiLo[0] > hiLo[1]);
+    else check(`${wr.name}: no team has two posted lines yet, so the Vegas total adds no adjustment`, hiLo, hiLo[0] === hiLo[1]);
     const mxv = [cp(we, g0, { ctx: { env: 1, mx: 1.08, inputs: [] } }), cp(we, g0, { ctx: { env: 1, mx: 0.92, inputs: [] } })];
     check(`${wr.name}: a soft matchup beats a tough one`, mxv, mxv[0] > mxv[1]);
     const flat = { env: 1, mx: 1, inputs: [] };
@@ -15247,13 +15276,25 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      never changing AM ranks, tiers or values; shown with a FantasyCalc link. The league's nearest format is used
      (1QB / Superflex × 10 / 12 teams) and put on the AM scale by the median AM ÷ market ratio of the players
      both value, so "AM likes him more than the market" is a like-for-like comparison. */
-  const MKT = { d: null, p: null, cur: null };
-  function loadMarket() {
-    if (!MKT.p) MKT.p = Promise.all([
-      fetch("data/market/redraft.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null),
-      fetch("data/market/flock.json", { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null)])
-      .then(([d, fl]) => { MKT.d = d; FLOCK_SITE.d = fl; FLOCK_SITE.v = null; MK_CACHE.key = ""; if (d && !$("panel-finder").hidden) renderFinder(); return d; });
-    return MKT.p;
+  // at: when this browser last loaded the market files; err / flErr: that load failed (a missing flock.json is "no list", not a failure)
+  const MKT = { d: null, p: null, cur: null, at: 0, err: "", flErr: "" };
+  const MK_RELOAD_MS = 15 * 60000;   // the files are re-read while the Market edge view is open, so a scheduled sync shows up without a reload
+  function loadMarket(again) {
+    if (MKT.p && !(again && MKT.at && Date.now() - MKT.at > MK_RELOAD_MS && !MKT.loading)) return MKT.p;
+    MKT.loading = true;
+    const get = (url, missOk) => fetch(url, { cache: "no-cache" }).then(r => (r.ok ? r.json().then(j => ({ j })) : { err: missOk && r.status === 404 ? "" : `HTTP ${r.status}` })).catch(e => ({ err: "no connection" }));
+    const p = Promise.all([get("data/market/redraft.json", false), get("data/market/flock.json", true)])
+      .then(([d, fl]) => {
+        MKT.loading = false; MKT.at = Date.now();
+        MKT.err = d.err || (d.j && d.j.formats ? "" : "unreadable file"); MKT.flErr = fl.err || "";
+        if (d.j && d.j.formats) MKT.d = d.j; else if (!MKT.d) MKT.d = null;   // a failed re-read keeps the values already loaded
+        if (fl.j) { FLOCK_SITE.d = fl.j; FLOCK_SITE.v = null; } else if (!fl.err) { FLOCK_SITE.d = null; FLOCK_SITE.v = null; }
+        MK_CACHE.key = "";
+        if (MKT.d && !$("panel-finder").hidden) renderFinder();
+        return MKT.d;
+      });
+    MKT.p = p;
+    return p;
   }
   function marketNow() {
     const d = activeData(); if (!MKT.d || !d || !MKT.d.formats) return null;
@@ -15449,7 +15490,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     parts.push(`<span class="mk-edge ${d > 0 ? "up" : d < 0 ? "down" : ""} l${r.lvl}" title="Consensus position rank minus AM position rank: + means AM is higher on him">AM edge ${d > 0 ? "+" + d : d < 0 ? "−" + (-d) : "0"}</span>`, mkPill(r));
     if (r.lvl) parts.push(`<span class="mk-conf ${r.conf.toLowerCase()}" title="From the size of the gap, FantasyCalc/Flock agreement, freshness, format match and whether AM's spot is manual">${r.conf} confidence</span>`);
     return `<div class="pm-mkt" aria-label="AM vs market"><div class="pm-prodrk"><span class="pr-k mk-lead">Market</span>${parts.join("")}</div>
-      <p class="mk-say">${esc(mkSentence(r))}${r.review ? ` <b class="mk-rev">${esc(r.review)}.</b>` : ""} <span class="mk-fresh-s">${esc(all.srcs.map(s => `${s.name} ${ago(Date.parse(s.at))}${s.notes.length ? " (approx.)" : ""}`).join(" · "))}</span></p></div>`;
+      <p class="mk-say">${esc(mkSentence(r))}${r.review ? ` <b class="mk-rev">${esc(r.review)}.</b>` : ""} <span class="mk-fresh-s">${esc(all.srcs.map(s => `${s.name} ${s.id === "fl" ? (s.site ? "exported" : "imported") : "synced"} ${ago(Date.parse(s.at))}${s.notes.length ? " (approx.)" : ""}`).join(" · "))}</span></p></div>`;
   }
   function mkRefresh() {
     MK_CACHE.key = "";
@@ -15480,9 +15521,103 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const mkEdgeTxt = n => (n > 0 ? `▲ +${n}` : n < 0 ? `▼ ${n}`.replace("-", "−") : "=");
   const mkPill = r => `<span class="mk-pill ${r.dir > 0 ? "buy" : r.dir < 0 ? "sell" : "even"} l${r.lvl}" title="${esc(mkSentence(r))}">${esc(r.bucket)}</span>`;
   function mkFresh(srcs) {
-    return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list from ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "updated"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
+    return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list exported ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "synced"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
   }
   const mkCredit = srcs => srcs.some(s => s.id === "fc") ? `<a class="tf-credit" href="https://www.fantasycalc.com/" target="_blank" rel="noopener">Market values: FantasyCalc</a>` : "";
+
+  /* Market rankings freshness (Alan, Oct 11). Two different times, never confused: when the PROVIDER last changed its
+     rankings (FantasyCalc's JSON has no such timestamp and Flock has no feed at all, so this is usually "Provider
+     update unknown"; the pipeline keeps FantasyCalc's Last-Modified header when it sends one), and when ADEQUATE last
+     retrieved them (FantasyCalc: the scheduled job's `updated`; Flock: the export or the import in this browser).
+     Adequate also records the last sync at which FantasyCalc's values actually differed (`changed`), so "synced an hour
+     ago, values unchanged since Tuesday" is shown as its own observation. Status: Current, Stale (older than MK_STALE)
+     or Sync failed (the last scheduled attempt failed, or the file couldn't be loaded here). Read-only: nothing here
+     touches ranks, values or the market weights. Shown in the Market edge bar on the Rankings page. */
+  const ET_STAMP = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  const ET_STAMP_Y = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  function etStamp(ts) {
+    const t = typeof ts === "number" ? ts : Date.parse(ts); if (!isFinite(t)) return "";
+    const sameYear = new Date(t).getFullYear() === new Date().getFullYear();
+    return (sameYear ? ET_STAMP : ET_STAMP_Y).format(t).replace(/(\d) ([AP]M)/, "$1 $2");
+  }
+  function agoLong(ts) {
+    const t = typeof ts === "number" ? ts : Date.parse(ts); if (!isFinite(t)) return "";
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m} minute${m === 1 ? "" : "s"} ago`;
+    const h = Math.round(m / 60);
+    if (h < 36) return `${h} hour${h === 1 ? "" : "s"} ago`;
+    const d = Math.round(h / 24);
+    return `${d} day${d === 1 ? "" : "s"} ago`;
+  }
+  const stampText = ts => `${etStamp(ts)} (${agoLong(ts)})`;
+  // one record per source, present whether or not the source is loaded: { id, name, status, synced, provider, changed, how, note, error, fmt }
+  function mkStatus(srcs) {
+    srcs = srcs || [];
+    const fmtOf = id => { const s = srcs.find(x => x.id === id); return s ? (s.notes.length ? "approximate: " : "") + s.fmt.replace(/ \(stale\)$/, "") : ""; };
+    const out = [];
+    const d = MKT.d, fc = { id: "fc", name: "FantasyCalc", kind: "Trade market", provider: null, changed: null, fmt: fmtOf("fc"), url: "https://www.fantasycalc.com/" };
+    if (d && d.updated) {
+      fc.synced = Date.parse(d.updated); fc.how = "Retrieved by Adequate's scheduled job (every 8 hours)";
+      fc.provider = d.provider_updated && isFinite(Date.parse(d.provider_updated)) ? Date.parse(d.provider_updated) : null;
+      fc.changed = d.changed && isFinite(Date.parse(d.changed)) ? Date.parse(d.changed) : null;
+      const sync = d.sync && typeof d.sync === "object" ? d.sync : null;
+      fc.attempt = sync && sync.attempted ? Date.parse(sync.attempted) : null;
+      fc.error = sync && sync.ok === false ? `The last scheduled sync (${etStamp(sync.attempted)}) failed${sync.error ? `: ${String(sync.error).slice(0, 140)}` : ""}. Showing the values synced before it.` : MKT.err ? `The market file couldn't be re-read in this browser (${MKT.err}); showing the values loaded ${agoLong(MKT.at)}.` : "";
+      if (!fc.error && sync && sync.ok && sync.error) fc.note = `Partial sync: ${sync.formats} of ${sync.of} formats answered.`;
+      fc.status = fc.error ? "Sync failed" : daysOld(d.updated) > MK_STALE.fc ? "Stale" : "Current";
+      if (daysOld(d.updated) >= MK_DEAD.fc) fc.note = `Older than ${MK_DEAD.fc} days, so it's left out of the market comparison.`;
+      fc.loaded = MKT.at;
+    } else if (MKT.p && MKT.at) { fc.status = "Sync failed"; fc.error = `Market values couldn't be loaded in this browser (${MKT.err || "no data"}).`; }
+    else fc.status = "Loading";
+    out.push(fc);
+    const FL = flockNow(), fl = { id: "fl", name: "Flock", kind: "Expert rankings", provider: null, changed: null, fmt: fmtOf("fl") };
+    if (FL && FL.at) {
+      fl.synced = Date.parse(FL.at); fl.site = !!FL.site; fl.file = FL.file || "";
+      fl.how = FL.site ? `Exported from Flock${FL.file ? ` (${FL.file})` : ""} and built into the site${FLOCK_SITE.d && FLOCK_SITE.d.synced ? `; added ${etStamp(FLOCK_SITE.d.synced)}` : ""}` : `Imported in this browser${FL.file ? ` (${FL.file})` : " (pasted list)"}; the export time isn't in the file`;
+      fl.status = daysOld(FL.at) > MK_STALE.fl ? "Stale" : "Current";
+      if (daysOld(FL.at) >= MK_DEAD.fl) fl.note = `Older than ${MK_DEAD.fl} days, so it's left out of the market comparison.`;
+    } else if (MKT.flErr) { fl.status = "Sync failed"; fl.error = `The built-in Flock list couldn't be loaded (${MKT.flErr}).`; }
+    else if (MKT.p && MKT.at) { fl.status = "Not loaded"; fl.note = "No Flock list: import one above. Flock has no feed, so it never syncs by itself."; }
+    else fl.status = "Loading";
+    out.push(fl);
+    return out;
+  }
+  const mkStCls = st => st === "Current" ? "ok" : st === "Stale" ? "stale" : st === "Sync failed" ? "fail" : "none";
+  // the compact line per source: "Synced 3 hours ago · Provider update unknown · values unchanged since Oct 9"
+  function mkStLine(s) {
+    if (!s.synced) return s.status === "Not loaded" ? "No list loaded · Flock has no feed, so a list comes from an import" : s.status === "Loading" ? "Loading…" : "Never synced in this browser";
+    const bits = [];
+    if (s.synced) bits.push(`${s.id === "fl" ? (s.site ? "Exported" : "Imported") : "Synced"} ${agoLong(s.synced)}`);
+    bits.push(s.provider ? `provider updated ${agoLong(s.provider)}` : "Provider update unknown");
+    if (s.changed && s.synced && s.synced - s.changed > 3600e3) bits.push(`values unchanged since ${etStamp(s.changed).replace(/,? \d{1,2}:\d{2} [AP]M [A-Z]+$/, "")}`);
+    return bits.join(" · ");
+  }
+  function mkStatusHtml(srcs) {
+    const rows = mkStatus(srcs);
+    const row = s => `<div class="mk-st-row" data-src="${s.id}"><b class="mk-st-name">${esc(s.name)}</b><span class="mk-st-txt">${esc(mkStLine(s))}${s.fmt ? ` · <span class="mk-st-fmt">${esc(s.fmt)}</span>` : ""}</span><span class="mk-st-tag ${mkStCls(s.status)}">${esc(s.status)}</span></div>`;
+    const dl = s => `<div class="mk-st-card" data-src="${s.id}"><h4>${esc(s.name)} <span>${esc(s.kind)}</span></h4><dl>
+        <dt>Last updated</dt><dd>${s.provider ? esc(stampText(s.provider)) + " <span class=\"mk-st-sub\">(the provider's Last-Modified header)</span>" : `Provider update unknown <span class="mk-st-sub">${s.id === "fc" ? "FantasyCalc publishes no update time" : "Flock publishes no update time"}</span>`}</dd>
+        ${s.changed ? `<dt>Values last changed</dt><dd>${esc(stampText(s.changed))} <span class="mk-st-sub">as seen by Adequate between syncs</span></dd>` : ""}
+        <dt>Last synced</dt><dd>${s.synced ? esc(stampText(s.synced)) : "—"}${s.how ? ` <span class="mk-st-sub">${esc(s.how)}</span>` : ""}</dd>
+        ${s.attempt && s.attempt !== s.synced ? `<dt>Last attempt</dt><dd>${esc(stampText(s.attempt))}</dd>` : ""}
+        ${s.loaded ? `<dt>Loaded here</dt><dd>${esc(stampText(s.loaded))} <span class="mk-st-sub">this browser re-reads the file every 15 minutes while this view is open</span></dd>` : ""}
+        <dt>Status</dt><dd><span class="mk-st-tag ${mkStCls(s.status)}">${esc(s.status)}</span>${s.error ? ` <span class="mk-st-err">${esc(s.error)}</span>` : ""}${s.note ? ` <span class="mk-st-sub">${esc(s.note)}</span>` : ""}</dd>
+        ${s.fmt ? `<dt>Format</dt><dd>${esc(s.fmt)}</dd>` : ""}
+      </dl></div>`;
+    return `<div class="mk-status" id="mk-status">${rows.map(row).join("")}
+      <div class="mk-st-foot"><button class="btn link inline" type="button" data-mk-details aria-expanded="${MK_UI.details}" aria-controls="mk-st-detail">${MK_UI.details ? "Hide source details" : "Source details"}</button>
+        <span class="mk-st-sub">Times in Eastern Time${rows.some(s => s.id === "fc" && s.synced) ? " · stale after 3 days (FantasyCalc) / 14 days (Flock)" : ""}</span> ${mkCredit(srcs)}</div>
+      ${MK_UI.details ? `<div class="mk-st-detail" id="mk-st-detail">${rows.map(dl).join("")}</div>` : ""}</div>`;
+  }
+  // keep the relative times honest while the view stays open: redraw the status block each minute, re-read the files every 15
+  setInterval(() => {
+    const el = $("mk-status"); if (!el || document.hidden) return;
+    loadMarket(true).then(d => { if (MKT.at > (el.dataset.at || 0)) mkRefresh(); });
+    el.dataset.at = MKT.at;
+    const fresh = document.createElement("div"); fresh.innerHTML = mkStatusHtml(mkAll().srcs);
+    el.replaceWith(fresh.firstElementChild);
+  }, 60000);
 
   /* Flock import (browser only): a Flock rankings CSV (player_id = Sleeper ID, Rank, Name, Team, Position, Tier) or
      pasted text. Kept in this browser (spm_flock), never committed or published: it's Flock's content. */
@@ -16283,9 +16418,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!r) return hcSec("Market comparison", `<p class="hc-muted">Neither FantasyCalc nor Flock ranks ${esc(p.name)}.</p>`);
     const am = r.am, line = (name, rank, v, d, note, cls = "") => `<tr class="${cls}"><th scope="row">${name}</th><td>${rank}</td><td>${v}</td><td>${d}</td></tr>${note ? `<tr class="hc-tn"><td colspan="4">${note}</td></tr>` : ""}`;
     let rows = line("AM", `${esc(p.pos)}${r.ap}`, fmt(am), "", "", "am");
+    const stat = mkStatus(all.srcs);
     all.srcs.forEach(s => {
-      const x = r.per[s.id];
-      const when = s.id === "fl" && s.site ? `list from ${hcDay(Date.parse(s.at))}` : `updated ${ago(Date.parse(s.at))}`;
+      const x = r.per[s.id], st = stat.find(z => z.id === s.id) || {};
+      // two different times, never confused (the market freshness rules): when Adequate retrieved the list, and when the provider changed it
+      const got = s.id === "fl" ? (s.site ? `list exported ${hcDay(Date.parse(s.at))}` : `imported ${ago(Date.parse(s.at))}`) : `synced ${ago(st.synced || Date.parse(s.at))}`;
+      const prov = st.provider ? `provider update ${hcDay(st.provider)}` : "provider update unknown";
+      const chg = s.id === "fc" && st.changed && st.synced && st.synced - st.changed > 3600e3 ? ` · values unchanged since ${hcDay(st.changed)}` : "";
+      const when = `${got} · ${prov}${chg}${st.status === "Sync failed" ? ` · <b class="hc-stale">last sync failed</b>` : ""}`;
       const raw = s.id === "fc" && s.rows.get(p.sleeperId) ? `raw ${fmt(Number(s.rows.get(p.sleeperId).raw))} · ` : "";
       const note = `${raw}${when}${s.stale ? ` · <b class="hc-stale">stale</b>` : ""}${s.notes.length ? ` · ${esc(s.notes.join(", "))}` : ""}`;
       rows += x ? line(esc(s.name), `${esc(p.pos)}${x.pr}`, fmt(x.v), hcPct(pctOf(am, x.v)), note) : line(esc(s.name), "–", "–", "", `doesn't rank him · ${when}`);
