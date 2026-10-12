@@ -1364,9 +1364,14 @@ body.editing #panel-rankings td.val { min-width: 330px; }
   margin: 0; font-weight: 820; font-stretch: 108%; font-size: 1.5rem; line-height: 1.1;
   letter-spacing: -0.02em; text-wrap: balance; color: var(--cream);
 }
-.verdict h2.fair { color: var(--heading); }
-.verdict h2.win-A { color: var(--side-a); }
-.verdict h2.win-B { color: var(--side-b); }
+/* The headline is neutral type and names the result; a small neutral dot marks that one side comes out ahead,
+   a hollow ring that it's even or the readings split (Alan, Oct 12: never red for side A, red means selection / your team). */
+.verdict h2.fair, .verdict h2.win-A, .verdict h2.win-B { color: var(--heading); }
+.verdict h2.fair::before, .verdict h2.win-A::before, .verdict h2.win-B::before {
+  content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 10px; vertical-align: 0.18em;
+}
+.verdict h2.win-A::before, .verdict h2.win-B::before { background: var(--text-secondary); }
+.verdict h2.fair::before { box-shadow: inset 0 0 0 2px var(--text-muted); }
 .verdict-main { min-width: 0; }
 .verdict-gap { color: var(--ink-2); margin: 6px 0 0; font-size: 0.98rem; font-variant-numeric: tabular-nums; }
 .verdict-gap b { color: var(--cream); font-weight: 750; }
@@ -1555,8 +1560,7 @@ button.rs-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 1
 .fit-tag.approx { color: var(--warn); }
 .verdict-eyebrow { display: block; margin-bottom: 4px; font-size: 0.6rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .verdict-ctx { margin: 8px 0 0; font-size: 0.82rem; color: var(--ink-2); }
-.verdict-ctx b.win-A, .ri-verdicts b.win-A { color: var(--side-a); }
-.verdict-ctx b.win-B, .ri-verdicts b.win-B { color: var(--side-b); }
+.verdict-ctx b.win-A, .ri-verdicts b.win-A, .verdict-ctx b.win-B, .ri-verdicts b.win-B { color: var(--heading); }
 .verdict-ctx b { color: var(--cream); }
 .tc-analysis { border-top: 1px solid var(--line-soft); padding-top: 4px; }
 .tc-analysis .section-label { margin-top: 14px; }
@@ -1822,7 +1826,7 @@ input[type="checkbox"]:disabled:checked { background-color: var(--disabled-borde
   font-size: 0.74rem; font-weight: 650; color: var(--muted); white-space: nowrap; transition: background 0.15s, color 0.15s; }
 .vt-btn:hover { color: var(--ink); }
 .vt-btn[aria-pressed="true"] { background: var(--accent-primary); color: var(--bg); }
-.vt-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.vt-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .vt-btn:disabled { opacity: 0.4; cursor: default; }
 .owner-filter { display: inline-flex; align-items: center; gap: 10px; font-size: 0.64rem; font-weight: 650; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); }
 .select {
@@ -3192,9 +3196,9 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tw-sub { font-size: 0.66rem; color: var(--muted); line-height: 1.3; }
 .tw-def { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 .tw-def .tw-label { margin-right: 2px; }
-.rk-chip { --rk: var(--gold); display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; }
-.rk-chip.good { --rk: var(--rb); } .rk-chip.tough { --rk: var(--qb); }
-.rk-chip b { color: var(--cream); font-weight: 700; font-variant-numeric: tabular-nums; min-width: 30px; }
+.tw-rank { --rk: var(--gold); display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; }
+.tw-rank.good { --rk: var(--rb); } .tw-rank.tough { --rk: var(--qb); }
+.tw-rank b { color: var(--cream); font-weight: 700; font-variant-numeric: tabular-nums; min-width: 30px; }
 .rk-l:empty { display: none; }
 .rk-bar { width: 44px; height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
 .rk-bar span { display: block; height: 100%; background: color-mix(in srgb, var(--rk) 70%, transparent); border-radius: 2px; }
@@ -3446,7 +3450,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tf-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; padding: 16px 18px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
 .tf-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tf-player { flex: 1 1 260px; }
-@media (min-width: 1280px) { .tf-player { flex: 0 1 440px; } }
+@media (min-width: 1280px) { .tf-player { flex: 0 1 auto; min-width: 440px; } }
 .tf-player .select { width: 100%; }
 .ctl-label { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .tf-check { display: inline-flex; align-items: center; gap: 8px; height: 34px; font-size: 0.84rem; font-weight: 550; color: var(--ink-2); cursor: pointer; }
@@ -3491,7 +3495,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .fit-table td { padding: 4px 6px 4px 0; vertical-align: top; color: var(--ink-2); border-bottom: 1px solid var(--line-soft); }
 .fit-table td:nth-child(2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .fit-table b { color: var(--cream); }
-.tc-lens .chip-btn { height: 30px; font-size: 0.68rem; }
+
 
 /* ---------- 3-team trades ---------- */
 .side.C { --side-color: var(--cream); }
@@ -3527,7 +3531,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 
 /* ---------- Trade finder (league-wide) ---------- */
 .tf-src { margin-bottom: 8px; }
-.tf-src .chip-btn { height: 32px; font-size: 0.78rem; padding: 0 12px; }
+
 .tf-pick-two { display: flex; gap: 8px; }
 .tf-pick-two .select { flex: 1 1 0; min-width: 0; }
 .tf-search { position: relative; }
@@ -3873,7 +3877,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .tf-controls[data-mode="target"] .tf-field:has(#tf-from), .tf-controls[data-mode="target"] .tf-field:has(#tf-against) { display: none; }
 .tf-controls[data-mode="discover"] > :not(.tf-player) { display: none; }
 #panel-finder:has(.tf-controls[data-mode="discover"]) .tf-sort { display: none; }
-.tf-src .chip-btn { white-space: nowrap; }
+.tf-src .vt-btn { white-space: nowrap; }
 .tf-src { flex-wrap: wrap; max-width: 100%; }   /* phones: the four modes wrap to a second row instead of running off the screen */
 /* Rankings Columns menu (Alan, Oct 12): stat columns per position, a popover like the Trade Finder's Package filter */
 .rk-cols { position: relative; display: inline-flex; }
@@ -4232,6 +4236,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .rk-mv { display: block; margin-top: 3px; font: 700 0.6rem/1 var(--font-display); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .rk-mv.up { color: var(--rb); } .rk-mv.down { color: var(--rose); }
 #rank-body td.rk .bm { display: block; margin: 3px 0 0; font-size: 0.6rem; }
+#rank-body td.rk .rk-ref { display: block; margin-top: 3px; font: 600 0.64rem/1 var(--font-display); letter-spacing: .02em; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* player: portrait, name strongest, team second, owner third */
 #rank-body .pl-cell { gap: 14px; }
 #rank-body .face { width: 50px; height: 50px; box-shadow: none; background: var(--fill-1); }
@@ -4372,12 +4377,10 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 /* value: the number leads, a short meter under it (relative to #1) */
 #panel-rankings table td.val { width: 160px; min-width: 0; padding-right: 22px; }
 body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* room for the Revalued tag */
-/* column proportions (Alan, Oct 9): Rank | Player | Position + Tier | Value. The player column is capped (enough for photo,
-   long names, team and owner) so the position badge starts right after the player block; the position/tier column takes
-   the leftover width, and the value stays right-aligned at the end */
-#rank-body tr.player > td:has(> .pl-cell) { width: 44%; }
-@media (min-width: 1500px) { #rank-body tr.player > td:has(> .pl-cell) { width: 40%; } }
-#panel-rankings table th.pos-col, #panel-rankings table td.pos-col { width: auto; }
+/* column proportions: Rank | Player | Position + Tier | Value. Position + tier and value are one compact cluster at the
+   right (fixed widths), and the player column takes the spare width, so a wide board leaves no ~350px gap between the
+   tier and the value (Alan, Oct 12; replaces the Oct 9 player-column cap, which put that space in the tier column) */
+#panel-rankings table th.pos-col, #panel-rankings table td.pos-col { width: 140px; }
 #panel-rankings .valbar.stack { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: center; column-gap: 8px; row-gap: 4px; }
 #panel-rankings .valbar.stack .num, #panel-rankings .valbar.stack .num-btn { grid-row: 1; grid-column: 2; min-width: 0; font: 700 1.02rem/1.1 var(--font-display); letter-spacing: -0.005em; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 #panel-rankings .valbar.stack .val-extra { grid-row: 1; grid-column: 1; }
@@ -4564,6 +4567,60 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 :is(.hc, .hc-inline) .hc-r .pos { font-size: 0.6rem; padding: 0 5px; justify-self: start; width: auto; min-width: 0; }
 .hc-inline { margin: 10px 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md, 8px); font-size: 0.8rem; }
 :is(.hc, .hc-inline) .hc-fmt { margin: -2px 0 5px; color: var(--text-muted); font-size: 0.7rem; }
+/* Drawer key figures (Alan, Oct 12): AM rank + value and ROS PPG as two equal blocks; season numbers and production
+   ranks follow on quieter lines */
+.pm-head .pm-key { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: 14px; border-block: 1px solid var(--line-soft); }
+.pm-head .pk { min-width: 0; padding: 10px 0 11px; display: flex; flex-direction: column; gap: 4px; }
+.pm-head .pk-am { padding-right: 16px; }
+.pm-head .pk + .pk { padding-left: 16px; border-left: 1px solid var(--line-soft); }
+.pm-head .pk-k { font: 600 0.62rem/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); cursor: help; }
+.pm-head .pk-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+.pm-head .pk-big, .pm-head .pk-val { font: 700 1.45rem/1.1 var(--font-display); letter-spacing: -0.01em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.pm-head .pk-big[title] { cursor: help; }
+.pm-head .pk-main .pr-rk { margin-left: 0 !important; align-self: center; }
+.pm-head .pk-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.76rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.pm-head .pk-sub > * { margin-left: 0 !important; }
+.pm-head .pk-sub .pd-item { display: inline-flex; align-items: baseline; gap: 5px; cursor: help; }
+.pm-head .pk-sub .pd-item .pr-k { font: 600 0.62rem/1 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.pm-head .pk-sub .pd-item b { font: 600 0.82rem/1.2 var(--font-display); color: var(--text-secondary); }
+/* the quieter line under them: Season PPG · Total · (Healthy) | FPTS rank · PPG rank · GP */
+.pm-head .pm-sec { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 22px; margin-top: 10px; }
+.pm-head .pm-sec > .pm-prodrk { margin-top: 0 !important; font-size: 0.78rem !important; }
+.pm-head .pm-sec .pr-k { font-size: 0.62rem !important; }
+.pm-head .pm-sec .pd-item b { font: 600 0.82rem/1.2 var(--font-display) !important; color: var(--text-secondary) !important; }
+.pm-head .pm-sec .pr-note { flex-basis: 100%; }
+@media (max-width: 359px) { .pm-head .pm-key { grid-template-columns: 1fr; } .pm-head .pk + .pk { padding-left: 0; border-left: 0; border-top: 1px solid var(--line-soft); } }
+/* ===== Shared components (Alan, Oct 12: consistency first). One primitive per pattern, the existing look kept:
+   the class names stay (JS and tests use them); these rules settle the accidental differences (radius 3/4/5px,
+   seven caps sizes, 650/750/800 weights the Proxima kit doesn't cut, five letter-spacings).
+   Families: box tag (rectangular, 4px) · filled pill · outline caps pill · caps micro-label · eyebrow · underline tab
+   (.tab / .chip-btn) · segmented switch (.view-toggle + .vt-btn, also the Trade Finder modes and the calculator lens). */
+:root { --tag-r: 4px; --tag-fs: 0.66rem; --tag-fs-caps: 0.6rem; --tag-ls-caps: 0.08em; --tag-pad: 2px 8px;
+  --eyebrow-fs: 0.62rem; --eyebrow-ls: 0.12em; --micro-fs: 0.58rem; }
+/* box tags: position badges, status blocks, rank chips, verdict / role / fit / injury tags */
+.pos, .st-blk, .ro-res, .rk-chip, .tf-verdict, .role-tag, .fit-tag, .inj-tag { border-radius: var(--tag-r); }
+.st-blk, .ro-res, .rk-chip, .tf-verdict, .role-tag, .inj-tag { font-weight: 700; }
+.fit-tag { font-weight: 600; }
+/* filled pills: status, leverage / confidence, grades, ranking-history change chips */
+.st-badge, .tf-pill, .tw-grade, .rh-chip, .tf-dtags span { border-radius: 999px; padding: var(--tag-pad); font-size: var(--tag-fs); font-weight: 600; letter-spacing: 0.02em; line-height: 1.35; }
+/* outline caps pills: transaction kinds, bidders, trade-history tags, market pills and freshness tags, owner status */
+.mv-tag, .mv-bidders, .th-tag, .mk-pill, .mk-st-tag, .owner.status { border-radius: 999px; padding: var(--tag-pad); font-size: var(--tag-fs-caps); font-weight: 600; letter-spacing: var(--tag-ls-caps); line-height: 1.35; }
+/* caps micro-labels (no box) */
+.mt-tag, .mx-livetag, .sc-now, .ro-res.now, .wk-status, .rf-tag { font-size: var(--micro-fs); font-weight: 600; letter-spacing: var(--tag-ls-caps); }
+/* eyebrows and section labels above a title or a block */
+.lg-eyebrow, .verdict-eyebrow, .tw-eyebrow, .section-label, .rr-label, .tc-lbl, .tr-head { font-size: var(--eyebrow-fs); font-weight: 600; letter-spacing: var(--eyebrow-ls); }
+/* segmented switches: the move popover's mode switch matches .view-toggle / .vt-btn; focus is the neutral ring everywhere */
+.mv-seg { padding: 3px; border-radius: var(--r-md, 8px); }
+.mv-seg .mv-mode { border-radius: 6px; }
+.mv-mode:focus-visible, .rv-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+/* the kit's three weights: segmented buttons 600, the verdict headline 700 */
+.vt-btn { font-weight: 600; }
+.verdict h2 { font-weight: 700; }
+/* Trade Finder modes: four segments on one row from tablet width */
+.tf-src .vt-btn { padding: 0 10px; }
+@media (min-width: 1280px) { .tf-src { flex-wrap: nowrap; width: max-content; max-width: 100%; } }
+/* League-adjusted "AM #4" under the rank: wraps to two short lines on phones instead of widening the rank column */
+@media (max-width: 560px) { #rank-body td.rk .rk-ref { white-space: normal; line-height: 1.15; } }
 </style>
 </head>
 <body>
@@ -4766,7 +4823,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     <div class="tf-controls">
       <div class="tf-field tf-player"><span class="sr-only">Player</span>
         <div class="view-toggle tf-src" id="tf-src" role="group" aria-label="Trade Finder mode">
-          <button class="chip-btn" type="button" data-src="mine" aria-pressed="true" title="What favorable trades can I make with someone I own?">Shop my players</button><button class="chip-btn" type="button" data-src="target" aria-pressed="false" title="I want this player: what realistic offers could get him while still giving me an edge?">Target a player</button><button class="chip-btn" type="button" data-src="discover" aria-pressed="false" title="Players around the league worth going after">Find targets</button><button class="chip-btn" type="button" data-src="team" aria-pressed="false" title="Any team's player, from that team's side">Any team</button>
+          <button class="vt-btn" type="button" data-src="mine" aria-pressed="true" title="What favorable trades can I make with someone I own?">Shop my players</button><button class="vt-btn" type="button" data-src="target" aria-pressed="false" title="I want this player: what realistic offers could get him while still giving me an edge?">Target a player</button><button class="vt-btn" type="button" data-src="discover" aria-pressed="false" title="Players around the league worth going after">Find targets</button><button class="vt-btn" type="button" data-src="team" aria-pressed="false" title="Any team's player, from that team's side">Any team</button>
         </div>
         <div id="tf-pick"></div>
       </div>
@@ -4874,7 +4931,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         </div>
         <div class="actions">
           <div class="view-toggle tc-lens" id="tc-lens" role="group" aria-label="Value lens" hidden>
-            <button class="chip-btn" type="button" data-lens="am" aria-pressed="true" title="The trade in AM's league-adjusted values for this league's format">AM Value</button><button class="chip-btn" type="button" data-lens="fit" aria-pressed="false" title="What the trade does to each roster: best lineup before and after, starters in and out, positions addressed or weakened, bench depth. No winner: the value verdict is under AM Value.">Roster Impact</button>
+            <button class="vt-btn" type="button" data-lens="am" aria-pressed="true" title="The trade in AM's league-adjusted values for this league's format">AM Value</button><button class="vt-btn" type="button" data-lens="fit" aria-pressed="false" title="What the trade does to each roster: best lineup before and after, starters in and out, positions addressed or weakened, bench depth. No winner: the value verdict is under AM Value.">Roster Impact</button>
           </div>
           <button class="btn balance-btn" id="balance-btn" type="button" aria-expanded="false" aria-controls="balance" hidden>Balance this trade</button>
           <button class="btn link" id="bal-undo" type="button" hidden>Undo</button>
@@ -5629,7 +5686,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T14:40Z";
+  const BUILD_ID = "2026-10-12T14:50Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5861,10 +5918,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
 
   // ▲/▼ next to a rank when other settings moved the player off your board's spot
-  function boardMove(from, to) {
+  // League-adjusted view: where he sits on the AM Board, as a labelled reference ("AM #12" / "AM WR5"), never ▲/▼,
+  // which on the board always means movement since the last update (Alan, Oct 12: one meaning per glyph).
+  function boardMove(from, to, pos = "") {
     if (from == null || to == null || from === to) return "";
-    const up = to < from, n = Math.abs(from - to);
-    return `<span class="bm ${up ? "bm-up" : "bm-down"}" title="${up ? "Up" : "Down"} ${n} from #${from} on the AM Board">${up ? "▲" : "▼"}${n}</span>`;
+    const higher = to < from, n = Math.abs(from - to), at = pos ? pos + from : "#" + from;
+    return `<span class="rk-ref" title="AM Board ${at}: ${n} spot${n === 1 ? "" : "s"} ${higher ? "higher" : "lower"} in this league's format">AM ${at}</span>`;
   }
   // Rank movement since the previous update day (Alan, Oct 9): overall rank on All, position rank on a position tab.
   // From Ranking History (the latest entry from an earlier day); shown only when he moved. RAIL_SKIP (Alan, Oct 5):
@@ -5980,7 +6039,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
     } else if (leagueView()) {
       list = players.filter(p => p.pos === posFilter).sort((a, b) => (LG.adjPos.get(a.id) ?? 1e9) - (LG.adjPos.get(b.id) ?? 1e9));
-      rk = p => (LG.adjPos.get(p.id) ?? "–") + boardMove(p.posNum, LG.adjPos.get(p.id));
+      rk = p => (LG.adjPos.get(p.id) ?? "–") + boardMove(p.posNum, LG.adjPos.get(p.id), p.pos);
       group = () => null;
     } else {
       list = players.filter(p => p.pos === posFilter).sort(byPos);
@@ -13230,7 +13289,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const form = new Map(list.map(p => [p.id, recentFormData(p.sleeperId, p.pos, p.team)]));
     const proj = new Map(list.map(p => [p.id, weekProj(p)])), season = seasonRanks();
     const D = defenseVsPos() || {}, wk = currentWeek();
-    const grade = p => { const g = nflGameState(p.team, wk); if (g.kind !== "upcoming") return 3; const x = D[p.pos] && D[p.pos][g.oppTeam]; return x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3; };
+    // each player's matchup grade once, before sorting (it was recomputed inside the comparator, O(n log n) times)
+    const GR = new Map(), grade = p => { if (GR.has(p.id)) return GR.get(p.id);
+      const g = nflGameState(p.team, wk), x = g.kind === "upcoming" && D[p.pos] && D[p.pos][g.oppTeam], v = x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3;
+      GR.set(p.id, v); return v; };
     const me = LG.teams.find(t => t.mine), K = me ? leagueKit() : null;
     const fit = new Map(K ? list.map(p => [p.id, faFit(K, me, p)]) : []);
     // AM rank order (the RK shown). My team fit: a gentle nudge on that rank (starters ×0.85, bench depth ×1.1),
@@ -13572,7 +13634,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // Drawer line: AM rank (primary) · FPTS rank · PPG rank (secondary), and a quiet gap marker when the AM position rank
   // and the PPG rank are far apart
-  function prodRankLine(p, sid, pos, curT) {
+  function prodRankLine(p, sid, pos, curT, showAm = true) {
     const r = prodRanks(sid), am = p ? String(posLabel(p) || "") : "";
     if (!am && !r) return "";
     const P = r ? r.pos : pos, scName = activeData() ? "league scoring" : "AM default scoring";
@@ -13580,7 +13642,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // one compact line (Alan, Oct 14): "AM WR8 · FPTS WR14 · PPG WR11 · 4 GP"; the numbers behind each rank are in its tooltip
     const item = (cls, k, rk, tip, v) => `<span class="pd-item ${cls}" title="${esc(tip)}"${v != null ? ` data-v="${v}"` : ""}><span class="pr-k">${k}</span><b>${rk}</b></span>`;
     const out = [];
-    if (am) out.push(item("am", "AM", esc(am), `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
+    if (am && showAm) out.push(item("am", "AM", esc(am), `AM position rank: rest of season, forward-looking${leagueView() ? " (league-adjusted)" : ""}`));
     if (!r) out.push(item("fp", "FPTS", "—", "No games played this season"), item("ppg", "PPG", "—", "No games played this season"));
     else {
       out.push(item("fp", "FPTS", `${P}${r.fpRank}`, `${nth(r.fpRank)} of ${r.fpN} ${P}s by total fantasy points this season: ${fp(r.pts)} pts in ${r.gp} game${r.gp === 1 ? "" : "s"} (${scName})`, r.pts));
@@ -13736,8 +13798,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const softTough = (r, n) => (r <= n / 2 ? `${ordinal(r)}-softest` : `${ordinal(n - r + 1)}-toughest`);
   const ROOF_TEXT = { dome: "Dome", closed: "Roof closed", open: "Roof open", outdoors: "Outdoors" };
+  // one shared formatter, cached per date: toLocaleDateString with options built a new Intl.DateTimeFormat on every call,
+  // and the Waiver Wire's matchup sort called this inside sort() (Oct 12 benchmark: ~1,000 of 1,413 ms)
+  const KO_FMT = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }), KO_DAY = new Map();
   const kickoffText = (date, time) => {
-    const day = new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    let day = KO_DAY.get(date);
+    if (day == null) { day = KO_FMT.format(new Date(date + "T12:00:00")); KO_DAY.set(date, day); }
     if (!time) return day;
     const [h, m] = time.split(":").map(Number);
     return `${day} · ${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"} ET`;
@@ -13860,7 +13926,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Drawer lines 2–3 (Alan, Oct 14): "ROS PPG 17.8 · WR9 · +1.9 vs season" and "Season PPG 15.9 · Healthy PPG 16.7".
   // PPG = actual season PPG; Healthy PPG = excluding only injury-shortened games; ROS PPG = AM's projection from now on;
   // the weekly number stays "Wk proj" elsewhere. Never a weekly projection dressed up as PPG.
-  function rosLine(p, curT) {
+  function rosLine(p, curT, key = false) {
     const ros = p ? rosPPG(p) : null, rk = ros != null ? rosRank(p) : null, scName = activeData() ? "league scoring" : "AM default scoring";
     const ppg = curT && curT.g ? curT.ppg : null, healthy = curT && curT.short && curT.fullG ? curT.fullPpg : null;
     const d = ros != null && ppg != null ? ros - ppg : null;
@@ -13885,8 +13951,28 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (ppg != null) b.push(it("sppg", "Season PPG", fp(ppg), `Actual points per game this season over ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName}), injury-shortened games included`));
     if (ppg != null) b.push(it("stot", "Total", fp(curT.pts), `Total fantasy points so far this season: ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName})`));
     if (healthy != null) b.push(it("hppg", "Healthy PPG", fp(healthy), `PPG excluding only his ${curT.short} injury-shortened game${curT.short === 1 ? "" : "s"} (${curT.fullG} game${curT.fullG === 1 ? "" : "s"})`));
+    if (key) return { ros: a.length ? rosKey(a) : "", season: b.length ? `<div class="pm-prodrk pm-sppg">${b.join("")}</div>` : "" };
     if (!a.length && !b.length) return "";
     return `<div class="pm-rosline">${a.length ? `<div class="pm-prodrk pm-ros">${a.join("")}</div>` : ""}${b.length ? `<div class="pm-prodrk pm-sppg">${b.join("")}</div>` : ""}</div>`;
+  }
+  // Drawer key figures (Alan, Oct 12): two equal blocks, what AM thinks he's worth (AM rank + value) and what AM
+  // projects him to produce (ROS PPG), so rankings and projections each have one focal number and nothing else competes.
+  function rosKey(a) {
+    // a[0] = the ROS PPG item (+ an Out for season tag), then the rank chip, delta, confidence and Next 4 pieces
+    const m = a[0].match(/^<span class="pd-item ([^"]*)" title="([^"]*)"><span class="pr-k">[^<]*<\/span><b>([^<]*)<\/b><\/span>([\s\S]*)$/);
+    if (!m) return `<div class="pk pk-ros"><div class="pm-prodrk pm-ros">${a.join("")}</div></div>`;
+    const [, cls, tip, num, tail] = m, chip = a.slice(1).find(x => x.includes('class="pr-rk"')) || "";
+    const rest = a.slice(1).filter(x => x !== chip);
+    return `<div class="pk pk-ros pm-ros ${cls}"><span class="pk-k" title="${tip}">ROS PPG</span>`
+      + `<div class="pk-main"><b class="pk-big" title="${tip}">${num}</b>${chip}</div>`
+      + `<div class="pk-sub">${tail}${rest.join("")}</div></div>`;
+  }
+  function amKey(p) {
+    if (!p) return `<div class="pk pk-am"><span class="pk-k">AM rank · value</span><div class="pk-sub">Not in the AM Rankings</div></div>`;
+    const lv = leagueView(), tip = `${lv ? (LG.active ? "League-adjusted AM rank and value" : "AM rank and value in your settings") : "AM Board rank and value"}: forward-looking${posLabel(p) !== p.posRank ? ` · AM Board ${p.posRank}` : ""}`;
+    return `<div class="pk pk-am" title="${esc(tip)}"><span class="pk-k">AM rank · value</span>`
+      + `<div class="pk-main"><b class="pk-big">${esc(String(posLabel(p) || "–"))}</b><b class="pk-val">${fmt(dv(p))}</b></div>`
+      + `<div class="pk-sub">#${lv ? overallRank(p) : p.rank ?? "–"} overall${p.tier ? " · " + esc(tierLabel(p.pos, p.tier)) : ""}</div></div>`;
   }
   // The model's factors behind his ROS PPG (data/projections.json `f`: [games of evidence, role xPPG, efficiency,
   // environment, schedule, healthy PPG], base scoring; every factor is a ratio, so it holds in any scoring).
@@ -13957,11 +14043,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
             <p class="pm-scoring" title="Every fantasy point on this page is computed from his raw NFL stats with these scoring rules">${esc(scoringLabel())}</p>
           </div>
         </div>
-        ${loaded ? rosLine(p, curT) : ""}
-        ${loaded ? prodRankLine(p, sid, pos, curT) : ""}
-        <div class="pm-stats pm-valline"${p ? ` title="${esc(`${leagueView() ? (LG.active ? "League-adjusted AM value" : "AM value in your settings") : "Base AM value"}${posLabel(p) !== p.posRank ? ` · AM Board ${p.posRank}` : ""}`)}"` : ""}>${p
-          ? `<span class="pv-k">Value</span><b>${fmt(dv(p))}</b><span class="pv-sub">#${leagueView() ? overallRank(p) : p.rank ?? "–"} overall${p.tier ? " · " + esc(tierLabel(p.pos, p.tier)) : ""}</span>`
-          : `<span class="pv-sub">Not in the AM Rankings</span>`}</div>
+        ${(() => { const k = loaded ? rosLine(p, curT, true) : null;
+          return `<div class="pm-key">${amKey(p)}${k && k.ros ? k.ros : ""}</div><div class="pm-sec">${k && k.season ? k.season : ""}${loaded ? prodRankLine(p, sid, pos, curT, false) : ""}</div>`; })()}
         <div class="pm-actions">
           <button class="btn primary sm" type="button" data-pm-add${!p || inTradeNow ? " disabled" : ""}>${inTradeNow ? "In trade" : `Add to trade · ${esc(getsLabel(p ? tradeSideFor(sid) : "A"))}`}</button>
           <button class="btn secondary sm" type="button" data-find-trades="${esc(sid)}"${findHint ? ` disabled title="${esc(findHint)}"` : ""}>${own && own !== "fa" && !own.mine && LG.teams.some(t => t.mine) ? "Target in Trade Finder" : "Find trades"}</button>
@@ -14191,7 +14274,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // A defense rank (1 = softest): the number with a short bar, tinted by third
   const gradeOf = (r, n) => (r <= Math.round(n / 3) ? "good" : r > n - Math.round(n / 3) ? "tough" : "neutral");
-  const rankChip = (label, r, n) => r ? `<span class="rk-chip ${gradeOf(r, n)}"><span class="rk-l">${label}</span><b>${ordinal(r)}</b><span class="rk-bar"><span style="width:${(100 * (n - r + 1) / n).toFixed(0)}%"></span></span></span>` : "";
+  const rankChip = (label, r, n) => r ? `<span class="tw-rank ${gradeOf(r, n)}"><span class="rk-l">${label}</span><b>${ordinal(r)}</b><span class="rk-bar"><span style="width:${(100 * (n - r + 1) / n).toFixed(0)}%"></span></span></span>` : "";
   // Injury report (latest week in the stats file): [name, pos, sid, game status, practice, injury]
   function injuryReport(team) {
     const d = statsCache[STATS_SEASONS[0]], I = d && d.injuries;

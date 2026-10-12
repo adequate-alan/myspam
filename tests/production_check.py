@@ -241,7 +241,7 @@ with sync_playwright() as p:
             return c === 'am' ? { v: b, sub: '' } : c === 'fp' ? { v: n, sub: b + ' · ' + gp.trim() } : { v: n + star, sub: b === 'NR' ? 'Not ranked · ' + gp.trim() : b.replace('*', '') }; };
           const d = document.querySelector(L + ' .pr-diff'), n = document.querySelector(L + ' .pr-note');
           const first = document.querySelector(L + ' .pd-item');
-          return { am: q('am'), fp: q('fp'), ppg: q('ppg'), diff: d ? d.textContent : '', note: n ? n.textContent : '', firstAm: !!first && first.classList.contains('am') }; }""")
+          return { am: q('am'), fp: q('fp'), ppg: q('ppg'), diff: d ? d.textContent : '', note: n ? n.textContent : '', firstAm: !!document.querySelector('.pm-key .pk-am .pk-big') && !document.querySelector(L + ' .pd-item.am') }; }""")
         pg.keyboard.press("Escape"); pg.wait_for_timeout(250)
         return r
     picks = []
@@ -263,7 +263,7 @@ with sync_playwright() as p:
                        and have[k][0].endswith("*") == want[k][0].endswith("*") for k in want)   # shown to one decimal
             if not same or not got["firstAm"] or (sh and pr and "injury-shortened" not in got["note"]):
                 bad.append((board[sid]["player"], have, want))
-        ok(not bad, f"{lid}: drawer FPTS / PPG (the number first, his position rank under it) match the league-scored stats for {len(picks)} players, AM rank first {bad[:2]}")
+        ok(not bad, f"{lid}: drawer FPTS / PPG (the number first, his position rank under it) match the league-scored stats for {len(picks)} players, AM rank in the key figures {bad[:2]}")
         if lid == "TEP": tep_fp = {sid: exp[sid][1] for sid in picks if sid in exp and exp[sid][0] == "TE"}
         else: full_fp = {sid: exp[sid][1] for sid in picks if sid in exp and exp[sid][0] == "TE"}
         pg.close()
