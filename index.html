@@ -5707,7 +5707,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T18:00Z";
+  const BUILD_ID = "2026-10-12T18:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -7476,11 +7476,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const nA = sideName("A"), nB = sideName("B"), pref = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b); return Math.abs(d) < 3 ? 0 : Math.sign(d); };
     const row = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b), w = pref(l);
       return `<tr${l.am ? ' class="am"' : ""}><th scope="row">${esc(l.k)}</th><td>${fmt(l.a)}</td><td>${fmt(l.b)}</td><td class="${w > 0 ? "up" : w < 0 ? "down" : ""}">${w === 0 ? "About even" : `${esc(w > 0 ? nA : nB)} +${Math.abs(d).toFixed(1)}%`}</td></tr>`; };
-    const amP = pref(lines[0]), mk = lines[1], mkP = pref(mk);
-    const say = amP && mkP && amP !== mkP ? `AM prefers ${amP > 0 ? nA : nB}'s side while ${mk.k === "AM" ? "" : mk.k.toLowerCase().replace("market consensus", "the market")} prefers ${mkP > 0 ? nA : nB}'s: the kind of gap worth exploiting.`
-      : amP && !mkP ? `AM prefers ${amP > 0 ? nA : nB}'s side; the market calls it even.` : !amP && mkP ? `AM calls it even; the market prefers ${mkP > 0 ? nA : nB}'s side.` : amP ? `AM and the market agree on ${amP > 0 ? nA : nB}'s side.` : "AM and the market both call it close.";
+    // the summary names what the table compares: AM against the consensus (two or more sources) or the one source loaded;
+    // no league = "your side" / "the other side", never the "You" / "They" labels in a possessive (Alan, Oct 12)
+    const amP = pref(lines[0]), mk = lines[1], mkP = pref(mk), M = mk.k === "Market consensus" ? "Market" : mk.k;
+    const sideOf = w => { const s = w > 0 ? "A" : "B", n = sideName(s);
+      return youMode() ? (s === "A" ? "your side" : "the other side") : n === "Other team" ? "the other team's side" : `${n}'s side`; };
+    const say = amP && mkP && amP !== mkP ? `AM favors ${sideOf(amP)}; ${M} favors ${sideOf(mkP)}: the kind of gap worth exploiting.`
+      : amP && !mkP ? `AM favors ${sideOf(amP)}; ${M} calls it about even.` : !amP && mkP ? `AM calls it about even; ${M} favors ${sideOf(mkP)}.`
+      : amP ? `AM and ${M} both favor ${sideOf(amP)}.` : `AM and ${M} agree this trade is about even.`;
     el.innerHTML = `<details class="tc-mkt-d"${amP && mkP && amP !== mkP ? " open" : ""}><summary>Market comparison <span class="sum-hint">${esc(say)}</span></summary>
-      <div class="tc-more-body"><table class="tc-mkt-t"><thead><tr><th></th><th>${esc(nA)} gets</th><th>${esc(nB)} gets</th><th>Prefers</th></tr></thead><tbody>${lines.map(row).join("")}</tbody></table>
+      <div class="tc-more-body"><table class="tc-mkt-t"><thead><tr><th></th><th>${esc(getsLabel("A"))}</th><th>${esc(getsLabel("B"))}</th><th>Prefers</th></tr></thead><tbody>${lines.map(row).join("")}</tbody></table>
       <p class="pp-note">AM is the verdict above. Market lines put FantasyCalc and Flock on AM's value scale (each source's position rank priced on AM's curve, FantasyCalc also by its own value gaps; the consensus weights them by source type, format match and freshness), with the same package adjustment; they are never mixed into AM's number. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
     el.hidden = false;
   }
@@ -7825,9 +7830,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const nowWorst = worst(res);
     const picks = cand.filter(c => c.worst < nowWorst).sort((a, b) => a.worst - b.worst).slice(0, 4);
     if (!picks.length) return;
-    $("balance-sub").textContent = `${names[W]} gives up the most. Redirect one of these to ${isYouThey(names[W]) ? "you" : names[W]}:`;
+    $("balance-sub").textContent = `${names[W]} ${isYouThey(names[W]) ? "give" : "gives"} up the most. Redirect one of these to ${isYouThey(names[W]) ? "you" : names[W]}:`;
     $("balance-list").innerHTML = picks.map(c => `<button class="suggest bal" type="button" data-ids="${c.p.id}" data-side="${W}" data-origin="${c.o}">
-      <span class="bal-players"><span class="bal-p">${face(c.p.sleeperId, c.p.name, "xs")}<span class="pos ${esc(c.p.pos)}">${esc(posLabel(c.p))}</span><span class="bal-n">${esc(c.p.name)}<small>from ${esc(names[c.o])}</small></span><span class="r-val">+${fmt(tv(c.p))}</span></span></span>
+      <span class="bal-players"><span class="bal-p">${face(c.p.sleeperId, c.p.name, "xs")}<span class="pos ${esc(c.p.pos)}">${esc(posLabel(c.p))}</span><span class="bal-n">${esc(c.p.name)}<small>from ${esc(isYouThey(names[c.o]) ? names[c.o].toLowerCase() : names[c.o])}</small></span><span class="r-val">+${fmt(tv(c.p))}</span></span></span>
       <span class="bal-result">→ ${esc(names[W])} ${c.st[W].m.a >= c.st[W].m.b ? "+" : "−"}${c.st[W].more.toFixed(1)}% · ${esc(c.st[W].outcome.label)}</span></button>`).join("");
     $("balance-btn").hidden = false;
     $("balance").hidden = !TC_UI.balance;
