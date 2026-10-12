@@ -268,6 +268,49 @@ with sync_playwright() as p:
     ok("Approximate rosters" in state(pg)["gap"], "[broken] The verdict line is tagged Approximate rosters")
     if os.environ.get("SHOTS"): pg.locator("#tc-hist").screenshot(path=os.path.join(os.environ["SHOTS"], "past_trade_broken.png"))
     pg.close()
+    # Market comparison wording (Alan, Oct 12): the summary names the sides in plain English ("your side" / "the other
+    # side" without a league, the team's name with one; never "You's side" or "You gets") and says what the table shows
+    SAY = re.compile(r"^(AM and (?P<m1>[A-Z][A-Za-z]+) (both favor (?P<both>.+)|agree this trade is about even)"
+                     r"|AM favors (?P<am>.+); (?P<m2>[A-Z][A-Za-z]+) (favors (?P<mk>.+)|calls it about even)(: the kind of gap worth exploiting)?"
+                     r"|AM calls it about even; (?P<m3>[A-Z][A-Za-z]+) favors (?P<mk2>.+))\.$")
+    def mkt(pg):
+        return pg.evaluate("""() => { const el = document.getElementById('tc-mkt'); if (el.hidden) return null;
+          const cell = k => { const r = [...el.querySelectorAll('tbody tr')][k]; return r ? { k: r.querySelector('th').textContent.trim(), pref: r.cells[r.cells.length - 1].textContent.trim() } : null; };
+          return { say: el.querySelector('.sum-hint').textContent.trim(), heads: [...el.querySelectorAll('thead th')].map(t => t.textContent.trim()), am: cell(0), mk: cell(1) }; }""")
+    def side_words(pref, names):   # the table's Prefers cell → how the summary must name that side
+        if pref == "About even": return None
+        return names[pref.rsplit(" +", 1)[0]]
+    def check_say(pg, label, names):
+        m = mkt(pg)
+        if not m: ok(False, f"Market comparison [{label}]: shown (market file loaded)"); return
+        g = SAY.match(m["say"])
+        ok(bool(g) and not re.search(r"\b(You|They)'s\b|\b(You|They) gets\b|\b(fantasycalc|flock)\b", m["say"]), f"Market comparison [{label}]: plain wording ({m['say']})")
+        ok(not any(re.search(r"\b(You|They) gets\b", h) for h in m["heads"]), f"Market comparison [{label}]: column heads read naturally ({m['heads']})")
+        if not g: return
+        src = m["mk"]["k"]; name = "Market" if src == "Market consensus" else src
+        ok((g.group("m1") or g.group("m2") or g.group("m3")) == name, f"Market comparison [{label}]: names the source it compares ({name})")
+        am, mk = side_words(m["am"]["pref"], names), side_words(m["mk"]["pref"], names)
+        said_am = g.group("both") or g.group("am")
+        said_mk = g.group("both") or g.group("mk") or g.group("mk2")
+        ok(said_am == am and said_mk == mk, f"Market comparison [{label}]: matches the table (AM {m['am']['pref']} · {src} {m['mk']['pref']} → {m['say']})")
+    def clear(pg):
+        pg.evaluate("() => { const b = [...document.querySelectorAll('#panel-trade button')].find(x => x.textContent.trim() === 'Clear'); b && b.click(); }"); pg.wait_for_timeout(300)
+    pg = page(False)
+    for a, b in (([KEL], ["Chris Olave"]), (["Josh Allen"], ["Chris Olave"]), (["George Kittle"], ["Malik Nabers"])):
+        clear(pg)
+        for n in a: add(pg, "A", n)
+        for n in b: add(pg, "B", n)
+        check_say(pg, f"league · {a[0]} for {b[0]}", {"Team Alpha": "Team Alpha's side", "Team Beta": "Team Beta's side"})
+    pg.evaluate("""() => { const s = document.getElementById('tc-league'); s.value = 'none'; s.dispatchEvent(new Event('change', { bubbles: true })); }"""); pg.wait_for_timeout(800)
+    top = [r["player"] for r in sorted(rows, key=lambda r: int(r["rank"]))]
+    for a, b in (([top[0]], [top[15]]), ([top[30]], [top[2]]), ([top[10]], [top[11]]), ([top[3]], [top[20], top[21]])):
+        clear(pg)
+        for n in a: add(pg, "A", n)
+        for n in b: add(pg, "B", n)
+        check_say(pg, f"no league · {a[0]} for {' + '.join(b)}", {"You": "your side", "They": "the other side"})
+        pg.click("#swap-btn"); pg.wait_for_timeout(500)
+        check_say(pg, f"no league · swapped · {a[0]} for {' + '.join(b)}", {"You": "your side", "They": "the other side"})
+    pg.close()
     ok(not errs, f"No page errors {errs}")
     br.close()
 
