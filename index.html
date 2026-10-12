@@ -2332,6 +2332,7 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-list { display: flex; flex-direction: column; gap: 14px; }
 .mx-filters { justify-content: flex-start; }
 .mx-source { font-size: 0.68rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+  .warn-txt { color: var(--warn); }
 .mx-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); overflow: hidden; }
 .mx-card.has-mine { box-shadow: inset 4px 0 0 var(--mine-accent); border-color: color-mix(in srgb, var(--mine-accent) 50%, var(--line-soft)); background: color-mix(in srgb, var(--mine-accent) 8%, var(--surface)); }
 .mx-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px 84px 150px minmax(0, 1fr); align-items: center; gap: 14px; padding: 22px 28px 10px; }
@@ -5524,11 +5525,60 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      status, team, week, fresh]: n / l = multiplier for his team's next game / later weeks, s / sl = chance to start (QB),
      fresh = this game's injury report is out (before it, a designation is last week's and only lowers his chance).
      ROS PPG keeps its conditional meaning; a backup quarterback's is labelled "If he starts". Never touches rankings,
-     values, tiers or history. No roles file → no adjustment (the old behavior). */
-  let ROLES = null, ROLES_AT = "", ROLE_QB_TEAMS = new Set();
+     values, tiers or history.
+     Safeguard (Alan, Oct 12: a missing roles file must never quietly bring back starter-level projections for backup
+     quarterbacks): malformed entries are dropped, and a quarterback whose team has no quarterbacks in the file (file
+     missing, unreadable or incomplete) gets a fallback role: his team's starter in its latest game (most snaps; with no
+     stats, the team's highest-ranked quarterback on the AM board) is the starter, everyone else 0, and the input line
+     says so. A file older than ROLE_STALE_DAYS or describing weeks already being played is still used (its depth order
+     still protects backups) but flagged stale. rolesNote() is the visible warning (Week view, Matchups, the inputs). */
+  const ROLE_STALE_DAYS = 9;
+  let ROLES = null, ROLES_AT = "", ROLE_QB_TEAMS = new Set(), ROLE_STATE = { file: "missing", dropped: 0 };
+  const roleOk = r => Array.isArray(r) && r.length >= 8 && [r[0], r[1]].every(v => typeof v === "number" && v >= 0 && v <= 1)
+    && typeof r[6] === "string" && r[6] && (r[7] == null || Number.isFinite(r[7]));
   function setRoles(map, at) {
-    ROLES = map || {}; ROLES_AT = at || "";
-    ROLE_QB_TEAMS = new Set(Object.entries(ROLES).filter(([, r]) => r[2] != null).map(([, r]) => r[6]));
+    const ok = {}; let dropped = 0, shape = map && typeof map === "object" && !Array.isArray(map);
+    if (shape) Object.entries(map).forEach(([sid, r]) => { if (roleOk(r)) ok[sid] = r; else dropped++; });
+    ROLES = ok; ROLES_AT = at || ""; ROLE_FB.key = "";
+    ROLE_STATE = { file: !shape ? "invalid" : !Object.keys(ok).length ? (dropped ? "invalid" : "missing") : dropped ? "partial" : "ok", dropped };
+    ROLE_QB_TEAMS = new Set(Object.values(ROLES).filter(r => r[2] != null).map(r => r[6]));
+  }
+  // Stale: older than ROLE_STALE_DAYS, or most teams' next game in the file is already behind the week being played
+  function rolesStale() {
+    if (ROLE_STATE.file === "missing" || ROLE_STATE.file === "invalid") return false;
+    const t = Date.parse(ROLES_AT);
+    if (Number.isFinite(t) && Date.now() - t > ROLE_STALE_DAYS * 864e5) return true;
+    const now = currentWeek(); if (now == null) return false;
+    const wk = Object.values(ROLES).filter(r => r[2] != null && r[4] === 1 && r[7] != null).map(r => r[7]);
+    return wk.length > 0 && wk.filter(w => w < now).length > wk.length / 2;
+  }
+  // The visible warning, or "" when the roles data is current and complete
+  function rolesNote() {
+    const f = ROLE_STATE.file, at = Number.isFinite(Date.parse(ROLES_AT)) ? ` (updated ${new Date(ROLES_AT).toLocaleDateString("en-US", { month: "short", day: "numeric" })})` : "";
+    if (f === "missing" || f === "invalid") return `Depth-chart roles ${f === "missing" ? "unavailable" : "unreadable"}: QB projections use each team's latest starter`;
+    if (rolesStale()) return `Depth-chart roles may be out of date${at}`;
+    if (f === "partial" || ROLE_QB_TEAMS.size < 32) return "Depth-chart roles incomplete: some teams' QB projections use their latest starter";
+    return "";
+  }
+  // Fallback starter per team (teams with no quarterbacks in the roles file): most snaps in the team's latest game
+  const ROLE_FB = { key: "", map: null };
+  function fallbackStarters() {
+    const d = statsCache[STATS_SEASONS[0]], key = (d && d.updated) || "none";
+    if (ROLE_FB.key === key && ROLE_FB.map) return ROLE_FB.map;
+    const best = {};   // team -> [week, snap, sid]
+    if (d && d.players && d.cols) {
+      const W = d.cols.indexOf("w"), T = d.cols.indexOf("tm"), S = d.cols.indexOf("snap");
+      Object.entries(d.players).forEach(([sid, pl]) => {
+        if (pl.p !== "QB" || !pl.g || !pl.g.length) return;
+        const g = pl.g[pl.g.length - 1], tm = g[T], w = g[W], sn = g[S] || 0, b = best[tm];
+        if (tm && (!b || w > b[0] || (w === b[0] && sn > b[1]))) best[tm] = [w, sn, sid];
+      });
+    }
+    const map = {};
+    Object.entries(best).forEach(([tm, b]) => { map[tm] = { sid: b[2], week: b[0] }; });
+    players.filter(p => p.pos === "QB" && p.team && p.sleeperId && !map[p.team]).sort((a, b) => a.rank - b.rank)
+      .forEach(p => { if (!map[p.team]) map[p.team] = { sid: p.sleeperId, board: true }; });
+    ROLE_FB.key = key; ROLE_FB.map = map; return map;
   }
   // { m, start, depth, status, later, next } for a player and week, or null when nothing is known. A quarterback missing
   // from a depth chart that lists his team's quarterbacks is behind all of them (m 0). Weeks before the roles' week
@@ -5543,6 +5593,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return { m: later ? r[1] : r[0], start: later ? r[3] : r[2], depth: r[4], status: r[5], later, next: r[7], fresh: !!r[8] };
     }
     if (!r && e.pos === "QB" && e.team && ROLE_QB_TEAMS.has(e.team) && week != null) return { m: 0, start: 0, depth: null, status: null, later: false, offChart: true };
+    if (!r && e.pos === "QB" && e.team && week != null) {   // no roles for his team: never a starter's projection by default
+      const f = fallbackStarters()[e.team]; if (!f) return null;
+      const st = f.sid === String(e.sid);
+      return { m: st ? 1 : 0, start: st ? 1 : 0, depth: null, status: null, later: false, fallback: true, starter: st, fbWeek: f.week, fbBoard: !!f.board };
+    }
     return null;
   }
   // The rest-of-season role: a quarterback the depth chart doesn't expect to start (later-week chance under 50%)
@@ -5550,6 +5605,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const rosBackup = p => { if (!p || p.pos !== "QB" || !ROLES) return false; const R = roleFor({ sid: p.sleeperId, pos: p.pos, team: p.team }, 99); return !!R && R.start != null && R.start < 0.5; };
   const pctTxt = v => `${Math.round(100 * v)}%`;
   function roleText(e, R, cond) {
+    if (R.fallback) return `${rolesNote() || "Depth-chart roles unavailable"} · ${R.starter ? `${R.fbBoard ? "highest-ranked QB" : `started`} for ${e.team}${R.fbBoard ? "" : ` in Week ${R.fbWeek}`}` : `not ${e.team}'s latest starter: not expected to start · if he starts: ${fp(cond)}`}`;
     if (R.offChart) return `Not on ${e.team}'s depth chart at QB: not expected to play · if he starts: ${fp(cond)}`;
     const st = R.status ? `${R.status}${R.later ? " now" : !R.fresh ? " last week" : ""}` : "";
     if (e.pos === "QB") return `QB${R.depth} on the depth chart${st ? ` (${st})` : ""} · ${R.start < 0.005 ? "not expected to start (relief only)" : `${pctTxt(R.start)} chance to start`}${R.later ? " (later weeks)" : ""} · if he starts: ${fp(cond)}`;
@@ -5734,7 +5790,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T19:00Z";
+  const BUILD_ID = "2026-10-12T20:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6540,6 +6596,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (n("out")) notes.push(`${n("out")} out`);
     }
     if (wantX && opp && oppThru < d.through_week) notes.push(`xFP through Week ${oppThru}`);
+    if (groups.proj.length && rolesNote()) notes.push(rolesNote());
     notes.push("AM-ranked players only · ranks and values unchanged");
     $("rank-count").textContent = notes.join(" · ");
     if (WK_POP.open) renderColsPop();
@@ -9867,7 +9924,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
     if (!comps) comps = await get("data/curve_components.json");
     if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; PROJ_AT = pj.updated || ""; }
-    if (!ROLES) { const rj = (await get("data/roles.json")) || {}; setRoles(rj.players || {}, rj.updated || ""); }
+    if (!ROLES) { const rj = await get("data/roles.json"); setRoles(rj ? rj.players : {}, rj ? rj.updated || "" : ""); if (rolesNote()) console.warn("Adequate: " + rolesNote()); }
   }
 
   /* League summaries */
@@ -12472,7 +12529,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <select class="select" id="mx-week" aria-label="Week">${Array.from({ length: Math.min(18, lastWeek) }, (_, i) => i + 1).map(n => `<option value="${n}"${n === w ? " selected" : ""}>Week ${n}${n === cur ? " · current" : ""}</option>`).join("")}</select>
         ${w !== cur ? `<button class="btn" type="button" data-mx-week="${cur}">Current week</button>` : ""}
         <button class="btn" type="button" data-mx-refresh${LT.mxLoading === key ? " disabled" : ""}>${LT.mxLoading === key ? "Loading…" : "Refresh scores"}</button></span>
-      <span class="mx-source">Scores: Sleeper · Projections: ${esc(projSource())} ${infoIcon("Live proj is each team's projected final score: AM's weekly projection (usage and recent production, calibrated with the Vegas team total, the matchup and player props when available), scored with this league's settings and summed over the starting lineup. Before kickoff it's the expected final score; during games it updates with points so far plus each player's projection for the part of his game that's left, estimated from the time since kickoff, so it's an estimate, not a real-time game model. Starters AM can't project use their season PPG when our stats have them; otherwise the total is marked partial and the bar is hidden. The bar shows each team's share of the two projected totals, not a win probability. Hover a player's projection to see its inputs.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
+      <span class="mx-source">Scores: Sleeper · Projections: ${esc(projSource())}${rolesNote() ? ` · <span class="warn-txt">${esc(rolesNote())}</span>` : ""} ${infoIcon("Live proj is each team's projected final score: AM's weekly projection (usage and recent production, calibrated with the Vegas team total, the matchup and player props when available), scored with this league's settings and summed over the starting lineup. Before kickoff it's the expected final score; during games it updates with points so far plus each player's projection for the part of his game that's left, estimated from the time since kickoff, so it's an estimate, not a real-time game model. Starters AM can't project use their season PPG when our stats have them; otherwise the total is marked partial and the bar is hidden. The bar shows each team's share of the two projected totals, not a win probability. Hover a player's projection to see its inputs.", "About projections")}${data ? ` · Updated ${esc(ago(data.at))}` : ""}</span></div>`;
     if (err) return weekSel + `<div class="lg-error"><p>Couldn't load Week ${w} matchups from Sleeper (${esc(err)}).</p><button class="btn primary" type="button" data-mx-refresh>Retry</button></div>`;
     if (!data) return weekSel + `<p class="empty-note lg-loading">Loading Week ${w} matchups…</p>`;
     const groups = new Map();
@@ -13163,6 +13220,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // everything above is what he scores if he plays his role; the weekly expectation weighs it by the chance he does
     const cond = pts, R = opts.role !== undefined ? (opts.role == null ? null : { m: opts.role }) : roleFor(e, g && g.week);
     if (R && R.m < 1) { pts = cond * R.m; if (R.depth !== undefined) inputs.unshift(roleText(e, R, cond)); }
+    else if (R && R.fallback) inputs.unshift(roleText(e, R, cond));
+    if (R && !R.fallback && R.depth !== undefined && rolesStale()) inputs.unshift(rolesNote());
     return { pts, cond, role: R, source: P.source, fallback: P.fallback, inputs };
   }
 
@@ -16857,8 +16916,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const e = p ? { sid: p.sleeperId, pos: p.pos, team: p.team, p, name: p.name } : sp ? { sid: String(sid), pos: sp[1], team: sp[2], p: null, name: sp[0] } : null;
     if (!e) return null;
     const o = weekOutlook(e, week ?? currentWeek());
-    return { kind: o.kind, proj: o.proj ?? null, est: o.est ?? null, cond: o.cond ?? null, m: o.role ? o.role.m : null, start: o.role ? o.role.start ?? null : null, inputs: o.inputs || [], text: o.text, ros: p ? rosPPG(p) : null, rosRank: p ? rosRank(p) : null, backup: p ? rosBackup(p) : false };
+    return { kind: o.kind, proj: o.proj ?? null, est: o.est ?? null, cond: o.cond ?? null, m: o.role ? o.role.m : null, start: o.role ? o.role.start ?? null : null, inputs: o.inputs || [], text: o.text, ros: p ? rosPPG(p) : null, rosRank: p ? rosRank(p) : null, backup: p ? rosBackup(p) : false, fallback: !!(o.role && o.role.fallback) };
   };
+  SPM.rolesNote = () => rolesNote();   // "" when the depth-chart roles are current and complete
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
   if (window.__SPM_TEST_HOOKS === true) SPM.edit = Object.assign(EDIT_API, { draft: () => tableToCsv(draft), unsaved: () => changedRows().length,
     reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn(); draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); } });
