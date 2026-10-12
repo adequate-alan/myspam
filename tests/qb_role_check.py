@@ -235,10 +235,40 @@ with sync_playwright() as p:
     ok(c["kind"] == "upcoming" and near(c["est"], 0.3 * c["cond"], 0.02) and near(b["est"], (0.7 + 0.04 * 0.3) * b["cond"], 0.02),
        f"Page, uncertain (last week's Out): Caleb {c['est']:.1f} (30%), Bagent {b['est']:.1f} (70%)")
     ok(any("last week" in s for s in c["inputs"]), "Page: the input line says the designation is last week's")
-    # no roles file: no adjustment (the old behaviour)
-    setr({})
-    k = get(KEENUM)
-    ok(near(k["est"], k["cond"], 0.001) and k["m"] is None, "Page, no roles file: no adjustment")
+    # Safeguard: a missing, unreadable or incomplete roles file never brings back starter-level projections for backups.
+    # The fallback starter is the team's QB with the most snaps in its latest game (from the stats file).
+    ci = {c: i for i, c in enumerate(STATS_FIX["cols"])}
+    last = {}
+    for sid_, pl in STATS_FIX["players"].items():
+        if pl.get("p") != "QB" or not pl["g"]: continue
+        g = pl["g"][-1]; tm, w, sn = g[ci["tm"]], g[ci["w"]], g[ci["snap"]] or 0
+        if tm and (tm not in last or (w, sn) > last[tm][:2]): last[tm] = (w, sn, sid_)
+    chi_fb = last["CHI"][2]
+    def qb_rooms():
+        return pg.evaluate("""async () => { const out = {}; const sp = await (await fetch('data/sleeper_players.json')).json();
+          for (const [sid, v] of Object.entries(sp)) { if (v[1] !== 'QB' || !v[2]) continue; const o = await SPM.weekOutlookOf(sid, 4);
+            if (o && o.kind === 'upcoming' && o.est != null && o.est >= 5) (out[v[2]] = out[v[2]] || []).push([v[0], Math.round(o.est * 10) / 10]); }
+          return out; }""")
+    for label, R in (("missing", {}), ("unreadable", "garbage"), ("malformed entries", {CALEB: [2, 1, 1, 1, 1, None, "CHI", 4, 1], KEENUM: ["x"]})):
+        setr(R)
+        c, b, k = get(CALEB), get(BAGENT), get(KEENUM)
+        fb = {CALEB: c, BAGENT: b, KEENUM: k}
+        starters = [s_ for s_, o in fb.items() if o["est"] > 0]
+        ok(all(o["fallback"] for o in fb.values()) and starters == ([chi_fb] if chi_fb in fb else []),
+           f"Page, roles {label}: CHI's QBs fall back to the latest starter only ({[n for n, s_ in (('Caleb', CALEB), ('Bagent', BAGENT), ('Keenum', KEENUM)) if s_ in starters]})")
+        ok(all(o["est"] == 0 for s_, o in fb.items() if s_ != chi_fb), f"Page, roles {label}: every CHI QB but the latest starter gets 0 (on this frozen Week 4 board Keenum started CHI's latest game, Week 3)")
+        ok(any("Depth-chart roles" in x for x in (fb[chi_fb] if chi_fb in fb else k)["inputs"]), f"Page, roles {label}: the input line says the roles data is unavailable")
+        note = pg.evaluate("() => SPM.rolesNote()")
+        ok(note.startswith("Depth-chart roles"), f"Page, roles {label}: a visible warning ({note})")
+    rooms = qb_rooms()
+    multi = {t: v for t, v in rooms.items() if len(v) > 1}
+    ok(not multi and len(rooms) >= 28, f"Page, no roles file: across {len(rooms)} teams no QB room has two projections of 5+ points" + (f" ({multi})" if multi else ""))
+    # stale file: still used (its depth order protects backups), flagged
+    pg.evaluate("R => SPM.setRoles(R, '2026-09-01T12:00Z')", HEALTHY)
+    k, c = get(KEENUM), get(CALEB)
+    note = pg.evaluate("() => SPM.rolesNote()")
+    ok(k["est"] == 0 and not k["fallback"] and "out of date" in note, f"Page, stale roles file: still applied (Keenum 0.0) with a warning ({note})")
+    ok(any("out of date" in x for x in c["inputs"]), "Page, stale roles file: the input line carries the warning")
     # the Week view shows the expected number
     setr(HEALTHY)
     pg.evaluate("() => { const s = document.getElementById('rk-week'); s.value = '4'; s.dispatchEvent(new Event('change')); }"); pg.wait_for_timeout(500)
@@ -246,6 +276,8 @@ with sync_playwright() as p:
     cell = pg.evaluate("""() => { const out = {}; document.querySelectorAll('#rank-body tr.player').forEach(tr => { const n = tr.querySelector('.pl-name'); const v = tr.querySelector('.pnum');
         if (n && v) out[n.textContent.trim()] = Number(v.firstChild.textContent); }); return out; }""")
     k, c = get(KEENUM), get(CALEB)
+    cnt = pg.evaluate("() => document.getElementById('rank-count').textContent")
+    ok("Depth-chart roles" in cnt, f"Week view: the count line warns that the roles data is incomplete in this test setup ({cnt[:120]})")
     ok(cell.get("Case Keenum") is not None and near(cell["Case Keenum"], k["est"], 0.06) and near(cell.get("Caleb Williams"), c["est"], 0.06),
        f"Week 4 view: Keenum {cell.get('Case Keenum')} and Caleb {cell.get('Caleb Williams')} show the expected numbers")
     # the drawer's ROS line labels the backup
