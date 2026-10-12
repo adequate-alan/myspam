@@ -5516,6 +5516,45 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      keeps the projection columns in RANKINGS_CSV, which change only when someone asks (Alan, Oct 5: nothing scheduled
      changes rankings or values). */
   let PROJ_WEEKLY = null, PROJ_ROS = null, PROJ_LINE = null;   // the model's per-player factors (`f`) and projected stat lines (`line`)
+  /* Roles (Alan, Oct 12; pipeline/roles.py → data/roles.json, refreshed with every stats run): AM's projections are
+     conditional (per game played; a quarterback's per start), so a weekly projection is that number × the chance he
+     plays his role that week. Quarterbacks share one job: the chance to start cascades down the depth chart (QB3 only
+     starts when both ahead of him are out), with a small relief share for QB2; RB / WR / TE: their availability
+     (Questionable 75%, Doubtful 15%, Out / IR 0, practice-adjusted with this week's report). sid → [n, l, s, sl, depth,
+     status, team, week, fresh]: n / l = multiplier for his team's next game / later weeks, s / sl = chance to start (QB),
+     fresh = this game's injury report is out (before it, a designation is last week's and only lowers his chance).
+     ROS PPG keeps its conditional meaning; a backup quarterback's is labelled "If he starts". Never touches rankings,
+     values, tiers or history. No roles file → no adjustment (the old behavior). */
+  let ROLES = null, ROLES_AT = "", ROLE_QB_TEAMS = new Set();
+  function setRoles(map, at) {
+    ROLES = map || {}; ROLES_AT = at || "";
+    ROLE_QB_TEAMS = new Set(Object.entries(ROLES).filter(([, r]) => r[2] != null).map(([, r]) => r[6]));
+  }
+  // { m, start, depth, status, later, next } for a player and week, or null when nothing is known. A quarterback missing
+  // from a depth chart that lists his team's quarterbacks is behind all of them (m 0). Weeks before the roles' week
+  // (a past or frozen week) get no adjustment: the file describes his team's next game and later weeks only.
+  function roleFor(e, week) {
+    if (!ROLES || !e || !e.sid || !EDIT_POS.includes(e.pos)) return null;
+    const r = ROLES[e.sid];
+    if (r && (!e.team || r[6] === e.team)) {
+      if (week == null || r[7] == null) return null;
+      if (week < r[7]) return null;
+      const later = week > r[7];
+      return { m: later ? r[1] : r[0], start: later ? r[3] : r[2], depth: r[4], status: r[5], later, next: r[7], fresh: !!r[8] };
+    }
+    if (!r && e.pos === "QB" && e.team && ROLE_QB_TEAMS.has(e.team) && week != null) return { m: 0, start: 0, depth: null, status: null, later: false, offChart: true };
+    return null;
+  }
+  // The rest-of-season role: a quarterback the depth chart doesn't expect to start (later-week chance under 50%)
+  // gets an "If he starts" ROS PPG and no ROS position rank
+  const rosBackup = p => { if (!p || p.pos !== "QB" || !ROLES) return false; const R = roleFor({ sid: p.sleeperId, pos: p.pos, team: p.team }, 99); return !!R && R.start != null && R.start < 0.5; };
+  const pctTxt = v => `${Math.round(100 * v)}%`;
+  function roleText(e, R, cond) {
+    if (R.offChart) return `Not on ${e.team}'s depth chart at QB: not expected to play · if he starts: ${fp(cond)}`;
+    const st = R.status ? `${R.status}${R.later ? " now" : !R.fresh ? " last week" : ""}` : "";
+    if (e.pos === "QB") return `QB${R.depth} on the depth chart${st ? ` (${st})` : ""} · ${R.start < 0.005 ? "not expected to start (relief only)" : `${pctTxt(R.start)} chance to start`}${R.later ? " (later weeks)" : ""} · if he starts: ${fp(cond)}`;
+    return `${st || "Availability"}: ${pctTxt(R.m)} chance to play · if he plays: ${fp(cond)}`;
+  }
   // Out for season (Alan, Oct 15): a player in the Out for season tier projects to 0 everywhere (ROS, Next 4, this week),
   // whatever the pipeline's line says; the board's tier is the source of truth for his availability.
   const outForSeason = p => !!p && Number(p.tier) === OUT_TIER;
@@ -5538,7 +5577,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const v = rosPPG(p); if (v == null) return null;
     const R = projRatios(scoringNow());
     let n = 0, ahead = 0;
-    players.forEach(q => { if (q.pos !== p.pos || !EDIT_POS.includes(q.pos) || outForSeason(q)) return; const w = rosPPG(q, R); if (w == null) return; n++; if (w > v + 1e-9) ahead++; });
+    if (rosBackup(p)) return null;   // a backup quarterback's ROS PPG is "if he starts": no rank among the starters
+    players.forEach(q => { if (q.pos !== p.pos || !EDIT_POS.includes(q.pos) || outForSeason(q) || rosBackup(q)) return; const w = rosPPG(q, R); if (w == null) return; n++; if (w > v + 1e-9) ahead++; });
     return { rank: ahead + 1, n };
   }
   /* League settings picked by hand (for anyone not connecting a league).
@@ -5694,7 +5734,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T17:10Z";
+  const BUILD_ID = "2026-10-12T19:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -9827,6 +9867,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
     if (!comps) comps = await get("data/curve_components.json");
     if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; PROJ_AT = pj.updated || ""; }
+    if (!ROLES) { const rj = (await get("data/roles.json")) || {}; setRoles(rj.players || {}, rj.updated || ""); }
   }
 
   /* League summaries */
@@ -13119,7 +13160,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const pr = propsProjection(e, sc, opts.props !== undefined ? opts.props : (g && g.week ? propsFor(e.sid, g.week) : null));
     if (pr) { const w = Math.min(0.6, 0.15 + 0.15 * pr.markets); pts = w * pr.pts + (1 - w) * pts; inputs.push(`Player props: ${pr.markets} market${pr.markets === 1 ? "" : "s"}${PROPS.data && PROPS.data.books ? ` (consensus of ${PROPS.data.books.length} books)` : ""}`); }
     else inputs.push("Player props: not available");
-    return { pts, source: P.source, fallback: P.fallback, inputs };
+    // everything above is what he scores if he plays his role; the weekly expectation weighs it by the chance he does
+    const cond = pts, R = opts.role !== undefined ? (opts.role == null ? null : { m: opts.role }) : roleFor(e, g && g.week);
+    if (R && R.m < 1) { pts = cond * R.m; if (R.depth !== undefined) inputs.unshift(roleText(e, R, cond)); }
+    return { pts, cond, role: R, source: P.source, fallback: P.fallback, inputs };
   }
 
   /* One player's week (shared by every page): game status from nflGameState + points + projection.
@@ -13150,12 +13194,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (SLPROJ_POS.includes(e.pos) && slSource() === "sleeper") loadSleeperProj(week);
     const P = contextProjection(e, g, sc);
     const so = g.kind === "live" ? (sleeperPts ?? 0) : null;
+    // ruled out by the role layer (Out for this game, IR for any week): Out, not a projection of 0
+    if (P && P.role && P.role.m === 0 && g.kind === "upcoming" && (P.role.status === "IR" || (P.role.status === "Out" && P.role.fresh && !P.role.later)))
+      return { kind: "out", game: g, est: 0, text: "Out", cond: P.cond, role: P.role };
     if (!P) return { kind: g.kind, game: g, pts: so, est: g.kind === "live" ? so : null, missing: true, text: g.text };
     if (g.kind === "live") {
       const left = Math.max(0, Math.min(1, 1 - (Date.now() - g.kick) / GAME_MS));
-      return { kind: "live", game: g, pts: so, proj: P.pts, est: so + P.pts * left, approx: true, fallback: P.fallback, source: P.source, inputs: P.inputs, text: "Live" };
+      return { kind: "live", game: g, pts: so, proj: P.pts, cond: P.cond, role: P.role, est: so + P.pts * left, approx: true, fallback: P.fallback, source: P.source, inputs: P.inputs, text: "Live" };
     }
-    return { kind: g.kind, game: g, proj: P.pts, est: P.pts, fallback: P.fallback, source: P.source, inputs: P.inputs, text: g.text };
+    return { kind: g.kind, game: g, proj: P.pts, cond: P.cond, role: P.role, est: P.pts, fallback: P.fallback, source: P.source, inputs: P.inputs, text: g.text };
   }
   // Self-test: projections follow the league's scoring (SPM.projectionCheck() in the console, tests/format_check.py)
   // Scoring engine self-test (Alan, Oct 5): fixed stat lines scored under different league settings
@@ -13204,7 +13251,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     check(`${wr.name}: a 100-yard receiving bonus never lowers his projection`, [b0, b1], b1 >= b0);
     // calibration layer: Vegas, matchup and props move the weekly projection; missing props change nothing
     const g0 = { oppTeam: "KC", week: 99, total: 47, spread: 0 }, sc0 = scOf({}), we = entry(wr), te0 = entry(te);
-    const cp = (e, g, o = {}) => Math.round(10 * contextProjection(e, g, o.sc || sc0, { props: o.props === undefined ? null : o.props, ctx: o.ctx }).pts) / 10;
+    const cp = (e, g, o = {}) => Math.round(10 * contextProjection(e, g, o.sc || sc0, { props: o.props === undefined ? null : o.props, ctx: o.ctx, role: null }).pts) / 10;
     // the Vegas term needs 2+ of his team's upcoming games with posted lines (its baseline); lines are usually posted a week
     // ahead, so pick the best WR whose team has them, and with none anywhere check that no baseline means no adjustment
     const lined = p => teamGames(STATS_SEASONS[0], p.team).filter(r => r[4] == null && r[7] != null && r[8] != null).length >= 2;
@@ -13951,6 +13998,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     } else if (ros != null) {
       a.push(it("ros", "ROS PPG", fp(ros), `AM's projected points per game from now to the end of the season (${scName}): his role (snap, target and touch share, red-zone usage), team scoring environment, schedule and sustainable efficiency; not a recent average`));
       if (rk) a.push(`<span class="pr-rk" title="${esc(`${rk.rank} of ${rk.n} ${p.pos}s by ROS PPG`)}">${esc(p.pos)}${rk.rank}</span>`);
+      else if (rosBackup(p)) { const R = roleFor({ sid: p.sleeperId, pos: p.pos, team: p.team }, 99); a.push(`<span class="pr-conf low" title="${esc(`QB${R.depth} on ${p.team}'s depth chart, ${pctTxt(R.start)} chance to start in a typical week: ROS PPG is what he'd average per start, not what to expect. Weekly projections weigh it by his chance to start.`)}">If he starts</span>`); }
       if (d != null) a.push(`<span class="pr-delta ${d >= 0.05 ? "up" : d <= -0.05 ? "down" : ""}" title="ROS PPG minus his actual season PPG: what AM expects to change going forward">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} vs season</span>`);
       const conf = rosConfidence(p);
       if (conf) a.push(`<span class="pr-conf ${conf.cls}" title="${esc(conf.tip)}">${conf.label}</span>`);
@@ -16802,6 +16850,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   window.SPM = { formulaPreview, stateValues, scarcityIndex, rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, snapshotOf: csv => rankingSnapshot(loadPlayers(csv)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
   /* The editor's own functions for the tests (SPM.edit): only when a test sets window.__SPM_TEST_HOOKS before the page
      loads. Visitors never get them; they can only change this browser's unsaved draft, like the arrows. */
+  // One player's weekly outlook, read only (tests and the console): kind, expected and conditional points, role multiplier
+  SPM.weekOutlookOf = async (sid, week) => {
+    await loadStatic(); await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason));
+    const p = players.find(x => x.sleeperId === String(sid)), sp = slPlayers && slPlayers[sid];
+    const e = p ? { sid: p.sleeperId, pos: p.pos, team: p.team, p, name: p.name } : sp ? { sid: String(sid), pos: sp[1], team: sp[2], p: null, name: sp[0] } : null;
+    if (!e) return null;
+    const o = weekOutlook(e, week ?? currentWeek());
+    return { kind: o.kind, proj: o.proj ?? null, est: o.est ?? null, cond: o.cond ?? null, m: o.role ? o.role.m : null, start: o.role ? o.role.start ?? null : null, inputs: o.inputs || [], text: o.text, ros: p ? rosPPG(p) : null, rosRank: p ? rosRank(p) : null, backup: p ? rosBackup(p) : false };
+  };
+  if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
   if (window.__SPM_TEST_HOOKS === true) SPM.edit = Object.assign(EDIT_API, { draft: () => tableToCsv(draft), unsaved: () => changedRows().length,
     reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn(); draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); } });
 

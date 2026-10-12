@@ -41,6 +41,7 @@ RATES = [("cmp", "pass_cmp", "pass_att"), ("sack", "pass_sack", "pass_att"), ("p
 # Set by pipeline/ros_backtest.py (Oct 14; numbers in CLAUDE.md §8). ENV_EL is 0 for the rest-of-season number: the
 # ratings-fitted environment term costs 0.05 PPG of MAE in the leak-free backtest. The next-4 outlook keeps environment
 # and schedule at ENV4_EL / SCHED4_EL: posted lines exist for the coming weeks and that horizon is what they're for.
+QB_START_SNAP = 0.5   # a quarterback game under half the snaps that wasn't cut short by injury is a relief appearance
 PARAMS = dict(HALF_LIFE=20.0, K_PRIOR=2.0, K_NOPRIOR=1.0, MIN_PRIOR_G=4, PRIOR_EFF_W=0.5, K_EFF=30.0, EFF_W=0.75,
               ENV_EL=0.0, SCHED_EL=0.25, ENV4_EL=0.5, SCHED4_EL=0.25, PRIOR_GAMES=0.0, SHORT_MIN_F=0.15)
 # The market environment (implied team totals) and the matchup (defense vs position) are separate factors everywhere
@@ -79,7 +80,13 @@ def frame(stats, sc):
                 s = sh[r["w"]]
                 f = (s[1] / s[2]) if s[2] else 0.5
                 f = min(1.0, max(PARAMS["SHORT_MIN_F"], f))
-            row = dict(id=sid, name=p["n"], pos=p["p"], week=r["w"], team=r["tm"], opp=r["opp"], snap=r["snap"] or 0, f=f,
+            # role fraction (Oct 12): a quarterback's relief or garbage-time appearance (under half the snaps, not already
+            # an injury-shortened game) is that share of a game of evidence for his per-start volume, not a full start
+            # with a starter's workload missing; other positions share the field, so their snaps are their role
+            rf = f
+            if p["p"] == "QB" and f >= 1 and (r["snap"] or 0) < QB_START_SNAP and r["snap"] is not None:
+                rf = min(1.0, max(PARAMS["SHORT_MIN_F"], r["snap"]))
+            row = dict(id=sid, name=p["n"], pos=p["p"], week=r["w"], team=r["tm"], opp=r["opp"], snap=r["snap"] or 0, f=f, rf=rf,
                        pts=game_points(r, p["p"], sc), **{k: (r.get(k) or 0) for k in STATS})
             # TDs scored from the red zone can't be told apart in the data; attribute TDs to red-zone opportunities first
             row["rush_td_rz"] = min(row["rush_td"], row["rz_rush"]); row["rush_td_out"] = row["rush_td"] - row["rush_td_rz"]
@@ -100,6 +107,7 @@ def league_rates(frames):
         rates = {name: (s[num].sum() / s[den].sum() if s[den].sum() > 0 else 0.0) for name, num, den in RATES}
         reg = s[s.snap >= 0.5]   # regulars: the shrink target for players without a previous season
         rates["opps"] = {o: (reg[o].sum() / len(reg) if len(reg) else 0.0) for o in OPPS}
+        rates["reg_snap"] = float(reg.snap.mean()) if len(reg) else 1.0
         out[pos] = rates
     return out
 
@@ -178,7 +186,8 @@ def prepare(stats, games, cutoff, prior_stats=None, rates=None, use_future_lines
         pi = [past_imp.get((wk, tm)) for wk, tm in zip(s.week, s.team)]; pi = [v for v in pi if v is not None]
         team = s.team.iloc[-1]
         fut = future.get(team, [])
-        groups.append(dict(sid=sid, name=name, pos=pos, team=team, week=s.week.to_numpy(float), f=s.f.to_numpy(),
+        groups.append(dict(sid=sid, name=name, pos=pos, team=team, week=s.week.to_numpy(float), f=s.f.to_numpy(), rf=s.rf.to_numpy(),
+                           snap=(s.snap / s.f).clip(upper=1.0).to_numpy(),
                            pts=s.pts.to_numpy(), opps={o: s[o].to_numpy(float) for o in OPPS},
                            counts={name: (s.loc[s.f >= 1, num].sum(), s.loc[s.f >= 1, den].sum()) for name, num, den in RATES},
                            past_imp=np.mean(pi) if pi else None, prior=prior.get(sid), status=status.get(sid),
@@ -190,17 +199,23 @@ def project_from(ctx, params=PARAMS):
     lam = math.log(2) / params["HALF_LIFE"]
     rows = []
     for g in ctx["groups"]:
-        pos = g["pos"]; f = g["f"]; lg = rates[pos]
-        rec = np.exp(-lam * (g["week"].max() - g["week"])); w = rec * f
-        g_eff = float(f.sum()); full = f >= 1
+        pos = g["pos"]; f = g["f"]; rf = g["rf"]; lg = rates[pos]
+        rec = np.exp(-lam * (g["week"].max() - g["week"])); w = rec * rf
+        g_eff = float(rf.sum()); full = f >= 1
         ppg = g["pts"].mean(); hppg = g["pts"][full].mean() if full.any() else ppg
         # 1-2. role: current per-full-game opportunities blended with the prior by games of evidence
-        cur = {o: float(np.sum(g["opps"][o] / f * w) / w.sum()) for o in OPPS}
+        cur = {o: float(np.sum(g["opps"][o] / rf * w) / w.sum()) for o in OPPS}
         pr = g["prior"]
         if pr and pr["g"] >= params["MIN_PRIOR_G"]:
             kp, base = params["K_PRIOR"], pr["opps"]
         else:
-            kp, base = params["K_NOPRIOR"], lg["opps"]
+            # no usable previous season: shrink toward the position's regulars, scaled by his own share of the snaps for
+            # RB / WR / TE (Oct 12: a backup on 4% of the snaps was pulled halfway to a starter's workload); a quarterback's
+            # per-start volume is a starter's by definition, so his target stays the regulars' (the role layer, roles.py,
+            # decides whether he starts)
+            sn = float(np.sum(g["snap"] * rec) / rec.sum())
+            role = 1.0 if pos == "QB" or sn <= 0 else min(1.0, sn / lg.get("reg_snap", 1.0))   # no snap data: no scaling
+            kp, base = params["K_NOPRIOR"], {o: lg["opps"][o] * role for o in OPPS}
         opp = {o: (g_eff * cur[o] + kp * base[o]) / (g_eff + kp) for o in OPPS}
         opp["rz_rush"] = min(opp["rz_rush"], opp["rush_att"]); opp["rz_tgt"] = min(opp["rz_tgt"], opp["rec_tgt"])
         # 3. efficiency: own counts (this season + prior season at PRIOR_EFF_W) shrunk to the league rate, applied at EFF_W
