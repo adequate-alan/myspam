@@ -16,7 +16,7 @@ directions, position filters, Full vs Half PPR and TE premium, injury-shortened 
 going back to Full season restoring the AM board exactly (ranks, values, header), the AM rank never changing, the
 phone layout (no sideways scroll), and no page errors. SHOTS=dir saves light/dark screenshots at 1440 and 390.
 """
-import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
+import csv, functools, http.server, io, json, math, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,9 +54,62 @@ def game_pts(a, pos, sc):
     v = sum(float(sc.get(k, 0)) * (a[IX[k]] or 0) for k in STAT_KEYS)
     v += float(sc.get("bonus_rec_" + pos.lower(), 0)) * (a[IX["rec"]] or 0)
     return round(v * 100) / 100
-def stat(a, k):
-    if k == "td": return (a[IX["pass_td"]] or 0) + (a[IX["rush_td"]] or 0) + (a[IX["rec_td"]] or 0)
-    return a[IX[k]] or 0
+# Stat columns (Oct 12, second pass): an independent reference for every column. One game = his line + his team's totals
+# that week (team_week); a season = the same summed over the games he played, shares = summed numerator ÷ summed
+# denominator (never an average of weekly percentages), each week on the team he played for that week.
+TW = S.get("team_week") or {}
+TC = {c: i for i, c in enumerate(TW.get("cols", []))}
+OPP = json.load(open(os.path.join(ROOT, f"data/opportunity/{season}.json")))
+OPPI = {c: i for i, c in enumerate(OPP["cols"])}
+XMAP = {"x_rec": "rec", "x_rec_yd": "rec_yd", "x_rec_td": "rec_td", "x_rec_fd": "rec_fd", "x_rush_yd": "rush_yd", "x_rush_td": "rush_td",
+        "x_rush_fd": "rush_fd", "x_pass_cmp": "pass_cmp", "x_pass_yd": "pass_yd", "x_pass_td": "pass_td", "x_pass_int": "pass_int", "x_pass_fd": "pass_fd"}
+PCT = {"tgt_pct": ("rec_tgt", "tm_tgt"), "ay_pct": ("air_yd", "tm_air"), "rush_pct": ("rush_nk", "tm_rush_nk"), "cmp_pct": ("pass_cmp", "pass_att"), "snap": ("snaps", "tm_snaps")}
+SUMS = {"rz": ("rz_rush", "rz_rec"), "touch": ("rush_att", "rec"), "opp": ("rush_att", "rec_tgt"), "td": ("pass_td", "rush_td", "rec_td"), "scrim": ("rush_yd", "rec_yd")}
+def jround(x): return math.floor(x + 0.5)
+def same(k, got, want):   # xFP: sums of model decimals can land either side of a .x5 rounding edge
+    if k == "xfp" and got not in (None, "N/A") and want != "N/A": return abs(float(got) - float(want)) < 0.1001
+    return got == want
+def comp(a, sid, pos, sc):
+    g = {c: a[i] for c, i in IX.items()}
+    t = TW.get("teams", {}).get(g["tm"], {}).get(str(g["w"]))
+    T = lambda k: t[TC[k]] if t else None
+    c = {k: g.get(k) for k in ["rec_tgt", "rec", "rec_yd", "rec_td", "rush_att", "rush_yd", "rush_td", "pass_att", "pass_cmp", "pass_yd", "pass_td", "pass_int", "rz_rush", "rz_rec", "snaps"]}
+    c["air_yd"] = g["air_yd"] if g["air_yd"] is not None else (None if g["rec_tgt"] else 0)
+    c["rush_nk"] = (g["rush_att"] or 0) - (g["kneel"] or 0)
+    c["tm_tgt"], c["tm_air"], c["tm_snaps"] = T("tgt"), T("air"), T("snaps")
+    c["tm_rush_nk"] = None if T("rush") is None else T("rush") - (T("kneel") or 0)
+    xr = next((r for r in OPP["players"].get(sid, []) if r[0] == g["w"]), None)
+    c["xfp"] = None
+    if xr:
+        line = {"pass_att": g["pass_att"] or 0, "rush_att": g["rush_att"] or 0, "rec_tgt": g["rec_tgt"] or 0}
+        for k, i in OPPI.items():
+            if k in XMAP: line[XMAP[k]] = xr[i] or 0
+        xs = {k: v for k, v in sc.items() if not k.startswith("bonus_") or k.startswith("bonus_rec_")}
+        xs.pop("fum_lost", None); xs.pop("pass_sack", None)
+        v = sum(float(xs.get(k, 0)) * line.get(k, 0) for k in STAT_KEYS) + float(xs.get("pass_inc", 0)) * (line["pass_att"] - line.get("pass_cmp", 0))
+        v += float(xs.get("bonus_rec_" + pos.lower(), 0)) * line.get("rec", 0)
+        c["xfp"] = jround(v * 100) / 100
+    return c
+def py_stat(cs, k):
+    """None = N/A; else (value, is_pct)"""
+    def ssum(*ks):
+        vals = [c[x] for c in cs for x in ks if c[x] is not None]
+        return sum(vals) if vals else None
+    if k in PCT:
+        a, b = PCT[k]; pr = [(c[a], c[b]) for c in cs if c[a] is not None and c[b] is not None]
+        d = sum(y for _, y in pr)
+        return None if not pr or d <= 0 else sum(x for x, _ in pr) / d
+    if k in SUMS: return ssum(*SUMS[k])
+    return ssum(k)
+def disp(k, v):
+    if v is None: return "N/A"
+    if k in PCT:
+        t = jround(v * 1000) / 10
+        return f"{jround(t) if t >= 10 or t == 0 else t:g}%"
+    if k == "xfp": return f"{v:.1f}"
+    return f"{jround(v):,}"
+def stat(a, k, sid=None, pos="WR", sc=None):
+    return py_stat([comp(a, sid, pos, sc or {})], k)
 def week_expect(week, sc, pos=None):
     """sid -> ('act', pts, row) | ('Bye'|'DNP', None, None)"""
     out = {}
@@ -111,7 +164,7 @@ READ = """() => { const heads = [...document.querySelectorAll('#rk-head-row th')
     if (!tr.classList.contains('player')) return;
     const cells = [...tr.children], st = {};
     cells.forEach((td, i) => { const h = heads[i + 1];   // heads[0] is the hidden editor column the rows don't have
-      if (h && h !== 'pts') { const n = td.querySelector('.wk-n'); st[h] = n ? n.textContent : null; } });
+      if (h && h !== 'pts') { const n = td.querySelector('.wk-n, .wk-na'); st[h] = n ? n.textContent : null; } });
     out.push({ sid: (tr.querySelector('[data-sid]') || tr.querySelector('.pl-name') || {}).dataset?.sid || '', id: tr.dataset.id,
       name: tr.querySelector('.pl-name').textContent.trim(), rank: tr.querySelector('td.rk').textContent.trim(),
       grp: ['act', 'proj', 'none'].find(c => tr.classList.contains(c)), band,
@@ -148,7 +201,7 @@ with sync_playwright() as p:
         pg.evaluate(f"() => {{ const s = document.getElementById('{sid}'); s.value = '{v}'; s.dispatchEvent(new Event('change')); }}"); pg.wait_for_timeout(400)
     def pos(pg, f):
         pg.click(f"#pos-chips [data-pos={f}]"); pg.wait_for_timeout(300)
-    def check_week(label, got, week, sc, pos_f=None):
+    def check_week(label, got, week, sc, pos_f=None, by_pts=True):
         exp = week_expect(week, sc, pos_f)
         act = [r for r in got["rows"] if r["grp"] == "act"]
         want_act = {name_of[s]: e for s, e in exp.items() if e[0] == "act"}
@@ -157,10 +210,11 @@ with sync_playwright() as p:
         for r in act:
             a = want_act.get(r["name"], (0, 0, None))[2]
             if a is None: continue
+            sid = by_name[r["name"]]
             for k, v in r["st"].items():
-                if k == "snap": continue
-                if v is None or abs(float(v) - stat(a, k)) > 0.051: stbad.append((r["name"], k, v, stat(a, k)))
-        order = [i for i in range(1, len(act)) if act[i]["pts"] > act[i - 1]["pts"] + 1e-9]
+                want = disp(k, stat(a, k, sid, board[sid]["pos"], sc))
+                if not same(k, v, want): stbad.append((r["name"], k, v, want))
+        order = [i for i in range(1, len(act)) if act[i]["pts"] > act[i - 1]["pts"] + 1e-9] if by_pts else []
         ok(not bad and not stbad and not order and len(act) == len(want_act) and [r["rank"] for r in act] == [str(i) for i in range(1, len(act) + 1)],
            f"{label}: {len(act)} players with stats match the Week {week} game log (points {bad[:2]}, stats {stbad[:2]}, order {order[:2]}, expected {len(want_act)})")
         if week < FIX_WEEK:
@@ -176,8 +230,8 @@ with sync_playwright() as p:
     pg = page("FULL")
     board0, head0 = pg.evaluate(BOARD), pg.inner_text("#rk-head-row")
     opts = pg.evaluate("() => [...document.getElementById('rk-week').options].map(o => o.textContent)")
-    ok(opts[0] == "Full season" and len(opts) == LAST_WEEK + 1 and opts[1] == "Week 1" and opts[FIX_WEEK] == f"Week {FIX_WEEK} · now" and opts[FIX_WEEK + 1] == f"Week {FIX_WEEK + 1} · proj",
-       f"Week menu: Full season + Weeks 1–{LAST_WEEK}, the current week marked now and later weeks proj ({opts[:2]} … {opts[FIX_WEEK:FIX_WEEK + 2]})")
+    ok(opts[0] == "Full season" and opts[1] == "Season stats" and len(opts) == LAST_WEEK + 2 and opts[2] == "Week 1" and opts[FIX_WEEK + 1] == f"Week {FIX_WEEK} · now" and opts[FIX_WEEK + 2] == f"Week {FIX_WEEK + 1} · proj",
+       f"Week menu: Full season, Season stats + Weeks 1–{LAST_WEEK}, the current week marked now and later weeks proj ({opts[:3]} … {opts[FIX_WEEK + 1:FIX_WEEK + 3]})")
     btn = pg.locator("#rk-week + .dd-btn")
     ok(btn.inner_text().strip() == "Full season", f"The Week menu starts on Full season ({btn.inner_text().strip()!r})")
     btn.click(); pg.wait_for_timeout(200)
@@ -186,7 +240,7 @@ with sync_playwright() as p:
     ok(pg.input_value("#rk-wsort") == "pts" and g2["heads"][4] == "pts" and pg.locator("#rk-wsort-lab").is_visible() and not pg.locator("#rk-sort-lab").is_visible() and not pg.locator("#rk-min + .dd-btn").is_visible(),
        "Picking Week 2 sorts by Fantasy points, swaps in the week's Sort menu and hides the season-only minimum games")
     act2 = check_week("Week 2 · All · Full PPR", g2, 2, SCORING["FULL"])
-    ok(g2["heads"][5:] == ["pass_yd", "rush_yd", "rec", "rec_yd", "td"], f"All positions show Pass yds · Rush yds · Rec · Rec yds · TD ({g2['heads'][5:]})")
+    ok(g2["heads"][5:] == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "rush_att", "rush_yd", "touch", "snap"], f"All positions show TGT · TGT% · REC · REC YDS · ATT · RUSH YDS · TOUCH · SNAP% ({g2['heads'][5:]})")
     bands = [r["band"] for r in g2["rows"] if r["grp"] == "none"][:1]
     ok(bands and bands[0].startswith("No stats this week"), f"Players without stats sit under their own band ({bands})")
     ok(all(r["sub"] == "Final" for r in act2), "Every Week 2 stat line is labelled Final")
@@ -200,28 +254,31 @@ with sync_playwright() as p:
        "Each row's AM # is his board rank, unchanged by the week view")
 
     # 2. sorting: header clicks and the Sort menu, both directions
-    for k in ["rec_yd", "rush_yd", "pass_yd", "rec", "td"]:
+    numv = lambda v: float(v.rstrip("%").replace(",", "")) if v not in (None, "N/A") else -1
+    for k in ["rec_yd", "rush_yd", "rec", "tgt_pct", "touch", "snap"]:
         pg.click(f"#rk-head-row [data-wk-sort={k}]"); pg.wait_for_timeout(350)
         g = pg.evaluate(READ); act = [r for r in g["rows"] if r["grp"] == "act"]
-        vals = [float(r["st"][k]) for r in act]
+        vals = [numv(r["st"][k]) for r in act]
         ok(vals == sorted(vals, reverse=True) and len(act) == len(act2) and pg.input_value("#rk-wsort") == k,
            f"Header sort by {k}: high → low ({vals[:4]}), the Sort menu follows")
-    pg.click("#rk-head-row [data-wk-sort=td]"); pg.wait_for_timeout(350)
-    g = pg.evaluate(READ); vals = [float(r["st"]["td"]) for r in g["rows"] if r["grp"] == "act"]
+    pg.click("#rk-head-row [data-wk-sort=snap]"); pg.wait_for_timeout(350)
+    g = pg.evaluate(READ); vals = [numv(r["st"]["snap"]) for r in g["rows"] if r["grp"] == "act" and r["st"]["snap"] != "N/A"]
     ok(vals == sorted(vals) and pg.inner_text("#rk-dir") == "Low → High", f"Clicking the sorted header again flips to low → high ({vals[:4]})")
-    set_sel(pg, "rk-wsort", "rec")
-    g = pg.evaluate(READ); vals = [float(r["st"]["rec"]) for r in g["rows"] if r["grp"] == "act"]
-    ok(vals == sorted(vals, reverse=True), f"Sort menu: Receptions, high → low ({vals[:4]})")
+    for k in ["rec", "pass_yd", "td", "ay_pct"]:
+        set_sel(pg, "rk-wsort", k)
+        g = pg.evaluate(READ); vals = [numv(r["st"][k]) for r in g["rows"] if r["grp"] == "act"]
+        ok(k in g["heads"] and vals == sorted(vals, reverse=True), f"Sort menu: {k}, high → low, its column added ({vals[:4]})")
+        check_week(f"Week 2 · sorted by {k}", g, 2, SCORING["FULL"], by_pts=False)
 
     # 3. position filters keep working, with position stat columns
     set_sel(pg, "rk-wsort", "pts")
-    for f, cols in [("QB", ["pass_att", "pass_yd", "pass_td", "pass_int", "rush_att", "rush_yd", "rush_td"]), ("RB", ["rush_att", "rush_yd", "rush_td", "rec_tgt", "rec", "rec_yd", "rec_td"]),
-                    ("WR", ["rec_tgt", "rec", "rec_yd", "rec_td", "rush_yd", "snap"]), ("TE", ["rec_tgt", "rec", "rec_yd", "rec_td", "snap"])]:
+    for f, cols in [("QB", ["pass_att", "pass_yd", "pass_td", "pass_int", "rush_att", "rush_yd"]), ("RB", ["rush_att", "rush_yd", "rec_tgt", "tgt_pct", "touch", "opp", "snap"]),
+                    ("WR", ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"]), ("TE", ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"])]:
         pos(pg, f); g = pg.evaluate(READ)
         check_week(f"Week 2 · {f}", g, 2, SCORING["FULL"], f)
         ok(g["heads"][5:] == cols, f"{f} columns: {g['heads'][5:]}")
     pos(pg, "RB"); set_sel(pg, "rk-wsort", "rush_yd")
-    g = pg.evaluate(READ); vals = [float(r["st"]["rush_yd"]) for r in g["rows"] if r["grp"] == "act"]
+    g = pg.evaluate(READ); vals = [float(r["st"]["rush_yd"].replace(",", "")) for r in g["rows"] if r["grp"] == "act"]
     ok(vals == sorted(vals, reverse=True), f"RB · Week 2 by rushing yards ({vals[:3]})")
     pos(pg, "ALL"); set_sel(pg, "rk-wsort", "pts")
 
@@ -253,7 +310,7 @@ with sync_playwright() as p:
     ok(pg.input_value("#rk-week") == "3" and pg.input_value("#rk-wsort") == "rec_yd" and g3["heads"][4] == "pts" and "rec_yd" in g3["heads"]
        and pg.get_attribute("#pos-chips [data-pos=WR]", "aria-pressed") == "true",
        "After a reload: Week 3, sorted by receiving yards, WR tab")
-    vals = [float(r["st"]["rec_yd"]) for r in g3["rows"] if r["grp"] == "act"]
+    vals = [float(r["st"]["rec_yd"].replace(",", "")) for r in g3["rows"] if r["grp"] == "act"]
     ok(vals == sorted(vals, reverse=True), f"Week 3 WRs by receiving yards after the reload ({vals[:3]})")
     set_sel(pg, "rk-week", "6"); g = pg.evaluate(READ)
     ok(pg.input_value("#rk-wsort") == "rec_yd", "Switching from one week to another keeps the chosen stat sort")
@@ -263,6 +320,112 @@ with sync_playwright() as p:
     set_sel(pg, "rk-week", "1")
     ok(pg.input_value("#rk-wsort") == "pts", "Coming from Full season, a week opens on Fantasy points again")
     set_sel(pg, "rk-week", "")
+    pg.close()
+
+    # 5b. Season stats: totals over the games he played; shares from summed numerators and team denominators
+    EXTRA = ["xfp", "air_yd", "ay_pct", "rush_pct", "rz", "pass_cmp", "cmp_pct", "snaps", "opp", "rec_td", "td"]
+    def season_expect(sc, pos_f=None):
+        out = {}
+        for sid, r in board.items():
+            if pos_f and r["pos"] != pos_f: continue
+            games = [a for a in (S["players"].get(sid) or {}).get("g", []) if played(a)]
+            out[sid] = (games, round(sum(game_pts(a, r["pos"], sc) for a in games) * 100) / 100, [comp(a, sid, r["pos"], sc) for a in games])
+        return out
+    def check_season(label, got, sc, pos_f=None):
+        exp = season_expect(sc, pos_f)
+        act = [r for r in got["rows"] if r["grp"] == "act"]
+        want = {name_of[s]: e for s, e in exp.items() if e[0]}
+        bad, stbad = [], []
+        for r in act:
+            e = want.get(r["name"])
+            if not e or abs(r["pts"] - e[1]) > 0.051 or r["sub"] != f"{len(e[0])} GP": bad.append((r["name"], r["pts"], e and e[1], r["sub"])); continue
+            for k, v in r["st"].items():
+                w = disp(k, py_stat(e[2], k))
+                if not same(k, v, w): stbad.append((r["name"], k, v, w))
+        none = {r["name"] for r in got["rows"] if r["grp"] == "none"}
+        order = [i for i in range(1, len(act)) if act[i]["pts"] > act[i - 1]["pts"] + 1e-9]
+        ok(not bad and not stbad and not order and len(act) == len(want) and none == {name_of[s] for s, e in exp.items() if not e[0]},
+           f"{label}: {len(act)} season lines match the game logs (points/GP {bad[:2]}, stats {stbad[:3]}, order {order[:2]}, expected {len(want)}, no games {len(none)})")
+        return act
+    pg = page("FULL")
+    opts = pg.evaluate("() => [...document.getElementById('rk-week').options].map(o => o.textContent)")
+    ok(opts[:3] == ["Full season", "Season stats", "Week 1"], f"Week menu: Full season (the AM board), then Season stats, then the weeks ({opts[:3]})")
+    set_sel(pg, "rk-week", "0"); gs = pg.evaluate(READ)
+    ok(gs["heads"][4] == "pts" and pg.locator("#rk-cols-btn").is_visible() and "Season stats · through Week" in pg.inner_text("#rank-count"),
+       f"Season stats opens on fantasy points with the Columns button ({pg.inner_text('#rank-count')[:70]})")
+    acts = check_season("Season stats · All · Full PPR", gs, SCORING["FULL"])
+    ok(not [r for r in gs["rows"] if r["grp"] == "proj"] and all(r["sub"].endswith("GP") for r in acts), "Season stats never mix in projections")
+    # a share is the ratio of sums, not the mean of weekly shares: find players where the two differ and check ours
+    diffw = []
+    for sid, (games, _, cs) in season_expect(BASE).items():
+        if len(cs) < 2: continue
+        weekly = [py_stat([c], "tgt_pct") for c in cs]
+        if None in weekly: continue
+        mean, ros = sum(weekly) / len(weekly), py_stat(cs, "tgt_pct")
+        if ros is not None and disp("tgt_pct", mean) != disp("tgt_pct", ros): diffw.append(name_of[sid])
+    shown = {r["name"]: r["st"].get("tgt_pct") for r in acts}
+    ok(diffw and all(n in shown for n in diffw[:5]), f"{len(diffw)} players whose averaged weekly TGT% differs from summed targets ÷ team targets show the latter (e.g. {diffw[:3]})")
+    movers = [name_of[s] for s, (games, _, _) in season_expect(BASE).items() if len({a[IX["tm"]] for a in games}) > 1]
+    ok(True, f"Players with two teams this season (each week's own team totals): {movers[:4] or 'none in this data'}")
+    # sorting the season by the new stats, header and menu, both directions
+    for k in ["tgt_pct", "snap", "touch"]:
+        pg.click(f"#rk-head-row [data-wk-sort={k}]"); pg.wait_for_timeout(350)
+        g = pg.evaluate(READ); vals = [r["st"][k] for r in g["rows"] if r["grp"] == "act"]
+        num = [float(v.rstrip("%").replace(",", "")) for v in vals if v != "N/A"]
+        ok(num == sorted(num, reverse=True) and all(v == "N/A" for v in vals[len(num):]), f"Season sort by {k}: high → low, N/A last ({vals[:4]})")
+    pg.click("#rk-head-row [data-wk-sort=touch]"); pg.wait_for_timeout(350)
+    g = pg.evaluate(READ); num = [float(r["st"]["touch"].replace(",", "")) for r in g["rows"] if r["grp"] == "act" and r["st"]["touch"] != "N/A"]
+    ok(num == sorted(num), "Clicking TOUCH again sorts low → high")
+    set_sel(pg, "rk-wsort", "rz"); g = pg.evaluate(READ)
+    num = [float(r["st"]["rz"]) for r in g["rows"] if r["grp"] == "act" and r["st"].get("rz") not in (None, "N/A")]
+    ok("rz" in g["heads"] and num == sorted(num, reverse=True), f"Sort menu: Red-zone touches adds its column and sorts ({num[:4]})")
+    set_sel(pg, "rk-wsort", "pts")
+
+    # 5c. Columns menu: per position, saved, reset; every optional stat checked against the logs (week and season)
+    pos(pg, "WR")
+    pg.click("#rk-cols-btn"); pg.wait_for_timeout(250)
+    ok(pg.locator("#rk-cols-pop").is_visible() and pg.evaluate("() => document.activeElement.matches('#rk-cols-pop input')"),
+       "Columns opens a menu with focus on its first option")
+    na = pg.evaluate("() => [...document.querySelectorAll('#rk-cols-pop .rk-col-opt.na')].map(x => [x.textContent.trim(), x.querySelector('input').disabled])")
+    ok(len(na) == 3 and all(d for _, d in na), f"Routes run, route participation and YPRR are listed as not available, disabled ({na})")
+    on = pg.evaluate("() => [...document.querySelectorAll('#rk-cols-pop [data-wk-col]:checked')].map(x => x.dataset.wkCol)")
+    ok(on == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"], f"WR defaults checked: {on}")
+    pg.click("#rk-cols-pop [data-wk-col=snap]"); pg.wait_for_timeout(250)
+    for k in EXTRA: pg.click(f"#rk-cols-pop [data-wk-col={k}]"); pg.wait_for_timeout(150)
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+    ok(not pg.locator("#rk-cols-pop").is_visible() and pg.evaluate("() => document.activeElement.id") == "rk-cols-btn", "Escape closes the menu and returns focus to Columns")
+    gw = pg.evaluate(READ)
+    ok("snap" not in gw["heads"] and all(k in gw["heads"] for k in EXTRA), f"WR shows the chosen columns, SNAP% hidden ({gw['heads'][5:]})")
+    check_season("Season stats · WR · chosen columns", gw, SCORING["FULL"], "WR")
+    xs = [r["st"]["xfp"] for r in gw["rows"] if r["grp"] == "act"]
+    ok(sum(1 for v in xs if v != "N/A") > 50, f"xFP is filled from the expected-points data ({sum(1 for v in xs if v != 'N/A')} of {len(xs)})")
+    set_sel(pg, "rk-week", "2"); g = pg.evaluate(READ)
+    check_week("Week 2 · WR · chosen columns", g, 2, SCORING["FULL"], "WR")
+    pos(pg, "ALL"); g = pg.evaluate(READ)
+    ok(g["heads"][5:] == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "rush_att", "rush_yd", "touch", "snap"], "All players keeps its own columns")
+    pos(pg, "QB"); pg.click("#rk-cols-btn"); pg.wait_for_timeout(200)
+    for k in ["pass_cmp", "cmp_pct", "rush_pct", "xfp"]: pg.click(f"#rk-cols-pop [data-wk-col={k}]"); pg.wait_for_timeout(150)
+    pg.keyboard.press("Escape"); g = pg.evaluate(READ)
+    check_week("Week 2 · QB · passing columns", g, 2, SCORING["FULL"], "QB")
+    ok("RUSH ATT" in pg.inner_text("#rk-head-row") and "PASS ATT" in pg.inner_text("#rk-head-row"), "QB headers tell pass and rush attempts apart")
+    pos(pg, "WR")
+    pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1800)
+    g = pg.evaluate(READ)
+    ok(pg.input_value("#rk-week") == "2" and "snap" not in g["heads"] and all(k in g["heads"] for k in EXTRA), "After a reload: Week 2, WR, the chosen columns")
+    pg.click("#rk-cols-btn"); pg.wait_for_timeout(200); pg.click("#rk-cols-reset"); pg.wait_for_timeout(300)
+    pg.mouse.click(5, 5); pg.wait_for_timeout(200)
+    g = pg.evaluate(READ)
+    ok(g["heads"][5:] == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"] and not pg.locator("#rk-cols-pop").is_visible(), f"Reset to WR defaults; a click outside closes the menu ({g['heads'][5:]})")
+    if shots:
+        os.makedirs(shots, exist_ok=True)
+        for theme in ("dark", "light"):
+            for w in (1440, 390):
+                q = page("FULL", w=w, theme=theme); pos(q, "WR"); set_sel(q, "rk-week", "0")
+                q.screenshot(path=os.path.join(shots, f"season_wr_{theme}_{w}.png"))
+                q.click("#rk-cols-btn"); q.wait_for_timeout(250)
+                q.screenshot(path=os.path.join(shots, f"columns_{theme}_{w}.png"))
+                q.close()
+    set_sel(pg, "rk-week", ""); pos(pg, "ALL")
     pg.close()
 
     # 6. league scoring: Half PPR and TE premium
@@ -283,7 +446,7 @@ with sync_playwright() as p:
           tbl: document.querySelector('#rank-body').closest('table').getBoundingClientRect().right,
           vis: [...document.querySelectorAll('#rk-head-row th')].filter(th => th.offsetParent && getComputedStyle(th).display !== 'none').map(th => th.textContent.trim()) })""")
         ok(m["doc"] <= m["vw"] and m["tbl"] <= m["vw"] + 1, f"{w}px: no sideways scroll (page {m['doc']}, table right edge {round(m['tbl'])}, viewport {m['vw']})")
-        ok(any(t.startswith("FPTS") for t in m["vis"]) and any(t.startswith("Rush yds") for t in m["vis"]) and not any(t.startswith("Rec yds") for t in m["vis"]),
+        ok(any(t.startswith("FPTS") for t in m["vis"]) and any(t.startswith("RUSH YDS") for t in m["vis"]) and not any(t.startswith("REC YDS") for t in m["vis"]),
            f"{w}px: FPTS and the sorted stat stay, other stat columns step aside ({m['vis']})")
         q.close()
 
