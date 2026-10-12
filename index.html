@@ -3439,7 +3439,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tf-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; padding: 16px 18px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); }
 .tf-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tf-player { flex: 1 1 260px; }
-@media (min-width: 1280px) { .tf-player { flex: 0 1 440px; } }
+@media (min-width: 1280px) { .tf-player { flex: 0 1 auto; min-width: 440px; } }
 .tf-player .select { width: 100%; }
 .ctl-label { font-size: 0.6rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .tf-check { display: inline-flex; align-items: center; gap: 8px; height: 34px; font-size: 0.84rem; font-weight: 550; color: var(--ink-2); cursor: pointer; }
@@ -4346,7 +4346,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 /* column proportions: Rank | Player | Position + Tier | Value. Position + tier and value are one compact cluster at the
    right (fixed widths), and the player column takes the spare width, so a wide board leaves no ~350px gap between the
    tier and the value (Alan, Oct 12; replaces the Oct 9 player-column cap, which put that space in the tier column) */
-#panel-rankings table th.pos-col, #panel-rankings table td.pos-col { width: 200px; }
+#panel-rankings table th.pos-col, #panel-rankings table td.pos-col { width: 140px; }
 #panel-rankings .valbar.stack { display: grid; grid-template-columns: auto auto; justify-content: end; justify-items: end; align-items: center; column-gap: 8px; row-gap: 4px; }
 #panel-rankings .valbar.stack .num, #panel-rankings .valbar.stack .num-btn { grid-row: 1; grid-column: 2; min-width: 0; font: 700 1.02rem/1.1 var(--font-display); letter-spacing: -0.005em; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 #panel-rankings .valbar.stack .val-extra { grid-row: 1; grid-column: 1; }
@@ -4579,6 +4579,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .mv-seg { padding: 3px; border-radius: var(--r-md, 8px); }
 .mv-seg .mv-mode { border-radius: 6px; }
 .mv-mode:focus-visible, .rv-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+/* the kit's three weights: segmented buttons 600, the verdict headline 700 */
+.vt-btn { font-weight: 600; }
+.verdict h2 { font-weight: 700; }
+/* Trade Finder modes: four segments on one row from tablet width */
+.tf-src .vt-btn { padding: 0 10px; }
+@media (min-width: 1280px) { .tf-src { flex-wrap: nowrap; width: max-content; max-width: 100%; } }
+/* League-adjusted "AM #4" under the rank: wraps to two short lines on phones instead of widening the rank column */
+@media (max-width: 560px) { #rank-body td.rk .rk-ref { white-space: normal; line-height: 1.15; } }
 </style>
 </head>
 <body>
