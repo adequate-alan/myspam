@@ -163,7 +163,7 @@ These colors are one palette shared by badges, value meters and lineup slots: QB
 - **Rows:**
   - Board rows are 59px on desktop, 49px on tablet and 43px on phones; My Team rows stay at 52px or less.
   - Rank, photo, position badge and value share one center line.
-- **Board columns:** Rank | Player | Position + Tier | Value. Position + tier (200px) and value form one right-hand cluster, and the player column takes the spare width.
+- **Board columns:** Rank | Player | Position + Tier | Value. Position + tier (140px) and value form one right-hand cluster, and the player column takes the spare width.
 - **Phones:**
   - From 375px with a 16px gutter.
   - No sideways page scroll; nothing essential is hidden or clipped.
