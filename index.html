@@ -4202,7 +4202,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .rk-mv { display: block; margin-top: 3px; font: 700 0.6rem/1 var(--font-display); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .rk-mv.up { color: var(--rb); } .rk-mv.down { color: var(--rose); }
 #rank-body td.rk .bm { display: block; margin: 3px 0 0; font-size: 0.6rem; }
-#rank-body td.rk .rk-ref { display: block; margin-top: 3px; font: 600 0.58rem/1 var(--font-display); letter-spacing: .02em; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#rank-body td.rk .rk-ref { display: block; margin-top: 3px; font: 600 0.64rem/1 var(--font-display); letter-spacing: .02em; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* player: portrait, name strongest, team second, owner third */
 #rank-body .pl-cell { gap: 14px; }
 #rank-body .face { width: 50px; height: 50px; box-shadow: none; background: var(--fill-1); }
@@ -5648,7 +5648,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T13:00Z";
+  const BUILD_ID = "2026-10-12T13:20Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
