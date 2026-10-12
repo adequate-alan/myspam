@@ -5451,7 +5451,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T18:40Z";
+  const BUILD_ID = "2026-10-15T18:45Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -12613,8 +12613,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // calibration layer: Vegas, matchup and props move the weekly projection; missing props change nothing
     const g0 = { oppTeam: "KC", week: 99, total: 47, spread: 0 }, sc0 = scOf({}), we = entry(wr), te0 = entry(te);
     const cp = (e, g, o = {}) => Math.round(10 * contextProjection(e, g, o.sc || sc0, { props: o.props === undefined ? null : o.props, ctx: o.ctx }).pts) / 10;
-    const hiLo = [cp(we, { ...g0, total: 56, spread: -7 }), cp(we, { ...g0, total: 38, spread: 7 })];
-    check(`${wr.name}: a higher Vegas team total raises his projection`, hiLo, hiLo[0] > hiLo[1]);
+    // the Vegas term needs 2+ of his team's upcoming games with posted lines (its baseline); lines are usually posted a week
+    // ahead, so pick the best WR whose team has them, and with none anywhere check that no baseline means no adjustment
+    const lined = p => teamGames(STATS_SEASONS[0], p.team).filter(r => r[4] == null && r[7] != null && r[8] != null).length >= 2;
+    const vw = players.filter(p => p.pos === "WR" && p.projPPG != null && p.sleeperId && p.team && lined(p) && (statsCache[STATS_SEASONS[0]].players[p.sleeperId] || {}).g).sort((a, b) => a.posNum - b.posNum)[0];
+    const ve = vw ? entry(vw) : we, hiLo = [cp(ve, { ...g0, total: 56, spread: -7 }), cp(ve, { ...g0, total: 38, spread: 7 })];
+    if (vw) check(`${vw.name}: a higher Vegas team total raises his projection`, hiLo, hiLo[0] > hiLo[1]);
+    else check(`${wr.name}: no team has two posted lines yet, so the Vegas total adds no adjustment`, hiLo, hiLo[0] === hiLo[1]);
     const mxv = [cp(we, g0, { ctx: { env: 1, mx: 1.08, inputs: [] } }), cp(we, g0, { ctx: { env: 1, mx: 0.92, inputs: [] } })];
     check(`${wr.name}: a soft matchup beats a tough one`, mxv, mxv[0] > mxv[1]);
     const flat = { env: 1, mx: 1, inputs: [] };
