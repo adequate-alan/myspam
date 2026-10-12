@@ -8,7 +8,8 @@ the variants recomposed from the stored components: base alone (v2 without marke
 base × matchup, base × both; the next-4 forecast against the healthy PPG of the following four weeks once they're
 played; the ROS forecast against the healthy PPG of the rest of the season so far. Injury-shortened games are left out
 of the targets (the forecast is for a full game). Pool: players with a stored forecast of at least 5 PPG, so the
-numbers describe fantasy-relevant players. Prints MAE and rank correlation per variant and per week.
+numbers describe fantasy-relevant players. Prints MAE and rank correlation per variant and per week. Weeks stored with the role layer (Oct 12, roles.py) also
+score the expected forecast (n1 × role) against every stored player's points, 0 when he didn't play.
 """
 import json, os, sys, glob
 import numpy as np, pandas as pd
@@ -23,6 +24,7 @@ def spearman(a, b):
 
 def main(stats_path="../data/stats/2026.json", proj_dir="../data/projections"):
     stats = json.load(open(stats_path)); sc = m.scoring(); act = actuals(stats, sc); through = stats["through_week"]
+    act_any = m.frame(stats, sc)[["id", "week", "pts"]]
     files = sorted(glob.glob(os.path.join(proj_dir, str(stats["season"]), "wk*.json")))
     if not files: print("no stored forecasts yet"); return
     rows = []
@@ -30,6 +32,7 @@ def main(stats_path="../data/stats/2026.json", proj_dir="../data/projections"):
         snap = json.load(open(fn)); wk = snap["week"]
         if wk > through: continue
         a1 = act[act.week == wk].set_index("id").pts
+        a1_any = act_any[act_any.week == wk].groupby("id").pts.sum()   # any game he played, cut short or not
         a4 = act[(act.week >= wk) & (act.week < wk + m.NEXT_N)].groupby("id").pts.agg(["mean", "size"])
         aros = act[act.week >= wk].groupby("id").pts.agg(["mean", "size"])
         for sid, p in snap["players"].items():
@@ -37,7 +40,9 @@ def main(stats_path="../data/stats/2026.json", proj_dir="../data/projections"):
             r = dict(week=wk, sid=sid, pos=p["pos"], conf=p["conf"], ros=p["ros"], n4=p["n4"], n1=p["n1"],
                      v_base=p["base"], v_market=p["base"] * p["env1"], v_matchup=p["base"] * p["sched1"], v_both=p["n1"],
                      act1=a1.get(sid), act4=a4["mean"].get(sid) if a4["size"].get(sid, 0) >= 3 else None,
-                     actros=aros["mean"].get(sid) if aros["size"].get(sid, 0) >= 3 else None)
+                     actros=aros["mean"].get(sid) if aros["size"].get(sid, 0) >= 3 else None,
+                     # role layer (stored from Oct 12): the expected forecast against what he scored, 0 when he didn't play
+                     n1_exp=p.get("n1_exp"), act1_dnp0=float(a1_any.get(sid, 0.0)) if "n1_exp" in p else None)
             rows.append(r)
     if not rows: print(f"no stored week has been played yet (stats through week {through})"); return
     d = pd.DataFrame(rows)
@@ -50,6 +55,9 @@ def main(stats_path="../data/stats/2026.json", proj_dir="../data/projections"):
     print("next game:")
     for pred, label in (("v_base", "v2, no market / matchup"), ("v_market", "v2 + team market (implied totals)"), ("v_matchup", "v2 + matchup (defense vs position)"), ("v_both", "v2 + both (the stored next-game forecast)")):
         report(pred, "act1", label)
+    if d["act1_dnp0"].notna().sum() >= 20:
+        print("next game, everyone with a stored role (didn't play = 0 points):")
+        report("n1", "act1_dnp0", "conditional n1 (as if he plays)"); report("n1_exp", "act1_dnp0", "expected n1 × role")
     print("next 4:"); report("n4", "act4", "next-4 forecast"); report("v_base", "act4", "v2 base alone")
     print("rest of season so far:"); report("ros", "actros", "ROS forecast"); report("v_base", "actros", "v2 base alone")
     print("by confidence (next game):")

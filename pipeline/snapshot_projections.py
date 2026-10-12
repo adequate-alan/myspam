@@ -19,6 +19,11 @@ def main(proj_path="projections.csv", stats_path="../data/stats/2026.json", out_
     if os.path.exists(out):
         print(f"{out} already stored; kept the earlier forecast"); return
     proj = pd.read_csv(proj_path, dtype={"sleeper_id": str})
+    # the role layer (Oct 12; roles.py, data/roles.json): the stored forecasts above are conditional (per game played,
+    # a quarterback's per start); store who was expected to play at the time too, so the expected-points forecast
+    # (n1 × role) can be scored later exactly as it was known before the games
+    try: roles = json.load(open(os.path.join(out_dir, "..", "roles.json"))).get("players", {})
+    except (OSError, ValueError): roles = {}
     recs = {}
     for r in proj.itertuples():
         recs[str(r.sleeper_id)] = dict(
@@ -27,8 +32,11 @@ def main(proj_path="projections.csv", stats_path="../data/stats/2026.json", out_
             env4=round(float(r.env4), 3), sched4=round(float(r.sched4), 3), env1=round(float(r.env1), 3), sched1=round(float(r.sched1), 3),
             g_eff=round(float(r.g_eff), 2), prior_g=int(r.prior_g), healthy_ppg=round(float(r.healthy_ppg), 2),
             conf=round(float(r.conf), 3), line=json.loads(r.line_json), props=None)   # props: filled in once a props feed exists
+        ro = roles.get(str(r.sleeper_id))
+        if ro and ro[7] == week:   # role for this very week: multiplier, chance to start, depth, designation
+            recs[str(r.sleeper_id)].update(role=ro[0], start=ro[2], depth=ro[4], status=ro[5], n1_exp=round(float(r.n1_ppg) * ro[0], 2))
     json.dump({"season": season, "week": week, "made": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"),
-               "model": "ros-v2", "scoring": "base", "players": recs}, open(out, "w"), separators=(",", ":"))
+               "model": "ros-v2", "roles": bool(roles), "scoring": "base", "players": recs}, open(out, "w"), separators=(",", ":"))
     print(f"stored {len(recs)} forecasts for week {week} in {out}")
 
 if __name__ == "__main__":
