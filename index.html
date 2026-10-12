@@ -2828,6 +2828,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .th-sides.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .th-side { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .th-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.th-team > div { min-width: 0; }
 .th-team b { display: block; font-size: 0.9rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .th-team span { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .th-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -12160,7 +12161,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const name = esc(P[s.ahead].team.name), even = s.fair && !s.split;
     const title = s.split ? "Split verdict" : s.oneSided ? `${name} got all the value` : two ? esc(s.tier.title(P[s.ahead].team.name, P[1 - s.ahead].team.name)) : even ? "Basically even" : `${name} got the most`;
     const edge = s.split ? `<span class="th-edge-sub">More value: ${name} · better package: ${esc(P[1 - s.ahead].team.name)}</span>`
-      : two ? `<span class="th-edge${even ? " even" : ""}">${even && s.diff < 1 ? "Even" : `${name} <b>+${fmt(s.diff)}</b>`}</span>${!s.oneSided && s.more >= 0.05 ? `<span class="th-edge-sub">${s.more.toFixed(1)}% more value${even ? " · within the fair range" : ""}</span>` : ""}`
+      : two ? `<span class="th-edge${even ? " even" : ""}">${even && s.diff < 1 ? "Even" : `${name} <b>+${fmt(s.diff)}</b>`}</span>${!s.oneSided && s.more >= 0.05 ? `<span class="th-edge-sub" title="The verdict's gap: the edge as a share of the smaller side's value (at least an average starter's value), computed the same way for Then and Now">${s.more.toFixed(1)}% edge${even ? " · within the fair range" : ""}</span>` : ""}`
       : `<span class="th-edge-sub">${P.map((q, i) => `${esc(q.team.name)} ${s.nets[i].net >= 0 ? "+" : "−"}${fmt(Math.abs(s.nets[i].net))}`).join(" · ")}</span>`;
     return `<div class="th-age ${key}"><span class="th-age-k">${key === "then" ? "Then" : "Now"}</span>
         <span class="th-age-v ${even || s.split ? "even" : "win"}">${title}</span>${edge}<small class="th-basis-l">${esc(basis)}</small></div>`;

@@ -26,6 +26,8 @@ SHOTS = os.environ.get("SHOTS")
 iso = lambda ms: datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 DAY = 86400e3
 
+LONG = "Alpha League Team 1 The Supercalifragilisticexpialidocious Dynasty"   # a long name must wrap, never clip
+L1["users"][0]["metadata"]["team_name"] = LONG
 R = L1["rosters"]
 a1, a2 = R[0]["players"][4], R[0]["players"][6]      # team 1 sends
 b1 = R[1]["players"][3]                              # team 2 sends
@@ -134,8 +136,33 @@ with sync_playwright() as p:
         pg.set_viewport_size({"width": 375, "height": 900}); pg.wait_for_timeout(400)
         if pg.locator(".th-age.then").count():
             tb, nb = (cards.nth(I["hist"]).locator(f".th-age.{k}").bounding_box() for k in ("then", "now"))
-            ok(tb and nb and abs(tb["y"] - nb["y"]) < 2 and nb["x"] > tb["x"], f"[{theme}] Then and Now stay side by side at 375px")
-        ok(pg.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"), f"[{theme}] no horizontal page scroll")
+            ok(tb and nb and abs(tb["y"] - nb["y"]) < 2 and nb["x"] >= tb["x"] + tb["width"] - 1, f"[{theme}] Then and Now stay side by side at 375px without overlapping")
+            clip = pg.evaluate("""() => [...document.querySelectorAll('.th-ages, .th-age, .th-age > *')].filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.className)""")
+            ok(not clip, f"[{theme}] long team names wrap inside the Then / Now blocks, nothing clipped at 375px {clip[:3]}")
+        if theme == "dark":
+            # how the trade aged, every case (agedText from the page source, run on synthetic snapshots)
+            src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+            fn = re.search(r"  function agedText\(r\) \{.*?\n  \}\n", src, re.S).group(0)
+            cases = pg.evaluate("""fn => { const aged = new Function('fmt', fn + '; return agedText;')(n => Math.round(n).toLocaleString('en-US'));
+              const P = [{ team: { name: 'A' } }, { team: { name: 'B' } }], S = (ahead, diff, fair = false, split = false) => ({ ahead, diff, fair, split });
+              const run = (t, n) => aged({ parts: P, then: t, now: n });
+              return { widened: run(S(0, 138), S(0, 437)), narrowed: run(S(0, 900), S(0, 200)), held: run(S(0, 500), S(0, 510)), flipped: run(S(0, 300), S(1, 300)),
+                emerged: run(S(0, 5, true), S(1, 800)), evened: run(S(1, 800), S(0, 5, true)), even: run(S(0, 5, true), S(1, 3, true)),
+                split: run(S(0, 0, false, true), S(0, 400)), missing: run(null, S(0, 400)) }; }""", fn)
+            exp = {"widened": ("Edge widened", "A won at the time and is still ahead today; the gap widened from +138 to +437."),
+                   "narrowed": ("Edge narrowed", "A won at the time and is still ahead today; the gap narrowed from +900 to +200."),
+                   "held": ("Edge held", "A won at the time and is still ahead today by about the same margin."),
+                   "flipped": ("Winner flipped", "A won at the time, but B is ahead today."),
+                   "emerged": ("Edge emerged", "Even at the time; B is ahead today."),
+                   "evened": ("Evened out", "B won at the time; it's basically even today."),
+                   "even": ("Even then and now", "Basically even at the time and still basically even today."),
+                   "split": ("Split at the time", "Split verdict at the time; A is ahead today.")}
+            for k, (lab, txt_) in exp.items():
+                got = cases[k] or {}
+                ok(got.get("label") == lab and got.get("text") == txt_, f"How it aged, {k}: {got}")
+            ok(cases["missing"] is None, "No at-the-time values: no Then → Now trend (today's verdict labeled Now)")
+        wide = pg.evaluate("() => [...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 1 && getComputedStyle(e).position !== 'fixed').slice(-4).map(e => e.tagName + '.' + e.className + ' ' + (e.textContent || '').slice(0, 40))")
+        ok(pg.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"), f"[{theme}] no horizontal page scroll {wide}")
         ok(not errs, f"[{theme}] no page errors {errs[:2]}")
         pg.close()
     br.close()
