@@ -60,7 +60,15 @@ COMPONENTS = {
 # usage per game (Alan, Oct 5; player Compare): offensive snap share, red-zone targets and carries (inside the 20),
 # goal-line carries (inside the 5), receiving air yards and air-yard share, QB scrambles (designed runs = carries - scrambles)
 USAGE = ["snap", "rz_tgt", "rz_rush", "gl_rush", "air_yd", "air_share", "scr"]
-COLS = ["w", "tm", "opp"] + list(COMPONENTS) + ["tgt_share"] + USAGE
+# Rankings stat columns (Alan, Oct 12): offensive snaps (count, PFR snap counts), red-zone receptions (complete passes caught
+# inside the 20: red-zone touches = rz_rush + rz_rec) and QB kneels (rush attempts that are kneel-downs, left out of rush share)
+USAGE2 = ["snaps", "rz_rec", "kneel"]
+COLS = ["w", "tm", "opp"] + list(COMPONENTS) + ["tgt_share"] + USAGE + USAGE2
+# Team denominators per team and week (Alan, Oct 12), so every share can be recomputed for a week or summed over a season:
+# tgt = targets credited to the team's players (nflverse's own target_share uses the same total), air = their receiving air
+# yards (passes with an intended receiver: the same population as targets), rush = rush attempts incl. scrambles and kneels
+# (nflverse carries), kneel = QB kneel-downs, snaps = team offensive snaps (PFR snap counts, solved from every player's share: team_snaps).
+TEAM_COLS = ["tgt", "air", "rush", "kneel", "snaps"]
 
 
 def team(t):
@@ -263,23 +271,30 @@ def usage(season, pfr, pbp_src=PBP_URL, snap_src=SNAP_URL):
         for r in sn.itertuples():
             gid = p2g.get(r.pfr_player_id)
             if gid and not pd.isna(r.offense_pct):
-                out.setdefault((gid, int(r.week)), {})["snap"] = round(float(r.offense_pct), 2)
+                d = out.setdefault((gid, int(r.week)), {})
+                d["snap"] = round(float(r.offense_pct), 2)
+                if not pd.isna(r.offense_snaps): d["snaps"] = int(r.offense_snaps)
     except Exception as e:
         print(f"  snap counts skipped: {e}")
     p = pd.read_csv(pbp_src.format(season), low_memory=False,
-                    usecols=["season_type", "week", "rusher_player_id", "receiver_player_id", "yardline_100", "rush", "pass_attempt", "sack", "qb_scramble", "two_point_attempt"])
+                    usecols=["season_type", "week", "rusher_player_id", "receiver_player_id", "yardline_100", "rush", "pass_attempt", "sack", "qb_scramble", "two_point_attempt",
+                             "complete_pass", "qb_kneel"])
     p = p[(p.season_type == "REG") & (p.two_point_attempt != 1)]
     def add(pid, wk, key):
         d = out.setdefault((pid, int(wk)), {}); d[key] = d.get(key, 0) + 1
     rz = p[p.yardline_100 <= 20]
     for r in rz[(rz.pass_attempt == 1) & (rz.sack != 1) & rz.receiver_player_id.notna()].itertuples():
         add(r.receiver_player_id, r.week, "rz_tgt")
+        if r.complete_pass == 1:
+            add(r.receiver_player_id, r.week, "rz_rec")
     for r in rz[(rz.rush == 1) & rz.rusher_player_id.notna()].itertuples():
         add(r.rusher_player_id, r.week, "rz_rush")
         if r.yardline_100 <= 5:
             add(r.rusher_player_id, r.week, "gl_rush")
     for r in p[(p.qb_scramble == 1) & p.rusher_player_id.notna()].itertuples():
         add(r.rusher_player_id, r.week, "scr")
+    for r in p[(p.qb_kneel == 1) & p.rusher_player_id.notna()].itertuples():
+        add(r.rusher_player_id, r.week, "kneel")
     return out
 
 
@@ -297,12 +312,59 @@ def usage_row(r, use):
     air, share = getattr(r, "receiving_air_yards", None), getattr(r, "air_yards_share", None)
     return [u.get("snap"), u.get("rz_tgt", 0), u.get("rz_rush", 0), u.get("gl_rush", 0),
             None if air is None or pd.isna(air) else int(round(float(air))),
-            None if share is None or pd.isna(share) else round(float(share), 3), u.get("scr", 0)]
+            None if share is None or pd.isna(share) else round(float(share), 3), u.get("scr", 0),
+            u.get("snaps"), u.get("rz_rec", 0), u.get("kneel", 0)]
+
+
+def team_snaps(g):
+    """A team's offensive snaps in one game from PFR's snap counts (one row per player: offense_snaps, offense_pct).
+    PFR has no team row, but every player's share is his snaps / the team's snaps rounded to 2 decimals, so the team
+    total is the smallest whole number at least the most any player took that every share agrees with. The most any
+    player took is the total whenever someone played every snap (1,239 of 1,244 team-games in 2024-26); in the other
+    five it was 1-2 snaps low (e.g. MIA 2025 Wk 6: 57, every share says 59). Where a few PFR rows contradict each other
+    (3 games in 2024) the total that the most shares agree with wins."""
+    mx = int(g.offense_snaps.max())
+    rows = [(s, p) for s, p in zip(g.offense_snaps, g.offense_pct) if not pd.isna(p)]
+    if not rows: return mx
+    best = None
+    for n in range(mx, mx + 11):
+        miss = sum(abs(s / n - p) > 0.0051 for s, p in rows)
+        if best is None or miss < best[1]: best = (n, miss)
+        if miss == 0: break
+    return best[0]
+
+
+def team_totals(season, d, pbp_src=PBP_URL, snap_src=SNAP_URL):
+    """{team: {week: [tgt, air, rush, kneel, snaps]}} for the regular season (TEAM_COLS). d = every player's weekly stats
+    row (all positions), so a team total is exactly the sum of what its players are credited with."""
+    out = {}
+    for (tm, w), g in d.groupby(["team", "week"]):
+        air = g.receiving_air_yards.fillna(0).sum() if "receiving_air_yards" in g else 0
+        out.setdefault(team(tm), {})[str(int(w))] = [int(g.targets.fillna(0).sum()), int(round(float(air))),
+                                                      int(g.carries.fillna(0).sum()), 0, None]
+    try:
+        p = pd.read_csv(pbp_src.format(season), low_memory=False, usecols=["season_type", "week", "posteam", "qb_kneel", "two_point_attempt"])
+        p = p[(p.season_type == "REG") & (p.qb_kneel == 1) & (p.two_point_attempt != 1) & p.posteam.notna()]
+        for (tm, w), n in p.groupby(["posteam", "week"]).size().items():
+            row = out.get(team(tm), {}).get(str(int(w)))
+            if row: row[3] = int(n)
+    except Exception as e:
+        print(f"  team kneels skipped: {e}")
+    try:
+        sn = pd.read_csv(snap_src.format(season), low_memory=False)
+        sn = sn[(sn.game_type == "REG") & sn.offense_snaps.notna() & (sn.offense_snaps > 0)]
+        for (tm, w), g in sn.groupby(["team", "week"]):
+            row = out.get(team(tm), {}).get(str(int(w)))
+            if row: row[4] = team_snaps(g)
+    except Exception as e:
+        print(f"  team snaps skipped: {e}")
+    return {"cols": TEAM_COLS, "teams": {t: dict(sorted(v.items(), key=lambda x: int(x[0]))) for t, v in sorted(out.items())}}
 
 
 def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL, prev=None, pfr=None, snap_src=SNAP_URL):
     d = pd.read_csv(stats_src.format(season), low_memory=False)
-    d = d[(d.season_type == "REG") & d.position.isin(POS)].copy()
+    every = d[d.season_type == "REG"]
+    d = every[every.position.isin(POS)].copy()
     d["sid"] = d.player_id.map(ids)
     d = d[d.sid.notna()].sort_values(["sid", "week"])
     use = optional("usage", usage, season, pfr or {}, pbp_src, snap_src) or {}
@@ -325,6 +387,7 @@ def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),   # when this file was built (UTC)
         "cols": COLS,
         "players": players,
+        "team_week": optional("team totals", team_totals, season, every, pbp_src, snap_src),
         "schedule_cols": SCHEDULE_COLS,
         "schedule": schedule(games, season),
         "defense": optional("defense", defense, season, pbp_src),
