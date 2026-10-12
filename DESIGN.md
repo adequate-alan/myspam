@@ -210,7 +210,7 @@ These are the shared primitives (the "Shared components" block at the end of the
   - Nothing essential lives only in a tooltip.
 - **Focus:** a visible neutral 2px ring (`--focus-ring`), never red.
 - **Movement glyphs:** ▲ / ▼ always mean movement over time (since the last update, or a change between two dates). A comparison between two boards, such as League-adjusted vs the AM Board, is a labelled reference ("AM #12"), never an arrow.
-- **Verdict headline (Trade Calculator):** neutral type. A small dot carries the outcome: the side's color when one side is ahead, a hollow neutral ring when it is even or split.
+- **Verdict headline (Trade Calculator):** neutral type; the words carry the result. A small neutral dot marks that one side is ahead, a hollow ring that it is even or split. Never a side color.
 - **Player drawer key figures:** two equal blocks, AM rank + value and ROS PPG. Season numbers and production ranks sit on one quieter line beneath them.
 
 ## Do's and Don'ts
