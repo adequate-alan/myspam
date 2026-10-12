@@ -5646,7 +5646,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T13:30Z";
+  const BUILD_ID = "2026-10-12T13:40Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5819,7 +5819,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const c = "own-tag" + (cls ? " " + cls : "");
     if (!o || o === "fa") return `<span class="${c} fa">Free agent</span>`;
     if (o.mine) return `<span class="${c} mine">My team</span>`;
-    return `<span class="${c}" title="Fantasy team: ${esc(o.name)}"><span class="own-by">Owned by</span> ${esc(nameOf(o))}</span>`;
+    const shown = nameOf(o);   // the full name stays one tap away when a phone row truncates it (Alan, Oct 12)
+    return `<span class="${c}" title="${shown !== o.name ? `Manager: ${esc(shown)} · ` : ""}Fantasy team: ${esc(o.name)}"><span class="own-by">Owned by</span> ${esc(shown)}</span>`;
   }
   // Who owns a player in the active league (rankings rows use the shorter manager name)
   function ownerTag(p, cls = "") {
