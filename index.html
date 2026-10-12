@@ -513,7 +513,9 @@ function tradeModel(sideA, sideB) {
   const note = swing === 0 ? "" :
     `Package adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${swing > 0 ? "A" : "B"} `
     + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal; Team ${more}'s ${n} extra player${n > 1 ? "s count" : " counts"} for less next to the best player).`;
-  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: 0, spot } };
+  // each extra piece's value and what it keeps (for the hover cards; the totals above are unchanged)
+  const kept = extras.map(v => ({ v, kept: v * Math.pow(Math.min(1, v / star), PACKAGE_POWER / d) }));
+  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: 0, spot, extras: kept } };
 }
 
 /* The value verdict from the raw and the package-adjusted totals (Alan, Oct 11). The package adjustment is a heuristic
@@ -4425,6 +4427,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 [data-hc]:focus-visible { outline: 2px solid var(--focus-line, var(--text-secondary)); outline-offset: 2px; border-radius: 3px; }
 
 @media (prefers-reduced-motion: reduce) { .hc { transition: none; } }
+:is(.hc, .hc-inline) .hc-li { position: relative; padding-left: 10px; color: var(--text-secondary); font-size: 0.74rem; }
+:is(.hc, .hc-inline) .hc-li::before { content: ""; position: absolute; left: 1px; top: 0.6em; width: 4px; height: 1px; background: var(--text-muted); }
+:is(.hc, .hc-inline) .hc-r .pos { font-size: 0.6rem; padding: 0 5px; justify-self: start; width: auto; min-width: 0; }
 .hc-inline { margin: 10px 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md, 8px); font-size: 0.8rem; }
 :is(.hc, .hc-inline) .hc-fmt { margin: -2px 0 5px; color: var(--text-muted); font-size: 0.7rem; }
 </style>
@@ -5480,7 +5485,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T19:00Z";
+  const BUILD_ID = "2026-10-15T21:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6201,7 +6206,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return `<li class="tc-pl">${face(p.sleeperId, p.name, "sm")}
         <span class="pl-head">${nameLink(p.sleeperId, p.name, "tc-pl-name")}</span>
         <span class="tc-pl-meta"><span class="pos ${esc(p.pos)}">${esc(tcAdjusted() ? posLabel(p) : p.posRank)}</span>${meta}</span>
-        <span class="tc-pl-v${cls}"${tip ? ` title="${esc(tip)}"` : ""}>${fmt(value)}</span>
+        <span class="tc-pl-v${cls}" data-hc="tv:${id}:${side}" data-hc-side="left">${fmt(value)}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
     }).join("") : `<li class="roster-empty" style="background:none">No players added yet.</li>`;
   }
@@ -9263,11 +9268,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!text || text === "null") return null;
     try { return JSON.parse(text); } catch (e) { throw new Error("Sleeper sent back something unexpected. Try again in a minute."); }
   }
+  var PROJ_AT = "";   // data/projections.json's own timestamp (the hover cards' "AM projections updated")
   async function loadStatic() {
     const get = async url => { try { const r = await fetch(url); return r.ok ? r.json() : null; } catch (e) { return null; } };
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
     if (!comps) comps = await get("data/curve_components.json");
-    if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; }
+    if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; PROJ_AT = pj.updated || ""; }
   }
 
   /* League summaries */
@@ -10711,8 +10717,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!wk || !e.team) return `<td class="mt-wk"><span class="muted">—</span></td>`;
     const { o, v } = mtOutlook(e, wk), g = o.game || {};
     // one primary state per player (Alan, Oct 4): "30.9 LIVE", "10.4 FINAL", "Proj 16.6", OUT, BYE; live adds one small "Live proj" line
-    const tag = t => `<span class="mt-tag">${t}</span>`, tip = g.oppTeam ? ` title="${esc(`${g.home ? "vs" : "@"} ${g.oppTeam}${g.text ? " · " + g.text : ""}`)}"` : "";
-    if (o.kind === "bye") return `<td class="mt-wk off">BYE</td>`;
+    const tag = t => `<span class="mt-tag">${t}</span>`, tip = hcWk(hcEnt(e), o, wk, v != null ? "sl" : "");
+    if (o.kind === "bye") return `<td class="mt-wk off"${tip}>BYE</td>`;
     if (o.kind === "out") return `<td class="mt-wk out"${tip}>OUT</td>`;
     if (o.kind === "final") return o.dnp ? `<td class="mt-wk off"${tip}>DNP</td>` : o.pending ? `<td class="mt-wk off"${tip}>— ${tag("Final")}</td>` : `<td class="mt-wk final"${tip}><b>${fp(o.pts)}</b> ${tag("Final")}</td>`;
     if (o.kind === "live") return v == null ? `<td class="mt-wk live"${tip}>${tag("Live")}${o.proj != null ? `<small>Proj ${fp(o.proj)}</small>` : ""}</td>`
@@ -11082,6 +11088,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const lb = mode ? positionLeaderboard(ev, mode) : null;
     const order = mode ? (LT.pb.dir === "asc" ? lb.slice().reverse() : lb) : ev.list.map(x => ({ x, rank: x.power, score: x.score }));
     const top = Math.max(1, ...order.map(r => r.score)), nPrim = mode ? primaryCount(d, mode) : 0;
+    HC_EV = { ev, mode, nPrim };   // the team hover cards read this render's numbers
     const sign = v => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v))}`;
     const posLink = (pos, place, rid, lab) => `<span class="pr-pos-item pb-link${mode === pos ? " on" : ""}" role="button" tabindex="0" data-pos-board="${pos}" data-pb-rid="${esc(rid)}" title="Rank every team by ${pos} room"><span class="pr-pos-label">${lab}</span><span class="pos ${pos}">${pos}</span><span class="pr-place">${ordinal(place)}</span></span>`;
     const rows = order.map(r => {
@@ -11095,7 +11102,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <span class="pr-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(t.name !== t.manager ? t.manager : "")}${mode ? `${t.name !== t.manager ? " · " : ""}Power #${x.power}` : ""}</span></span></span>
           <span class="pr-rec">${esc(recordText(st) || "–")}</span>
           <span class="pr-pf">${st.pf ? pts(st.pf) : "–"}<small>${st.pa ? pts(st.pa) : ""}</small></span>
-          <span class="pr-strength"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : ""}</span>
+          <span class="pr-strength" data-hc="pw:${esc(rid)}"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : ""}</span>
           <span class="pr-pos">${posLink(x.best[0], x.best[1], rid, "Best")}
             ${posLink(x.worst[0], x.worst[1], rid, "Weakest")}</span>
           <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${names}</span></span>
@@ -11755,8 +11762,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const adds = Object.keys(t.adds).filter(sid => t.adds[sid] === rid), drops = Object.keys(t.drops).filter(sid => t.drops[sid] === rid);
     const faabOn = activeData().league.settings && activeData().league.settings.waiver_type === 2;
     const faab = t.type === "waiver" && t.bid != null && (faabOn || t.bid > 0)
-      ? `<span class="mv-faab-amt${t.bid === 0 ? " zero" : budget && t.bid >= 0.1 * budget ? " big" : ""}">$${t.bid}<small>FAAB</small></span>` : "";
-    const bidders = t.bids && t.bids.length > 1 ? `<button class="mv-bidders" type="button" data-bids="${esc(t.id)}" aria-haspopup="dialog" title="See every bid">${t.bids.length} bidders</button>` : "";
+      ? `<span class="mv-faab-amt${t.bid === 0 ? " zero" : budget && t.bid >= 0.1 * budget ? " big" : ""}" data-hc="claim:${esc(t.id)}">$${t.bid}<small>FAAB</small></span>` : "";
+    const bidders = t.bids && t.bids.length > 1 ? `<button class="mv-bidders" type="button" data-bids="${esc(t.id)}" aria-haspopup="dialog" data-hc="claim:${esc(t.id)}" aria-label="${t.bids ? t.bids.length : 0} bidders: see every bid">${t.bids.length} bidders</button>` : "";
     const when = new Date(t.at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
     return `<div class="mv-row ${txKind(t)}">
       <span class="mv-kind"><span class="mv-tag ${txKind(t)}">${TX_TAG[txKind(t)]}</span>${bidders}</span>
@@ -11926,11 +11933,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const ptsCell = x => {
         const P = x.proj;
         if (x.empty) return `<td class="mx-pts">—</td>`;
-        if (P.kind === "final") return `<td class="mx-pts final"><b>${P.pts != null ? fp(P.pts) : "—"}</b><small>${P.dnp ? "DNP" : P.pending ? "pts pending" : "Final"}</small></td>`;
-        if (P.kind === "live") return `<td class="mx-pts live"><b>${fp(P.pts)}</b> <span class="mx-livetag">Live</span>${P.proj != null ? `<small title="${esc(projTip(P))}">Live proj ${fp(P.est)}</small>` : `<small>No projection</small>`}</td>`;
-        if (P.kind === "bye" || P.kind === "out") return `<td class="mx-pts off">${esc(P.text)}</td>`;
-        if (P.missing) return `<td class="mx-pts up" title="No AM projection and no ${STATS_SEASONS[0]} games in our stats">No proj</td>`;
-        return `<td class="mx-pts up" title="${esc(projTip(P))}"><span>Live proj <b>${fp(P.proj)}</b></span>${P.fallback ? `<small>season PPG</small>` : ""}</td>`;
+        const hc = hcWk(hcEnt(x.e), P, w, x.pts != null ? "sl" : "");
+        if (P.kind === "final") return `<td class="mx-pts final"${hc}><b>${P.pts != null ? fp(P.pts) : "—"}</b><small>${P.dnp ? "DNP" : P.pending ? "pts pending" : "Final"}</small></td>`;
+        if (P.kind === "live") return `<td class="mx-pts live"${hc}><b>${fp(P.pts)}</b> <span class="mx-livetag">Live</span>${P.proj != null ? `<small>Live proj ${fp(P.est)}</small>` : `<small>No projection</small>`}</td>`;
+        if (P.kind === "bye" || P.kind === "out") return `<td class="mx-pts off"${hc}>${esc(P.text)}</td>`;
+        if (P.missing) return `<td class="mx-pts up"${hc}>No proj</td>`;
+        return `<td class="mx-pts up"${hc}><span>Live proj <b>${fp(P.proj)}</b></span>${P.fallback ? `<small>season PPG</small>` : ""}</td>`;
       };
       const row = x => x.empty ? `<tr class="mx-empty"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td><td colspan="3" class="muted">Empty</td><td class="mx-pts">—</td></tr>`
         : `<tr class="${x.proj.kind === "out" ? "out" : x.g.kind}"><td class="mx-slot">${esc(SLOT_LABEL[x.slot] || x.slot)}</td>
@@ -12048,14 +12056,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const R = rosterWeek(d, t, w, ev), map = bySleeper(), season = seasonRanks(), D = defenseVsPos() || {};
     const rep = w === currentWeek();
     const entry = sid => { const e = rosterEntry(sid, map); e.o = weekOutlook(e, w, { pts: R.pp[sid] != null ? Number(R.pp[sid]) : undefined }); return e; };
-    const wkCell = o => {
-      if (!o) return `<td class="ro-wk"><span class="muted">—</span></td>`;
-      if (o.kind === "final") return o.dnp ? `<td class="ro-wk dnp">DNP<small>Final</small></td>` : o.pending ? `<td class="ro-wk dnp">—<small>Final · pts pending</small></td>` : `<td class="ro-wk final"><b>${fp(o.pts)}</b><small>Final</small></td>`;
-      if (o.kind === "live") return `<td class="ro-wk live"><b>${fp(o.pts)}</b><small><span class="ro-live">Live</span></small>${o.proj != null ? `<small class="ro-lp" title="${esc(projTip(o))}">Live proj ${fp(o.est)}</small>` : ""}</td>`;
-      if (o.kind === "bye") return `<td class="ro-wk off">BYE</td>`;
-      if (o.kind === "out") return `<td class="ro-wk out">OUT</td>`;
-      if (o.missing) return `<td class="ro-wk none" title="No AM projection and no ${STATS_SEASONS[0]} games in our stats">—</td>`;
-      return `<td class="ro-wk up" title="${esc(projTip(o))}"><b>${fp(o.proj)}</b><small>Proj${o.fallback ? " · szn PPG" : ""}</small></td>`;
+    const wkCell = (o, e) => {
+      const hc = e ? hcWk(hcEnt(e), o, w, R.pp[e.sid] != null ? "sl" : "") : "";
+      if (!o) return `<td class="ro-wk"${hc}><span class="muted">—</span></td>`;
+      if (o.kind === "final") return o.dnp ? `<td class="ro-wk dnp"${hc}>DNP<small>Final</small></td>` : o.pending ? `<td class="ro-wk dnp"${hc}>—<small>Final · pts pending</small></td>` : `<td class="ro-wk final"${hc}><b>${fp(o.pts)}</b><small>Final</small></td>`;
+      if (o.kind === "live") return `<td class="ro-wk live"${hc}><b>${fp(o.pts)}</b><small><span class="ro-live">Live</span></small>${o.proj != null ? `<small class="ro-lp">Live proj ${fp(o.est)}</small>` : ""}</td>`;
+      if (o.kind === "bye") return `<td class="ro-wk off"${hc}>BYE</td>`;
+      if (o.kind === "out") return `<td class="ro-wk out"${hc}>OUT</td>`;
+      if (o.missing) return `<td class="ro-wk none"${hc}>—</td>`;
+      return `<td class="ro-wk up"${hc}><b>${fp(o.proj)}</b><small>Proj${o.fallback ? " · szn PPG" : ""}</small></td>`;
     };
     const game = e => {
       const g = e.o ? e.o.game : null;
@@ -12074,12 +12083,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const main = `<tr class="ro-row ${cls}${open ? " open" : ""}${e.o && (e.o.kind === "bye" || e.o.kind === "out") ? " dim" : ""}" data-ro-open="${esc(sid)}" tabindex="0" aria-expanded="${open}">
         <td class="ro-slot">${slotBadge(lab)}</td>
         <td class="ro-pl"><div class="pl-cell">${face(e.sid, e.name, "sm")}<div class="pl-text"><span class="pl-head">${nameEl}${e.team ? `<span class="ro-tm">${teamLogo(e.team, "xs")}${nflTag(e.team)}</span>` : ""}${inj(e)}</span>${game(e)}</div></div></td>
-        ${wkCell(e.o)}
-        <td class="ro-srk" title="${sn && sn.g ? `${STATS_SEASONS[0]} finish: ${e.pos}${sn.rank} by total fantasy points` : "No games this season"}">${sn && sn.g ? `<span class="rk-dot" style="--c: var(--${e.pos.toLowerCase()})">${e.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
+        ${wkCell(e.o, e)}
+        <td class="ro-srk"${sn && sn.g ? ` data-hc="szn:${esc(e.sid)}"` : ` title="No games this season"`}>${sn && sn.g ? `<span class="rk-dot" style="--c: var(--${e.pos.toLowerCase()})">${e.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
         <td class="ro-rk" title="${e.ranked ? `League-adjusted AM rank: ${esc(posLabel(e.p))} · #${overallRank(e.p)} overall` : "Not on the AM Board"}">${e.ranked ? `<span class="ro-am"><small>#${overallRank(e.p)}</small><span class="rk-chip" style="--c: var(--${e.pos.toLowerCase()})">${esc(posLabel(e.p))}</span></span>` : `<span class="muted">—</span>`}</td>
         <td class="ro-num">${sn ? sn.g : "—"}</td>
-        <td class="ro-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
-        <td class="ro-num">${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td></tr>`;
+        <td class="ro-num"${sn && sn.g ? ` data-hc="szn:${esc(e.sid)}"` : ""}>${sn && sn.g ? fp(sn.pts) : "—"}</td>
+        <td class="ro-num"${sn && sn.g ? ` data-hc="szn:${esc(e.sid)}"` : ""}>${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td></tr>`;
       if (!open) return main;
       const g = e.o && e.o.game, dx = g && g.kind === "upcoming" ? (D[e.pos] || {})[g.oppTeam] : null;
       const base = e.ranked && String(e.p.rank) !== String(overallRank(e.p)) ? `<span><i>AM Board</i><b>#${e.p.rank} · ${esc(e.p.pos + e.p.posNum)}</b></span>` : "";
@@ -12672,12 +12681,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Waiver Wire's Wk N cell, from the shared week outlook
   function weekProj(p) {
     const o = weekOutlook({ sid: p.sleeperId, pos: p.pos, team: p.team, p }, currentWeek());
-    if (o.kind === "bye") return { kind: "bye", text: "Bye", v: null, sub: "" };
-    if (o.kind === "out") return { kind: "out", text: "Out", v: null, sub: "" };
-    if (o.kind === "final") return o.dnp ? { kind: "dnp", text: "DNP", v: 0, sub: "Final" } : o.pending ? { kind: "pending", text: "—", v: null, sub: "Final · pts pending" } : { kind: "final", text: fp(o.pts), v: o.pts, sub: "Final" };
-    if (o.missing) return { kind: "none", text: "—", v: null, sub: o.kind === "live" ? "Live" : "" };
+    if (o.kind === "bye") return { kind: "bye", text: "Bye", v: null, sub: "", o };
+    if (o.kind === "out") return { kind: "out", text: "Out", v: null, sub: "", o };
+    if (o.kind === "final") return o.dnp ? { kind: "dnp", text: "DNP", v: 0, sub: "Final", o } : o.pending ? { kind: "pending", text: "—", v: null, sub: "Final · pts pending", o } : { kind: "final", text: fp(o.pts), v: o.pts, sub: "Final", o };
+    if (o.missing) return { kind: "none", text: "—", v: null, sub: o.kind === "live" ? "Live" : "", o };
     const v = Math.round(o.proj * 10) / 10;
-    return { kind: "ok", text: v.toFixed(1), v, sub: (o.kind === "live" ? "Live · proj" : "Proj") + (o.fallback ? " (season PPG)" : ""), tip: projTip(o) };
+    return { kind: "ok", text: v.toFixed(1), v, sub: (o.kind === "live" ? "Live · proj" : "Proj") + (o.fallback ? " (season PPG)" : ""), o };
   }
   // Season production in the league's scoring: position finish by total points, points, points per game
   let seasonRankCache = { key: "", map: null };
@@ -12766,12 +12775,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
         <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span>${tc ? `<span class="fa-trend" title="Added in ${tc.toLocaleString("en-US")} Sleeper leagues in the last 24 hours (all of Sleeper, not just this league)">▲ ${trendCount(tc)} adds · 24h</span>` : ""}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
-      <td class="fa-proj ${pj.kind}"${pj.tip ? ` title="${esc(pj.tip)}"` : ""}>${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
+      <td class="fa-proj ${pj.kind}"${hcWk(p, pj.o, currentWeek())}>${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
       <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
       <td class="fa-wk">${faMatch(p)}</td>
-      <td class="fa-srk">${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${p.pos.toLowerCase()})">${p.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
-      <td class="fa-num">${sn && sn.g ? fp(sn.pts) : "—"}</td>
-      <td class="fa-num">${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td>
+      <td class="fa-srk"${sn && sn.g ? ` data-hc="szn:${esc(p.sleeperId)}"` : ""}>${sn && sn.g ? `<span class="fa-srk-b" style="--c: var(--${p.pos.toLowerCase()})">${p.pos}${sn.rank}</span>` : `<span class="muted">—</span>`}</td>
+      <td class="fa-num"${sn && sn.g ? ` data-hc="szn:${esc(p.sleeperId)}"` : ""}>${sn && sn.g ? fp(sn.pts) : "—"}</td>
+      <td class="fa-num"${sn && sn.g ? ` data-hc="szn:${esc(p.sleeperId)}"` : ""}>${sn && sn.g ? fp(sn.ppg) + snShort(sn) : "—"}</td>
       <td class="fa-fit">${f ? `<span class="fa-fit-t ${f.cls}">${esc(f.text)}</span>` : `<span class="muted">—</span>`}</td></tr>`;
     }).join("")
       : `<tr><td class="empty" colspan="10">No ranked players available${faPos !== "ALL" ? " at " + faPos : ""}.</td></tr>`;
@@ -13642,7 +13651,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
             : o.kind === "out" ? tile(`Wk ${wk} proj`, "Out", "Ruled out")
             : o.missing ? tile(`Wk ${wk} proj`, "–", "No projection")
             : o.kind === "live" ? tile(`Wk ${wk} proj`, fp(o.proj), "Game in progress")
-            : `<div class="tw-stat" title="${esc(projTip(o))}"><span class="tw-label">Wk ${wk} proj</span><span class="tw-val">${fp(o.proj)}</span><span class="tw-sub">${o.fallback ? "Season PPG" : `${esc(projSource())} · ${activeData() ? "league" : "site"} scoring`}</span></div>`; })()}
+            : `<div class="tw-stat"${hcWk(info.p || { name: info.name, pos: info.pos, sleeperId: info.sid, team: info.team }, o, wk, "pm")}><span class="tw-label">Wk ${wk} proj</span><span class="tw-val">${fp(o.proj)}</span><span class="tw-sub">${o.fallback ? "Season PPG" : `${esc(projSource())} · ${activeData() ? "league" : "site"} scoring`}</span></div>`; })()}
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
         ${tile("Team total", implied ?? "–", implied ? "implied" : "")}
@@ -16254,6 +16263,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const hcPct = x => `<span class="hc-d ${x > 0.05 ? "up" : x < -0.05 ? "down" : ""}">${signPct(x)}</span>`;
   const hcDay = ts => (ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
   const hcPlayer = id => players.find(x => String(x.id) === String(id)) || null;
+  function hcEnt(e) { return (e && e.p) || { name: e.name, pos: e.pos, sleeperId: e.sid, team: e.team, id: e.sid }; }   // a roster entry as a card's player
   const hcPlayerBySid = sid => (sid ? bySleeper().get(String(sid)) || null : null);
 
   /* AM value / rank card (priority 1 and 2): what the board shows, where it came from, and how the outside sources see
@@ -16309,6 +16319,115 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   HC_KINDS.am = id => hcAm(hcPlayer(id));
   HC_KINDS.amsid = sid => hcAm(hcPlayerBySid(sid));
+
+
+  /* Projection / week card (priority 3): what a "Wk N" cell shows, from the same weekOutlook object the cell was drawn
+     from (kept in HC_WK by the renderer, so the card never recomputes or disagrees). Pregame, live and final are
+     labelled; live splits points so far (only when the page has Sleeper's live points) from the projected rest of his
+     game, which is an estimate from time since kickoff, never a game clock. */
+  // function declarations and vars: the renderers that call these can run before this part of the script has
+  var HC_WK;
+  function hcWk(p, o, week, ctx = "") { if (!p || !o) return ""; if (!HC_WK) HC_WK = new Map(); const k = `${p.sleeperId || p.id}:${week}:${ctx}`; HC_WK.set(k, { p, o, week, live: ctx === "sl" }); return ` data-hc="wk:${esc(k)}"`; }
+  HC_KINDS.wk = k => {
+    const x = HC_WK && HC_WK.get(k); if (!x) return null;
+    const { p, o, week } = x, g = o.game || {};
+    const opp = g.oppTeam ? `${g.home ? "vs" : "@"} ${esc(g.oppTeam)}` : "";
+    const kick = g.kick ? new Date(g.kick).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET" : "";
+    const sub = [`Week ${week}`, opp, o.kind === "upcoming" ? kick : ""].filter(Boolean).join(" · ");
+    const state = { upcoming: "Pregame projection", live: "Live", final: o.dnp ? "Final · did not play" : o.pending ? "Final · points pending" : "Final", bye: "Bye week", out: o.season ? "Out for season" : "Out (injury report)", none: "No game found" }[o.kind] || (o.text || "");
+    let body = hcRow("Status", esc(state));
+    if (o.kind === "final" && o.pts != null && !o.dnp) body += hcRow("Points", `<b>${fp(o.pts)}</b>`, "actual");
+    if (o.kind === "live") {
+      if (o.pts != null && x.live) body += hcRow("Scored so far", `<b>${fp(o.pts)}</b>`, "Sleeper live points");
+      else body += hcRow("Scored so far", `<span class="hc-muted">not shown here</span>`);
+      if (o.proj != null && o.pts != null && x.live) body += hcRow("Projected rest", fp(o.est - o.pts), "≈ share of his game left") + hcRow("Live projection", `<b>${fp(o.est)}</b>`, "estimate");
+      if (o.proj != null) body += hcRow("Pregame projection", fp(o.proj));
+    }
+    if (o.kind === "upcoming" && o.proj != null) body += hcRow("Projected", `<b>${fp(o.proj)}</b>`, o.fallback ? "season PPG (no AM projection)" : "");
+    if (o.missing && o.kind !== "live") body += hcRow("Projected", `<span class="hc-muted">no projection available</span>`);
+    let src = "";
+    if (o.inputs && o.inputs.length && o.kind !== "final" && o.kind !== "bye") src = hcSec("Projection inputs", o.inputs.map(s => `<div class="hc-li">${esc(s)}</div>`).join(""));
+    const upd = PROJ_AT ? `AM projections updated ${esc(hcDay(Date.parse(PROJ_AT)))}` : "";
+    return hcHead(p, sub) + hcSec("", body + hcRow("Scoring", esc(scoringLabel()))) + src +
+      hcFoot([upd, o.kind === "live" ? "Live numbers are estimated from the time since kickoff, not a real-time game model." : ""].filter(Boolean).join(" · "));
+  };
+  /* Season production card (PPG / FPTS / Szn rk cells): seasonRanks() in the league's scoring, the same map the cells read */
+  HC_KINDS.szn = sid => {
+    const p = hcPlayerBySid(sid), r = seasonRanks().get(String(sid)); if (!r) return null;
+    const pos = r.pos, sub = `${STATS_SEASONS[0]} season · ${esc(scoringLabel())}`;
+    let body = hcRow("Games played", String(r.g), r.short ? `· ${r.short} injury-shortened` : "") +
+      hcRow("Fantasy points", `<b>${fp(r.pts)}</b>`, `· ${esc(pos)}${r.rank} by total`) +
+      hcRow("Points per game", `<b>${fp(r.ppg)}</b>`, r.short ? "· includes injury-shortened games" : "");
+    return hcHead(p || { name: sid, pos }, sub) + hcSec("", body) + hcFoot("Actual points from his NFL stats in this scoring; a game counts only if he played.");
+  };
+
+  /* Trade value card (priority 4): a player's value in the calculator or the Trade Finder, step by step. AM value (base
+     board) → the format steps (formatSteps: scoring, TE premium, lineup and league size = positional scarcity) → the
+     league-adjusted value the trade uses (tv) → his package adjustment when he's an extra piece in an uneven 2-team deal
+     (tradeModel's own extras) → the market's view (Market edge) → what he does to the receiving lineup (the calculator's
+     roster fit, when it was calculated). Nothing new is computed. */
+  function hcPackage(p) {
+    if (TC3.on || !sides.A.length || !sides.B.length || sides.A.length === sides.B.length) return "";
+    const side = sides.A.includes(p.id) ? "A" : sides.B.includes(p.id) ? "B" : null; if (!side) return "";
+    const r = runModel(sides.A, sides.B), a = r.adj; if (!a || !a.extras || a.more !== side) return "";
+    const v = tv(p), hit = a.extras.find(x => Math.abs(x.v - Math.max(0, v)) < 0.5);
+    return hit ? hcRow("Package", `<b>${fmt(hit.kept)}</b>`, `· counts ${Math.round(100 * hit.kept / Math.max(1, hit.v))}% as an extra piece next to the deal's best player`) : hcRow("Package", "counts in full", "· not one of the extra pieces");
+  }
+  HC_KINDS.tv = (arg) => {
+    const [id, side] = arg.split(":"), p = hcPlayer(id); if (!p) return null;
+    const v = tv(p), st = LG.fmtOn ? formatSteps(p) : null;
+    let body = hcRow("AM value", fmt(p.value), "AM Board");
+    if (st) st.steps.filter(s => s.on !== false && Math.round(s.d)).forEach(s => { body += hcRow(esc(s.key === "lineup" ? "Lineup & size" : s.label.replace(/ \(.*/, "")), `<span class="hc-d ${s.d > 0 ? "up" : "down"}">${s.d > 0 ? "+" : "−"}${fmt(Math.abs(s.d))}</span>`, esc(s.key === "lineup" ? "· positional scarcity in this lineup" : s.key === "tep" ? s.label.replace(/^[^(]*/, "") : "")); });
+    body += hcRow("Trade value", `<b>${fmt(v)}</b>`, LG.fmtOn ? `· ${esc(tcValuesName() || "league-adjusted")}` : "· AM Board (no format set)");
+    body += hcPackage(p);
+    const X = side && !TC3.on && TC_UI.ctx ? TC_UI.ctx[side] : null, fe = X ? X.fit.inc.find(e => e.p.id === p.id) : null;
+    if (fe) body += hcRow("Lineup", esc(fe.why.replace(/^./, c => c.toUpperCase())), `· for ${esc(X.t.name)}`);
+    const m = mkOf(p);
+    let mk = "";
+    if (m) mk = hcSec("Market", Object.values(m.per).map(x => hcRow(esc(x.name), `${fmt(x.v)} <span class="hc-note">${esc(p.pos)}${x.pr}</span>`, `· AM ${hcPct(pctOf(m.am, x.v))}`)).join("") + (m.srcN > 1 ? hcRow("Consensus", fmt(m.cv), `· AM ${hcPct(pctOf(m.am, m.cv))}`) : ""));
+    return hcHead(p, `${p.team ? esc(p.team) + " · " : ""}${esc(posLabel(p))}`) + hcSec("", body) + mk + hcFoot("The verdict uses the trade values; market values are a secondary reference on AM's scale." + (m && m.per.fl ? " Flock is a ranking, so its value is AM's price for that rank." : ""));
+  };
+
+  /* Team card (priority 5): a Power Rankings row's numbers from evaluateTeams (the same object the row was drawn from,
+     kept in HC_EV while the tab renders): power rank, team score = starting lineup + bench depth, each position room's
+     place and gap to the league average, and in a position lens the players that room counts. */
+  var HC_EV = null;
+  // Waiver claim (Transactions): the bid, its share of the budget and every logged bid, all from Sleeper's log
+  HC_KINDS.claim = id => {
+    const d = activeData(), t = d && d.tx && d.tx.find(x => x.id === id);
+    if (!t) return null;
+    const sid = Object.keys(t.adds).find(k => t.adds[k] === t.rosters[0]) || Object.keys(t.adds)[0];
+    const e = sid ? rosterEntry(sid, bySleeper()) : null, team = teamByRid(t.rosters[0]), fl = faabLeft(d);
+    const head = e ? hcHead(hcEnt(e), `Week ${esc(t.week)} · ${esc(txWhen(t.at))}`) : "";
+    let body = hcRow("Claimed by", esc(team.name), team.manager && team.manager !== team.name ? `· ${esc(team.manager)}` : "");
+    if (t.bid != null) body += hcRow("Winning bid", `<b>$${t.bid}</b>`, fl ? `· ${(100 * t.bid / fl.budget).toFixed(t.bid / fl.budget < 0.1 ? 1 : 0)}% of the $${fmt(fl.budget)} budget` : "");
+    if (fl && fl.left.has(team.rosterId)) body += hcRow("FAAB left", `$${fmt(fl.left.get(team.rosterId))}`, "· today");
+    let bids = "";
+    if (t.bids && t.bids.length > 1) {
+      const win = t.bids.find(b => b.won), rest = t.bids.filter(b => !b.won);
+      bids = hcSec(`Bids · ${t.bids.length} teams`, (win ? [win] : []).concat(rest).slice(0, 6).map(b => hcRow(b.bid == null ? "–" : "$" + b.bid, esc(teamByRid(b.rid).name), b.won ? "· won" : win && b.bid != null && win.bid != null && b.bid < win.bid ? "· outbid" : win && b.bid === win.bid ? "· lost tie-break" : "· not awarded")).join("") + (t.bids.length > 6 ? `<div class="hc-note">${t.bids.length - 6} more in the bids panel</div>` : ""));
+    } else body += hcRow("Bidders", "1", "· no other claim logged for him in this run");
+    return head + hcSec("", body) + bids + hcFoot("From Sleeper's transaction log." + (t.bids && t.bids.length > 1 ? " Click for every bid and Sleeper's notes." : ""));
+  };
+  HC_KINDS.pw = rid => {
+    if (!HC_EV) return null;
+    const { ev, mode, nPrim } = HC_EV, x = ev.byRoster.get(String(rid)); if (!x) return null;
+    const t = x.team, n = ev.n, third = Math.max(1, Math.floor(n / 3));
+    const rankOf = f => 1 + ev.list.filter(y => f(y) > f(x) + 1e-9).length;
+    const head = `<div class="hc-h">${teamFace(t, "xs")}<span class="hc-id"><span class="hc-n">${esc(t.name)}</span><span class="hc-sub">${esc(t.manager || "")}${t.mine ? " · your team" : ""}</span></span></div>`;
+    let body = hcRow("Power rank", `<b>#${x.power}</b> of ${n}`, `· team score ${fmt(x.score)}`) +
+      hcRow("Starting lineup", fmt(x.startVal), `· ${ordinal(rankOf(y => y.startVal))} of ${n}`) +
+      hcRow("Bench depth", fmt(x.depthVal), `· ${ordinal(rankOf(y => y.depthVal))} of ${n}`);
+    const rooms = EDIT_POS.map(pos => { const pl = x.place[pos], d = x.room[pos] - ev.avg[pos];
+      return hcRow(`<span class="pos ${pos}">${pos}</span>`, `${ordinal(pl)} <span class="hc-d ${pl <= third ? "up" : pl > n - third ? "down" : ""}">${d >= 0 ? "+" : "−"}${fmt(Math.abs(d))}</span>`, "vs avg"); }).join("");
+    let lens = "";
+    if (mode && mode !== "DEPTH" && x.roomPlayers && x.roomPlayers[mode]) {
+      const list = x.roomPlayers[mode].slice(0, Math.max(nPrim, 1) + 2);
+      lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < nPrim ? "Starter" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
+    }
+    return head + hcSec("", body) + hcSec("Position rooms", rooms) + lens +
+      hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: the best starting lineup in full plus a share of bench depth; injured reserve counts, taxi doesn't. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
+  };
 
   // Start-up: restore a saved connection
   sl = readSl();
