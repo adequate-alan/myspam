@@ -4490,7 +4490,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   #rank-body .pl-text { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; }
   #rank-body .pl-text > .own-tag { flex: 1 0 100%; }
   #rank-body .own-tag, #rank-body .own-tag.mine { width: 0; min-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #rank-body .own-tag .own-by { display: none; }   /* "MANAGER11" rather than "OWNED BY MANAGE…"; the full name stays in the tooltip */
+  /* "MGR: MANAGER11" rather than "OWNED BY MANAGE…": a compact visible label; screen readers still hear "Owned by" */
+  #rank-body .own-tag .own-by { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #rank-body .own-tag:has(.own-by)::before { content: "Mgr:" / ""; margin-right: 4px; font-weight: 500; }
   #rank-body .own-tag { letter-spacing: 0.05em; }
   body:not(.editing) #panel-rankings td.rk { padding-left: 10px; }
   body.editing #panel-rankings .table-scroll table { min-width: 0; }
@@ -5588,7 +5590,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T22:10Z";
+  const BUILD_ID = "2026-10-12T12:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
