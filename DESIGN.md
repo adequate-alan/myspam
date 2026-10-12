@@ -5,13 +5,13 @@ colors:
   am-red: "#E4002B"
   am-red-hover: "#F01B43"
   dark-page: "#08090B"
-  dark-surface: "#101216"
-  dark-raised: "#1B1D22"
-  dark-control: "#16181C"
-  dark-border: "#26292F"
+  dark-surface: "#14161B"
+  dark-raised: "#1F2228"
+  dark-control: "#1A1C22"
+  dark-border: "#2B2F36"
   dark-text: "#F6F7F9"
   dark-text-secondary: "#A7ABB3"
-  dark-text-muted: "#80868F"
+  dark-text-muted: "#878D96"
   light-page: "#ECEEF2"
   light-surface: "#FFFFFF"
   light-table-head: "#F7F8FA"
@@ -52,7 +52,7 @@ typography:
     fontFamily: "proxima-nova, Proxima Nova, Arial, sans-serif"
     fontSize: "0.62rem"
     fontWeight: 600
-    letterSpacing: "0.12em"
+    letterSpacing: "0.09em"
 rounded:
   tag: "4px"
   control: "6px"
@@ -127,8 +127,8 @@ These colors are one palette shared by badges, value meters and lineup slots: QB
 
 ### Neutral
 - **Dark theme:**
-  - Page #08090B, surface #101216, raised #1B1D22, controls #16181C, border #26292F.
-  - Text #F6F7F9, secondary #A7ABB3, muted #80868F.
+  - Page #08090B, surface #14161B, raised #1F2228, controls #1A1C22, table head #181A20, border #2B2F36 (Oct 12 refinement: a clearer step off the near-black page).
+  - Text #F6F7F9, secondary #A7ABB3, muted #878D96.
 - **Light theme:**
   - Page #ECEEF2 and surfaces #FFFFFF with #D2D6DD borders, table head #F7F8FA, controls #E3E6EB.
   - Text #101114, secondary #50545C, muted #62676F.
@@ -149,7 +149,7 @@ These colors are one palette shared by badges, value meters and lineup slots: QB
 - **Data** (700, tabular): player names, ranks, values, verdict numbers, key figures.
 - **Body** (500–600, 0.8–0.9rem): copy and table cells.
 - **Metadata** (500): NFL team, owner, tier text, muted lines.
-- **Label** (600, 0.58–0.62rem, uppercase, 0.08–0.12em tracking): column guides, eyebrows and tags. These are the only uppercase text.
+- **Label** (600, 0.58–0.62rem, uppercase, 0.06–0.1em tracking; muted labels are never heavier than 600): column guides, eyebrows and tags. These are the only uppercase text.
 
 ### Named rules
 - **The Three Weights Rule.** Use 500, 600 and 700 only. These are the kit's cuts; other weights render synthesized.
@@ -184,7 +184,7 @@ The system is flat by default, with tonal layering.
 - **Controls and segmented buttons:** 6px.
 - **Cards and panels:** 8px.
 - **Pills** (status, confidence, market, transaction kinds): fully round.
-- **Value meters:** 2px tall with 2px ends.
+- **Value meters and stat bars:** 2px tall with 2px ends; stat bars (Week view, production sorts) use the position color at 50% so the number leads.
 - **Lines:** borders are 1px; underline tabs use a 2px red bar.
 
 ## Components
@@ -197,7 +197,7 @@ These are the shared primitives (the "Shared components" block at the end of the
 - **Box tag:** a 4px-radius tinted rectangle, weight 700 (or 600 for fit tags). Used for verdicts, roles, injuries and status blocks.
 - **Filled pill:** a round tinted pill (`--tag-pad`, `--tag-fs`, weight 600). Used for status, leverage, confidence, grades and history chips.
 - **Outline caps pill:** a round pill with a 1px border in uppercase (`--tag-fs-caps`, `--tag-ls-caps`). Used for transaction kinds, bidders, trade-history tags, market tags and freshness.
-- **Caps micro-label and eyebrow:** text only, weight 600. Micro-labels are 0.58rem / 0.08em; eyebrows are 0.62rem / 0.12em.
+- **Caps micro-label and eyebrow:** text only, weight 600. Micro-labels are 0.58rem / 0.07em; eyebrows are 0.62rem / 0.09em.
 - **Underline tab (`.tab`, `.chip-btn`):** transparent; the selected state is strong text plus a 2px red bar. Used for the main nav, position chips, League sub-tabs, drawer tabs and filter rows. Tablists use `aria-selected`; filter groups use `aria-pressed`.
 - **Segmented switch (`.view-toggle` + `.vt-btn`):**
   - A neutral fill container with 30px buttons at 6px radius.
