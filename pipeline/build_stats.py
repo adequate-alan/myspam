@@ -67,7 +67,7 @@ COLS = ["w", "tm", "opp"] + list(COMPONENTS) + ["tgt_share"] + USAGE + USAGE2
 # Team denominators per team and week (Alan, Oct 12), so every share can be recomputed for a week or summed over a season:
 # tgt = targets credited to the team's players (nflverse's own target_share uses the same total), air = their receiving air
 # yards (passes with an intended receiver: the same population as targets), rush = rush attempts incl. scrambles and kneels
-# (nflverse carries), kneel = QB kneel-downs, snaps = offensive snaps (PFR snap counts: the most snaps any player took).
+# (nflverse carries), kneel = QB kneel-downs, snaps = team offensive snaps (PFR snap counts, solved from every player's share: team_snaps).
 TEAM_COLS = ["tgt", "air", "rush", "kneel", "snaps"]
 
 
@@ -316,6 +316,24 @@ def usage_row(r, use):
             u.get("snaps"), u.get("rz_rec", 0), u.get("kneel", 0)]
 
 
+def team_snaps(g):
+    """A team's offensive snaps in one game from PFR's snap counts (one row per player: offense_snaps, offense_pct).
+    PFR has no team row, but every player's share is his snaps / the team's snaps rounded to 2 decimals, so the team
+    total is the smallest whole number at least the most any player took that every share agrees with. The most any
+    player took is the total whenever someone played every snap (1,239 of 1,244 team-games in 2024-26); in the other
+    five it was 1-2 snaps low (e.g. MIA 2025 Wk 6: 57, every share says 59). Where a few PFR rows contradict each other
+    (3 games in 2024) the total that the most shares agree with wins."""
+    mx = int(g.offense_snaps.max())
+    rows = [(s, p) for s, p in zip(g.offense_snaps, g.offense_pct) if not pd.isna(p)]
+    if not rows: return mx
+    best = None
+    for n in range(mx, mx + 11):
+        miss = sum(abs(s / n - p) > 0.0051 for s, p in rows)
+        if best is None or miss < best[1]: best = (n, miss)
+        if miss == 0: break
+    return best[0]
+
+
 def team_totals(season, d, pbp_src=PBP_URL, snap_src=SNAP_URL):
     """{team: {week: [tgt, air, rush, kneel, snaps]}} for the regular season (TEAM_COLS). d = every player's weekly stats
     row (all positions), so a team total is exactly the sum of what its players are credited with."""
@@ -334,10 +352,10 @@ def team_totals(season, d, pbp_src=PBP_URL, snap_src=SNAP_URL):
         print(f"  team kneels skipped: {e}")
     try:
         sn = pd.read_csv(snap_src.format(season), low_memory=False)
-        sn = sn[(sn.game_type == "REG") & sn.offense_snaps.notna()]
-        for (tm, w), n in sn.groupby(["team", "week"]).offense_snaps.max().items():
+        sn = sn[(sn.game_type == "REG") & sn.offense_snaps.notna() & (sn.offense_snaps > 0)]
+        for (tm, w), g in sn.groupby(["team", "week"]):
             row = out.get(team(tm), {}).get(str(int(w)))
-            if row and n > 0: row[4] = int(n)
+            if row: row[4] = team_snaps(g)
     except Exception as e:
         print(f"  team snaps skipped: {e}")
     return {"cols": TEAM_COLS, "teams": {t: dict(sorted(v.items(), key=lambda x: int(x[0]))) for t, v in sorted(out.items())}}
