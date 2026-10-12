@@ -4375,6 +4375,58 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 :root[data-theme="light"] #panel-rankings .valbar.stack .fill { background: color-mix(in srgb, var(--c, var(--ink)) 72%, transparent); }
 :root[data-theme="light"] #panel-rankings .valbar.stack .track { background: var(--track); }
 :root[data-theme="light"] .masthead { border-bottom-color: var(--border); }
+/* ---------- Hover cards (Alan, Oct 12): one themed card for every tooltip (see HC in the script). Fixed layer, never
+   over its trigger, theme surfaces and tokens, tabular numbers, a restrained shadow, a short fade (none with reduced
+   motion). Plain cards are a line or two of text; rich cards (AM value, market, projections, trades, teams) are compact
+   label / value rows and small tables. On touch a rich card opens as a bottom sheet. ---------- */
+.hc { position: fixed; top: 0; left: 0; z-index: 990; box-sizing: border-box; max-width: min(300px, calc(100vw - 16px));
+  padding: 6px 9px; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: var(--r-md, 8px); box-shadow: 0 10px 26px -14px var(--shadow-color), 0 1px 2px rgba(0, 0, 0, .12);
+  font: 500 0.76rem/1.4 var(--font-body); letter-spacing: 0; text-transform: none; text-align: left; white-space: normal;
+  pointer-events: none; opacity: 0; transition: opacity .1s ease-out; overflow-wrap: anywhere; }
+.hc.on { opacity: 1; }
+.hc[hidden] { display: none; }
+.hc.rich { width: 320px; max-width: calc(100vw - 16px); padding: 10px 12px 9px; pointer-events: auto; font-size: 0.78rem;
+  max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain; }
+:is(.hc, .hc-inline) .hc-h { display: flex; align-items: center; gap: 8px; min-width: 0; padding-bottom: 7px; margin-bottom: 7px; border-bottom: 1px solid var(--border); }
+:is(.hc, .hc-inline) .hc-h .face { flex: none; }
+:is(.hc, .hc-inline) .hc-n { font-weight: 700; font-size: 0.86rem; color: var(--text-strong, var(--text-primary)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:is(.hc, .hc-inline) .hc-h .pos { flex: none; font-size: 0.62rem; padding: 1px 5px; }
+:is(.hc, .hc-inline) .hc-sub { color: var(--text-muted); font-weight: 500; font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }
+:is(.hc, .hc-inline) .hc-id { display: grid; min-width: 0; flex: 1; line-height: 1.25; }
+:is(.hc, .hc-inline) .hc-h .face { width: 30px; height: 30px; }
+:is(.hc, .hc-inline) .hc-sec + .hc-sec { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+:is(.hc, .hc-inline) .hc-st { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; font: 600 0.62rem/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+:is(.hc, .hc-inline) .hc-st .hc-sub { margin-left: auto; font-size: 0.68rem; }
+:is(.hc, .hc-inline) .hc-r { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 1.5px 0; align-items: baseline; }
+:is(.hc, .hc-inline) .hc-k { color: var(--text-muted); font-size: 0.72rem; }
+:is(.hc, .hc-inline) .hc-v { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+:is(.hc, .hc-inline) .hc-v b, :is(.hc, .hc-inline) .hc-t b { font-weight: 700; }
+:is(.hc, .hc-inline) .hc-note, :is(.hc, .hc-inline) .hc-muted { color: var(--text-muted); font-size: 0.72rem; }
+:is(.hc, .hc-inline) .hc-d { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-secondary); }
+:is(.hc, .hc-inline) .hc-d.up { color: var(--rb); } .hc .hc-d.down { color: var(--rose); }
+:is(.hc, .hc-inline) .hc-stale { color: var(--warn); font-weight: 600; }
+:is(.hc, .hc-inline) .hc-t { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+:is(.hc, .hc-inline) .hc-t th, :is(.hc, .hc-inline) .hc-t td { padding: 2px 0; text-align: right; font-size: 0.76rem; white-space: nowrap; }
+:is(.hc, .hc-inline) .hc-t thead th { font: 600 0.6rem/1.2 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); padding-bottom: 3px; }
+:is(.hc, .hc-inline) .hc-t th:first-child, :is(.hc, .hc-inline) .hc-t td:first-child { text-align: left; }
+:is(.hc, .hc-inline) .hc-t tbody th { font-weight: 600; color: var(--text-primary); }
+:is(.hc, .hc-inline) .hc-t td + td, :is(.hc, .hc-inline) .hc-t th + th { padding-left: 10px; }
+:is(.hc, .hc-inline) .hc-t tr.am td, :is(.hc, .hc-inline) .hc-t tr.am th { color: var(--text-strong, var(--text-primary)); font-weight: 700; }
+:is(.hc, .hc-inline) .hc-t tr.cons th, :is(.hc, .hc-inline) .hc-t tr.cons td { border-top: 1px solid var(--border); padding-top: 3px; }
+:is(.hc, .hc-inline) .hc-t tr.hc-tn td { padding: 0 0 3px; text-align: left; font-size: 0.68rem; color: var(--text-muted); white-space: normal; }
+:is(.hc, .hc-inline) .hc-say { margin: 6px 0 0; color: var(--text-secondary); font-size: 0.75rem; }
+:is(.hc, .hc-inline) .hc-f { margin: 7px 0 0; color: var(--text-muted); font-size: 0.68rem; line-height: 1.35; }
+.hc .hc-x { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; border: 0; border-radius: var(--r-sm, 6px); background: var(--fill-1); color: var(--text-secondary); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.hc.sheet { left: 8px !important; right: 8px; top: auto !important; bottom: max(8px, env(safe-area-inset-bottom)); width: auto; max-width: 480px; margin: 0 auto;
+  max-height: 70vh; padding: 12px 14px; border-radius: var(--r-lg, 12px); box-shadow: 0 -8px 30px -12px var(--shadow-color); font-size: 0.82rem; }
+.hc.sheet .hc-h { padding-right: 36px; }
+
+[data-hc]:focus-visible { outline: 2px solid var(--focus-line, var(--text-secondary)); outline-offset: 2px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) { .hc { transition: none; } }
+.hc-inline { margin: 10px 0 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md, 8px); font-size: 0.8rem; }
+:is(.hc, .hc-inline) .hc-fmt { margin: -2px 0 5px; color: var(--text-muted); font-size: 0.7rem; }
 </style>
 </head>
 <body>
@@ -5428,7 +5480,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-15T18:10Z";
+  const BUILD_ID = "2026-10-15T19:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5560,7 +5612,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!p.hasValue) return `<span class="num-empty">Value pending</span>`;
     const v = dv(p), pct = Math.max(2, (v / maxValue) * 100);
     return `<div class="valbar stack pos-${p.pos}" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))">
-      <span class="num">${fmt(v)}</span>
+      <span class="num" tabindex="0">${fmt(v)}</span>
       <div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div></div>`;
   }
 
@@ -5682,7 +5734,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const chunks = html.split(/(?=<tr[\s>])/).filter(c => c.trim());
     const top = n => { while (n && n.parentNode !== tb) n = n.parentNode; return n; };
     // records are marked as they arrive (the observer's callback runs after each task) and any still queued now
-    const mark = recs => { for (const r of recs) { const t = top(r.target); if (t) t._dirty = true; r.addedNodes.forEach(n => { if (n.parentNode === tb) n._dirty = true; }); } };
+    // the hover card's own attribute swaps (title ⇄ data-hc-t, aria-describedby) aren't changes to the row
+    const HC_ATTR = /^(title|data-hc-t|aria-describedby)$/;
+    const mark = recs => { for (const r of recs) { if (r.type === "attributes" && HC_ATTR.test(r.attributeName)) continue; const t = top(r.target); if (t) t._dirty = true; r.addedNodes.forEach(n => { if (n.parentNode === tb) n._dirty = true; }); } };
     if (!tb._mo) {
       tb._mo = new MutationObserver(mark);
       tb._mo.observe(tb, { childList: true, subtree: true, characterData: true, attributes: true });
@@ -5821,7 +5875,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           ? `<button class="rk-btn" type="button" data-mv="${p.id}" aria-haspopup="dialog" aria-expanded="${MV.id === p.id ? "true" : "false"}" title="Move to rank…" aria-label="Move ${esc(p.name)} to a rank (now ${posFilter === "ALL" ? "#" + n : esc(posLabel(p))})">${n}</button>` + h.slice(n.length) : h; })()}</td>
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
-        <td class="val">${editing ? valueCellEdit(p) : valueCell(p)}</td>
+        <td class="val"${p.hasValue === false ? "" : ` data-hc="am:${p.id}" data-hc-side="left"`}>${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
     if (tierEdit) flushEmpties(Infinity);
@@ -5887,7 +5941,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted AM rank" : "AM Board rank"}">${spamTxt}</span></td>
         <td class="prod-col"><div class="prodbar" style="--c: var(--${p.pos.toLowerCase()}, var(--ink))"><div class="track"><div class="fill" style="width:${pct.toFixed(1)}%"></div></div><span class="pnum">${num}${star}</span>${sub}</div></td>
-        <td class="val val-2"><span class="num-2" title="${leagueView() ? "League-adjusted AM value" : "AM value"}">${p.hasValue === false ? "—" : fmt(dv(p))}</span></td>
+        <td class="val val-2" data-hc="am:${p.id}" data-hc-side="left"><span class="num-2">${p.hasValue === false ? "—" : fmt(dv(p))}</span></td>
       </tr>`;
     });
     $("rank-body").innerHTML = out.length ? out.join("") :
@@ -5934,12 +5988,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <td class="rk">${i + 1}</td>
         <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(p.pos)}${r.ap}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk">AM #${amRk(p)}</span></td>
-        <td class="mk-col"><div class="mk-cell" title="${esc(mkSentence(r))}">
+        <td class="mk-col" data-hc="am:${p.id}" data-hc-side="left"><div class="mk-cell">
           <span class="mk-ranks"><b>AM ${p.pos}${r.ap}</b><span>${x ? x.name : "Market"} ${p.pos}${cR}</span></span>
           <span class="mk-edge ${edge > 0 ? "up" : edge < 0 ? "down" : ""} ${lvlCls}">${mkEdgeTxt(edge)}</span>
           ${x ? "" : mkPill(r)}${!x && r.lvl ? `<span class="mk-conf ${r.conf.toLowerCase()}">${r.conf}</span>` : ""}
           <span class="mk-src">${esc(srcLine)}${r.review ? ` · <b class="mk-rev">${esc(r.review)}</b>` : ""}</span></div></td>
-        <td class="val val-2"><span class="num-2">${p.hasValue === false ? "—" : fmt(adjOf(p))}</span></td>
+        <td class="val val-2" data-hc="am:${p.id}" data-hc-side="left"><span class="num-2">${p.hasValue === false ? "—" : fmt(adjOf(p))}</span></td>
       </tr>`;
     });
     $("rank-body").innerHTML = out.length ? out.join("") : `<tr><td class="empty" colspan="5">${query ? `No players match “${esc(query)}”.` : "No players with market data here."}</td></tr>`;
@@ -6029,7 +6083,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (all.srcs.length) {
         const gaps = [...all.map.values()].filter(r => r.lvl >= 1 && r.p.rank != null);
         const hi = gaps.filter(r => r.dir > 0).sort((a, b) => b.e - a.e).slice(0, 3), lo = gaps.filter(r => r.dir < 0).sort((a, b) => a.e - b.e).slice(0, 3);
-        const gRow = r => `<li><span class="rr-mv ${r.dir > 0 ? "up" : "down"}" title="Consensus position rank minus AM position rank">${r.dir > 0 ? "+" : "−"}${Math.abs(r.cRank - r.ap)}</span><button class="rr-name rr-jump" type="button" data-jump="${r.p.id}" title="Show ${esc(r.p.name)} in the rankings">${esc(r.p.name)}</button><span class="rr-sub"><span class="rr-pos ${esc(r.p.pos)}" title="AM position rank">${esc(r.p.pos + r.ap)}</span><span title="Market (consensus) position rank">Mkt ${esc(r.p.pos + r.cRank)}</span></span></li>`;
+        const gRow = r => `<li><span class="rr-mv ${r.dir > 0 ? "up" : "down"}" title="Consensus position rank minus AM position rank">${r.dir > 0 ? "+" : "−"}${Math.abs(r.cRank - r.ap)}</span><button class="rr-name rr-jump" type="button" data-jump="${r.p.id}" title="Show ${esc(r.p.name)} in the rankings">${esc(r.p.name)}</button><span class="rr-sub" data-hc="am:${r.p.id}" data-hc-side="left"><span class="rr-pos ${esc(r.p.pos)}">${esc(r.p.pos + r.ap)}</span><span>Mkt ${esc(r.p.pos + r.cRank)}</span></span></li>`;
         if (hi.length || lo.length) parts.push(`<section class="rr-sec rr-moves rr-ins"><h3 class="rr-label">Ranking insights <span class="rr-when">AM vs market</span></h3>
           ${hi.length ? `<p class="rr-sublabel">AM higher than the market</p><ul class="rr-list">${hi.map(gRow).join("")}</ul>` : ""}
           ${lo.length ? `<p class="rr-sublabel">Market higher than AM</p><ul class="rr-list">${lo.map(gRow).join("")}</ul>` : ""}
@@ -14161,7 +14215,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function ppTradeValue(info) {
     const p = info.p;
     if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the AM Rankings, so he has no trade value yet.</p>`;
-    return mkDrawer(p) + ppTradeValueBody(info);
+    // the hover card's market table, inline (Oct 12): the same comparison on touch, where nothing can be hovered
+    const mk = EDIT_POS.includes(p.pos) ? hcMarket(p) : "";
+    return mkDrawer(p) + (mk ? `<div class="hc-inline">${mk}</div>` : "") + ppTradeValueBody(info);
   }
   function ppTradeValueBody(info) {
     const p = info.p;
@@ -14568,7 +14624,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (t.closest("[data-pm-swap]")) { const a = PP.sid; PP.sid = PP.compare; PP.compare = a; renderPlayer(); return; }
     if (t.closest("[data-pm-uncompare]")) { PP.compare = null; PP.tab = "overview"; renderPlayer(); return; }
     const ft = t.closest("[data-find-trades]"); if (ft && !ft.disabled) { closePlayer(); openFinder(ft.dataset.findTrades); return; }
-    const hit = t.closest("[data-tip]"); if (hit) showTip(hit);
+    const hit = t.closest("[data-tip]"); if (hit && !HC_FINE.matches) { if (HC.trig === hit) hcClose(); else hcOpen(hit); }
   });
   $("player-body").addEventListener("input", e => {
     if (e.target.id !== "pm-pick") return;
@@ -14582,19 +14638,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (e.target.id === "pm-pick" && e.key === "Enter") { const first = $("player-body").querySelector("[data-pm-pick]"); if (first) first.click(); e.preventDefault(); }
     if (e.target.id === "pm-pick" && e.key === "Escape" && e.target.value) { e.preventDefault(); e.stopPropagation(); PP.pickQuery = ""; PP.picking = false; renderPlayer(); }
   });
-  $("player-body").addEventListener("mouseover", e => { const hit = e.target.closest("[data-tip]"); if (hit) showTip(hit); });
-  $("player-body").addEventListener("mouseout", e => {
-    const hit = e.target.closest("[data-tip]");
-    if (hit) { const box = hit.closest(".chart-box"), tip = box && box.querySelector(".chart-tip"); if (tip) tip.hidden = true; }
-  });
-  function showTip(hit) {
-    const box = hit.closest(".chart-box"), tip = box && box.querySelector(".chart-tip");
-    if (!tip) return;
-    const r = hit.getBoundingClientRect(), b = box.getBoundingClientRect();
-    tip.textContent = hit.dataset.tip; tip.hidden = false;
-    const left = Math.min(Math.max(0, r.left - b.left + r.width / 2 - tip.offsetWidth / 2), b.width - tip.offsetWidth);
-    tip.style.left = left + "px"; tip.style.top = "0px";
-  }
+  // chart points ([data-tip]) use the site's shared hover card (Oct 12); a tap on touch shows it too
 
   /* ---------- Trade finder ----------
      League-wide trade discovery around one player. The "starting team" is whoever owns him
@@ -15403,6 +15447,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (mkOn() && !$("panel-rankings").hidden) renderRankings();
     else queueRail();   // the rail's Ranking insights card reads the market too
     if ($("player-modal").open && PP.sid) renderPlayer();
+    hcRefresh();
   }
   const mkVal = p => { const r = mkOf(p); return r ? r.cv : dv(p); };   // a player's value as the market / consensus sees it, on AM's scale
   const mkOf = p => (p && p.sleeperId ? mkAll().map.get(p.sleeperId) || null : null);
@@ -16059,6 +16104,211 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      loads. Visitors never get them; they can only change this browser's unsaved draft, like the arrows. */
   if (window.__SPM_TEST_HOOKS === true) SPM.edit = Object.assign(EDIT_API, { draft: () => tableToCsv(draft), unsaved: () => changedRows().length,
     reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn(); draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); } });
+
+  /* ===== Hover cards (Alan, Oct 12) =====
+     One themed card for every tooltip on the site, replacing the browser's native title tooltips and the drawer's own
+     chart tip. Three kinds of trigger, all delegated from the document:
+       [data-hc="kind:arg"]  a rich card built on open by HC_KINDS[kind](arg, el) from data the page already holds
+                             (never a new formula, never a network request; null = nothing to show)
+       [data-tip]            a chart point in the player drawer (plain text)
+       [title]               every other tooltip: the text moves into the card while it's open, then goes back
+     Desktop: hover (after a short intent delay) or keyboard focus opens it; a card already open swaps straight to the
+     next trigger, so moving down a column of values never flickers. The card never covers its trigger (above / below,
+     or beside it for table columns), sits in a fixed layer on top of everything (inside an open modal dialog when the
+     trigger is in one), flips and clamps at the viewport edges and never shifts the layout. Rich cards can be hovered
+     into. Escape, scroll, resize or a drag close it. Touch: tapping a rich trigger that isn't itself a button or link
+     opens the same card as a bottom sheet, so nothing needs hover. Reduced motion: no fade. */
+  const HC = { el: null, trig: null, kind: "", openT: 0, closeT: 0, warmUntil: 0, sheet: false, prev: null };
+  const HC_KINDS = {};
+  const HC_FINE = matchMedia("(hover: hover) and (pointer: fine)");
+  const HC_SEL = "[data-hc],[data-tip],[title]";
+  function hcNode() {
+    if (!HC.el) {
+      HC.el = document.createElement("div");
+      HC.el.id = "hc"; HC.el.className = "hc"; HC.el.hidden = true; HC.el.setAttribute("role", "tooltip");
+      HC.el.addEventListener("pointerenter", () => clearTimeout(HC.closeT));
+      HC.el.addEventListener("pointerleave", e => { if (!HC.sheet && !(e.relatedTarget && HC.trig && HC.trig.contains(e.relatedTarget))) hcLater(); });
+      HC.el.addEventListener("click", e => { if (e.target.closest("[data-hc-close]")) hcClose(); });
+    }
+    return HC.el;
+  }
+  // what a trigger shows: { html, rich, side }
+  function hcContent(t) {
+    const spec = t.getAttribute("data-hc");
+    if (spec) {
+      const i = spec.indexOf(":"), kind = i < 0 ? spec : spec.slice(0, i), arg = i < 0 ? "" : spec.slice(i + 1), f = HC_KINDS[kind];
+      let html = null; try { html = f ? f(arg, t) : null; } catch (e) { diag("error", "hover card " + kind + ": " + (e && e.message)); }
+      if (html) return { html, rich: true, side: t.getAttribute("data-hc-side") || "" };
+    }
+    const text = t.getAttribute("data-tip") || t.getAttribute("title") || t.dataset.hcT || "";
+    return text.trim() ? { html: esc(text), rich: false, side: "" } : null;
+  }
+  function hcOpen(t, opts = {}) {
+    if (DRAG_STATE.on) return;
+    const c = hcContent(t); if (!c) return;
+    clearTimeout(HC.openT); clearTimeout(HC.closeT);
+    if (HC.trig && HC.trig !== t) hcRestore();
+    const el = hcNode(), host = t.closest("dialog[open]");
+    const parent = host && host.matches(":modal") ? host : document.body;
+    if (el.parentNode !== parent) parent.appendChild(el);
+    if (t.hasAttribute("title")) { t.dataset.hcT = t.getAttribute("title"); t.removeAttribute("title"); }   // no native tooltip on top
+    HC.trig = t; HC.sheet = !!opts.sheet;
+    el.className = "hc" + (c.rich ? " rich" : " plain") + (HC.sheet ? " sheet" : "");
+    el.innerHTML = c.html + (HC.sheet ? `<button class="hc-x" type="button" data-hc-close aria-label="Close">×</button>` : "");
+    el.hidden = false; el.classList.remove("on");
+    el.style.left = "0px"; el.style.top = "0px";
+    if (!HC.sheet) hcPlace(t, el, c.side);
+    t.setAttribute("aria-describedby", "hc");
+    requestAnimationFrame(() => { if (HC.trig === t) el.classList.add("on"); });
+  }
+  // position: preferred side, flipped when there's no room, clamped 8px inside the viewport; never over the trigger
+  function hcPlace(t, el, side) {
+    const r = t.getBoundingClientRect(), W = innerWidth, H = innerHeight, w = el.offsetWidth, h = el.offsetHeight, g = 8, m = 8;
+    let x, y;
+    const vert = () => {
+      const above = r.top - g - h, below = r.bottom + g;
+      y = (above >= m && (side !== "bottom" || below + h > H - m)) ? above : below + h <= H - m || r.top < H / 2 ? below : Math.max(m, above);
+      x = Math.min(Math.max(m, r.left + r.width / 2 - w / 2), W - w - m);
+    };
+    if (side === "left" || side === "right") {
+      const lx = r.left - g - w, rx = r.right + g, roomL = lx >= m, roomR = rx + w <= W - m;
+      if ((side === "left" && roomL) || (side === "right" && !roomR && roomL)) x = lx;
+      else if (roomR) x = rx;
+      else { vert(); }
+      if (x != null && y == null) y = Math.min(Math.max(m, r.top + r.height / 2 - h / 2), H - h - m);
+    } else vert();
+    el.style.left = Math.round(x) + "px"; el.style.top = Math.round(y) + "px";
+  }
+  function hcRestore() {
+    const t = HC.trig; if (!t) return;
+    if (t.dataset.hcT != null) { t.setAttribute("title", t.dataset.hcT); delete t.dataset.hcT; }
+    if (t.getAttribute("aria-describedby") === "hc") t.removeAttribute("aria-describedby");
+  }
+  function hcClose() {
+    clearTimeout(HC.openT); clearTimeout(HC.closeT);
+    if (!HC.trig) return;
+    hcRestore(); HC.trig = null; HC.sheet = false; HC.pend = null;
+    if (HC.el) { HC.el.hidden = true; HC.el.classList.remove("on"); HC.el.innerHTML = ""; }
+    HC.warmUntil = Date.now() + 250;
+  }
+  const hcLater = () => { clearTimeout(HC.closeT); HC.closeT = setTimeout(hcClose, 140); };
+  // a rich card that's open is rebuilt in place when its data arrives (market or history loading)
+  function hcRefresh() {
+    if (!HC.trig || !HC.el || HC.el.hidden || !HC.trig.isConnected) return;
+    const t = HC.trig; if (!t.hasAttribute("data-hc")) return;
+    const sheet = HC.sheet; hcOpen(t, { sheet });
+  }
+  const hcTrig = n => (n && n.closest ? n.closest("[data-hc]") || n.closest("[data-tip],[title]") : null);   // a rich card wins over a title nested in it
+  document.addEventListener("pointerover", e => {
+    if (e.pointerType === "touch" || !HC_FINE.matches || DRAG_STATE.on) return;
+    if (HC.el && HC.el.contains(e.target)) return;
+    const t = hcTrig(e.target);
+    if (!t) return;
+    if (t === HC.trig) { clearTimeout(HC.closeT); return; }
+    if (t === HC.pend) return;   // moving between the trigger's own children
+    clearTimeout(HC.openT); HC.pend = t;
+    const rich = t.hasAttribute("data-hc") || t.hasAttribute("data-tip");
+    if (t.hasAttribute("title") && !rich) { t.dataset.hcT = t.getAttribute("title"); t.removeAttribute("title"); }   // keep the native one from appearing first
+    if ((HC.trig && !HC.el.hidden) || Date.now() < HC.warmUntil) { hcOpen(t); return; }   // already reading: swap at once
+    HC.openT = setTimeout(() => { HC.pend = null; if (t.isConnected && t.matches(":hover")) hcOpen(t); else if (t.dataset.hcT != null && t !== HC.trig) { t.setAttribute("title", t.dataset.hcT); delete t.dataset.hcT; } }, rich ? 120 : 320);
+  }, true);
+  document.addEventListener("pointerout", e => {
+    if (e.pointerType === "touch") return;
+    const t = hcTrig(e.target), to = e.relatedTarget;
+    if (t && t !== HC.trig && !(to && t.contains(to))) {   // left a trigger that hadn't opened yet
+      if (HC.pend === t) { clearTimeout(HC.openT); HC.pend = null; }
+      if (t.dataset.hcT != null) { t.setAttribute("title", t.dataset.hcT); delete t.dataset.hcT; }
+    }
+    // the open card: judged by where the pointer went, so a trigger re-rendered under the pointer still closes
+    if (!HC.trig || HC.sheet || (to && (HC.trig.contains(to) || (HC.el && HC.el.contains(to))))) return;
+    const nt = hcTrig(to); if (nt && nt !== HC.trig && nt.isConnected) return;   // straight onto the next trigger: pointerover swaps it
+    if (HC.el && !HC.el.classList.contains("rich")) hcClose(); else hcLater();
+  }, true);
+  // keyboard: focus shows it (only for keyboard focus, so a click doesn't leave a card behind)
+  document.addEventListener("focusin", e => {
+    const t = e.target; if (!t || !t.matches || !t.matches(":focus-visible") || t.matches("input, textarea, select, [contenteditable]")) return;
+    const h = t.closest("[data-hc]") || (t.hasAttribute("title") ? t : null); if (h) hcOpen(h);
+  });
+  document.addEventListener("focusout", e => { if (HC.trig && HC.trig.contains(e.target) && !(e.relatedTarget && HC.trig.contains(e.relatedTarget)) && !(e.relatedTarget && HC.el && HC.el.contains(e.relatedTarget))) hcLater(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && HC.trig) hcClose(); }, true);   // closes the card; whatever else Escape closes still hears it
+  // touch: a tap on a trigger that has no action of its own opens the card: a rich card as a bottom sheet, a plain one
+  // beside the element (a tap on a button, link or player name keeps doing what it does)
+  const HC_ACT = "a, button, input, select, textarea, label, summary, [role=button], [data-player], [data-jump]";
+  document.addEventListener("click", e => {
+    if (HC.trig && HC.el && !HC.el.contains(e.target) && !(HC.trig.contains(e.target))) hcClose();
+    if (HC_FINE.matches || !e.target.closest) return;
+    const t = hcTrig(e.target);
+    if (!t || t.hasAttribute("data-tip") || e.target.closest(HC_ACT)) return;
+    if (HC.trig === t) { hcClose(); return; }
+    hcOpen(t, { sheet: t.hasAttribute("data-hc") });
+  });
+  addEventListener("scroll", e => { if (HC.trig && !HC.sheet && !(HC.el && HC.el.contains(e.target))) hcClose(); }, { capture: true, passive: true });
+  addEventListener("resize", () => { if (HC.trig && !HC.sheet) hcClose(); });
+  addEventListener("pointerdown", e => { if (HC.trig && !HC.sheet && !(HC.el && HC.el.contains(e.target))) hcClose(); }, true);
+
+  /* --- Card pieces: one vocabulary for every card --- */
+  const hcHead = (p, sub = "") => `<div class="hc-h">${p && p.sleeperId ? face(p.sleeperId, p.name, "xs", false) : ""}<span class="hc-id"><span class="hc-n">${esc(p ? p.name : "")}</span>${sub ? `<span class="hc-sub">${sub}</span>` : ""}</span>${p ? `<span class="pos ${esc(p.pos)}">${esc(p.pos)}</span>` : ""}</div>`;
+  const hcRow = (k, v, note = "") => `<div class="hc-r"><span class="hc-k">${k}</span><span class="hc-v">${v}${note ? ` <span class="hc-note">${note}</span>` : ""}</span></div>`;
+  const hcSec = (title, body) => `<div class="hc-sec">${title ? `<div class="hc-st">${title}</div>` : ""}${body}</div>`;
+  const hcFoot = s => (s ? `<p class="hc-f">${s}</p>` : "");
+  const hcPct = x => `<span class="hc-d ${x > 0.05 ? "up" : x < -0.05 ? "down" : ""}">${signPct(x)}</span>`;
+  const hcDay = ts => (ts ? new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
+  const hcPlayer = id => players.find(x => String(x.id) === String(id)) || null;
+  const hcPlayerBySid = sid => (sid ? bySleeper().get(String(sid)) || null : null);
+
+  /* AM value / rank card (priority 1 and 2): what the board shows, where it came from, and how the outside sources see
+     him. Every number is the page's own: p.value (base AM Board), LG.adj (league-adjusted, the board's League-adjusted
+     view and every league screen), Ranking History (published entries) and the Market edge engine (mkOf / mkAll), so the
+     card always matches the row it explains. */
+  function hcHist(sid) {
+    let h; try { h = rankHistory; } catch (e) { h = undefined; }
+    if (h === undefined) { loadHistory().then(hcRefresh); return null; }
+    return h && h.players ? historyOf(sid, h) : [];
+  }
+  function hcMarket(p) {
+    if (!EDIT_POS.includes(p.pos) || !p.sleeperId) return "";
+    if (!MKT.p || (!MKT.d && !FLOCK_SITE.d && !FLOCK)) { loadMarket().then(mkRefresh); return hcSec("Market comparison", `<p class="hc-muted">Loading market values…</p>`); }
+    const all = mkAll(), r = all.map.get(p.sleeperId);
+    if (!all.srcs.length) return hcSec("Market comparison", `<p class="hc-muted">No market source is loaded for this format.</p>`);
+    if (!r) return hcSec("Market comparison", `<p class="hc-muted">Neither FantasyCalc nor Flock ranks ${esc(p.name)}.</p>`);
+    const am = r.am, line = (name, rank, v, d, note, cls = "") => `<tr class="${cls}"><th scope="row">${name}</th><td>${rank}</td><td>${v}</td><td>${d}</td></tr>${note ? `<tr class="hc-tn"><td colspan="4">${note}</td></tr>` : ""}`;
+    let rows = line("AM", `${esc(p.pos)}${r.ap}`, fmt(am), "", "", "am");
+    all.srcs.forEach(s => {
+      const x = r.per[s.id];
+      const when = s.id === "fl" && s.site ? `list from ${hcDay(Date.parse(s.at))}` : `updated ${ago(Date.parse(s.at))}`;
+      const raw = s.id === "fc" && s.rows.get(p.sleeperId) ? `raw ${fmt(Number(s.rows.get(p.sleeperId).raw))} · ` : "";
+      const note = `${raw}${when}${s.stale ? ` · <b class="hc-stale">stale</b>` : ""}${s.notes.length ? ` · ${esc(s.notes.join(", "))}` : ""}`;
+      rows += x ? line(esc(s.name), `${esc(p.pos)}${x.pr}`, fmt(x.v), hcPct(pctOf(am, x.v)), note) : line(esc(s.name), "–", "–", "", `doesn't rank him · ${when}`);
+    });
+    if (r.srcN > 1) rows += line("Consensus", `${esc(p.pos)}${r.cRank}`, fmt(r.cv), hcPct(pctOf(am, r.cv)), "", "cons");
+    const verdict = mkSentence(r);
+    return hcSec("Market comparison", `<p class="hc-fmt">${esc(formatLabel(all.F.vl))}</p><table class="hc-t"><thead><tr><th scope="col">Source</th><th scope="col">Rank</th><th scope="col">Value</th><th scope="col">AM vs</th></tr></thead><tbody>${rows}</tbody></table>
+       <p class="hc-say">${esc(verdict)}</p>`) +
+      hcFoot(`Values on AM's scale in this format: FantasyCalc's trade values fitted to it, Flock's rank priced on AM's curve. A secondary reference: never changes AM.`);
+  }
+  function hcAm(p, opt = {}) {
+    if (!p || p.pos === "PICK") return null;
+    const base = p.hasValue === false ? null : p.value, adj = LG.fmtOn && LG.adj.has(p.id) ? LG.adj.get(p.id) : null;
+    const sub = `${p.team ? esc(p.team) + " · " : ""}${esc(tierLabel(p.pos, p.tier))}`;
+    let body = hcRow("AM rank", `#${p.rank ?? "–"} overall · ${esc(p.posRank || "–")}`) ;
+    if (adj != null) body += hcRow("League-adjusted", `#${LG.adjRank.get(p.id) ?? "–"} · ${esc(p.pos + (LG.adjPos.get(p.id) ?? "–"))}`);
+    body += hcRow("AM value", base == null ? "Value pending" : `<b>${fmt(base)}</b>`, adj != null ? "AM Board" : "");
+    if (adj != null) body += hcRow("In this format", `<b>${fmt(adj)}</b>`, `${base ? hcPct(pctOf(adj, base)) + " · " : ""}${esc(tcValuesName() || formatLabel(valueLeague()))}`);
+    const hist = p.sleeperId ? hcHist(p.sleeperId) : [];
+    if (hist && hist.length && base != null) {
+      const last = hist[hist.length - 1];
+      // his previous value: the latest published value that differs from today's, and the day it changed
+      let k = -1; for (let i = hist.length - 1; i >= 0; i--) if (hist[i].value != null && hist[i].value !== base) { k = i; break; }
+      if (k >= 0) body += hcRow("Previous", fmt(hist[k].value), `${hcPct(pctOf(base, hist[k].value))} · ${k === hist.length - 1 ? "unsaved change" : "until " + esc(sinceText(hist[k + 1].date))}`);
+      const mv = boardMoves().get(p.id);
+      if (mv && (mv.d || mv.dp)) body += hcRow("Movement", `${mv.d ? `<span class="hc-d ${mv.d > 0 ? "up" : "down"}">${mv.d > 0 ? "▲" : "▼"}${Math.abs(mv.d)}</span> overall` : ""}${mv.d && mv.dp ? " · " : ""}${mv.dp ? `<span class="hc-d ${mv.dp > 0 ? "up" : "down"}">${mv.dp > 0 ? "▲" : "▼"}${Math.abs(mv.dp)}</span> ${esc(p.pos)}` : ""}`, `since ${esc(sinceText(mv.since))}`);
+      body += hcRow("Last change", esc(sinceText(last.date)), last.kind === "A" ? "· model repricing" : last.kind === "V" ? "· value edit" : last.kind === "RV" ? "· rank and value" : last.kind ? "· rank or tier" : "");
+    } else if (hist === null) body += hcRow("History", `<span class="hc-muted">Loading…</span>`);
+    if (REVALUED.has(p.id)) body += hcRow("Revalued", "this edit", "· his value follows his new spot; players who only shifted keep theirs");
+    return hcHead(p, sub) + hcSec("", body) + hcMarket(p) + (opt.foot ? hcFoot(opt.foot) : "");
+  }
+  HC_KINDS.am = id => hcAm(hcPlayer(id));
+  HC_KINDS.amsid = sid => hcAm(hcPlayerBySid(sid));
 
   // Start-up: restore a saved connection
   sl = readSl();
