@@ -13081,7 +13081,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const form = new Map(list.map(p => [p.id, recentFormData(p.sleeperId, p.pos, p.team)]));
     const proj = new Map(list.map(p => [p.id, weekProj(p)])), season = seasonRanks();
     const D = defenseVsPos() || {}, wk = currentWeek();
-    const grade = p => { const g = nflGameState(p.team, wk); if (g.kind !== "upcoming") return 3; const x = D[p.pos] && D[p.pos][g.oppTeam]; return x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3; };
+    // each player's matchup grade once, before sorting (it was recomputed inside the comparator, O(n log n) times)
+    const GR = new Map(), grade = p => { if (GR.has(p.id)) return GR.get(p.id);
+      const g = nflGameState(p.team, wk), x = g.kind === "upcoming" && D[p.pos] && D[p.pos][g.oppTeam], v = x ? { good: 0, neutral: 1, tough: 2 }[x.grade] ?? 3 : 3;
+      GR.set(p.id, v); return v; };
     const me = LG.teams.find(t => t.mine), K = me ? leagueKit() : null;
     const fit = new Map(K ? list.map(p => [p.id, faFit(K, me, p)]) : []);
     // AM rank order (the RK shown). My team fit: a gentle nudge on that rank (starters ×0.85, bench depth ×1.1),
@@ -13587,8 +13590,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const softTough = (r, n) => (r <= n / 2 ? `${ordinal(r)}-softest` : `${ordinal(n - r + 1)}-toughest`);
   const ROOF_TEXT = { dome: "Dome", closed: "Roof closed", open: "Roof open", outdoors: "Outdoors" };
+  // one shared formatter, cached per date: toLocaleDateString with options built a new Intl.DateTimeFormat on every call,
+  // and the Waiver Wire's matchup sort called this inside sort() (Oct 12 benchmark: ~1,000 of 1,413 ms)
+  const KO_FMT = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }), KO_DAY = new Map();
   const kickoffText = (date, time) => {
-    const day = new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    let day = KO_DAY.get(date);
+    if (day == null) { day = KO_FMT.format(new Date(date + "T12:00:00")); KO_DAY.set(date, day); }
     if (!time) return day;
     const [h, m] = time.split(":").map(Number);
     return `${day} · ${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"} ET`;
