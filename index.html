@@ -1417,12 +1417,9 @@ body.editing #panel-rankings td.val { min-width: 330px; }
   color: var(--muted); font: 700 0.56rem/1 Georgia, serif; font-style: italic; letter-spacing: 0; text-transform: none; cursor: help;
 }
 .info:hover, .info:focus-visible { color: var(--cream); border-color: var(--gold); outline: none; }
-.info:hover::after, .info:focus-visible::after {
-  content: attr(data-info); position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
-  width: max-content; max-width: min(260px, 70vw); padding: 8px 10px; border-radius: 6px; white-space: normal; text-align: left;
-  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); box-shadow: 0 14px 30px -14px var(--shadow-color);
-  font: 500 0.76rem/1.4 var(--font-body); font-style: normal; letter-spacing: 0;
-}
+/* the "i" stays 15px but takes a 43px target (alan: 40–44px; WCAG 2.5.8 asks 24px); its text opens in the shared hover card (data-info) */
+.info::before { content: ""; position: absolute; inset: var(--info-hit, -14px); border-radius: 50%; }
+.info ~ :is(a, button) { position: relative; z-index: 1; }   /* a link or button right beside the "i" keeps every pixel of its own target */
 .side-needs { margin: 0; font-size: 0.74rem; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .side-needs b { color: var(--ink-2); font-weight: 650; }
 .roster-toggle {
@@ -4486,6 +4483,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .hc.sheet { left: 8px !important; right: 8px; top: auto !important; bottom: max(8px, env(safe-area-inset-bottom)); width: auto; max-width: 480px; margin: 0 auto;
   max-height: 70vh; padding: 12px 14px; border-radius: var(--r-lg, 12px); box-shadow: 0 -8px 30px -12px var(--shadow-color); font-size: 0.82rem; }
 .hc.sheet .hc-h { padding-right: 36px; }
+.hc .hc-more { display: block; width: 100%; min-height: 36px; margin-top: 8px; border: 0; border-radius: var(--r-sm, 6px); background: var(--fill-1); color: var(--text-secondary); font: 600 0.78rem var(--font-body); cursor: pointer; }
+.hc .hc-more:hover, .hc .hc-more:focus-visible { background: var(--fill-2); color: var(--ink); }
 
 /* ---- Site audit, Oct 12 (Impeccable audit + critique): phone fixes ----
    Rankings board on phones: Value is never clipped. The owner line truncates instead of setting the player
@@ -5641,7 +5640,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T12:30Z";
+  const BUILD_ID = "2026-10-12T13:00Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -16594,14 +16593,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const HC = { el: null, trig: null, kind: "", openT: 0, closeT: 0, warmUntil: 0, sheet: false, prev: null };
   const HC_KINDS = {};
   const HC_FINE = matchMedia("(hover: hover) and (pointer: fine)");
-  const HC_SEL = "[data-hc],[data-tip],[title]";
-  function hcNode() {
+    function hcNode() {
     if (!HC.el) {
       HC.el = document.createElement("div");
       HC.el.id = "hc"; HC.el.className = "hc"; HC.el.hidden = true; HC.el.setAttribute("role", "tooltip");
       HC.el.addEventListener("pointerenter", () => clearTimeout(HC.closeT));
       HC.el.addEventListener("pointerleave", e => { if (!HC.sheet && !(e.relatedTarget && HC.trig && HC.trig.contains(e.relatedTarget))) hcLater(); });
-      HC.el.addEventListener("click", e => { if (e.target.closest("[data-hc-close]")) hcClose(); });
+      HC.el.addEventListener("click", e => {
+        if (e.target.closest("[data-hc-close]")) hcClose();
+        else if (e.target.closest("[data-hc-more]") && HC.trig) { e.stopPropagation(); hcOpen(HC.trig, { sheet: true, full: true }); }   // the rebuild detaches the button: the page's outside-click close mustn't see it
+      });
     }
     return HC.el;
   }
@@ -16613,12 +16614,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       let html = null; try { html = f ? f(arg, t) : null; } catch (e) { diag("error", "hover card " + kind + ": " + (e && e.message)); }
       if (html) return { html, rich: true, side: t.getAttribute("data-hc-side") || "" };
     }
-    const text = t.getAttribute("data-tip") || t.getAttribute("title") || t.dataset.hcT || "";
+    const text = t.getAttribute("data-tip") || t.getAttribute("data-info") || t.getAttribute("title") || t.dataset.hcT || "";
     return text.trim() ? { html: esc(text), rich: false, side: "" } : null;
   }
   function hcOpen(t, opts = {}) {
     if (DRAG_STATE.on) return;
-    const c = hcContent(t); if (!c) return;
+    HC.brief = !!opts.sheet && !opts.full;   // a bottom sheet opens on a short first view; "More details" opens the rest
+    const c = hcContent(t); HC.brief = false; if (!c) return;
     clearTimeout(HC.openT); clearTimeout(HC.closeT);
     if (HC.trig && HC.trig !== t) hcRestore();
     const el = hcNode(), host = t.closest("dialog[open]");
@@ -16671,7 +16673,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const t = HC.trig; if (!t.hasAttribute("data-hc")) return;
     const sheet = HC.sheet; hcOpen(t, { sheet });
   }
-  const hcTrig = n => (n && n.closest ? n.closest("[data-hc]") || n.closest("[data-tip],[title]") : null);   // a rich card wins over a title nested in it
+  const hcTrig = n => (n && n.closest ? n.closest("[data-hc]") || n.closest("[data-tip],[data-info],[title]") : null);   // a rich card wins over a title nested in it
   document.addEventListener("pointerover", e => {
     if (e.pointerType === "touch" || !HC_FINE.matches || DRAG_STATE.on) return;
     if (HC.el && HC.el.contains(e.target)) return;
@@ -16680,10 +16682,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (t === HC.trig) { clearTimeout(HC.closeT); return; }
     if (t === HC.pend) return;   // moving between the trigger's own children
     clearTimeout(HC.openT); HC.pend = t;
-    const rich = t.hasAttribute("data-hc") || t.hasAttribute("data-tip");
+    const rich = t.hasAttribute("data-hc") || t.hasAttribute("data-tip") || t.hasAttribute("data-info");
     if (t.hasAttribute("title") && !rich) { t.dataset.hcT = t.getAttribute("title"); t.removeAttribute("title"); }   // keep the native one from appearing first
     if ((HC.trig && !HC.el.hidden) || Date.now() < HC.warmUntil) { hcOpen(t); return; }   // already reading: swap at once
-    HC.openT = setTimeout(() => { HC.pend = null; if (t.isConnected && t.matches(":hover")) hcOpen(t); else if (t.dataset.hcT != null && t !== HC.trig) { t.setAttribute("title", t.dataset.hcT); delete t.dataset.hcT; } }, rich ? 120 : 320);
+    HC.openT = setTimeout(() => { HC.pend = null; if (t.isConnected && t.matches(":hover")) hcOpen(t); else if (t.dataset.hcT != null && t !== HC.trig) { t.setAttribute("title", t.dataset.hcT); delete t.dataset.hcT; } }, rich ? 300 : 320);
   }, true);
   document.addEventListener("pointerout", e => {
     if (e.pointerType === "touch") return;
@@ -16700,7 +16702,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // keyboard: focus shows it (only for keyboard focus, so a click doesn't leave a card behind)
   document.addEventListener("focusin", e => {
     const t = e.target; if (!t || !t.matches || !t.matches(":focus-visible") || t.matches("input, textarea, select, [contenteditable]")) return;
-    const h = t.closest("[data-hc]") || (t.hasAttribute("title") ? t : null); if (h) hcOpen(h);
+    const h = t.closest("[data-hc]") || (t.hasAttribute("title") || t.hasAttribute("data-info") ? t : null); if (h) hcOpen(h);
   });
   document.addEventListener("focusout", e => { if (HC.trig && HC.trig.contains(e.target) && !(e.relatedTarget && HC.trig.contains(e.relatedTarget)) && !(e.relatedTarget && HC.el && HC.el.contains(e.relatedTarget))) hcLater(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && HC.trig) hcClose(); }, true);   // closes the card; whatever else Escape closes still hears it
@@ -16711,7 +16713,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (HC.trig && HC.el && !HC.el.contains(e.target) && !(HC.trig.contains(e.target))) hcClose();
     if (HC_FINE.matches || !e.target.closest) return;
     const t = hcTrig(e.target);
-    if (!t || t.hasAttribute("data-tip") || e.target.closest(HC_ACT)) return;
+    if (!t || t.hasAttribute("data-tip") || (e.target.closest(HC_ACT) && !t.hasAttribute("data-info"))) return;
     if (HC.trig === t) { hcClose(); return; }
     hcOpen(t, { sheet: t.hasAttribute("data-hc") });
   });
@@ -16765,6 +16767,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        <p class="hc-say">${esc(verdict)}</p>`) +
       hcFoot(`Values on AM's scale in this format: FantasyCalc's trade values fitted to it, Flock's rank priced on AM's curve. A secondary reference: never changes AM.`);
   }
+  // the brief view's one market line: consensus (or the only source) vs AM, from the same engine as the full table
+  function hcMarketLine(p) {
+    if (!EDIT_POS.includes(p.pos) || !p.sleeperId || !MKT.p) return "";
+    const all = mkAll(), r = all.srcs.length ? all.map.get(p.sleeperId) : null; if (!r) return "";
+    const one = r.srcN > 1 ? null : all.srcs.find(s => r.per[s.id]);
+    const name = one ? one.name : "Market consensus", x = one ? r.per[one.id] : { pr: r.cRank, v: r.cv };
+    return hcRow(esc(name), `${esc(p.pos)}${x.pr} · ${fmt(x.v)}`, `AM ${hcPct(pctOf(r.am, x.v))}`);
+  }
   function hcAm(p, opt = {}) {
     if (!p || p.pos === "PICK") return null;
     const base = p.hasValue === false ? null : p.value, adj = LG.fmtOn && LG.adj.has(p.id) ? LG.adj.get(p.id) : null;
@@ -16773,6 +16783,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (adj != null) body += hcRow("League-adjusted", `#${LG.adjRank.get(p.id) ?? "–"} · ${esc(p.pos + (LG.adjPos.get(p.id) ?? "–"))}`);
     body += hcRow("AM value", base == null ? "Value pending" : `<b>${fmt(base)}</b>`, adj != null ? "AM Board" : "");
     if (adj != null) body += hcRow("In this format", `<b>${fmt(adj)}</b>`, `${base ? hcPct(pctOf(adj, base)) + " · " : ""}${esc(tcValuesName() || formatLabel(valueLeague()))}`);
+    const brief = body;
     const hist = p.sleeperId ? hcHist(p.sleeperId) : [];
     if (hist && hist.length && base != null) {
       const last = hist[hist.length - 1];
@@ -16784,6 +16795,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       body += hcRow("Last change", esc(sinceText(last.date)), last.kind === "A" ? "· model repricing" : last.kind === "V" ? "· value edit" : last.kind === "RV" ? "· rank and value" : last.kind ? "· rank or tier" : "");
     } else if (hist === null) body += hcRow("History", `<span class="hc-muted">Loading…</span>`);
     if (REVALUED.has(p.id)) body += hcRow("Revalued", "this edit", "· his value follows his new spot; players who only shifted keep theirs");
+    if (HC.brief) return hcHead(p, sub) + hcSec("", brief + hcMarketLine(p)) + `<button class="hc-more" type="button" data-hc-more>More details</button>`;
     return hcHead(p, sub) + hcSec("", body) + hcMarket(p) + (opt.foot ? hcFoot(opt.foot) : "");
   }
   HC_KINDS.am = id => hcAm(hcPlayer(id));
