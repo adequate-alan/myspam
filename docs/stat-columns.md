@@ -31,7 +31,7 @@ None of it touches AM ranks, tiers, values, league adjustments, ROS projections 
 | RZ | Carries + receptions inside the opponent's 20 | nflverse play-by-play | Two-point tries excluded |
 | PASS ATT, CMP, CMP%, PASS YDS, PASS TD, INT | Passing line; CMP% = completions ÷ attempts | nflverse | |
 | SNAPS | Offensive snaps | nflverse snap counts (Pro Football Reference) | |
-| SNAP% | His offensive snaps ÷ team offensive snaps | nflverse snap counts | Team snaps = the most snaps any player on that team played that game (the center, nearly always); matches PFR's `offense_pct` on 99% of team-games |
+| SNAP% | His offensive snaps ÷ team offensive snaps | nflverse snap counts | Team snaps solved from PFR's own shares (see below) |
 | TOUCH | Carries + receptions | nflverse | Ball actually in his hands |
 | OPP | Carries + targets | nflverse | Caught or not |
 | xFP | Expected fantasy points | ffverse **ffopportunity** (MIT), built on nflverse play-by-play | See below |
@@ -41,6 +41,18 @@ Coverage, 2026 through Week 5: 1,659 games played by QB/RB/WR/TE with a Sleeper 
 snap counts 1,654 (5 missing: players without a PFR ID match; they read N/A), expected points 1,515 of the 1,515
 games with a target, carry or pass attempt.
 
+### Team offensive snaps (verified after Alan's review, Oct 12)
+
+PFR's snap counts have one row per player (offensive snaps and `offense_pct`, his share rounded to two decimals) and
+no team row. The first version took the most snaps any player played as the team total. Checked against every
+regular-season team-game in 2024–26 (1,244): that equals the total implied by the shares in 1,239; in the other five
+nobody played every snap and it was 1–2 low (BAL 2025 Wk 4 54 → 55, MIA 2025 Wk 6 57 → 59, SF 2025 Wk 11 53 → 55,
+DEN 2026 Wk 4 65 → 66, DET 2024 Wk 2 85 → 86), which inflated those teams' SNAP% by 2–3%. Now the team total
+(`team_snaps` in `pipeline/build_stats.py`) is the smallest whole number, at least the most any player took, that
+every player's published share agrees with; 1,241 of 1,244 have exactly one such number, and in three 2024 games where
+a few PFR rows contradict each other the number most shares agree with is used. It's PFR's own team total, not an
+estimate from another measure.
+
 ### xFP (the "Weighted Opportunity" request)
 
 Alan asked for Weighted Opportunity only if the data supports a defensible expected-points model. It does:
@@ -49,7 +61,8 @@ touchdown and interception from a model trained on nflverse play-by-play (down, 
 yards, …). We keep that expected stat line (`data/opportunity/<season>.json`, `pipeline/build_opportunity.py`) and
 score it with the league's own scoring, so PPR level, TE premium and first-down scoring apply exactly as they do to
 real points. Targets, carries and attempts are his real counts. Left out: fumbles and sacks (no expected value in
-the source) and yardage bonuses (not applied to expected yards). It is not a hand-weighted count.
+the source) and yardage bonuses (not applied to expected yards). It is not a hand-weighted count, and **not a projection**: it describes opportunities he already had. FPTS above xFP
+= he scored more than that opportunity usually brings.
 
 The data lags the stats by a day or so after games; until it catches up the new week reads N/A and the count line
 says "xFP through Week N".

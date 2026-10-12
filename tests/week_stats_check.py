@@ -230,10 +230,10 @@ with sync_playwright() as p:
     pg = page("FULL")
     board0, head0 = pg.evaluate(BOARD), pg.inner_text("#rk-head-row")
     opts = pg.evaluate("() => [...document.getElementById('rk-week').options].map(o => o.textContent)")
-    ok(opts[0] == "Full season" and opts[1] == "Season stats" and len(opts) == LAST_WEEK + 2 and opts[2] == "Week 1" and opts[FIX_WEEK + 1] == f"Week {FIX_WEEK} · now" and opts[FIX_WEEK + 2] == f"Week {FIX_WEEK + 1} · proj",
+    ok(opts[0] == "Full season · AM board" and opts[1] == "Season stats" and len(opts) == LAST_WEEK + 2 and opts[2] == "Week 1" and opts[FIX_WEEK + 1] == f"Week {FIX_WEEK} · now" and opts[FIX_WEEK + 2] == f"Week {FIX_WEEK + 1} · proj",
        f"Week menu: Full season, Season stats + Weeks 1–{LAST_WEEK}, the current week marked now and later weeks proj ({opts[:3]} … {opts[FIX_WEEK + 1:FIX_WEEK + 3]})")
     btn = pg.locator("#rk-week + .dd-btn")
-    ok(btn.inner_text().strip() == "Full season", f"The Week menu starts on Full season ({btn.inner_text().strip()!r})")
+    ok(btn.inner_text().strip() == "Full season · AM board", f"The Week menu starts on Full season · AM board ({btn.inner_text().strip()!r})")
     btn.click(); pg.wait_for_timeout(200)
     pg.locator(".dd-menu:not([hidden]) .dd-opt", has_text="Week 2").first.click(); pg.wait_for_timeout(600)
     g2 = pg.evaluate(READ)
@@ -273,7 +273,7 @@ with sync_playwright() as p:
     # 3. position filters keep working, with position stat columns
     set_sel(pg, "rk-wsort", "pts")
     for f, cols in [("QB", ["pass_att", "pass_yd", "pass_td", "pass_int", "rush_att", "rush_yd"]), ("RB", ["rush_att", "rush_yd", "rec_tgt", "tgt_pct", "touch", "opp", "snap"]),
-                    ("WR", ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"]), ("TE", ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"])]:
+                    ("WR", ["rec_tgt", "tgt_pct", "rec", "rec_yd", "ay_pct", "snap"]), ("TE", ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"])]:
         pos(pg, f); g = pg.evaluate(READ)
         check_week(f"Week 2 · {f}", g, 2, SCORING["FULL"], f)
         ok(g["heads"][5:] == cols, f"{f} columns: {g['heads'][5:]}")
@@ -349,7 +349,7 @@ with sync_playwright() as p:
         return act
     pg = page("FULL")
     opts = pg.evaluate("() => [...document.getElementById('rk-week').options].map(o => o.textContent)")
-    ok(opts[:3] == ["Full season", "Season stats", "Week 1"], f"Week menu: Full season (the AM board), then Season stats, then the weeks ({opts[:3]})")
+    ok(opts[:3] == ["Full season · AM board", "Season stats", "Week 1"], f"Week menu: Full season (the AM board), then Season stats, then the weeks ({opts[:3]})")
     set_sel(pg, "rk-week", "0"); gs = pg.evaluate(READ)
     ok(gs["heads"][4] == "pts" and pg.locator("#rk-cols-btn").is_visible() and "Season stats · through Week" in pg.inner_text("#rank-count"),
        f"Season stats opens on fantasy points with the Columns button ({pg.inner_text('#rank-count')[:70]})")
@@ -389,9 +389,10 @@ with sync_playwright() as p:
     na = pg.evaluate("() => [...document.querySelectorAll('#rk-cols-pop .rk-col-opt.na')].map(x => [x.textContent.trim(), x.querySelector('input').disabled])")
     ok(len(na) == 3 and all(d for _, d in na), f"Routes run, route participation and YPRR are listed as not available, disabled ({na})")
     on = pg.evaluate("() => [...document.querySelectorAll('#rk-cols-pop [data-wk-col]:checked')].map(x => x.dataset.wkCol)")
-    ok(on == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"], f"WR defaults checked: {on}")
+    ok(on == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "ay_pct", "snap"], f"WR defaults checked: {on}")
     pg.click("#rk-cols-pop [data-wk-col=snap]"); pg.wait_for_timeout(250)
-    for k in EXTRA: pg.click(f"#rk-cols-pop [data-wk-col={k}]"); pg.wait_for_timeout(150)
+    for k in EXTRA:   # AY% is already a WR default (Alan, Oct 12)
+        if k != "ay_pct": pg.click(f"#rk-cols-pop [data-wk-col={k}]"); pg.wait_for_timeout(150)
     pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
     ok(not pg.locator("#rk-cols-pop").is_visible() and pg.evaluate("() => document.activeElement.id") == "rk-cols-btn", "Escape closes the menu and returns focus to Columns")
     gw = pg.evaluate(READ)
@@ -415,7 +416,7 @@ with sync_playwright() as p:
     pg.click("#rk-cols-btn"); pg.wait_for_timeout(200); pg.click("#rk-cols-reset"); pg.wait_for_timeout(300)
     pg.mouse.click(5, 5); pg.wait_for_timeout(200)
     g = pg.evaluate(READ)
-    ok(g["heads"][5:] == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"] and not pg.locator("#rk-cols-pop").is_visible(), f"Reset to WR defaults; a click outside closes the menu ({g['heads'][5:]})")
+    ok(g["heads"][5:] == ["rec_tgt", "tgt_pct", "rec", "rec_yd", "ay_pct", "snap"] and not pg.locator("#rk-cols-pop").is_visible(), f"Reset to WR defaults; a click outside closes the menu ({g['heads'][5:]})")
     if shots:
         os.makedirs(shots, exist_ok=True)
         for theme in ("dark", "light"):

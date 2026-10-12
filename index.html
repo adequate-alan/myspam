@@ -4155,6 +4155,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   #panel-rankings .controls .search { flex: 1 1 auto; width: auto; min-width: 0; }
   #panel-rankings .controls .owner-filter { flex: none; min-width: 0; }
   #panel-rankings .controls .owner-filter .dd-btn { max-width: 132px; }
+  #panel-rankings .controls #rk-week-lab .dd-btn { max-width: 210px; }   /* "Full season · AM board" reads in full */
   #panel-rankings .controls .fmt-note { white-space: normal; }
   #pos-chips { border-bottom: 0; }
   .mast-right { width: auto; margin-left: auto; }
@@ -4725,7 +4726,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <div class="rk-sort" id="rk-sort-wrap" role="group" aria-label="Sort the board">
         <label class="owner-filter rk-sort-lab" id="rk-week-lab"><span>Week</span>
           <select class="select" id="rk-week" aria-label="Week">
-            <option value="">Full season</option>
+            <option value="">Full season · AM board</option>
           </select>
         </label>
         <label class="owner-filter rk-sort-lab" id="rk-wsort-lab" hidden><span>Sort</span>
@@ -5686,7 +5687,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T15:05Z";
+  const BUILD_ID = "2026-10-12T15:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6207,8 +6208,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      route run) have no free source yet: listed in the Columns menu as not available, never approximated. */
   const WK_STATS = {
     pts: { label: "Fantasy points", short: "FPTS", grp: "Fantasy" },
-    xfp: { label: "Expected fantasy points", short: "xFP", grp: "Fantasy", dec: 1, x: true,
-      tip: "Expected fantasy points: what his targets, carries and pass attempts are usually worth, from ffopportunity's model (down, distance, field position, air yards), scored with this league's scoring. Fumbles, sacks and yardage bonuses left out" },
+    xfp: { label: "Expected fantasy points (opportunity)", short: "xFP", grp: "Fantasy", dec: 1, x: true,
+      tip: "Expected fantasy points from opportunity, not a projection: what the targets, carries and pass attempts he already had are usually worth, from ffopportunity's model (down, distance, field position, air yards), scored with this league's scoring. Compare with FPTS: above xFP = scored more than his opportunity usually brings. Fumbles, sacks and yardage bonuses left out" },
     rec_tgt: { label: "Targets", short: "TGT", grp: "Receiving", tip: "Passes thrown to him" },
     tgt_pct: { label: "Target share", short: "TGT%", grp: "Receiving", pct: ["rec_tgt", "tm_tgt"], of: "team targets", tip: "His targets ÷ his team's targets in the games he played" },
     rec: { label: "Receptions", short: "REC", grp: "Receiving" },
@@ -6228,7 +6229,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     pass_td: { label: "Passing TDs", short: "PASS TD", grp: "Passing" },
     pass_int: { label: "Interceptions", short: "INT", grp: "Passing" },
     snaps: { label: "Offensive snaps", short: "SNAPS", grp: "Opportunity", tip: "Offensive plays he was on the field for" },
-    snap: { label: "Snap share", short: "SNAP%", grp: "Opportunity", pct: ["snaps", "tm_snaps"], of: "team offensive snaps", tip: "His offensive snaps ÷ his team's offensive snaps in the games he played" },
+    snap: { label: "Snap share", short: "SNAP%", grp: "Opportunity", pct: ["snaps", "tm_snaps"], of: "team offensive snaps", tip: "His offensive snaps ÷ his team's offensive snaps in the games he played (PFR snap counts; the team total is the one every player's published share agrees with)" },
     touch: { label: "Touches", short: "TOUCH", grp: "Opportunity", tip: "Carries + receptions: the ball in his hands", v: a => a.sum("rush_att", "rec") },
     opp: { label: "Opportunities", short: "OPP", grp: "Opportunity", tip: "Carries + targets: caught or not", v: a => a.sum("rush_att", "rec_tgt") },
     td: { label: "Total TDs", short: "TD", grp: "Totals", tip: "Passing, rushing and receiving touchdowns", v: a => a.sum("pass_td", "rush_td", "rec_td") },
@@ -6237,10 +6238,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const WK_GROUPS = ["Fantasy", "Receiving", "Rushing", "Passing", "Opportunity", "Totals"];
   const WK_NA = [["Routes run", "RR"], ["Route participation", "RR%"], ["Yards per route run", "YPRR"]];
   const WK_NA_WHY = "No free, documented source has routes run: nflverse's participation data names only the targeted receiver's route, and route counts come from paid charting (PFF and similar)";
-  // preferred defaults by position (Alan, Oct 12); WR/TE's RR% and YPRR wait for a routes source
+  // preferred defaults by position (Alan, Oct 12; AY% added for WRs after his review); WR/TE's RR% and YPRR wait for a routes source
   const WK_COLS = { ALL: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "rush_att", "rush_yd", "touch", "snap"],
     QB: ["pass_att", "pass_yd", "pass_td", "pass_int", "rush_att", "rush_yd"], RB: ["rush_att", "rush_yd", "rec_tgt", "tgt_pct", "touch", "opp", "snap"],
-    WR: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"], TE: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"] };
+    WR: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "ay_pct", "snap"], TE: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"] };
   let WK_PREF = {};
   try { WK_PREF = JSON.parse(localStorage.getItem("spm_rk_cols") || "{}") || {}; } catch (e) {}
   const wkColsFor = pos => { const s = WK_PREF[pos], def = WK_COLS[pos] || WK_COLS.ALL;
@@ -6338,7 +6339,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const d = statsCache[STATS_SEASONS[0]], sel = $("rk-week");
     if (!d || !d.schedule) return;
     const last = Math.max(0, ...Object.values(d.schedule).flatMap(rows => rows.map(r => r[0]))), cur = currentWeek();
-    const html = `<option value="">Full season</option><option value="0">Season stats</option>` + Array.from({ length: last }, (_, i) => i + 1)
+    const html = `<option value="">Full season · AM board</option><option value="0">Season stats</option>` + Array.from({ length: last }, (_, i) => i + 1)
       .map(w => `<option value="${w}">Week ${w}${w === cur ? " · now" : cur != null && w > cur ? " · proj" : ""}</option>`).join("");
     if (sel.dataset.weeks !== html) { sel.innerHTML = html; sel.dataset.weeks = html; }
     sel.value = RK.week != null ? String(RK.week) : "";
@@ -6479,7 +6480,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const n = k => rows.filter(r => r.kind === k).length, liveN = rows.filter(r => r.kind === "live").length;
     let notes;
     if (szn) {
-      notes = [`Season stats · through Week ${d.through_week}`, "totals from games played, shares from summed team totals", `fantasy points in ${scoringLabel()}`, `${groups.act.length} with games`];
+      notes = [`Season stats · through Week ${d.through_week}`, "stat totals, not the AM rankings (Full season · AM board)", "totals from games played, shares from summed team totals", `fantasy points in ${scoringLabel()}`, `${groups.act.length} with games`];
       if (groups.none.length) notes.push(`${groups.none.length} without a game`);
     } else {
       const state = !groups.act.length ? "projections" : groups.proj.length || liveN ? "in progress" : "final";
