@@ -1081,9 +1081,22 @@ td.wk-st.on .wk-n { font-weight: 700; color: var(--text-strong, var(--ink)); }
 .wk-status.dnp { color: color-mix(in srgb, var(--st-dnp) 78%, var(--ink)); }
 .wk-status.out { color: color-mix(in srgb, var(--st-out) 62%, var(--ink)); }
 #rank-body tr.wkrow.none .pl-name, #rank-body tr.wkrow.none .face { opacity: .78; }
-@media (max-width: 1180px) { #panel-rankings .wk-lo:not(.on) { display: none; } }
+#panel-rankings table.wk-many tr.player.wkrow > td:has(> .pl-cell) { width: auto; }
+#panel-rankings table.wk-many td.wk-fp { width: 1%; }
+#panel-rankings table.wk-many td.wk-fp { min-width: 72px; }
+#panel-rankings table.wk-many .prodbar { grid-template-columns: auto; }
+#panel-rankings table.wk-many .prodbar .track { display: none; }
+#panel-rankings table.wk-many .prodbar .psub { grid-column: 1; }
+#panel-rankings table.wk-many tr.wkrow td.pos-col .tier-tag { display: none; }
+#panel-rankings table.wk-many th.wk-st, #panel-rankings table.wk-many td.wk-st { padding-inline: 7px; }
+.wk-na { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
+/* how many stat columns fit follows the board's own width (the rail comes and goes at 1280px): every chosen column from
+   940px, six from 760px, four below; a hidden column comes back while it's the sorted one */
+#panel-rankings .rk-main:has(table.wk-st-on) { container: rkmain / inline-size; }
+@container rkmain (max-width: 939px) { #panel-rankings .wk-lo2:not(.on) { display: none; } }
+@container rkmain (max-width: 759px) { #panel-rankings .wk-lo:not(.on) { display: none; } }
 @media (max-width: 760px) {
-  #panel-rankings .wk-st:not(.on) { display: none; }
+  #panel-rankings .wk-st:not(.on):not(.wk-ph) { display: none; }
   #panel-rankings td.wk-fp { min-width: 0; width: auto; }
   #rank-body tr.player.wkrow > td:has(> .pl-cell) { width: auto; }
   #panel-rankings tbody tr.player td.wk-st, #panel-rankings thead th.wk-st, #panel-rankings thead th.wk-fp { padding-inline: 4px 8px; }
@@ -3866,6 +3879,29 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 #panel-finder:has(.tf-controls[data-mode="discover"]) .tf-sort { display: none; }
 .tf-src .vt-btn { white-space: nowrap; }
 .tf-src { flex-wrap: wrap; max-width: 100%; }   /* phones: the four modes wrap to a second row instead of running off the screen */
+/* Rankings Columns menu (Alan, Oct 12): stat columns per position, a popover like the Trade Finder's Package filter */
+.rk-cols { position: relative; display: inline-flex; }
+.rk-cols[hidden] { display: none; }
+.rk-cols-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--border-strong); }
+.rk-cols-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 520px; max-width: calc(100vw - 32px); max-height: min(560px, 72vh); overflow-y: auto; padding: 12px;
+  background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 22px 44px -18px var(--shadow-color), 0 2px 6px -2px var(--shadow-soft); animation: dd-in 0.12s ease-out; }
+.rk-cols-pop[hidden] { display: none; }
+.rk-cols-head { display: flex; flex-direction: column; gap: 2px; margin: 0 4px 10px; }
+.rk-cols-title { font-size: 0.86rem; font-weight: 650; color: var(--text-strong, var(--ink)); }
+.rk-cols-sub { font-size: 0.72rem; color: var(--text-muted); }
+.rk-cols-grid { columns: 2; column-gap: 16px; }
+.rk-col-grp { display: flex; flex-direction: column; gap: 1px; break-inside: avoid; margin-bottom: 10px; }
+.rk-col-opt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 5px 6px; border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 0.8rem; color: var(--text-primary); }
+.rk-col-opt:hover { background: var(--hover-bg); }
+.rk-col-opt.na { cursor: default; color: var(--text-muted); }
+.rk-col-opt.na:hover { background: none; }
+.rk-col-ab { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.rk-cols-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 10px 4px 0; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.rk-cols-note { font-size: 0.7rem; color: var(--text-muted); }
+@media (max-width: 760px) { .rk-cols-pop { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-width: none; max-height: 70vh; }
+  .rk-cols-grid { columns: 1; } }
 /* Trade Finder package filter (Alan, Oct 10): You send / You receive counts in a small popover, replacing the
    1-for-2 / 2-for-1 / 3-for-1s / 2-for-4s tab row; collapsed it reads "Send 1 · Get 2" */
 .tf-pkg { position: relative; }
@@ -4119,6 +4155,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   #panel-rankings .controls .search { flex: 1 1 auto; width: auto; min-width: 0; }
   #panel-rankings .controls .owner-filter { flex: none; min-width: 0; }
   #panel-rankings .controls .owner-filter .dd-btn { max-width: 132px; }
+  #panel-rankings .controls #rk-week-lab .dd-btn { max-width: 210px; }   /* "Full season · AM board" reads in full */
   #panel-rankings .controls .fmt-note { white-space: normal; }
   #pos-chips { border-bottom: 0; }
   .mast-right { width: auto; margin-left: auto; }
@@ -4689,12 +4726,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <div class="rk-sort" id="rk-sort-wrap" role="group" aria-label="Sort the board">
         <label class="owner-filter rk-sort-lab" id="rk-week-lab"><span>Week</span>
           <select class="select" id="rk-week" aria-label="Week">
-            <option value="">Full season</option>
+            <option value="">Full season · AM board</option>
           </select>
         </label>
         <label class="owner-filter rk-sort-lab" id="rk-wsort-lab" hidden><span>Sort</span>
           <select class="select" id="rk-wsort" aria-label="Sort this week by"></select>
         </label>
+        <span class="rk-cols" id="rk-cols-wrap" hidden>
+          <button class="rk-dir rk-cols-btn" id="rk-cols-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="rk-cols-pop" title="Choose which stat columns show">Columns</button>
+          <div class="rk-cols-pop" id="rk-cols-pop" role="dialog" aria-label="Stat columns" hidden></div>
+        </span>
         <label class="owner-filter rk-sort-lab" id="rk-sort-lab"><span>Sort</span>
           <select class="select" id="rk-sort" aria-label="Sort">
             <option value="spam">AM Rank</option>
@@ -5646,7 +5687,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T15:00Z";
+  const BUILD_ID = "2026-10-12T15:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5760,7 +5801,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     wkWeekOptions();
     $("rk-week").value = wk ? String(RK.week) : "";
     $("rk-sort-lab").hidden = wk; $("rk-wsort-lab").hidden = !wk;
-    if (wk) { if (!$("rk-wsort").options.length) $("rk-wsort").innerHTML = Object.entries(WK_STATS).map(([k, s]) => `<option value="${k}">${esc(s.label)}</option>`).join(""); $("rk-wsort").value = RK.wsort; }
+    if (wk) { if (!$("rk-wsort").options.length) $("rk-wsort").innerHTML = WK_GROUPS.map(gr => `<optgroup label="${gr}">${Object.entries(WK_STATS).filter(([, S]) => S.grp === gr).map(([k, S]) => `<option value="${k}">${esc(S.label)}</option>`).join("")}</optgroup>`).join(""); $("rk-wsort").value = RK.wsort; }
+    $("rk-cols-wrap").hidden = !wk;
+    if (!wk && WK_POP.open) setColsPop(false);
     $("rk-sort").value = RK.sort;
     $("rk-prod-opts").hidden = !PROD_MODES[RK.sort] && !wk;
     $("rk-min").hidden = wk;
@@ -5771,7 +5814,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   $("rk-sort").addEventListener("change", e => { RK.sort = e.target.value; syncRkControls(); saveRk(); renderRankings(); });
   $("rk-min").addEventListener("change", e => { RK.min = Number(e.target.value); saveRk(); renderRankings(); });
   $("rk-week").addEventListener("change", e => {
-    const w = e.target.value === "" ? null : Number(e.target.value);
+    const w = e.target.value === "" ? null : Number(e.target.value);   // 0 = Season stats
     if (w != null && RK.week == null) { RK.wsort = "pts"; RK.dir = "desc"; }   // a week opens on its highest scorers
     RK.week = w; syncRkControls(); saveRk(); renderRankings();
   });
@@ -5966,6 +6009,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("rk-sort-wrap").hidden = posFilter === "PICK";
     $("mk-bar").hidden = !mkOn();
     if (wkOn()) return renderWeek();
+    $("rk-head-row").closest("table").classList.remove("wk-many", "wk-st-on");
     if (prodOn()) return renderProd();
     if (mkOn()) return renderMkt();
     if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
@@ -6156,25 +6200,146 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      Sleeper's live points for a rostered player), projected (his game hasn't been played: the shared weekOutlook
      projection, labelled Proj or Live) and no stats (Bye, DNP, Out, points pending). A statistics filter only: ranks,
      tiers and values never change. */
+  /* Stat columns (Alan, Oct 12, second pass): production and opportunity side by side. Every stat is built from one
+     game's components (wkComp: his stat line plus his team's totals that week, data/stats team_week), and a season is
+     the same components summed over the games he played (wkAgg), so a share is always summed numerator ÷ summed team
+     denominator, never an average of weekly percentages, and a team change uses each week's own team. N/A when the
+     data doesn't have it; nothing is estimated from another measure. Routes run (and route participation, yards per
+     route run) have no free source yet: listed in the Columns menu as not available, never approximated. */
   const WK_STATS = {
-    pts: { label: "Fantasy points", short: "FPTS" },
-    pass_yd: { label: "Passing yards", short: "Pass yds" }, pass_td: { label: "Passing TDs", short: "Pass TD" },
-    pass_int: { label: "Interceptions", short: "INT" }, pass_att: { label: "Pass attempts", short: "Att" },
-    rush_att: { label: "Carries", short: "Car" }, rush_yd: { label: "Rushing yards", short: "Rush yds" }, rush_td: { label: "Rushing TDs", short: "Rush TD" },
-    rec_tgt: { label: "Targets", short: "Tgt" }, rec: { label: "Receptions", short: "Rec" }, rec_yd: { label: "Receiving yards", short: "Rec yds" }, rec_td: { label: "Receiving TDs", short: "Rec TD" },
-    td: { label: "Total TDs", short: "TD", tip: "Passing, rushing and receiving touchdowns", f: g => (g.pass_td || 0) + (g.rush_td || 0) + (g.rec_td || 0) },
-    scrim: { label: "Scrimmage yards", short: "Scrim", tip: "Rushing + receiving yards", f: g => (g.rush_yd || 0) + (g.rec_yd || 0) },
-    snap: { label: "Snap share", short: "Snap %", tip: "Share of his team's offensive snaps", pct: true },
+    pts: { label: "Fantasy points", short: "FPTS", grp: "Fantasy" },
+    xfp: { label: "Expected fantasy points (opportunity)", short: "xFP", grp: "Fantasy", dec: 1, x: true,
+      tip: "Expected fantasy points from opportunity, not a projection: what the targets, carries and pass attempts he already had are usually worth, from ffopportunity's model (down, distance, field position, air yards), scored with this league's scoring. Compare with FPTS: above xFP = scored more than his opportunity usually brings. Fumbles, sacks and yardage bonuses left out" },
+    rec_tgt: { label: "Targets", short: "TGT", grp: "Receiving", tip: "Passes thrown to him" },
+    tgt_pct: { label: "Target share", short: "TGT%", grp: "Receiving", pct: ["rec_tgt", "tm_tgt"], of: "team targets", tip: "His targets ÷ his team's targets in the games he played" },
+    rec: { label: "Receptions", short: "REC", grp: "Receiving" },
+    rec_yd: { label: "Receiving yards", short: "REC YDS", grp: "Receiving" },
+    rec_td: { label: "Receiving TDs", short: "REC TD", grp: "Receiving" },
+    air_yd: { label: "Air yards", short: "AY", grp: "Receiving", tip: "Intended distance downfield on his targets" },
+    ay_pct: { label: "Air yards share", short: "AY%", grp: "Receiving", pct: ["air_yd", "tm_air"], of: "team air yards", tip: "His air yards ÷ the air yards on all his team's targeted passes in the games he played" },
+    rush_att: { label: "Carries", short: "ATT", alt: "RUSH ATT", grp: "Rushing", tip: "Rushing attempts (scrambles and kneel-downs included, as in the official stats)" },
+    rush_yd: { label: "Rushing yards", short: "RUSH YDS", grp: "Rushing" },
+    rush_td: { label: "Rushing TDs", short: "RUSH TD", grp: "Rushing" },
+    rush_pct: { label: "Rush attempt share", short: "RUSH%", grp: "Rushing", pct: ["rush_nk", "tm_rush_nk"], of: "team carries", tip: "His carries ÷ his team's carries in the games he played; QB kneel-downs left out of both" },
+    rz: { label: "Red-zone touches", short: "RZ", grp: "Rushing", tip: "Carries and receptions inside the opponent's 20", v: a => a.sum("rz_rush", "rz_rec") },
+    pass_att: { label: "Pass attempts", short: "PASS ATT", grp: "Passing" },
+    pass_cmp: { label: "Completions", short: "CMP", grp: "Passing" },
+    cmp_pct: { label: "Completion %", short: "CMP%", grp: "Passing", pct: ["pass_cmp", "pass_att"], of: "attempts" },
+    pass_yd: { label: "Passing yards", short: "PASS YDS", grp: "Passing" },
+    pass_td: { label: "Passing TDs", short: "PASS TD", grp: "Passing" },
+    pass_int: { label: "Interceptions", short: "INT", grp: "Passing" },
+    snaps: { label: "Offensive snaps", short: "SNAPS", grp: "Opportunity", tip: "Offensive plays he was on the field for" },
+    snap: { label: "Snap share", short: "SNAP%", grp: "Opportunity", pct: ["snaps", "tm_snaps"], of: "team offensive snaps", tip: "His offensive snaps ÷ his team's offensive snaps in the games he played (PFR snap counts; the team total is the one every player's published share agrees with)" },
+    touch: { label: "Touches", short: "TOUCH", grp: "Opportunity", tip: "Carries + receptions: the ball in his hands", v: a => a.sum("rush_att", "rec") },
+    opp: { label: "Opportunities", short: "OPP", grp: "Opportunity", tip: "Carries + targets: caught or not", v: a => a.sum("rush_att", "rec_tgt") },
+    td: { label: "Total TDs", short: "TD", grp: "Totals", tip: "Passing, rushing and receiving touchdowns", v: a => a.sum("pass_td", "rush_td", "rec_td") },
+    scrim: { label: "Scrimmage yards", short: "SCRIM", grp: "Totals", tip: "Rushing + receiving yards", v: a => a.sum("rush_yd", "rec_yd") },
   };
-  const WK_COLS = { ALL: ["pass_yd", "rush_yd", "rec", "rec_yd", "td"], QB: ["pass_att", "pass_yd", "pass_td", "pass_int", "rush_att", "rush_yd", "rush_td"],
-    RB: ["rush_att", "rush_yd", "rush_td", "rec_tgt", "rec", "rec_yd", "rec_td"], WR: ["rec_tgt", "rec", "rec_yd", "rec_td", "rush_yd", "snap"], TE: ["rec_tgt", "rec", "rec_yd", "rec_td", "snap"] };
-  const wkStat = (g, k) => (WK_STATS[k].f ? WK_STATS[k].f(g) : g[k] ?? 0);
+  const WK_GROUPS = ["Fantasy", "Receiving", "Rushing", "Passing", "Opportunity", "Totals"];
+  const WK_NA = [["Routes run", "RR"], ["Route participation", "RR%"], ["Yards per route run", "YPRR"]];
+  const WK_NA_WHY = "No free, documented source has routes run: nflverse's participation data names only the targeted receiver's route, and route counts come from paid charting (PFF and similar)";
+  // preferred defaults by position (Alan, Oct 12; AY% added for WRs after his review); WR/TE's RR% and YPRR wait for a routes source
+  const WK_COLS = { ALL: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "rush_att", "rush_yd", "touch", "snap"],
+    QB: ["pass_att", "pass_yd", "pass_td", "pass_int", "rush_att", "rush_yd"], RB: ["rush_att", "rush_yd", "rec_tgt", "tgt_pct", "touch", "opp", "snap"],
+    WR: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "ay_pct", "snap"], TE: ["rec_tgt", "tgt_pct", "rec", "rec_yd", "snap"] };
+  let WK_PREF = {};
+  try { WK_PREF = JSON.parse(localStorage.getItem("spm_rk_cols") || "{}") || {}; } catch (e) {}
+  const wkColsFor = pos => { const s = WK_PREF[pos], def = WK_COLS[pos] || WK_COLS.ALL;
+    const list = Array.isArray(s) ? s.filter(k => WK_STATS[k] && k !== "pts") : def;
+    return wkOrder(pos).filter(k => list.includes(k)); };
+  // a position's column order: its defaults as Alan listed them, then every other stat in the menu's order
+  const wkOrder = pos => { const def = WK_COLS[pos] || WK_COLS.ALL; return [...def, ...Object.keys(WK_STATS).filter(k => k !== "pts" && !def.includes(k))]; };
+  const saveWkPref = () => { try { localStorage.setItem("spm_rk_cols", JSON.stringify(WK_PREF)); } catch (e) {} };
+  // One game's components: his line, his team's totals that week (null when unknown) and, when loaded, his expected line
+  const WK_XKEYS = { x_rec: "rec", x_rec_yd: "rec_yd", x_rec_td: "rec_td", x_rec_fd: "rec_fd", x_rush_yd: "rush_yd", x_rush_td: "rush_td",
+    x_rush_fd: "rush_fd", x_pass_cmp: "pass_cmp", x_pass_yd: "pass_yd", x_pass_td: "pass_td", x_pass_int: "pass_int", x_pass_fd: "pass_fd" };
+  const xScoring = sc => { const o = { ...sc }; THRESHOLDS.forEach(([k]) => { delete o[k]; }); delete o.fum_lost; delete o.pass_sack; return o; };
+  function wkComp(g, d, sid, pos, xsc, opp) {
+    const tw = d.team_week && d.team_week.teams && d.team_week.teams[g.tm], tc = d.team_week && d.team_week.cols;
+    const t = tw && tw[String(g.w)], T = k => (t && tc ? t[tc.indexOf(k)] ?? null : null);
+    const n = k => (g[k] === undefined ? null : g[k] ?? null);
+    const c = { w: g.w };
+    ["rec_tgt", "rec", "rec_yd", "rec_td", "rush_att", "rush_yd", "rush_td", "pass_att", "pass_cmp", "pass_yd", "pass_td", "pass_int", "rz_rush", "rz_rec", "snaps"].forEach(k => { c[k] = n(k); });
+    c.air_yd = g.air_yd ?? (g.rec_tgt ? null : 0);
+    c.rush_nk = g.kneel === undefined ? null : (g.rush_att || 0) - (g.kneel || 0);
+    c.tm_tgt = T("tgt"); c.tm_air = T("air"); c.tm_snaps = T("snaps");
+    c.tm_rush_nk = T("rush") == null ? null : T("rush") - (T("kneel") || 0);
+    c.xfp = null;
+    const xr = opp && opp.players && (opp.players[sid] || []).find(r => r[0] === g.w);
+    if (xr) {
+      const line = { pass_att: g.pass_att || 0, rush_att: g.rush_att || 0, rec_tgt: g.rec_tgt || 0 };
+      opp.cols.forEach((k, i) => { if (WK_XKEYS[k]) line[WK_XKEYS[k]] = xr[i] || 0; });
+      c.xfp = gamePoints(line, pos, xsc);
+    }
+    return c;
+  }
+  // Components over several games: sums and shares from summed numerators and denominators
+  function wkAgg(list) {
+    return { gp: list.length, list,
+      sum: (...ks) => { let v = 0, any = false; for (const c of list) for (const k of ks) if (c[k] != null) { v += c[k]; any = true; } return any ? v : null; },
+      known: k => list.filter(c => c[k] != null).length,
+      ratio: (a, b) => { let n = 0, dd = 0, any = false; for (const c of list) if (c[a] != null && c[b] != null) { n += c[a]; dd += c[b]; any = true; } return any && dd > 0 ? { v: n / dd, n, d: dd } : null; } };
+  }
+  const wkStatOf = (k, a) => { const S = WK_STATS[k]; if (S.pct) { const r = a.ratio(...S.pct); return r ? r.v : null; } return S.v ? S.v(a) : a.sum(k); };
+  // ffopportunity's expected stat lines (data/opportunity/<season>.json), loaded only when xFP is shown or sorted
+  const oppCache = {}, oppLoading = {};
+  function loadOpp(season) {
+    if (oppCache[season] !== undefined) return Promise.resolve(oppCache[season]);
+    return oppLoading[season] || (oppLoading[season] = fetch(`data/opportunity/${season}.json`, { cache: "no-cache" })
+      .then(r => (r.ok ? r.json() : null)).catch(() => null).then(x => { oppCache[season] = x; return x; }));
+  }
+  /* Columns menu (Alan, Oct 12): which stat columns the week and season views show, per position (All, QB, RB, WR, TE
+     each keep their own set, saved in this browser as spm_rk_cols). FPTS always stays. Changes apply at once. */
+  const WK_POP = { open: false };
+  function renderColsPop() {
+    const pos = posFilter === "PICK" ? "ALL" : posFilter, on = wkColsFor(pos), def = WK_COLS[pos] || WK_COLS.ALL;
+    const isDef = on.length === def.length && def.every(k => on.includes(k));
+    const posName = pos === "ALL" ? "All players" : pos;
+    const item = k => { const S = WK_STATS[k];
+      return `<label class="rk-col-opt" title="${esc(S.tip || S.label)}"><input type="checkbox" data-wk-col="${k}"${on.includes(k) ? " checked" : ""}><span>${esc(S.label)}</span><span class="rk-col-ab">${esc(S.short)}</span></label>`; };
+    const groups = WK_GROUPS.map(gr => { const ks = Object.keys(WK_STATS).filter(k => k !== "pts" && WK_STATS[k].grp === gr);
+      const na = gr === "Receiving" ? WK_NA.map(([l, s]) => `<span class="rk-col-opt na" title="${esc(WK_NA_WHY)}"><input type="checkbox" disabled aria-label="${esc(l)} (not available)"><span>${esc(l)}</span><span class="rk-col-ab">N/A</span></span>`).join("") : "";
+      return ks.length ? `<div class="rk-col-grp" role="group" aria-label="${gr}"><span class="tf-pkg-h">${gr}</span>${ks.map(item).join("")}${na}</div>` : ""; }).join("");
+    $("rk-cols-pop").innerHTML = `<div class="rk-cols-head"><span class="rk-cols-title">Columns · ${esc(posName)}</span><span class="rk-cols-sub">FPTS always shows. Each position keeps its own set.</span></div>
+      <div class="rk-cols-grid">${groups}</div>
+      <div class="rk-cols-foot"><span class="rk-cols-note" title="${esc(WK_NA_WHY)}">Routes run, RR% and YPRR need a routes source.</span><button type="button" class="btn link" id="rk-cols-reset"${isDef ? " disabled" : ""}>Reset to ${esc(pos === "ALL" ? "All" : pos)} defaults</button></div>`;
+  }
+  function setColsPop(open) {
+    WK_POP.open = open;
+    const pop = $("rk-cols-pop"), btn = $("rk-cols-btn");
+    if (open) renderColsPop();
+    pop.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+    if (open) { const f = pop.querySelector("input:not(:disabled)"); if (f) f.focus(); }
+  }
+  $("rk-cols-btn").addEventListener("click", () => setColsPop(!WK_POP.open));
+  $("rk-cols-pop").addEventListener("change", e => {
+    const c = e.target.closest("[data-wk-col]"); if (!c) return;
+    const pos = posFilter === "PICK" ? "ALL" : posFilter, on = wkColsFor(pos).filter(k => k !== c.dataset.wkCol);
+    if (c.checked) on.push(c.dataset.wkCol);
+    WK_PREF[pos] = wkOrder(pos).filter(k => on.includes(k)); saveWkPref(); renderRankings();
+    const f = $("rk-cols-pop").querySelector(`[data-wk-col="${c.dataset.wkCol}"]`); if (f) f.focus();
+  });
+  $("rk-cols-pop").addEventListener("click", e => {
+    if (!e.target.closest("#rk-cols-reset")) return;
+    delete WK_PREF[posFilter === "PICK" ? "ALL" : posFilter]; saveWkPref(); renderRankings();
+    const f = $("rk-cols-pop").querySelector("input:not(:disabled)"); if (f) f.focus();
+  });
+  document.addEventListener("pointerdown", e => { if (WK_POP.open && !e.target.closest("#rk-cols-wrap")) setColsPop(false); });
+  $("rk-cols-wrap").addEventListener("keydown", e => {
+    if (!WK_POP.open) return;
+    if (e.key === "Escape") { e.stopPropagation(); setColsPop(false); $("rk-cols-btn").focus(); return; }
+    if (e.key === "Tab") {   // keep Tab inside the menu while it's open
+      const f = [...$("rk-cols-pop").querySelectorAll("input:not(:disabled), button:not(:disabled)")]; if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  });
   // Week menu: Full season + every week on this season's schedule (now / projected marked), filled once the stats are in
   function wkWeekOptions() {
     const d = statsCache[STATS_SEASONS[0]], sel = $("rk-week");
     if (!d || !d.schedule) return;
     const last = Math.max(0, ...Object.values(d.schedule).flatMap(rows => rows.map(r => r[0]))), cur = currentWeek();
-    const html = `<option value="">Full season</option>` + Array.from({ length: last }, (_, i) => i + 1)
+    const html = `<option value="">Full season · AM board</option><option value="0">Season stats</option>` + Array.from({ length: last }, (_, i) => i + 1)
       .map(w => `<option value="${w}">Week ${w}${w === cur ? " · now" : cur != null && w > cur ? " · proj" : ""}</option>`).join("");
     if (sel.dataset.weeks !== html) { sel.innerHTML = html; sel.dataset.weeks = html; }
     sel.value = RK.week != null ? String(RK.week) : "";
@@ -6211,7 +6376,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return { grp: "proj", kind: o.kind === "live" ? "live" : "proj", v: o.proj, fallback: o.fallback, game: o.game };
   }
   function renderWeek() {
-    const season = STATS_SEASONS[0], d = statsCache[season], head = $("rk-head-row"), week = RK.week, key = RK.wsort;
+    const season = STATS_SEASONS[0], d = statsCache[season], head = $("rk-head-row"), week = RK.week, key = RK.wsort, szn = week === 0;
     document.body.classList.remove("editing");
     if (!d || !d.players) {
       if (statsCache[season] === undefined) loadSeason(season).then(() => { syncRkControls(); if (wkOn()) renderRankings(); });
@@ -6219,21 +6384,39 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       $("rank-body").innerHTML = `<tr><td class="empty" colspan="4">${statsCache[season] === null ? "This season's stats couldn't be loaded." : "Loading this season's stats…"}</td></tr>`;
       $("rank-count").textContent = ""; return;
     }
-    const cols = (WK_COLS[posFilter] || WK_COLS.ALL).slice();
+    const cols = wkColsFor(posFilter === "PICK" ? "ALL" : posFilter);
     if (key !== "pts" && !cols.includes(key)) cols.push(key);
+    const wantX = cols.includes("xfp"), opp = wantX ? oppCache[season] : null;
+    if (wantX && oppCache[season] === undefined) loadOpp(season).then(() => { if (wkOn()) renderRankings(); });
+    const oppThru = opp ? opp.through_week : null;
     const arrow = k => (k === key ? (RK.dir === "desc" ? " ↓" : " ↑") : "");
+    const shortOf = k => (WK_STATS[k].alt && cols.includes("pass_att") ? WK_STATS[k].alt : WK_STATS[k].short);
+    // a stat column's place decides when it steps aside: from the 5th under 1180px, from the 7th under 1440px; on phones
+    // only the sorted stat stays beside FPTS (the first chosen column when sorted by fantasy points)
+    const colCls = (k, i) => `wk-st${i >= 6 ? " wk-lo2" : ""}${i >= 4 ? " wk-lo" : ""}${key === "pts" && i === 0 ? " wk-ph" : ""}${k === key ? " on" : ""}`;
+    const xTip = k => (k === "xfp" ? (opp ? ` · data through Week ${oppThru}` : oppCache[season] === null ? " · data couldn't be loaded" : "") : "");
     const th = (k, cls) => { const S = WK_STATS[k];
-      return `<th scope="col" class="${cls}${k === key ? " on" : ""}"${k === key ? ` aria-sort="${RK.dir === "desc" ? "descending" : "ascending"}"` : ""}><button type="button" class="wk-sort" data-wk-sort="${k}" title="${esc((S.tip ? S.tip + " · " : "") + "Sort by " + S.label.toLowerCase())}">${esc(S.short)}${arrow(k)}</button></th>`; };
-    const sig = `wk|${week}|${posFilter}|${key}|${RK.dir}|${cols.join(",")}`;
+      return `<th scope="col" class="${cls}"${k === key ? ` aria-sort="${RK.dir === "desc" ? "descending" : "ascending"}"` : ""}><button type="button" class="wk-sort" data-wk-sort="${k}" title="${esc((S.tip ? S.tip + xTip(k) + " · " : "") + "Sort by " + S.label.toLowerCase())}">${esc(shortOf(k))}${arrow(k)}</button></th>`; };
+    head.closest("table").classList.toggle("wk-many", cols.length > 5);
+    head.closest("table").classList.add("wk-st-on");   // many stat columns: the player and points cells give up their fixed widths
+    const sig = `wk|${week}|${posFilter}|${key}|${RK.dir}|${cols.join(",")}|${oppThru}`;
     if (head.dataset.prod !== sig) {
-      head.innerHTML = `<th scope="col" id="edit-head" hidden></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col wk-pos">Pos</th>${th("pts", "prod-col wk-fp")}${cols.map((k, i) => th(k, `wk-st${i >= 4 ? " wk-lo" : ""}`)).join("")}`;
+      head.innerHTML = `<th scope="col" id="edit-head" hidden></th><th scope="col" id="rk-head">Rk</th><th scope="col">Player</th><th scope="col" class="pos-col wk-pos">Pos</th>${th("pts", `prod-col wk-fp${key === "pts" ? " on" : ""}`)}${cols.map((k, i) => th(k, colCls(k, i))).join("")}`;
       head.dataset.prod = sig;
     }
-    const sc = scoringNow(), cur = currentWeek(), slPts = cur != null && week === cur ? wkSleeperPts(week) : null;
+    const sc = scoringNow(), xsc = xScoring(sc), cur = currentWeek(), slPts = !szn && cur != null && week === cur ? wkSleeperPts(week) : null;
     const spamRk = p => (leagueView() ? LG.adjRank.get(p.id) : p.rank) ?? 1e9;
     const pool = players.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && (posFilter === "ALL" || p.pos === posFilter));
-    const rows = pool.map(p => ({ p, ...wkRow(p, week, d, sc, cur, slPts) }));
-    const sortV = r => (key === "pts" ? r.v : r.g ? wkStat(r.g, key) : null);
+    const comp = (p, g) => wkComp(g, d, String(p.sleeperId), p.pos, xsc, opp);
+    // Season stats: actual games only (projections never enter a total); Week N: that week's line, projection or status
+    const rows = szn ? pool.map(p => { const sid = String(p.sleeperId), lg = seasonLog(season, sid, p.pos);
+        const games = lg ? lg.games : [];
+        if (!games.length) return { p, grp: "none", kind: "none", status: "No games", tip: "No game played this season" };
+        const sh = shortMap(d, sid), short = games.filter(g => sh.has(g.w)).length;
+        return { p, grp: "act", kind: "final", v: Math.round(games.reduce((s, g) => s + g.pts, 0) * 100) / 100, a: wkAgg(games.map(g => comp(p, g))), gp: games.length, short };
+      })
+      : pool.map(p => { const r = { p, ...wkRow(p, week, d, sc, cur, slPts) }; if (r.g) r.a = wkAgg([comp(p, r.g)]); return r; });
+    const sortV = r => (key === "pts" ? r.v : r.a ? wkStatOf(key, r.a) : null);
     const cmp = (a, b) => { const x = sortV(a), y = sortV(b);
       if (x == null || y == null) return (x == null) - (y == null) || (b.v ?? -1e9) - (a.v ?? -1e9) || spamRk(a.p) - spamRk(b.p);
       return (y - x) || ((b.v ?? 0) - (a.v ?? 0)) || (spamRk(a.p) - spamRk(b.p)); };
@@ -6249,10 +6432,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const ncols = 5 + cols.length, out = [];
     const band = (label, meta) => `<tr class="tier wk-band"><td colspan="${ncols}"><div class="tier-band"><span class="tier-label">${esc(label)}</span>${meta ? `<span class="tier-meta">${esc(meta)}</span>` : ""}</div></td></tr>`;
     const cell = (r, k, i) => {
-      const cls = `wk-st${i >= 4 ? " wk-lo" : ""}${k === key ? " on" : ""}`;
-      if (!r.g) return `<td class="${cls}"><span class="wk-dash">—</span></td>`;
-      const v = wkStat(r.g, k), txt = WK_STATS[k].pct ? (v > 0 ? Math.round(v * 100) + "%" : "—") : String(Math.round(v * 10) / 10);
-      return `<td class="${cls}"><span class="wk-n${v ? "" : " z"}">${txt}</span>${k === "pass_att" && r.g.pass_att ? `<span class="wk-sub">${r.g.pass_cmp || 0} cmp</span>` : ""}</td>`;
+      const cls = colCls(k, i), S = WK_STATS[k];
+      if (!r.a) return `<td class="${cls}"><span class="wk-dash">—</span></td>`;
+      const v = wkStatOf(k, r.a);
+      if (v == null) {
+        const why = S.x ? (oppCache[season] === undefined ? "Loading expected points…" : !opp ? "Expected-points data couldn't be loaded" : `No expected-points line for him${oppThru != null && !szn && week > oppThru ? `: the data runs through Week ${oppThru}` : ""}`)
+          : S.pct ? `Not available: the ${S.of} for this ${szn ? "season" : "game"} aren't in the data` : "Not available in the data";
+        return `<td class="${cls}"><span class="wk-na" title="${esc(why)}">N/A</span></td>`;
+      }
+      let txt, tip = "";
+      if (S.pct) { const q = r.a.ratio(...S.pct); txt = Math.round(v * 1000) / 10; txt = (txt >= 10 || txt === 0 ? Math.round(txt) : txt) + "%";
+        tip = `${fmt(q.n)} of ${fmt(q.d)} ${S.of}${szn ? ` in his ${r.a.known(S.pct[1]) === 1 ? "game" : r.a.known(S.pct[1]) + " games"}` : ""}`; }
+      else txt = S.dec ? v.toFixed(S.dec) : fmt(Math.round(v));
+      if (S.x && szn && oppThru != null) { const kn = r.a.known("xfp"); if (kn < r.a.gp) tip = `Expected points for ${kn} of his ${r.a.gp} games: the data runs through Week ${oppThru}`; }
+      return `<td class="${cls}"${tip ? ` title="${esc(tip)}"` : ""}><span class="wk-n${v ? "" : " z"}">${txt}</span>${k === "pass_att" && r.a.sum("pass_att") && !cols.includes("pass_cmp") ? `<span class="wk-sub">${fmt(r.a.sum("pass_cmp") || 0)} cmp</span>` : ""}</td>`;
     };
     const rowHtml = r => {
       const p = r.p, own = LG.active && LG.ownerOf.get(p.id);
@@ -6262,8 +6455,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (r.grp === "none") fpCell = `<span class="wk-status ${r.kind}" title="${esc(r.tip || "")}">${esc(r.status)}</span>`;
       else {
         const pct = top > 0 ? Math.max(0, r.v) / top * 100 : 0;
-        const star = r.short ? `<span class="inj-star" title="${esc(`Left Week ${week} early with an injury${r.short.inj ? " (" + r.short.inj + ")" : ""}; the game still counts`)}">*</span>` : "";
-        const sub = r.grp === "proj" ? (r.kind === "live" ? `<span class="psub wk-live" title="Game in progress; no live points for him here, so this is his projection for the game">Live · proj</span>`
+        const star = r.short ? `<span class="inj-star" title="${esc(szn ? `Includes ${shortCount(r.short)} (left early with an injury); the games still count` : `Left Week ${week} early with an injury${r.short.inj ? " (" + r.short.inj + ")" : ""}; the game still counts`)}">*</span>` : "";
+        const sub = szn ? `<span class="psub" title="${esc(`Season totals from the ${r.gp} game${r.gp === 1 ? "" : "s"} he played`)}">${r.gp} GP</span>`
+          : r.grp === "proj" ? (r.kind === "live" ? `<span class="psub wk-live" title="Game in progress; no live points for him here, so this is his projection for the game">Live · proj</span>`
             : `<span class="psub" title="${esc(`Projection: his game hasn't been played${r.game && r.game.opp ? ` (${r.game.opp}${r.game.text ? " · " + r.game.text : ""})` : ""}${r.fallback ? " · season PPG, no AM projection" : ""}`)}">Proj${r.fallback ? " · PPG" : ""}</span>`)
           : r.kind === "live" ? `<span class="psub wk-live" title="Points so far from Sleeper; his game is still in progress">Live</span>`
           : `<span class="psub" title="${esc(r.sl ? "Final points from Sleeper; his stat line isn't in yet" : `Actual stats from Week ${week}`)}">Final</span>`;
@@ -6272,7 +6466,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return `<tr class="player prod wkrow ${r.grp}${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA ? ` title="Compare with ${esc(CMP.name)}"` : ""}>
         <td class="rk">${r.rank ?? "–"}</td>
         <td><div class="pl-cell">${CMP.on ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
-        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted AM rank" : "AM Board rank"}: unchanged by the week view">${spamTxt}</span></td>
+        <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk" title="${leagueView() ? "League-adjusted AM rank" : "AM Board rank"}: unchanged by the ${szn ? "season stats" : "week"} view">${spamTxt}</span></td>
         <td class="prod-col wk-fp${key === "pts" ? " on" : ""}">${fpCell}</td>${cols.map((k, i) => cell(r, k, i)).join("")}
       </tr>`;
     };
@@ -6280,20 +6474,28 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     shown.act.forEach(r => out.push(rowHtml(r)));
     if (shown.proj.length) out.push(band(groups.act.length ? "Not played yet · projections" : `Week ${week} hasn't been played · projections`, "Projected fantasy points, no stats yet"));
     shown.proj.forEach(r => out.push(rowHtml(r)));
-    if (shown.none.length) out.push(band("No stats this week", "Bye, did not play, out or stats pending"));
+    if (shown.none.length) out.push(band(szn ? "No games this season" : "No stats this week", szn ? "No game played yet" : "Bye, did not play, out or stats pending"));
     shown.none.forEach(r => out.push(rowHtml(r)));
     $("rank-body").innerHTML = out.length ? out.join("") : `<tr><td class="empty" colspan="${ncols}">${query ? `No players match “${esc(query)}”.` : "No AM-ranked players here."}</td></tr>`;
     const n = k => rows.filter(r => r.kind === k).length, liveN = rows.filter(r => r.kind === "live").length;
-    const state = !groups.act.length ? "projections" : groups.proj.length || liveN ? "in progress" : "final";
-    const notes = [`Week ${week} · ${state === "final" ? "final stats" : state === "in progress" ? "in progress: actual stats where games are final" : "not played yet"}`, `fantasy points in ${scoringLabel()}`];
-    if (groups.act.length) notes.push(`${groups.act.length} with stats`);
-    if (liveN) notes.push(`${liveN} live`);
-    if (groups.proj.length && groups.act.length) notes.push(`${groups.proj.length} projected`);
-    if (n("dnp")) notes.push(`${n("dnp")} did not play`);
-    if (n("bye")) notes.push(`${n("bye")} on bye`);
-    if (n("out")) notes.push(`${n("out")} out`);
+    let notes;
+    if (szn) {
+      notes = [`Season stats · through Week ${d.through_week}`, "stat totals, not the AM rankings (Full season · AM board)", "totals from games played, shares from summed team totals", `fantasy points in ${scoringLabel()}`, `${groups.act.length} with games`];
+      if (groups.none.length) notes.push(`${groups.none.length} without a game`);
+    } else {
+      const state = !groups.act.length ? "projections" : groups.proj.length || liveN ? "in progress" : "final";
+      notes = [`Week ${week} · ${state === "final" ? "final stats" : state === "in progress" ? "in progress: actual stats where games are final" : "not played yet"}`, `fantasy points in ${scoringLabel()}`];
+      if (groups.act.length) notes.push(`${groups.act.length} with stats`);
+      if (liveN) notes.push(`${liveN} live`);
+      if (groups.proj.length && groups.act.length) notes.push(`${groups.proj.length} projected`);
+      if (n("dnp")) notes.push(`${n("dnp")} did not play`);
+      if (n("bye")) notes.push(`${n("bye")} on bye`);
+      if (n("out")) notes.push(`${n("out")} out`);
+    }
+    if (wantX && opp && oppThru < d.through_week) notes.push(`xFP through Week ${oppThru}`);
     notes.push("AM-ranked players only · ranks and values unchanged");
     $("rank-count").textContent = notes.join(" · ");
+    if (WK_POP.open) renderColsPop();
     updateEditorBar();
     queueRail();
     if ($("player-modal").open) markCurrent();
@@ -13478,7 +13680,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!saved || !(PROD_MODES[saved.sort] || MK_MODES[saved.sort] || Number.isInteger(saved.week))) return;
     if (PROD_MODES[saved.sort] || MK_MODES[saved.sort]) RK.sort = saved.sort;
     RK.dir = saved.dir === "asc" ? "asc" : "desc";
-    if (Number.isInteger(saved.week) && saved.week >= 1 && saved.week <= 22) { RK.week = saved.week; RK.wsort = WK_STATS[saved.wsort] ? saved.wsort : "pts"; }
+    if (Number.isInteger(saved.week) && saved.week >= 0 && saved.week <= 22) { RK.week = saved.week; RK.wsort = WK_STATS[saved.wsort] ? saved.wsort : "pts"; }
     RK.min = [0, 2, 3, 4].includes(saved.min) ? saved.min : null;
     if (filters.includes(saved.pos) && saved.pos !== "PICK") {
       posFilter = saved.pos;

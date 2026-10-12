@@ -99,6 +99,7 @@ jobs:
         run: |
           pip install pandas numpy
           python build_stats.py 2026
+          python build_opportunity.py 2026 || echo "Expected points not refreshed (kept the last file)"
           python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
@@ -118,6 +119,7 @@ jobs:
           python merge_projections.py ../index.html --json ../data/projections.json
           python merge_projections.py ../index.html
           python snapshot_projections.py
+          python build_opportunity.py 2026 || echo "Expected points not refreshed (kept the last file)"
           python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
@@ -145,6 +147,7 @@ jobs:
           if [ -f data/projections.json ]; then git add data/projections.json; fi
           if [ -d data/projections ]; then git add data/projections; fi
           if [ -f data/market/redraft.json ]; then git add data/market/redraft.json; fi
+          if [ -d data/opportunity ]; then git add data/opportunity; fi
           git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'market' && 'Market values refresh' || steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
           git pull --rebase origin main && git push
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
