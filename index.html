@@ -2822,12 +2822,13 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .th-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 14px 18px 12px; }
 .th-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 12px; }
 .th-date { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.th-verdict { font-size: 0.98rem; font-weight: 850; font-stretch: 108%; text-transform: uppercase; letter-spacing: 0.01em; color: var(--am-red-text); }
+.th-verdict { font-size: 0.98rem; font-weight: 850; font-stretch: 108%; text-transform: uppercase; letter-spacing: 0.01em; color: var(--heading); }
 .th-verdict.fair { color: var(--heading); }
 .th-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .th-sides.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .th-side { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .th-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.th-team > div { min-width: 0; }
 .th-team b { display: block; font-size: 0.9rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .th-team span { font-size: 0.64rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .th-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -2887,14 +2888,26 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 @media (max-width: 560px) { .ml-p { grid-template-columns: 1fr auto; } .ml-p .ml-n { grid-column: 1 / -1; order: 3; } }
 /* trade history: at the time vs today (Alan, Oct 8) */
 .th-verdict small { display: block; text-align: right; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.09em; color: var(--muted); font-stretch: 100%; margin-bottom: 1px; }
-.th-ages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--bg) 60%, transparent); }
-.th-age { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.th-age-k { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.th-age b { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; }
-.th-age b small { font-size: 0.72rem; font-weight: 550; color: var(--muted); }
-.th-age > small { font-size: 0.66rem; color: var(--muted); }
-.th-age-none { font-size: 0.78rem; color: var(--muted); line-height: 1.35; }
-.th-aged { grid-column: 1 / -1; margin: 4px 0 0; padding-top: 7px; border-top: 1px solid var(--line-soft); font-size: 0.8rem; font-weight: 650; color: var(--ink-2); }
+/* Then vs Now (Alan, Oct 12): two equal blocks, each with its verdict, who had the edge and by how much, and the values it
+   uses; a shared sentence under them says how the trade aged. Neutral like the calculator's verdict: a filled dot = one
+   side ahead, a hollow ring = even or split; never red or gray per side. */
+.th-ages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--bg) 60%, transparent); }
+.th-age { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 11px 14px 10px; }
+.th-age.now { border-left: 1px solid var(--line-soft); }
+.th-age-k { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.th-age-v { font-size: 0.92rem; font-weight: 700; line-height: 1.25; color: var(--heading); text-wrap: balance; }
+.th-age-v::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 0.1em; }
+.th-age-v.win::before { background: var(--text-secondary); }
+.th-age-v.even::before { box-shadow: inset 0 0 0 2px var(--text-muted); }
+.th-edge { font-size: 1.12rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.th-edge b { font-weight: 750; color: var(--text-strong); }
+.th-edge.even, .th-edge.even b { font-size: 0.92rem; color: var(--ink-2); font-weight: 600; }
+.th-edge-sub { font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.th-age .th-basis-l { margin-top: 2px; font-size: 0.68rem; color: var(--muted); }
+.th-age-none { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+.th-aged { grid-column: 1 / -1; margin: 0; padding: 8px 14px 9px; border-top: 1px solid var(--line-soft); font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
+.th-verdict { margin-left: auto; text-align: right; }
+.th-verdict small { text-align: inherit; }
 .thh-basis { font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
 .thh-basis b { color: var(--ink-2); }
 .thh-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 16px; margin: 8px 0 10px; }
@@ -2908,7 +2921,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .thh-arrow { color: var(--muted); }
 .thh-d { font-weight: 700; color: var(--muted); }
 .thh-d.up { color: var(--rb); } .thh-d.down { color: var(--danger-text); }
-@media (max-width: 560px) { .th-ages { grid-template-columns: 1fr; } }
+@media (max-width: 400px) { .th-age { padding: 10px 11px 9px; } .th-edge { font-size: 1rem; } }
 @media (max-width: 900px) {
   .tx-board, .tx-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tx-summary .tx-sum:last-child { grid-column: 1 / -1; }
@@ -5694,7 +5707,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T17:10Z";
+  const BUILD_ID = "2026-10-12T18:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -12130,29 +12143,47 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     return P.map((q, i) => `${esc(q.team.name)} ${s.nets[i].net >= 0 ? "+" : "−"}${fmt(Math.abs(s.nets[i].net))}`).join(" · ");
   }
-  // how the trade aged: process (at the time) vs outcome (today)
+  // how the trade aged: process (then) vs outcome (now). One trend label for the card's header and one sentence that
+  // names both states and whether the gap widened, narrowed or flipped (Alan, Oct 12).
   function agedText(r) {
     const P = r.parts, a = r.then, b = r.now;
-    if (!a || !b) return "";
-    const name = s => P[s.ahead].team.name;
-    if (a.split || b.split) return `${a.split ? "Split verdict at the time" : a.fair ? "Fair at the time" : `${name(a)} won at the time`} · ${b.split ? "split verdict today" : b.fair ? "basically even now" : `${name(b)} ahead today`}`;
-    if (a.fair && b.fair) return "Basically even then · basically even now";
-    if (a.fair) return `Fair at the time · ${name(b)} ahead today`;
-    if (b.fair) return `${name(a)} won at the time · basically even now`;
-    if (a.ahead === b.ahead) return `${name(a)} won at the time · still ahead today`;
-    return `${name(a)} won the initial value · ${name(b)} won the outcome`;
+    if (!a || !b) return null;
+    const name = s => P[s.ahead].team.name, even = s => s.fair && !s.split;
+    if (a.split || b.split) return {
+      label: a.split && b.split ? "Split then and now" : a.split ? "Split at the time" : "Split today",
+      text: `${a.split ? "Split verdict at the time" : even(a) ? "Even at the time" : `${name(a)} won at the time`}; ${b.split ? "a split verdict today" : even(b) ? "basically even today" : `${name(b)} is ahead today`}.` };
+    if (even(a) && even(b)) return { label: "Even then and now", text: "Basically even at the time and still basically even today." };
+    if (even(a)) return { label: "Edge emerged", text: `Even at the time; ${name(b)} is ahead today.` };
+    if (even(b)) return { label: "Evened out", text: `${name(a)} won at the time; it's basically even today.` };
+    if (a.ahead !== b.ahead) return { label: "Winner flipped", text: `${name(a)} won at the time, but ${name(b)} is ahead today.` };
+    const d = b.diff - a.diff, same = Math.abs(d) < Math.max(10, a.diff * 0.05);
+    return same ? { label: "Edge held", text: `${name(a)} won at the time and is still ahead today by about the same margin.` }
+      : { label: d > 0 ? "Edge widened" : "Edge narrowed", text: `${name(a)} won at the time and is still ahead today; the gap ${d > 0 ? "widened" : "narrowed"} from +${fmt(a.diff)} to +${fmt(b.diff)}.` };
+  }
+  // one side of the Then / Now comparison: the verdict, who had the edge and by how much, and the values it uses
+  function thBlock(r, s, key, basis) {
+    const P = r.parts, two = P.length === 2;
+    const name = esc(P[s.ahead].team.name), even = s.fair && !s.split;
+    const title = s.split ? "Split verdict" : s.oneSided ? `${name} got all the value` : two ? esc(s.tier.title(P[s.ahead].team.name, P[1 - s.ahead].team.name)) : even ? "Basically even" : `${name} got the most`;
+    const edge = s.split ? `<span class="th-edge-sub">More value: ${name} · better package: ${esc(P[1 - s.ahead].team.name)}</span>`
+      : two ? `<span class="th-edge${even ? " even" : ""}">${even && s.diff < 1 ? "Even" : `${name} <b>+${fmt(s.diff)}</b>`}</span>${!s.oneSided && s.more >= 0.05 ? `<span class="th-edge-sub" title="The verdict's gap: the edge as a share of the smaller side's value (at least an average starter's value), computed the same way for Then and Now">${s.more.toFixed(1)}% edge${even ? " · within the fair range" : ""}</span>` : ""}`
+      : `<span class="th-edge-sub">${P.map((q, i) => `${esc(q.team.name)} ${s.nets[i].net >= 0 ? "+" : "−"}${fmt(Math.abs(s.nets[i].net))}`).join(" · ")}</span>`;
+    return `<div class="th-age ${key}"><span class="th-age-k">${key === "then" ? "Then" : "Now"}</span>
+        <span class="th-age-v ${even || s.split ? "even" : "win"}">${title}</span>${edge}<small class="th-basis-l">${esc(basis)}</small></div>`;
   }
   const dShort = ms => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const tsLong = ts => whenDate(ts).toLocaleString("en-US", hasTime(ts) ? { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric", year: "numeric" });
   function tradeCard(r) {
     const t = r.t, P = r.parts, full = LT.tradesFull.has(t.id);
     const when = new Date(t.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    const main = r.then || r.now;   // the headline verdict: at the time when AM values existed, else today's (labeled)
-    const verdict = P.length === 2
+    // the headline: with both snapshots, how the trade aged (labeled Then → Now); with only today's values, today's verdict (labeled Now)
+    const aged = agedText(r), main = r.now;
+    const verdict = aged ? `<span class="th-verdict trend"><small>Then → Now</small>${esc(aged.label)}</span>`
+      : P.length === 2
       ? (!main.oneSided
-          ? `<span class="th-verdict${main.fair ? " fair" : ""}${r.then ? "" : " lookback"}"><small>${r.then ? "Then" : "Now"}</small>${esc(main.tier.title(P[main.ahead].team.name, P[1 - main.ahead].team.name))}</span>`
-          : `<span class="th-verdict">One-sided in AM values</span>`)
-      : `<span class="th-verdict fair">${P.length}-team trade</span>`;
+          ? `<span class="th-verdict lookback"><small>Now</small>${esc(main.tier.title(P[main.ahead].team.name, P[1 - main.ahead].team.name))}</span>`
+          : `<span class="th-verdict"><small>Now</small>One-sided in AM values</span>`)
+      : `<span class="th-verdict"><small>${P.length}-team trade · Now</small>${main.fair ? "Basically even" : `${esc(P[main.ahead].team.name)} got the most`}</span>`;
     const side = s => `<div class="th-side">
         <div class="th-team">${teamFace(s.team, "sm")}<div><b>${esc(s.team.name)}</b><span>receives</span></div></div>
         <ul class="th-list">${s.items.map(x => `<li>${face(x.sid, x.e.name, "xs")}<span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.sid, x.e.name, "th-name") : `<span class="th-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span>
@@ -12167,12 +12198,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : r.preSpam ? `<span class="th-tag pre">Pre-AM trade</span>` : `<span class="th-tag now">Partial AM history</span>`;
     const noThen = r.preSpam ? "No AM value existed at the time of this trade"
       : `Not every player had an AM value at the time (${P.flatMap(s => s.items).filter(x => (x.p || x.then) && !x.then).map(x => esc(x.e.name)).join(", ")})`;
-    const aged = agedText(r);
-    const ages = `<div class="th-ages">
-        <div class="th-age"><span class="th-age-k">Then</span>${r.then ? `<b>${snapText(r, r.then)}</b><small>${esc(basisDate)} AM values</small>` : `<span class="th-age-none">${noThen}</span>`}</div>
-        <div class="th-age"><span class="th-age-k">Now</span><b>${snapText(r, r.now)}</b><small>Current AM values</small></div>
-        ${aged ? `<p class="th-aged">${esc(aged)}</p>` : ""}
-      </div>`;
+    const ages = `<section class="th-ages" aria-label="Then vs now">
+        ${r.then ? thBlock(r, r.then, "then", `${basisDate} AM values`) : `<div class="th-age then none"><span class="th-age-k">Then</span><span class="th-age-none">${noThen}</span></div>`}
+        ${thBlock(r, r.now, "now", "Current AM values")}
+        ${aged ? `<p class="th-aged">${esc(aged.text)}</p>` : ""}
+      </section>`;
     const anyPicks = P.some(s => s.picks.length);
     const fullHtml = !full ? "" : tradeHistoryHtml(r);
     return `<article class="th-card">

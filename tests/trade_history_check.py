@@ -26,6 +26,8 @@ SHOTS = os.environ.get("SHOTS")
 iso = lambda ms: datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 DAY = 86400e3
 
+LONG = "Alpha League Team 1 The Supercalifragilisticexpialidocious Dynasty"   # a long name must wrap, never clip
+L1["users"][0]["metadata"]["team_name"] = LONG
 R = L1["rosters"]
 a1, a2 = R[0]["players"][4], R[0]["players"][6]      # team 1 sends
 b1 = R[1]["players"][3]                              # team 2 sends
@@ -87,9 +89,23 @@ with sync_playwright() as p:
             print("   card:", c[:400])
             ok("THEN" in c.upper() and "NOW" in c.upper() and "AM VALUES" in c.upper() and "CURRENT AM VALUES" in c.upper(), "Both snapshots shown on the compact card as Then / Now with the values they use")
             ok("8,500" in c and "6,100" in c and "2,400" in c and "4,000" not in c, "At the time = the entry before the trade, never the update an hour after it")
-            ok(cards.nth(I["hist"]).locator(".th-verdict small").inner_text().upper() == "THEN", "The headline verdict is labeled Then (the at-the-time verdict)")
-            aged = cards.nth(I["hist"]).locator(".th-aged").inner_text()
-            ok(any(k in aged for k in ("at the time", "then", "initial value")), f"How it aged: {aged}")
+            # Then vs Now (Alan, Oct 12): two equal blocks (verdict, who had the edge and by how much, the values used),
+            # a headline labeled Then → Now naming how it aged, and one sentence covering both states
+            hc = cards.nth(I["hist"])
+            ok(hc.locator(".th-verdict small").inner_text().upper() == "THEN → NOW", "The headline is labeled Then → Now (a comparison, not only the historical verdict)")
+            label = hc.locator(".th-verdict").inner_text().split("\n")[-1].strip().upper()
+            ok(label in {"EDGE WIDENED", "EDGE NARROWED", "EDGE HELD", "WINNER FLIPPED", "EDGE EMERGED", "EVENED OUT", "EVEN THEN AND NOW", "SPLIT AT THE TIME", "SPLIT TODAY", "SPLIT THEN AND NOW"}, f"Headline names how the trade aged: {label}")
+            bt, bn = (" ".join(hc.locator(f".th-age.{k}").inner_text().split()) for k in ("then", "now"))
+            print("   then:", bt, "| now:", bn)
+            ok(bt.upper().startswith("THEN") and "AM values" in bt and bn.upper().startswith("NOW") and "Current AM values" in bn, "Then and Now blocks each name the values they use")
+            ok(all(hc.locator(f".th-age.{k} .th-age-v").count() == 1 for k in ("then", "now")), "Each block carries its own verdict")
+            whoT, whoN = (hc.locator(f".th-age.{k} .th-edge").inner_text() for k in ("then", "now"))
+            ok(all(re.search(r"Team \d+ \+[\d,]+$", w.strip()) or w.strip() == "Even" or "Team" in w for w in (whoT, whoN)), f"Each block says who had the edge and by how much ({whoT} / {whoN})")
+            tT, tN = (re.search(r"Team (\d+) \+", w) for w in (whoT, whoN))
+            if tT and tN and tT.group(1) != tN.group(1): ok(label == "WINNER FLIPPED", "A different winner reads Winner flipped")
+            aged = hc.locator(".th-aged").inner_text()
+            ok("at the time" in aged and "today" in aged, f"How it aged covers both states: {aged}")
+            ok(hc.locator(".th-age-v.win, .th-age-v.even").count() == 2 and hc.locator(".th-ages [class*=red], .th-ages .mine").count() == 0, "Then / Now markers are neutral (filled dot or hollow ring), never red per side")
             ok("$15 FAAB" in c and "2027 Round 1" in c, "Draft pick and FAAB stay listed")
             cards.nth(I["hist"]).locator("[data-th-full]").click(); pg.wait_for_timeout(300)
             full = " ".join(cards.nth(I["hist"]).locator(".th-full").inner_text().split())
@@ -108,13 +124,45 @@ with sync_playwright() as p:
             ok("Not every player had an AM value at the time" in cp and "NOW" in cp.upper() and cards.nth(I["part"]).locator(".th-verdict small").inner_text().upper() == "NOW", "Partial history: no at-the-time verdict")
             ok("No AM value existed at the time of this trade" in c0 and cards.nth(I["pre"]).locator(".th-tag.pre").count() == 1, "Pre-AM trade says no AM value existed, shows today only")
             ok(cards.nth(I["pre"]).locator(".th-verdict small").inner_text().upper() == "NOW", "Pre-AM headline verdict is labeled Now")
+            ok(cards.nth(I["three"]).locator(".th-verdict small").inner_text().upper() == "THEN → NOW" and cards.nth(I["three"]).locator(".th-age.then .th-edge-sub").count() == 1, "Three-team trade: Then → Now headline, each team's net in the Then block")
         if SHOTS:
             cards.nth(I["hist"]).scroll_into_view_if_needed()
             pg.screenshot(path=os.path.join(SHOTS, f"trade_history_{theme}.png"), full_page=False)
+            cards.nth(I["hist"]).screenshot(path=os.path.join(SHOTS, f"card_{theme}_1440.png"))
             pg.set_viewport_size({"width": 390, "height": 900}); pg.wait_for_timeout(400)
             cards.nth(I["hist"]).scroll_into_view_if_needed()
             pg.screenshot(path=os.path.join(SHOTS, f"trade_history_{theme}_phone.png"), full_page=False)
-        ok(pg.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"), f"[{theme}] no horizontal page scroll")
+            cards.nth(I["hist"]).screenshot(path=os.path.join(SHOTS, f"card_{theme}_390.png"))
+        pg.set_viewport_size({"width": 375, "height": 900}); pg.wait_for_timeout(400)
+        if pg.locator(".th-age.then").count():
+            tb, nb = (cards.nth(I["hist"]).locator(f".th-age.{k}").bounding_box() for k in ("then", "now"))
+            ok(tb and nb and abs(tb["y"] - nb["y"]) < 2 and nb["x"] >= tb["x"] + tb["width"] - 1, f"[{theme}] Then and Now stay side by side at 375px without overlapping")
+            clip = pg.evaluate("""() => [...document.querySelectorAll('.th-ages, .th-age, .th-age > *')].filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.className)""")
+            ok(not clip, f"[{theme}] long team names wrap inside the Then / Now blocks, nothing clipped at 375px {clip[:3]}")
+        if theme == "dark":
+            # how the trade aged, every case (agedText from the page source, run on synthetic snapshots)
+            src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+            fn = re.search(r"  function agedText\(r\) \{.*?\n  \}\n", src, re.S).group(0)
+            cases = pg.evaluate("""fn => { const aged = new Function('fmt', fn + '; return agedText;')(n => Math.round(n).toLocaleString('en-US'));
+              const P = [{ team: { name: 'A' } }, { team: { name: 'B' } }], S = (ahead, diff, fair = false, split = false) => ({ ahead, diff, fair, split });
+              const run = (t, n) => aged({ parts: P, then: t, now: n });
+              return { widened: run(S(0, 138), S(0, 437)), narrowed: run(S(0, 900), S(0, 200)), held: run(S(0, 500), S(0, 510)), flipped: run(S(0, 300), S(1, 300)),
+                emerged: run(S(0, 5, true), S(1, 800)), evened: run(S(1, 800), S(0, 5, true)), even: run(S(0, 5, true), S(1, 3, true)),
+                split: run(S(0, 0, false, true), S(0, 400)), missing: run(null, S(0, 400)) }; }""", fn)
+            exp = {"widened": ("Edge widened", "A won at the time and is still ahead today; the gap widened from +138 to +437."),
+                   "narrowed": ("Edge narrowed", "A won at the time and is still ahead today; the gap narrowed from +900 to +200."),
+                   "held": ("Edge held", "A won at the time and is still ahead today by about the same margin."),
+                   "flipped": ("Winner flipped", "A won at the time, but B is ahead today."),
+                   "emerged": ("Edge emerged", "Even at the time; B is ahead today."),
+                   "evened": ("Evened out", "B won at the time; it's basically even today."),
+                   "even": ("Even then and now", "Basically even at the time and still basically even today."),
+                   "split": ("Split at the time", "Split verdict at the time; A is ahead today.")}
+            for k, (lab, txt_) in exp.items():
+                got = cases[k] or {}
+                ok(got.get("label") == lab and got.get("text") == txt_, f"How it aged, {k}: {got}")
+            ok(cases["missing"] is None, "No at-the-time values: no Then → Now trend (today's verdict labeled Now)")
+        wide = pg.evaluate("() => [...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 1 && getComputedStyle(e).position !== 'fixed').slice(-4).map(e => e.tagName + '.' + e.className + ' ' + (e.textContent || '').slice(0, 40))")
+        ok(pg.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"), f"[{theme}] no horizontal page scroll {wide}")
         ok(not errs, f"[{theme}] no page errors {errs[:2]}")
         pg.close()
     br.close()

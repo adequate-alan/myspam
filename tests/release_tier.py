@@ -67,7 +67,7 @@ RISK = {
  "drawer-ui":     (TARGETED, ["drawer_check", "xss_check"],
                    "openPlayer closePlayer renderPlayer ppSection ppOverview thisWeekCard ppSchedule ppPractice ppDepth ppGameLog ppStats ppPerformance ppHistory ppTradeValue ppCompare weeklySeries weeksChart barChart lineChart usageGrid prodRankLine statsStamp markCurrent mkDrawer".split()),
  "league-ui":     (TARGETED, ["league_hub_check", "trade_history_check", "xss_check", "form_trend_check"],
-                   "renderLeague powerHtml teamExpand standingsHtml matchupsHtml rostersHtml rostersInner scheduleHtml txHtml txRail moveRow openBids tradeCard tradeHistoryHtml snapText agedText renderMyTeam renderFA strengthCards recentForm recentFormData formTrend availability recentFormHtml RF_MIN_PTS RF_MIN_PCT mtActions".split()),
+                   "renderLeague powerHtml teamExpand standingsHtml matchupsHtml rostersHtml rostersInner scheduleHtml txHtml txRail moveRow openBids tradeCard tradeHistoryHtml snapText agedText thBlock renderMyTeam renderFA strengthCards recentForm recentFormData formTrend availability recentFormHtml RF_MIN_PTS RF_MIN_PCT mtActions".split()),
  "finder-ui":     (TARGETED, ["trade_target_check", "market_edge_check"],
                    "renderFinder renderDiscover renderFinderPick tfResults targetCard mlCard shortWhy fullWhy fitBadge".split()),
  "calc-ui":       (TARGETED, ["roster_fit_check", "trade_target_check"],
