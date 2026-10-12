@@ -59,7 +59,8 @@
       "move_to_rank_check",
       "fixture_check",
       "inflight_check",
-      "form_trend_check"
+      "form_trend_check",
+      "market_sync_check"
     ],
     "weights": {
       "inflight_check": 400,
@@ -78,6 +79,7 @@
       "drag_scroll_check": 55,
       "drawer_check": 45,
       "form_trend_check": 40,
+      "market_sync_check": 2,
       "format_check": 38,
       "history_check": 35,
       "injury_check": 30,
