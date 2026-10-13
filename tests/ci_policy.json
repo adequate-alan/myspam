@@ -96,7 +96,7 @@
       "value_state_check": 20,
       "value_curve_check": 3,
       "injury_trend_check": 40,
-      "theme_transition_check": 45
+      "theme_transition_check": 85
     },
     "exclusive": [
       "drag_check",
