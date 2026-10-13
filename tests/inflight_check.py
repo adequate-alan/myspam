@@ -25,7 +25,7 @@ making the same edits after the fact. Cases:
   9. unaffected players identical to the published board; values strictly down the overall order after every case;
      no duplicate history events or snapshots
 
-INDEX=old.html runs it against an older page (the pre-fix code fails case 1).
+INDEX=old.html runs it against an older page (the pre-fix code fails case 1). CI_PART=1/2 or 2/2 runs half the cases (CI).
 Run from the repo root:  python3 tests/inflight_check.py   (CHROMIUM=/path/to/chromium if needed)
 """
 import functools, http.server, json, os, re, socketserver, sys, threading, time
@@ -45,6 +45,12 @@ h = functools.partial(http.server.SimpleHTTPRequestHandler, directory=ROOT); h.l
 srv = socketserver.TCPServer(("127.0.0.1", 0), h); threading.Thread(target=srv.serve_forever, daemon=True).start()
 BASE = f"http://127.0.0.1:{srv.server_address[1]}"
 failures = []
+# CI_PART=k/2 (tests/run_ci.py, suites.parts): run half the cases, balanced by their measured time (Oct 13: 8 → 144 s,
+# 3 → 60 s, 1 → 50 s, 7 → 45 s, 6 → 34 s, 2 / 4 → 30 s, 5 → 29 s), so the suite isn't the floor of a parallel CI run.
+# Every case is independent (its own mock repository and pages); together the parts run every case once.
+PARTS = {2: ({2, 4, 8}, {1, 3, 5, 6, 7})}
+_part = os.environ.get("CI_PART", "")
+CASES = set(PARTS[int(_part.split("/")[1])][int(_part.split("/")[0]) - 1]) if _part else None
 def ok(cond, msg):
     print(("PASS " if cond else "FAIL ") + msg, flush=True)
     if not cond: failures.append(msg)
@@ -113,12 +119,15 @@ with sync_playwright() as pw:
         changed = [r[0] for r in s["board"] if r[0] not in moved and pb.get(r[0]) and (pb[r[0]][3], pb[r[0]][4], pb[r[0]][5]) != (r[3], r[4], r[5])]
         ok(not changed, f"{label}: players not edited keep their published tier, value and source ({len(changed)} changed: {changed[:4]})")
     def run_case(n, fn):
+        if CASES and n not in CASES: return
+        t0 = time.time()
         try: fn()
         except Exception as e:
             ok(False, f"case {n} crashed: {type(e).__name__}: {str(e)[:160]}")
             for c in br.contexts:
                 try: c.close()
                 except Exception: pass
+        print(f"  case {n}: {time.time() - t0:.0f}s", flush=True)
 
     # 1. Burrow, exactly as reported
     def case_1():

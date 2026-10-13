@@ -25,7 +25,7 @@ Run from the repo root:  python3 tests/ci_pipeline_check.py      (needs PyYAML; 
 6. Pull requests can't deploy, publish or write: no job that runs for a pull request can push, deploy, save the
    verified-code record or use a secret.
 """
-import json, os, re, shutil, subprocess, sys, tempfile, glob
+import importlib.util, json, os, re, shutil, subprocess, sys, tempfile, glob
 import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,17 +40,29 @@ on, jobs = wf[True], wf["jobs"]
 # 1. structure
 need = lambda j: [jobs[j]["needs"]] if isinstance(jobs[j].get("needs"), str) else jobs[j].get("needs", [])
 ok("push" in on and "pull_request" in on, "Runs on pushes to main and on pull requests")
-ok(need("deploy") == ["build"] and set(need("build")) == {"verify", "targeted", "full"} and need("full") == ["verify"] and need("targeted") == ["verify"] and need("verify") == ["refresh"],
-   f"Job graph refresh → verify → (targeted | full) → build → deploy ({ {j: need(j) for j in jobs} })")
+ok(need("deploy") == ["build"] and set(need("build")) == {"plan", "verify", "targeted", "full"} and need("full") == ["plan"] and need("targeted") == ["plan"]
+   and need("verify") == ["plan"] and need("plan") == ["refresh"],
+   f"Job graph refresh → plan → (verify ∥ targeted | full) → build → deploy: the lane's suites start beside the fast checks ({ {j: need(j) for j in jobs} })")
+# Oct 13: a job whose `if` is always() keeps running when its run is cancelled, so a superseded run's suites ran to the end
+# and the newer run waited behind them in the concurrency group (PR #33: 44 minutes for 15 minutes of checks)
+ok(all("always()" not in str(jobs[j].get("if", "")) for j in jobs) and all("!cancelled()" in str(jobs[j]["if"]) for j in ("plan", "verify", "targeted", "full", "mark-verified", "build", "deploy")),
+   "Every job after refresh uses !cancelled(), none always(): a cancelled (superseded) run stops instead of running its suites to the end")
+ok(all(0 < jobs[j].get("timeout-minutes", 0) <= 45 for j in jobs), f"Every job has a time limit ({ {j: jobs[j].get('timeout-minutes') for j in jobs} })")
 steps = [s.get("name", s.get("uses", "")) for s in jobs["refresh"]["steps"]]
 ok(steps.index("Check the refreshed data before committing") < steps.index("Commit refreshed site"), "The scheduled refresh checks its data before it commits")
 chk = next(s for s in jobs["refresh"]["steps"] if s.get("name") == "Check the refreshed data before committing")["run"]
 ok("--frozen-rankings" in chk, "…and fails if any ranking field changed")
+bsteps = jobs["build"]["steps"]; bnames = [st.get("name", st.get("uses", "")) for st in bsteps]
+stamp = next(st for st in bsteps if st.get("name") == "Stamp the build ID")
+ok(bnames.index("Stamp the build ID") < next(i for i, n in enumerate(bnames) if "upload-pages-artifact" in n)
+   and "release_fingerprint.py --page" in stamp["run"] and "n != 1" in stamp["run"] and stamp.get("if") == "steps.head.outputs.current == 'true'",
+   "The build job stamps BUILD_ID (exactly one placeholder, a 12-hex page hash) before uploading the site")
 ok(wf["permissions"] == {"contents": "read"}, "Default permissions are read-only")
 ok(jobs["refresh"]["permissions"] == {"contents": "write"} and jobs["deploy"]["permissions"] == {"pages": "write", "id-token": "write"}
-   and jobs["verify"]["permissions"] == {"contents": "read", "actions": "read"}
-   and all("permissions" not in jobs[j] for j in ("targeted", "full", "build", "mark-verified")), "Only refresh can push and only deploy can publish Pages (verify may read the Actions cache list)")
-for j in ("verify", "targeted", "full", "build"):
+   and jobs["plan"]["permissions"] == {"contents": "read", "actions": "read", "pull-requests": "read"} and jobs["verify"]["permissions"] == {"contents": "read"}
+   and all("permissions" not in jobs[j] for j in ("targeted", "full", "build", "mark-verified")),
+   "Only refresh can push and only deploy can publish Pages (plan may read the Actions cache list and whose branch a pull request is)")
+for j in ("plan", "verify", "targeted", "full", "build"):
     co = next(s for s in jobs[j]["steps"] if str(s.get("uses", "")).startswith("actions/checkout"))
     ok(co.get("with", {}).get("persist-credentials") is False, f"{j}: the checkout doesn't keep the GitHub token")
 for j in ("full", "targeted"):
@@ -92,6 +104,8 @@ NIGHTLY = "15 7 * * *"
 def evaluate(expr, ctx):
     e = str(expr).replace("${{", "").replace("}}", "").strip()
     e = re.sub(r"always\(\)", "True", e)
+    e = re.sub(r"cancelled\(\)", repr(bool(ctx.get("cancelled"))), e)
+    e = e.replace("github.event.pull_request.head.repo.full_name == github.repository", repr(not ctx.get("fork")))
     e = re.sub(r"needs\.([\w-]+)\.result", lambda m: repr(ctx["result"].get(m[1], "skipped")), e)
     e = re.sub(r"needs\.([\w-]+)\.outputs\.(\w+)", lambda m: repr(ctx["outputs"].get(m[1], {}).get(m[2], "")), e)
     e = re.sub(r"format\('pr-\{0\}', github\.ref\)", repr("pr-x"), e)
@@ -108,10 +122,10 @@ def ancestors(j, seen=None):
         if d not in seen: seen.add(d); ancestors(d, seen)
     return seen
 
-def run(event, lane="fast", schedule=None, full_ci=False, refresh="success", verify="success", targeted="success", full="success", build="success", current="true"):
+def run(event, lane="fast", schedule=None, full_ci=False, refresh="success", plan="success", verify="success", targeted="success", full="success", build="success", current="true", fork=False, cancelled=False):
     """Walk the graph like Actions: a job runs when its `if` is true (jobs without one need every dependency to succeed)."""
     res, out = {}, {}
-    ctx = {"result": res, "outputs": out, "event": event, "schedule": schedule, "full_ci": full_ci}
+    ctx = {"result": res, "outputs": out, "event": event, "schedule": schedule, "full_ci": full_ci, "fork": fork, "cancelled": cancelled}
     def go(j, actual):
         cond = jobs[j].get("if")
         # GitHub's rule: a job whose `if` has no status function gets an implicit success(), which needs EVERY job
@@ -120,9 +134,10 @@ def run(event, lane="fast", schedule=None, full_ci=False, refresh="success", ver
         runs = bool(evaluate(cond, ctx) if cond else True) and (ok_up or (cond is not None and re.search(r"always\(\)|failure\(\)|cancelled\(\)", str(cond)) is not None))
         res[j] = actual if runs else "skipped"
     go("refresh", refresh)
+    go("plan", plan)
+    deploy_flag = evaluate(next(s for s in jobs["plan"]["steps"] if s.get("id") == "ref")["run"].split("deploy=")[1].split("}}")[0] + "}}", ctx)
+    out["plan"] = {"lane": "full" if (schedule == NIGHTLY or full_ci) else lane, "deploy": "true" if deploy_flag else "false"} if res["plan"] == "success" else {}
     go("verify", verify)
-    deploy_flag = evaluate(next(s for s in jobs["verify"]["steps"] if s.get("id") == "ref")["run"].split("deploy=")[1].split("}}")[0] + "}}", ctx)
-    out["verify"] = {"lane": "full" if (schedule == NIGHTLY or full_ci) else lane, "deploy": "true" if deploy_flag else "false"} if res["verify"] == "success" else {}
     go("targeted", targeted); go("full", full); go("mark-verified", "success"); go("build", build)
     out["build"] = {"current": current} if res["build"] == "success" else {}
     go("deploy", "success")
@@ -131,6 +146,10 @@ def run(event, lane="fast", schedule=None, full_ci=False, refresh="success", ver
 cases = [
     ("fast lane push (CSS, copy, data), verify passes", dict(event="push", lane="fast"), True),
     ("fast lane push, static/smoke checks fail", dict(event="push", lane="fast", verify="failure"), False),
+    ("lane can't be picked (plan fails)", dict(event="push", lane="fast", plan="failure"), False),
+    ("full push, the full suite passes but the fast checks (run beside it) fail", dict(event="push", lane="full", verify="failure"), False),
+    ("targeted push, its suites pass but the fast checks fail", dict(event="push", lane="targeted", verify="failure"), False),
+    ("a cancelled (superseded) push run", dict(event="push", lane="full", cancelled=True), False),
     ("targeted push, its suites pass", dict(event="push", lane="targeted"), True),
     ("targeted push, a suite fails", dict(event="push", lane="targeted", targeted="failure"), False),
     ("full push, the full suite passes", dict(event="push", lane="full"), True),
@@ -152,21 +171,25 @@ for lane in ("fast", "targeted"):
     ok(res["full"] == "skipped", f"Gate: a {lane}-lane release runs no full suite (no trailing full CI): {res}")
 _, res = run(event="push", lane="fast"); ok(res["targeted"] == "skipped", "Gate: a fast-lane release runs no targeted suites")
 _, res = run(event="push", lane="full"); ok(res["targeted"] == "skipped" and res["full"] == "success", "Gate: a full-lane release runs the full suite and no targeted job")
+_, res = run(event="push", lane="full", cancelled=True)
+ok(all(res[j] == "skipped" for j in ("plan", "verify", "targeted", "full", "mark-verified", "build", "deploy")), f"Gate: once a run is cancelled no further job starts or keeps it alive: {res}")
 for kw in (dict(event="schedule", schedule=NIGHTLY), dict(event="workflow_dispatch", full_ci=True)):
     _, res = run(**kw)
     ok(res["refresh"] == "skipped" and res["full"] == "success" and res["build"] == "skipped", f"Gate: nightly / manual full CI runs the full suite, refreshes nothing and never builds: {res}")
 _, res = run(event="schedule", schedule="0 15 * * 1"); ok(res["refresh"] == "success", "Gate: the other schedules still run the data refresh")
 bc = jobs["build"]["if"]
 for lane, job in (("targeted", "targeted"), ("full", "full")):
-    ok(not evaluate(bc, {"result": {"verify": "success", job: "skipped"}, "outputs": {"verify": {"lane": lane, "deploy": "true"}}, "event": "push"}),
+    ok(not evaluate(bc, {"result": {"plan": "success", "verify": "success", job: "skipped"}, "outputs": {"plan": {"lane": lane, "deploy": "true"}}, "event": "push"}),
        f"Gate: a {lane} lane whose check job was skipped (for any reason) never deploys")
-ok("always()" in jobs["mark-verified"]["if"] and "always()" in jobs["full"]["if"] and "always()" in jobs["targeted"]["if"], "targeted, full and mark-verified can't be skipped by a skipped upstream job")
+ok(all("!cancelled()" in jobs[j]["if"] for j in ("mark-verified", "full", "targeted", "verify")), "verify, targeted, full and mark-verified can't be skipped by a skipped upstream job")
 mv = jobs["mark-verified"]["if"]
-mvc = lambda lane, r, ev="push": evaluate(mv, {"result": {"verify": "success", **r}, "outputs": {"verify": {"lane": lane}}, "event": ev})
+mvc = lambda lane, r, ev="push", fork=False, verify="success": evaluate(mv, {"result": {"plan": "success", "verify": verify, **r}, "outputs": {"plan": {"lane": lane}}, "event": ev, "fork": fork})
 ok(mvc("fast", {}) and mvc("targeted", {"targeted": "success"}) and mvc("full", {"full": "success"})
    and not mvc("targeted", {"targeted": "failure"}) and not mvc("full", {"full": "failure"}) and not mvc("full", {"full": "skipped"})
-   and not mvc("fast", {}, "pull_request"),
-   "Code is marked verified only after its lane's checks passed, and never from a pull request")
+   and not mvc("full", {"full": "success"}, verify="failure") and mvc("full", {"full": "success"}, "pull_request") and not mvc("full", {"full": "success"}, "pull_request", fork=True),
+   "Code is marked verified only after its lane's checks and the fast checks passed; a pull request from this repository records it, a fork never")
+lt = next(st for st in jobs["plan"]["steps"] if st.get("id") == "lane")["run"]
+ok("refs/heads/main)" in lt and "head.repo.full_name" in lt and '= "$REPO" ]' in lt, "The lane only trusts verified-code records from main and from pull requests whose branch is in this repository")
 
 # concurrency: pushes cancel the run they supersede; the nightly / manual full CI and the data refresh have their own
 # groups and never cancel or delay a push; deploys are serialized on their own
@@ -182,10 +205,10 @@ ok(jobs["deploy"].get("concurrency", {}).get("group") == "pages-deploy" and jobs
 
 # 6. pull requests: nothing that writes runs for them
 pr_jobs = [j for j in jobs if run(event="pull_request", lane="full")[1].get(j) not in ("skipped", None)] + [j for j in jobs if run(event="pull_request", lane="targeted")[1].get(j) not in ("skipped", None)]
-ok(set(pr_jobs) <= {"verify", "full", "targeted"}, f"Only the check jobs run for a pull request: {sorted(set(pr_jobs))}")
+ok(set(pr_jobs) <= {"plan", "verify", "full", "targeted", "mark-verified"}, f"Only the check jobs (and the verified-code record) run for a pull request: {sorted(set(pr_jobs))}")
 ok(all(not (jobs[j].get("permissions") or {}).get("contents") == "write" for j in pr_jobs) and wf["permissions"] == {"contents": "read"}, "…with read-only permissions")
 ok("secrets." not in open(os.path.join(ROOT, ".github/workflows/site.yml")).read(), "The workflow uses no secrets")
-ok("github.event_name == 'pull_request'" in jobs["mark-verified"]["if"].replace("!=", "==") and "deploy" in jobs["build"]["if"], "Build (and so deploy) and the verified-code record exclude pull requests")
+ok("deploy" in jobs["build"]["if"] and "pull_request" not in str(jobs["build"]["if"]) and not run(event="pull_request", lane="fast")[0], "Build (and so deploy) exclude pull requests (plan's deploy flag is false for them)")
 
 # 3. run_ci.py decisions, on synthetic suites
 tmp = tempfile.mkdtemp()
@@ -314,6 +337,37 @@ try:
     ok(rc == 1 and "timed out" in o and not alive and wall < 10, f"run_ci: a timed-out suite's subprocess is killed with it ({'still alive' if alive else 'gone'})")
     policy["suites"].pop("exclusive", None)
 
+    # parts (Oct 13): a suite listed under suites.parts runs as N processes with CI_PART=k/N; every part runs and reports
+    open(os.path.join(fake, "tests", "split_check.py"), "w").write("import os\nprint('PASS part ' + os.environ.get('CI_PART', 'none'))\n")
+    policy["suites"]["parts"] = {"split_check": 2}
+    rc, o, wall = sched(["split_check", "s1"], "--jobs", "2")
+    ok(rc == 0 and "[pass] split_check@1/2" in o and "[pass] split_check@2/2" in o and os.path.exists(os.path.join(tmp, "logs", "split_check.part2of2.log"))
+       and "PASS part 2/2" in open(os.path.join(tmp, "logs", "split_check.part2of2.log")).read(), "run_ci: a suite with parts runs as N processes, each told its part (CI_PART), each reported")
+    policy["suites"].pop("parts", None)
+
+    # the CI shards of the real policy: every suite (and every part) runs exactly once across the shards, and the
+    # expected wall time per shard (2 suites at a time, timing suites alone) stays near the ideal split
+    spec = importlib.util.spec_from_file_location("rc", os.path.join(ROOT, "tests/run_ci.py")); RC = importlib.util.module_from_spec(spec); spec.loader.exec_module(RC)
+    allu = RC.units(RC.POLICY["suites"]["full"])
+    for n, jobs in ((4, 2), (3, 1)):
+        sh = [RC.shard_of(allu, k, n, jobs) for k in range(1, n + 1)]
+        flat = [u for x in sh for u in x]
+        excl = set(RC.POLICY["suites"].get("exclusive", []))
+        costs = [RC.cost([u for u in x if RC.base(u) not in excl], [u for u in x if RC.base(u) in excl], jobs) for x in sh]
+        ideal = max(max(RC.weight(u) for u in allu), sum(RC.weight(u) for u in allu) / (n * jobs))
+        ok(sorted(flat) == sorted(allu) and len(set(flat)) == len(flat) and set(RC.base(u) for u in flat) == set(RC.POLICY["suites"]["full"]),
+           f"run_ci shards ({n} × {jobs} at a time): every suite and part runs exactly once ({len(flat)} units)")
+        ok(max(costs) <= ideal * 1.2 + 30, f"run_ci shards ({n} × {jobs} at a time): expected wall {[round(c) for c in costs]}s per shard, ideal {ideal:.0f}s")
+
+    # a split suite's parts cover every one of its cases exactly once (inflight_check: CI_PART picks its cases)
+    for sname, n in RC.POLICY["suites"].get("parts", {}).items():
+        src = open(os.path.join(ROOT, "tests", sname + ".py")).read()
+        cases_all = sorted(int(x) for x in re.findall(r"^    run_case\((\d+),", src, re.M))
+        m = re.search(r"^PARTS = (\{.*\})$", src, re.M)
+        split = eval(m[1], {}).get(n) if m else None
+        ok(split is not None and sorted(c for part in split for c in part) == cases_all and len(split) == n,
+           f"{sname}: its {n} parts cover each of its cases {cases_all} exactly once ({split})")
+
     # 4. static_check.py on broken copies of the repo
     def repo_copy():
         d = os.path.join(tmp, "copy"); shutil.rmtree(d, ignore_errors=True)
@@ -351,6 +405,8 @@ try:
     rc, o = static(d, "--base", "HEAD"); ok(rc == 1 and "history only grows" in o, "static_check: a rewritten history entry fails")
     open(os.path.join(d, "index.html"), "w").write(html.replace("const BUILD_ID", "const const BUILD_ID", 1))
     rc, o = static(d); ok(rc == 1 and "scripts parse" in o, "static_check: a JavaScript syntax error fails")
+    open(os.path.join(d, "index.html"), "w").write(html.replace('const BUILD_ID = "dev";', 'const BUILD_ID = "2099-01-01T00:00Z";', 1))
+    rc, o = static(d); ok(rc == 1 and "placeholder" in o, "static_check: a hand-bumped BUILD_ID fails (the deploy stamps it)")
     # snapshots: both formats pass (the committed file holds 5-field snapshots from before Oct 12 and 4-field ones since);
     # a wrong field count for the snapshot's format, a bad typed flag, a duplicate rank or timestamp each fail
     shutil.copy(os.path.join(ROOT, "index.html"), os.path.join(d, "index.html"))
@@ -377,6 +433,14 @@ try:
         snap_case(label, fn, msg)
     json.dump(snap0, open(sp, "w"))
 
+    # 4b. the deployed build ID: a hash of the page's code only (rankings, data, tests and the workflow don't change it)
+    spec = importlib.util.spec_from_file_location("rfp", os.path.join(ROOT, "tests/release_fingerprint.py")); rfp = importlib.util.module_from_spec(spec); spec.loader.exec_module(rfp)
+    page = open(os.path.join(ROOT, "index.html"), "rb").read()
+    csv2 = rfp.CSV_RE.sub(lambda m: m[1] + m[2].replace(b"manual", b"auto", 1) + m[3], page)
+    ok(csv2 != page and rfp.page_id(csv2) == rfp.page_id(page), "Build ID: a rankings-only change keeps it (no refresh prompt for a publish)")
+    ok(rfp.page_id(page.replace(b"</style>", b"a{}</style>", 1)) != rfp.page_id(page), "Build ID: a CSS change changes it")
+    ok(rfp.page_id(page.replace(b"let lastBuildCheck = 0;", b"let lastBuildCheck = 1;", 1)) != rfp.page_id(page), "Build ID: a script change changes it")
+    ok(re.fullmatch(r"[0-9a-f]{12}", rfp.page_id(page)) is not None, "Build ID: 12 hex characters")
     # 5. the fast path's fingerprint: data-only changes keep it, anything that can change behaviour changes it
     shutil.copy(os.path.join(ROOT, "index.html"), os.path.join(d, "index.html"))
     for f in ("tests/release_fingerprint.py", "tests/requirements-ci.txt", "tests/ci_policy.json", ".github/workflows/site.yml"):
@@ -520,6 +584,22 @@ try:
     css2 = commit([(css_line, lambda l: l + "  ")], "another CSS tweak")
     b = RT.ok_base(css2, {FP(BASE), FP(risky)}); l = RT.classify(b, css2)["lane"]
     ok(b == risky and l == "fast", "Walk: a cancelled (superseded) CSS push is diffed together with the next one, still fast")
+    # a verified pull request merged into main (Oct 13): main releases on the fast lane instead of re-running the PR's suites
+    G("checkout", "-q", "-b", "pr", BASE)
+    pr = commit([(in_fn("stateValues"), code)], "a pull request changing Architecture C, verified on its branch")
+    G("checkout", "-q", "-b", "main2", BASE)
+    css_main = commit([(css_line, lambda l: l.replace("{", "{ outline: 0;", 1))], "CSS that landed on main meanwhile")
+    G("-c", "user.name=t", "-c", "user.email=t@t", "merge", "-q", "--no-ff", "--no-edit", pr); merged = G("rev-parse", "HEAD")
+    b, c = RT.pick_base(merged, merged, {FP(BASE), FP(css_main), FP(pr)})
+    ok(b == pr and c["lane"] == "fast", f"Merge: the merge of a verified pull request diffs from its verified head (only main's CSS is new): fast ({c['lane']})")
+    b, c = RT.pick_base(merged, merged, {FP(BASE), FP(css_main)})
+    ok(c["lane"] == "full", f"Merge: the same merge without the pull request's record runs the full suite ({c['lane']})")
+    G("checkout", "-q", "-b", "squash", BASE); G("checkout", "-q", pr, "--", "index.html")
+    G("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "squash merge of an up-to-date pull request"); sq = G("rev-parse", "HEAD")
+    b, c = RT.pick_base(sq, sq, {FP(BASE), FP(pr)})
+    ok(b == sq and c["lane"] == "fast", f"Merge: a squash merge whose code equals the verified pull request head releases on the fast lane ({c['lane']})")
+    b, c = RT.pick_base(sq, sq, {FP(BASE)})
+    ok(c["lane"] == "full", f"Merge: …and runs the full suite when that head never passed ({c['lane']})")
 finally:
     shutil.rmtree(tmp2, ignore_errors=True)
 
