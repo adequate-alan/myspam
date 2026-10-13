@@ -62,7 +62,8 @@
       "inflight_check",
       "form_trend_check",
       "market_sync_check",
-      "qb_role_check"
+      "qb_role_check",
+      "theme_transition_check"
     ],
     "weights": {
       "inflight_check": 400,
@@ -94,7 +95,8 @@
       "drag_check": 22,
       "value_state_check": 20,
       "value_curve_check": 3,
-      "injury_trend_check": 40
+      "injury_trend_check": 40,
+      "theme_transition_check": 45
     },
     "exclusive": [
       "drag_check",
