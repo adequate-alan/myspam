@@ -125,6 +125,7 @@ These colors are one palette shared by badges, value meters and lineup slots: QB
 ### Semantic: states
 - **Warnings** are amber (`--warn`), never red.
 - **Negatives** (fallers, losing sides, destructive actions) use a softer brick: #E0806F in dark, #A63A2E in light. It never reads as the brand.
+- **Strong performances** (the Game Log's weekly finishes) use the RB emerald at low opacity: an elite finish gets a 15% tint (13% light) and the finish in green; a good finish a 10% tint (8% light) with neutral text (`--gl-elite-*` / `--gl-good-bg`). No left edge: an inset edge means yours / selected / current everywhere else. Two levels only, neutral for everything else, never a red or brick background for a bad game.
 - **Practice and injury status:** one `--st-*` system covers FP, LP, DNP, Out, Questionable, Doubtful and IR.
 - **NFL team colors** are small accents only (strips, edges, a photo ring). They come from `NFL_TEAMS` through `teamAccent`.
 

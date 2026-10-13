@@ -86,7 +86,7 @@ Click any player's name or photo anywhere on the site (rankings, My Team, team p
 
 - **Top:** photo, team, position, age, overall rank, position rank, SPAM Value, points per game, Sleeper owner. Actions: **Add to trade** (goes to the side away from the team that owns him), **Find trades**, **Compare player** (side-by-side, better number in gold) and close.
 - **Overview:** ranks, value, season points, PPG, recent games, last 3 and last 5 averages, season trend, next opponent, Sleeper owner and roster status (starting, bench, IR, taxi), plus a weekly points chart.
-- **Game log:** each week of 2026, 2025 or 2024 with position-specific columns, byes and missed games. Gold rows are big weeks (1.75× the position's starter line), dim rows are under half of it.
+- **Game log:** each week of 2026, 2025 or 2024 with position-specific columns, byes and missed games. Green rows mark strong weekly finishes at his position in the selected league's scoring and lineup: emerald for an elite finish (the best quarter of the league's weekly starters at the position, at least the top 3), a lighter green for any other starter-level finish; everything else is neutral.
 - **Stats:** season totals and usage/efficiency (target share, catch rate, yards per touch/carry/catch, completion %, yards per attempt).
 - **Fantasy performance:** weekly points chart for Last 5, Last 10, 2026, 2025 or 2024, with average and starter lines.
 - **Ranking history:** overall rank, position rank and value over time from the published snapshots.
