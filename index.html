@@ -3454,11 +3454,22 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .gl-opp { color: var(--ink); font-weight: 600; }
 .gl-res { color: var(--muted); font-size: 0.78rem !important; }
 .gl-pts { color: var(--cream); font-weight: 750; }
-.gl-row.good td { background: color-mix(in srgb, var(--gold) 7%, transparent); }
-.gl-row.good td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
-.gl-row.good .gl-pts { color: var(--am-red-text); }
-.gl-row.weak td { color: var(--muted); }
-.gl-row.weak .gl-pts { color: var(--ink-2); font-weight: 600; }
+:root {
+  --gl-elite-bg: color-mix(in srgb, var(--rb) 15%, transparent); --gl-elite-text: color-mix(in srgb, var(--rb) 82%, #FFFFFF);
+  --gl-good-bg: color-mix(in srgb, var(--rb) 10%, transparent);
+}
+:root[data-theme="light"] {
+  --gl-elite-bg: color-mix(in srgb, var(--rb) 13%, transparent); --gl-elite-text: color-mix(in srgb, var(--rb) 90%, #000000);
+  --gl-good-bg: color-mix(in srgb, var(--rb) 8%, transparent);
+}
+/* Game Log performance rows (Alan, Oct 13): two levels of emerald tint for strong weekly finishes, neutral for everything
+   else. Tiers come from his weekly finish at the position in the league's scoring and lineup (finishTier), never raw
+   points. No left edge: an inset edge means "yours / selected / current" everywhere else on the site (Impeccable, Oct 13).
+   Red stays for brand and selection, so a bad game gets no color at all. */
+.gl-row.elite td { background: var(--gl-elite-bg); }
+.gl-row.elite .gl-fin { color: var(--gl-elite-text); font-weight: 700; }
+.gl-row.good td { background: var(--gl-good-bg); }
+.gl-row.good .gl-fin { font-weight: 600; }
 .gl-row.off td { color: var(--muted); font-size: 0.78rem; padding-block: 7px; background: var(--bg); }
 .gl-table tfoot td { border-top: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); font-weight: 650; }
 .gl-table tfoot td:first-child { font-size: 0.74rem; color: var(--muted); }
@@ -5803,7 +5814,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-12T21:00Z";
+  const BUILD_ID = "2026-10-13T12:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -14602,6 +14613,33 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     FIN.key = key; FIN.data = out;
     return out;
   }
+  // Weekly starters at a position in the selected league (or the site's format): dedicated slots plus a share of the flex spots
+  function lineupNow() {
+    const d = activeData();
+    // the selected league, else your Custom format, else the AM default: the same precedence as scoringNow()
+    return d ? lineupOf(d.league) : FMT ? lineupOf(fmtLeague(FMT)) : comps ? BASE_LINEUP() : { teams: 12, QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1, WRRB_FLEX: 0, REC_FLEX: 0, SUPER_FLEX: 1 };
+  }
+  function posStartable(pos, lu = lineupNow()) {
+    const flexShare = { QB: lu.SUPER_FLEX, RB: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX, WR: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX + 0.8 * lu.REC_FLEX, TE: 0.1 * lu.FLEX + 0.2 * lu.REC_FLEX };
+    return Math.round(lu.teams * ((lu[pos] || 0) + (flexShare[pos] || 0))) || lu.teams;
+  }
+  // Performance tiers from his weekly finish at the position (Alan, Oct 13): "elite" = the best quarter of the league's
+  // weekly starters there (at least the top 3), "good" = any other starter-level finish, "" = everyone else. Position-specific
+  // by construction (a 12-team 1QB league starts 12 QBs but ~41 WRs), never a raw-points threshold or his AM rank.
+  // Superflex (Alan, Oct 13): "good" for QBs is capped at the primary QB slots (teams × QB), so a 12-team Superflex league reads
+  // QB1–6 elite (a quarter of its ~24 weekly QB starters), QB7–12 good and QB13+ neutral: a startable QB19 isn't a strong game.
+  // `startable` keeps the full count for the weekly chart's "poor" weeks (outside the league's starters), unchanged.
+  function finishTiers(pos) {
+    const lu = lineupNow(), startable = posStartable(pos, lu);
+    const good = pos === "QB" ? Math.min(startable, lu.teams * Math.max(1, lu.QB || 0)) : startable;
+    return { elite: Math.min(good, Math.max(3, Math.round(startable / 4))), good, startable };
+  }
+  const finishNum = f => { const m = String(f || "").match(/\d+$/); return m ? Number(m[0]) : null; };
+  function finishTier(pos, f, tiers) {
+    const n = finishNum(f); if (n == null) return "";
+    const t = tiers || finishTiers(pos);
+    return n <= t.elite ? "elite" : n <= t.good ? "good" : "";
+  }
   function byeWeek(team) {
     const rows = team ? teamGames(STATS_SEASONS[0], team) : [];
     if (!rows.length) return null;
@@ -14697,8 +14735,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const season = PP.season, log = seasonLog(season, info.sid, info.pos), data = statsCache[season];
     const head = seasonChips(season, "pp-season");
     if (!log || !log.games.length) return head + `<p class="empty-note">No ${season} games for ${esc(info.name)}.</p>`;
-    const pos = info.pos, cols = logCols(pos, log.games), line = starterLine(pos);
-    const hi = line ? line * 1.75 : Infinity, lo = line ? line * 0.5 : -Infinity;
+    const pos = info.pos, cols = logCols(pos, log.games), tiers = finishTiers(pos);
     const byWeek = new Map(log.games.map(g => [g.w, g]));
     const team = log.games[log.games.length - 1].tm, sched = teamGames(season, team);
     // every week of the season: played games, bye, missed games, then (this season) the games still to come
@@ -14707,10 +14744,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     for (let w = 1; w <= last; w++) {
       const g = byWeek.get(w), r = sched.find(x => x[0] === w);
       if (g) {
-        const o = oppLabel(season, g), cls = g.pts >= hi ? " good" : g.pts < lo ? " weak" : "";
+        const o = oppLabel(season, g), tier = finishTier(pos, myFin[w], tiers), cls = tier ? " " + tier : "";
         const res = (o.res ? `<span class="gl-res ${o.res[0]}">${esc(o.res)}</span>` : "") + (g.short ? ` <span class="inj-tag" title="${esc(shortTip(g))}">Left early</span>` : "")
           + (canFlagInj() ? ` <button class="inj-ov" type="button" data-inj-ov="${season}|${esc(info.sid)}|${w}" title="Editor: ${g.short ? "this game wasn't cut short by an injury" : "he left this game early with an injury"}">${g.short ? "Clear flag" : "Mark injury"}</button>` : "");
-        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(g.opp, "xs")}${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${ptsStar(g)}</td><td class="gl-fin">${esc(myFin[w] || "–")}</td>
+        rows.push(`<tr class="gl-row${cls}"><td class="gl-wk">${w}</td><td class="gl-opp">${teamLogo(g.opp, "xs")}${esc(o.opp)}</td><td class="gl-result">${res}</td><td class="gl-pts">${ptsStar(g)}</td><td class="gl-fin"${tier ? ` title="${tier === "elite" ? "Elite" : "Good"} performance: ${esc(myFin[w])} that week (${tier === "elite" ? `top ${tiers.elite}` : `a ${tiers.good < tiers.startable ? "primary" : "weekly"} starter, top ${tiers.good}`} at ${esc(pos)} in ${activeData() ? "this league" : "the site's format"})"` : ""}>${esc(myFin[w] || "–")}</td>
           ${cols.map(c => `<td>${cellOf(g, c)}</td>`).join("")}</tr>`);
       } else if (!r) {
         rows.push(`<tr class="gl-row off"><td class="gl-wk">${w}</td><td class="gl-opp" colspan="${span - 1}">Bye week</td></tr>`);
@@ -14733,7 +14770,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <tbody>${rows.join("")}</tbody>
         <tfoot><tr><td colspan="3">${t.g} G · ${fp(t.ppg)}/g${t.short ? ` · ${t.short} injury-shortened${t.distort ? ` · ${fp(t.fullPpg)}/g completed` : ""}` : ""}</td><td class="gl-pts">${fp(t.pts)}</td><td></td>${totalCells}</tr></tfoot>
       </table></div>
-      <p class="pp-note">${esc(scoringLabel())}. Fin = his finish at ${esc(pos)} that week.${t.short ? " * Left early with an injury (an in-game injury or a new injury on the next week's report, and he didn't finish: his snap share fell well under his usual, or for a QB a backup took every dropback after he left); the game still counts in his average." : ""} ${line ? `Gold rows: ${fp(hi)}+ points (1.75× the ${pos} starter line of ${fp(line)}). Dim rows: under ${fp(lo)}.` : ""}</p>`;
+      <p class="pp-note">${esc(scoringLabel())}. Fin = his finish at ${esc(pos)} that week.${t.short ? " * Left early with an injury (an in-game injury or a new injury on the next week's report, and he didn't finish: his snap share fell well under his usual, or for a QB a backup took every dropback after he left); the game still counts in his average." : ""} Green rows mark the finish, not the points: elite = top ${tiers.elite} at ${esc(pos)} that week (the best quarter of ${activeData() ? "this league's" : "the format's"} ${tiers.startable} weekly ${esc(pos)} starters), lighter green = ${tiers.good < tiers.startable ? `a primary-starter finish (${esc(pos)}${tiers.elite + 1}–${esc(pos)}${tiers.good}: one ${esc(pos)} slot per team; a superflex-level ${esc(pos)}${tiers.good + 1}+ stays neutral)` : `any other starter-level finish (${esc(pos)}${tiers.elite + 1}–${esc(pos)}${tiers.good})`}.</p>`;
   }
 
   /* Season stats */
@@ -15157,11 +15194,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const sched = teamGames(season, team), lastSched = Math.max(0, ...sched.map(r => r[0]));
     const lastPlayed = Math.max(...cur.games.map(g => g.w));
     const end = Math.min(lastSched || lastPlayed, Math.max(lastPlayed, isFinite(now) ? now + 2 : lastPlayed));
-    const d = activeData(), lu = d ? lineupOf(d.league) : comps ? BASE_LINEUP() : { teams: 12, QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1, WRRB_FLEX: 0, REC_FLEX: 0, SUPER_FLEX: 1 };
-    const flexShare = { QB: lu.SUPER_FLEX, RB: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX, WR: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX + 0.8 * lu.REC_FLEX, TE: 0.1 * lu.FLEX + 0.2 * lu.REC_FLEX };
-    const startable = Math.round(lu.teams * ((lu[pos] || 0) + (flexShare[pos] || 0))) || lu.teams;
+    const tiers = finishTiers(pos), startable = tiers.startable;
     const fin = (weeklyFinish(season) || {})[sid] || {};
-    const finN = w => { const m = String(fin[w] || "").match(/\d+$/); return m ? Number(m[0]) : null; };
+    const finN = w => finishNum(fin[w]);
     const weeks = [];
     for (let w = 1; w <= end; w++) {
       const g = byWeek.get(w);
@@ -15169,7 +15204,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const o = oppLabel(season, g);
         const f = finN(w);
         weeks.push({ w, kind: "final", pts: g.pts, opp: g.opp, where: o.opp.startsWith("@") ? "@" : "vs", res: o.res, fin: fin[w] || "", short: g.short ? shortTip(g) : "",
-          tone: g.short ? "" : f == null ? "" : f <= 5 ? "strong" : f > startable ? "poor" : "" });
+          tone: g.short ? "" : f == null ? "" : f <= tiers.elite ? "strong" : f > startable ? "poor" : "" });
         continue;
       }
       const row = sched.find(r => r[0] === w);
