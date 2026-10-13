@@ -102,12 +102,12 @@ with sync_playwright() as p:
     top = [x["name"] for x in r[:6]]
     ok(name_of[BUY] in top, f"Biggest buy: {name_of[BUY]} near the top {top}")
     b = next(x for x in r if x["name"] == name_of[BUY])
-    ok("▲" in b["cell"] and "BUY" in b["cell"].upper(), f"Buy row reads AM vs market with ▲: {b['cell'][:80]!r}")
+    ok(re.search(r"AM \+\d", b["cell"]) and "▲" not in b["cell"] and "BUY" in b["cell"].upper(), f"Buy row reads AM +N vs market (▲/▼ only mean movement): {b['cell'][:80]!r}")
     sort(pg, "mksell")
     r = pg.evaluate(ROWS)
     ok(name_of[SELL] in [x["name"] for x in r[:6]], f"Biggest sell: {name_of[SELL]} near the top")
     s_ = next(x for x in r if x["name"] == name_of[SELL])
-    ok("▼" in s_["cell"] and "SELL" in s_["cell"].upper(), f"Sell row reads ▼ and Sell: {s_['cell'][:80]!r}")
+    ok(re.search(r"Mkt \+\d", s_["cell"]) and "▼" not in s_["cell"] and "SELL" in s_["cell"].upper(), f"Sell row reads Mkt +N and Sell: {s_['cell'][:80]!r}")
     # 2. Flock import (synthetic CSV), 1QB list in a Superflex format -> approximate
     pg.click("[data-mk-flock]"); pg.wait_for_timeout(300)
     pg.evaluate("() => { const s = document.getElementById('mk-fl-qb'); s.value = '1qb'; }")
