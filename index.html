@@ -1978,10 +1978,17 @@ button.tr-player:hover:not(:disabled) { background: var(--surface-2); }
 .theme-toggle .ti-moon { display: none; }
 :root[data-theme="light"] .theme-toggle .ti-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .ti-moon { display: block; }
-/* smooth swap when the theme changes (not on first paint) */
-html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, fill 0.25s ease, stroke 0.25s ease !important;
-}
+/* Theme switch (Alan, Oct 13): one coordinated 200ms crossfade of the whole page (setTheme). The old per-element
+   transition on every element (html.theme-anim *) made the browser build ~50k CSS transitions on the ~9,700-element
+   board: 1.5–2.5s of style work, so the page froze and then snapped (9s on a throttled phone). Now the page is
+   snapshotted, the theme flips in one style pass, and the two pictures crossfade on the compositor, so backgrounds,
+   text, borders, shadows, images and icons change at exactly the same moment. During the swap no element runs its own
+   color transition (they'd finish at their own speeds inside the new picture). Reduced motion: an instant swap. */
+html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition: none !important; }
+html.theme-vt::view-transition { pointer-events: none; }
+html.theme-vt::view-transition-group(root) { animation: none; }
+html.theme-vt::view-transition-old(root), html.theme-vt::view-transition-new(root) { animation-duration: 200ms; animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
+@media (prefers-reduced-motion: reduce) { html.theme-vt::view-transition-old(root), html.theme-vt::view-transition-new(root) { animation: none; } }
 
 /* ---------- League settings (by hand) and league imports ---------- */
 .fmt-chip {
@@ -5814,7 +5821,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T15:00Z";
+  const BUILD_ID = "2026-10-13T15:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5839,15 +5846,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* ---------- Theme (light / dark) ----------
      All colors come from the theme tokens at the top of the stylesheet; this only flips
      data-theme on <html> and remembers it. Charts and every page follow automatically. */
+  let themeSeq = 0;
   function setTheme(t, animate) {
-    const root = document.documentElement;
-    if (animate) { root.classList.add("theme-anim"); clearTimeout(setTheme.timer); setTheme.timer = setTimeout(() => root.classList.remove("theme-anim"), 320); }
-    root.setAttribute("data-theme", t);
-    try { localStorage.setItem("spm_theme", t); } catch (e) {}
-    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
-    const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
-    btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
-    btn.setAttribute("aria-pressed", String(t === "light"));
+    const root = document.documentElement, seq = ++themeSeq;
+    const apply = () => {
+      if (animate) root.classList.add("theme-switching");   // same style pass as the flip: no element runs its own color transition (see CSS)
+      root.setAttribute("data-theme", t);
+      try { localStorage.setItem("spm_theme", t); } catch (e) {}
+      const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
+      const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
+      btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
+      btn.setAttribute("aria-pressed", String(t === "light"));
+    };
+    if (!animate) { apply(); return; }
+    // a newer switch owns the classes; an older one finishing (or skipped by it) leaves them alone
+    const end = () => { if (seq === themeSeq) root.classList.remove("theme-switching", "theme-vt"); };
+    const motion = !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (motion && document.startViewTransition && document.visibilityState === "visible") {
+      root.classList.add("theme-vt");
+      try { document.startViewTransition(apply).finished.finally(end); return; } catch (e) { root.classList.remove("theme-vt"); }
+    }
+    apply(); requestAnimationFrame(() => requestAnimationFrame(end));   // reduced motion, a hidden tab or no View Transitions: instant
   }
   setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark", false);
   $("theme-toggle").addEventListener("click", () => setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light", true));
