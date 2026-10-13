@@ -11,6 +11,9 @@ locally.
                            else running, after the others; every other suite is independent (its own server, browser and
                            mock GitHub) and can share the machine. Locally --jobs 3 brings the full tier from ~33 to
                            ~10 minutes on 4 cores.
+           Suites listed under "parts" in the policy are split into N independent units ("inflight_check@1/2"), each
+                           run with CI_PART=k/N (the suite picks its share of cases), and placed like any other suite;
+                           shards are balanced longest-first on the policy's measured weights for the given --jobs.
            --heartbeat S   while suites run, print what is running and for how long every S seconds (default 60, 0 off)
            --timeout M     per-suite timeout in minutes (default from the policy's timeout_minutes, 15)
            --logs DIR      one log per suite (default tests/.ci-logs); --static-args "--base SHA" (passed to static_check)
@@ -31,11 +34,33 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 POLICY = json.load(open(os.path.join(ROOT, "tests", "ci_policy.json")))
 
-def shard_of(suites, k, n):   # greedy by expected duration, deterministic
-    w = POLICY["suites"]["weights"]; bins = [[0, []] for _ in range(n)]
-    for s in sorted(suites, key=lambda s: (-w.get(s, 60), s)):
-        b = min(bins, key=lambda b: b[0]); b[0] += w.get(s, 60); b[1].append(s)
-    return bins[k - 1][1]
+def units(suites):
+    """Suites as units of work: a suite listed under suites.parts in the policy runs as N parts ("inflight_check@1/2"),
+    each its own process with CI_PART=k/N in the environment (the suite runs its share of its cases), so one long suite
+    doesn't set the floor of a parallel run. Every part runs; together they are the whole suite."""
+    parts = POLICY["suites"].get("parts", {})
+    return [f"{s}@{k}/{parts[s]}" if s in parts else s for s in suites for k in range(1, parts.get(s, 1) + 1)]
+
+def base(unit): return unit.split("@")[0]
+
+def weight(unit):
+    w = POLICY["suites"]["weights"].get(base(unit), 60)
+    return w / int(unit.split("/")[1]) if "@" in unit else w
+
+def cost(shared, exclusive, jobs):
+    """Expected wall time of a list: the independent suites `jobs` at a time (longest first), then the exclusive ones alone."""
+    lanes = [0.0] * max(1, jobs)
+    for u in sorted(shared, key=lambda u: -weight(u)): lanes[lanes.index(min(lanes))] += weight(u)
+    return max(lanes) + sum(weight(u) for u in exclusive)
+
+def shard_of(suites, k, n, jobs=1):   # greedy by expected wall time with `jobs` suites at a time, deterministic
+    excl = set(POLICY["suites"].get("exclusive", []))
+    bins = [([], []) for _ in range(n)]
+    for u in sorted(suites, key=lambda u: (-weight(u), u)):
+        side = 1 if base(u) in excl else 0
+        def after(b): t = (b[0] + [u], b[1]) if side == 0 else (b[0], b[1] + [u]); return cost(t[0], t[1], jobs)
+        b = min(bins, key=after); b[side].append(u)
+    return bins[k - 1][0] + bins[k - 1][1]
 
 # a crash the browser or the local server caused, not the site: the last lines of the suite's output say so
 INFRA = [re.compile(x) for x in (
@@ -50,7 +75,10 @@ def infra_reason(out):
         if m: return tail[max(0, m.start() - 40):m.end() + 60].replace("\n", " ").strip()
     return None
 
+def logname(unit): return unit.replace("@", ".part").replace("/", "of")
+
 def classify(suite, line):
+    suite = base(suite)
     kf = POLICY["known_failures"].get(suite, {})
     for name in kf:
         if line.startswith(name): return "known", name
@@ -75,17 +103,17 @@ def main():
             print(f"targeted: unknown or no suites {unknown or a.suites!r}"); return 1
     else:
         suites = POLICY["suites"][a.tier]
-    if a.tier == "full": suites = shard_of(suites, k, n)
+    suites = units(suites)
+    if a.tier == "full": suites = shard_of(suites, k, n, a.jobs)
     if a.tier == "targeted" and a.group != "all":
         excl = POLICY["suites"].get("exclusive", [])
-        suites = [x for x in suites if (x in excl) == (a.group == "exclusive")]
+        suites = [x for x in suites if (base(x) in excl) == (a.group == "exclusive")]
         if not suites: print(f"targeted ({a.group}): nothing to run in this group"); return 0
     os.makedirs(a.logs, exist_ok=True)
     retries = int(POLICY["suites"].get("infra_retries", 1))
     timeout = a.timeout * 60
-    weights = POLICY["suites"]["weights"]
-    exclusive = [s for s in suites if s in POLICY["suites"].get("exclusive", [])]
-    shared = sorted([s for s in suites if s not in exclusive], key=lambda s: (-weights.get(s, 60), s))   # longest first packs best
+    exclusive = [s for s in suites if base(s) in POLICY["suites"].get("exclusive", [])]
+    shared = sorted([s for s in suites if s not in exclusive], key=lambda s: (-weight(s), s))   # longest first packs best
     jobs = max(1, a.jobs)
     running, lock, t_start = {}, threading.Lock(), time.time()
     out_lock = threading.Lock()
@@ -93,9 +121,10 @@ def main():
         with out_lock: print(*parts, flush=True)
 
     def attempt(s):
-        cmd = [sys.executable, os.path.join("tests", s + ".py")] + (a.static_args.split() if s == "static_check" and a.static_args else [])
+        cmd = [sys.executable, os.path.join("tests", base(s) + ".py")] + (a.static_args.split() if s == "static_check" and a.static_args else [])
+        env = dict(os.environ, **({"CI_PART": s.split("@")[1]} if "@" in s else {}))
         # each suite runs in its own process group, so a timeout kills the suite AND its browser / server subprocesses
-        proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+        proc = subprocess.Popen(cmd, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
         try:
             out, _ = proc.communicate(timeout=timeout); return out, proc.returncode
         except subprocess.TimeoutExpired:
@@ -114,14 +143,14 @@ def main():
                 if rc == 0 or rc == "timeout" or any(l.startswith("FAIL ") for l in out.splitlines()): break
                 why = infra_reason(out)
                 if not why: break
-                open(os.path.join(a.logs, f"{s}.attempt{i + 1}.log"), "w").write(out)
+                open(os.path.join(a.logs, f"{logname(s)}.attempt{i + 1}.log"), "w").write(out)
                 say(f"    retry {s}: the browser or the local server failed, not a check ({why[:160]})")
                 out, rc = attempt(s)
                 if rc == 0: flaky = why
         finally:
             with lock: running.pop(s, None)
         dt = time.time() - t0
-        open(os.path.join(a.logs, s + ".log"), "w").write(out)
+        open(os.path.join(a.logs, logname(s) + ".log"), "w").write(out)
         fails = [l[5:] for l in out.splitlines() if l.startswith("FAIL ")]
         passes = sum(1 for l in out.splitlines() if l.startswith("PASS "))
         new, known, adv = [], set(), []
@@ -133,7 +162,7 @@ def main():
         if rc == "timeout": new.append(f"timed out after {a.timeout:g} min"); crashed = False
         if crashed: new.append("crashed (non-zero exit without a FAIL line): " + (out.strip().splitlines() or ["no output"])[-1][:200])
         # a known failure that didn't show up in a run that completed normally
-        fixed = [x for x in POLICY["known_failures"].get(s, {}) if x not in known] if (not crashed and rc != "timeout" and passes) else []
+        fixed = [x for x in POLICY["known_failures"].get(base(s), {}) if x not in known] if (not crashed and rc != "timeout" and passes) else []
         status = "FAIL" if new else "pass"
         if flaky:
             with lock:

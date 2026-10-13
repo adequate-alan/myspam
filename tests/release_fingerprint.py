@@ -13,6 +13,11 @@ was already verified runs only the fast checks (static + smoke), anything else r
 So a rankings publish made on top of code that failed its checks still runs the full suite and stays blocked.
 
 Run from the repo root:  python3 tests/release_fingerprint.py [--rev COMMIT]   (the working tree, or a commit's tree)
+
+  --page  prints the page's build ID instead: 12 hex characters of index.html with the rankings block blanked. The build
+          job stamps it into the deployed copy's BUILD_ID (the repo keeps "dev"), so open browsers get the "new
+          version" prompt only when the page's own code changes: never for a rankings publish, a data refresh, or a
+          test or workflow change.
 """
 import hashlib, os, re, subprocess, sys
 
@@ -42,6 +47,13 @@ def fingerprint(rev=None):
         h.update(f.encode() + b"\0" + hashlib.sha256(b).digest())
     return h.hexdigest()[:32]
 
+def page_id(html):
+    """The deployed page's build ID: index.html with the rankings block blanked (BUILD_ID itself is the "dev" placeholder)."""
+    if len(CSV_RE.findall(html)) != 1: raise SystemExit("index.html: expected exactly one RANKINGS_CSV block")
+    return hashlib.sha256(CSV_RE.sub(lambda m: m[1] + b"<rankings>" + m[3], html)).hexdigest()[:12]
+
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--page"]:
+        print(page_id(open(os.path.join(ROOT, "index.html"), "rb").read())); sys.exit(0)
     print(fingerprint(sys.argv[2] if len(sys.argv) > 2 and sys.argv[1] == "--rev" else None))
     sys.exit(0)
