@@ -12,7 +12,7 @@
     try { t = localStorage.getItem("spm_theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", t);
-    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
+    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#ECEEF2" : "#08090B";
   })();
 </script>
 <meta name="description" content="Adequate: fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
@@ -5821,7 +5821,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T13:40Z";
+  const BUILD_ID = "2026-10-13T14:35Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5853,7 +5853,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (animate) root.classList.add("theme-switching");   // same style pass as the flip: no element runs its own color transition (see CSS)
       root.setAttribute("data-theme", t);
       try { localStorage.setItem("spm_theme", t); } catch (e) {}
-      const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
+      const m = $("theme-color"); if (m) m.content = t === "light" ? "#ECEEF2" : "#08090B";
       const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
       btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
       btn.setAttribute("aria-pressed", String(t === "light"));
