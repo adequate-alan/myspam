@@ -1,6 +1,6 @@
 # Adequate · Fantasy Football Rankings
 
-Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-premium, superflex redraft league. Rankings by Alan ([adequate-alan](https://github.com/adequate-alan)), starting from the board he built with Steven ([stevenp36](https://github.com/stevenp36)); player values come from a model that blends those rankings with this season's usage and betting-market team outlooks.
+Fantasy football rankings and a trade calculator for a 12-team, full-PPR, TE-premium, superflex redraft league. Rankings by Alan ([adequate-alan](https://github.com/adequate-alan)); player values come from a model that blends those rankings with this season's usage and betting-market team outlooks.
 
 **Live site:** https://adequate-alan.github.io/myspam/ (rankings: https://adequate-alan.github.io/myspam/#rankings)
 

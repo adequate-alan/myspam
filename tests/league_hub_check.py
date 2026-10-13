@@ -619,7 +619,7 @@ with sync_playwright() as p:
     else:
         ok(False, "Live-matchup details (Live proj, tooltip, played/active/remaining, LIVE points): skipped, no live matchup")
     if SHOTS: pg2.screenshot(path=f"{SHOTS}/hub_matchups_live.png", full_page=True)
-    # phones (Steven, Oct 4): nothing in a matchup card, incl. the open lineups' points and projections, is cut off
+    # phones (Oct 4): nothing in a matchup card, incl. the open lineups' points and projections, is cut off
     for w in (360, 320):
         pg2.set_viewport_size({"width": w, "height": 800}); pg2.wait_for_timeout(300)
         clipped = pg2.evaluate("""() => [...document.querySelectorAll('.mx-card *')].filter(el => { const r = el.getBoundingClientRect(), c = el.closest('.mx-card').getBoundingClientRect();

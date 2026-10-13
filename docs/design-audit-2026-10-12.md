@@ -93,7 +93,7 @@ Severity: P0 blocks a task. P1 is a major difficulty or a WCAG AA failure. P2 is
 
 1. **[P1] The editor bar for every visitor.** It is 40 px on desktop and three lines on phones, and reads "Drag or use the arrows…" for visitors whose edits stay in their own browser. It also drives the phone editing layout, which now fits but is crowded.
    - Option: show the bar and the drag column only after sign-in, or after a visitor's first edit.
-   - Product decision: Steven's temporary "editing open to all".
+   - Product decision: the temporary "editing open to all".
 2. **[P1] One control vocabulary.**
    - Segmented switches: AM Board / League-adjusted and By division / League are full size, while the calculator's AM Value / Roster Impact is a ~60% copy.
    - Badges: filled position badges, outlined slot badges with a colored edge, and rounded transaction pills, where WAIVER CLAIM's blue reads as WR.

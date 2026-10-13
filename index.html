@@ -2479,7 +2479,7 @@ th.fa-proj { text-align: right; }
   .st-mgr { display: none; }
   #fa-wrap .fa-fit, #fa-wrap .fa-srk, #fa-wrap .fa-num { display: none; }
 }
-/* Matchups on phones (Steven, Oct 4): every number stays reachable. Team names wrap instead of truncating, each
+/* Matchups on phones (Oct 4): every number stays reachable. Team names wrap instead of truncating, each
    lineup row becomes slot | player (game under the name) | points, and the lineup area can scroll sideways as a
    last resort instead of clipping. */
 .mx-detail { overflow-x: auto; }
@@ -12041,7 +12041,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   /* Standings: record order next to AM power rank */
   const streakText = s => { const m = String(s || "").match(/(\d+)\s*([WLT])/i) || String(s || "").match(/([WLT])\s*(\d+)/i); if (!m) return "–"; const [num, k] = /\d/.test(m[1]) ? [m[1], m[2]] : [m[2], m[1]]; return k.toUpperCase() + num; };
-  /* Standings (Steven, Oct 4): Sleeper's own divisions (names and grouping) and a playoff odds column.
+  /* Standings (Oct 4): Sleeper's own divisions (names and grouping) and a playoff odds column.
      Divisions: when the league has them, teams are grouped under each division's name and ranked inside it
      (wins, then points for, as Sleeper does); "League" shows one table. Playoff odds: a Monte Carlo of the rest
      of the regular season on Sleeper's real schedule (so strength of schedule is built in), with each team's
@@ -13226,7 +13226,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      Weekly projections never touch rankings, values, tiers or history. */
   const PROJ_PROVIDERS = [
     { id: "spam", label: "AM", get: e => { const v = projPPGOf(e.p); return v != null ? { basePts: v } : null; } },
-    // Kickers and team defenses (Steven, Oct 4): AM doesn't rank or project them, so Matchups use Sleeper's own
+    // Kickers and team defenses (Oct 4): AM doesn't rank or project them, so Matchups use Sleeper's own
     // weekly projection, scored with this league's K/DEF settings (sleeperPoints). See SLPROJ below.
     { id: "sleeper", label: "Sleeper (K, DEF)", get: (e, week) => (SLPROJ_POS.includes(e.pos) ? slProjFor(e.sid, week) : null) }
   ];
@@ -13304,7 +13304,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     return out;
   }
-  /* Sleeper's weekly projections for kickers and team defenses (Steven, Oct 4). AM's pipeline only projects
+  /* Sleeper's weekly projections for kickers and team defenses (Oct 4). AM's pipeline only projects
      QB/RB/WR/TE, so a K or DEF starter used to leave a matchup "partial". The visitor's browser asks Sleeper
      directly for that week's K/DEF projections (memory only, never stored or committed, like the rest of the
      league data); each projection is a raw stat line (field goals by distance, extra points, sacks, takeaways,
@@ -14710,7 +14710,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       `<p class="pp-note">Official practice report (nflverse): FP full, LP limited, DNP did not practice. ${anyDaily ? "Each day fills in from our Wednesday, Thursday and Friday evening updates; a dash means that day wasn't captured." : "Shows the latest day reported."}</p>`;
   }
 
-  /* Depth Chart (Steven, Oct 4): his NFL team's depth chart from Sleeper (depth_chart_position / depth_chart_order in
+  /* Depth Chart (Oct 4): his NFL team's depth chart from Sleeper (depth_chart_position / depth_chart_order in
      Sleeper's player database). The pipeline writes data/depth_charts.json with every stats refresh (Sleeper asks for
      that ~5 MB file at most daily, so browsers never fetch it). Offense first, his own slot highlighted; the offensive
      line, defense and special teams behind "Full depth chart". Never changes rankings or values. */
@@ -15616,7 +15616,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const TF = { goalSet: false, discPos: "", discFor: "", src: "mine", sid: null, sid2: "", srcTeam: "", from: "auto", against: "ANY", pos: "ANY", send: "any", recv: "any", three: false,
                gap: 10, fair: false, goal: "fair", sort: "best", disc: "buy", q: "", ideas: [], ideas3: [], openFull: new Set(), show: 10, showKey: "" };
   const TF_PAGE = 10;   // ideas shown at first; "Show more" adds this many
-  // Trade types (Steven, Oct 4): 1-for-1, 1-for-2, 2-for-1 or All packages (incl. 2-for-2), counted from the starting team's side.
+  // Trade types (Oct 4): 1-for-1, 1-for-2, 2-for-1 or All packages (incl. 2-for-2), counted from the starting team's side.
   // A 2-player package already fixes one side at 2: shopping it (give) allows 2-for-1, getting it allows 1-for-2.
   // Package size, always directional (Alan, Oct 10): [players the starting team sends, players it gets]. These are the
   // shapes the generator in findTrades actually builds; 3→2 only exists in Target a player (three pieces for a pair).
