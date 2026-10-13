@@ -15,7 +15,7 @@ Browser-saved data (league connection, theme, editor token and unpublished edits
 
 ## Updates reaching visitors
 
-GitHub Pages can keep serving a browser its cached copy of the page for a few minutes after an update. `BUILD_ID` near the top of the main script changes with every code update; a few seconds after the page loads (and whenever the tab comes back into view, at most every 5 minutes) the site checks the live copy and, if it's newer, shows "A new version of SPAM is available" with a Refresh button. Update `BUILD_ID` whenever the code changes (rankings edits published from the editor don't need it).
+GitHub Pages can keep serving a browser its cached copy of the page for a few minutes after an update. `BUILD_ID` near the top of the main script is `"dev"` in the repo and the deploy stamps a hash of the page's code into it, so it changes with every code update; a few seconds after the page loads (and whenever the tab comes back into view, at most every 5 minutes) the site checks the live copy and, if it's newer, shows "A new version of SPAM is available" with a Refresh button. Never edit `BUILD_ID` by hand (rankings edits and data refreshes don't change it).
 
 ## Brand
 
