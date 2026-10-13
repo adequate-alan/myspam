@@ -2223,7 +2223,7 @@ th.mt-wk { text-align: right; }
 .rf-trend.hot { color: var(--rb); } .rf-trend.cool { color: var(--qb); } .rf-trend.steady { color: var(--muted); }
 .rf-trend.rising { color: var(--rb); } .rf-trend.falling { color: var(--qb); }
 .rf-avail { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
-.rf-avail.out, .rf-avail.ir { color: var(--st-dnp-text); } .rf-avail.d { color: var(--st-d); } .rf-avail.q { color: var(--st-q); } .rf-avail.back { color: var(--st-fp); }
+.rf-avail.out, .rf-avail.ir { color: var(--st-dnp-text); } .rf-avail.d { color: var(--st-d); } .rf-avail.q { color: var(--st-q); } .rf-avail.back { color: var(--st-fp-text); }
 .rf-trend.none { color: var(--muted); font-weight: 500; }
 .fa-opp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.84rem; }
 .fa-opp .sc-dot { margin-right: 4px; }
@@ -3264,13 +3264,13 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .pr-player .st-badge { margin-left: 8px; }
 .pr-inj { color: var(--ink-2); }
 /* Status colours, the same everywhere */
-:root, :root[data-theme="dark"] { --st-dnp-text: #E2625D; --st-out-text: #E8706A; --st-fp: #2F8550; --st-lp: #D8901E; --st-dnp: #C9373F; --st-out: #93202A; --st-q: #D9A520; --st-d: #D85A2B; --st-ir: #8F4A4F; --st-ink: #FFFFFF; --st-ink-amber: #1A1314; }
-:root[data-theme="light"] { --st-dnp-text: var(--st-dnp); --st-out-text: var(--st-out); --st-fp: #2F8550; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
+:root, :root[data-theme="dark"] { --st-dnp-text: #E2625D; --st-out-text: #E8706A; --st-fp: #2F8550; --st-fp-text: #4FB877; --st-lp: #D8901E; --st-dnp: #C9373F; --st-out: #93202A; --st-q: #D9A520; --st-d: #D85A2B; --st-ir: #8F4A4F; --st-ink: #FFFFFF; --st-ink-amber: #1A1314; }
+:root[data-theme="light"] { --st-dnp-text: var(--st-dnp); --st-out-text: var(--st-out); --st-fp: #2F8550; --st-fp-text: #23703F; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
 .st-blk { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 24px; padding: 0 6px; border-radius: 5px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; color: var(--st-ink); background: var(--st, var(--surface-2)); }
 .st-blk.none { --st: transparent; color: var(--muted); font-weight: 500; }
 .st-blk.fp { --st: var(--st-fp); } .st-blk.lp { --st: var(--st-lp); color: var(--st-ink-amber); } .st-blk.dnp { --st: var(--st-dnp); }
 .st-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; color: var(--st-ink); background: var(--st, var(--surface-2)); white-space: nowrap; }
-.st-badge.fp, .st-badge.ok { --st: color-mix(in srgb, var(--st-fp) 22%, transparent); color: var(--st-fp); }
+.st-badge.fp, .st-badge.ok { --st: color-mix(in srgb, var(--st-fp) 22%, transparent); color: var(--st-fp-text); }
 .st-badge.lp, .st-badge.q { --st: var(--st-q); color: var(--st-ink-amber); }
 .st-badge.d { --st: var(--st-d); } .st-badge.dnp { --st: var(--st-dnp); } .st-badge.out { --st: var(--st-out); } .st-badge.ir { --st: var(--st-ir); }
 .inj-pos { display: inline-block; min-width: 30px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.06em; color: var(--muted); }
