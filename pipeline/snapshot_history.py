@@ -12,8 +12,8 @@ Run from the pipeline folder after the projection refresh:
     python snapshot_history.py --src B           # a baseline snapshot (no publish involved)
 Needs: pip install playwright && python -m playwright install --with-deps chromium
 """
-import argparse, datetime, functools, http.server, json, os, socketserver, threading
-from playwright.sync_api import sync_playwright
+import argparse, datetime, functools, http.server, json, os, socketserver, sys, threading
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 HIST = os.path.join(ROOT, "data", "rank_history.json")
@@ -54,7 +54,13 @@ def main():
             pg = b.new_page()
             pg.route("**/*", lambda r: r.abort() if not r.request.url.startswith(url.rsplit("/", 1)[0]) else r.continue_())
             pg.goto(url)
-            pg.wait_for_function("window.SPM && window.SPM.rankingSnapshot")
+            # A function-valued predicate is called by Playwright, so rankingSnapshot() ran before the board loaded
+            # (players still null) and threw. Wait for a non-empty board instead.
+            try:
+                pg.wait_for_function("(() => { try { return Object.keys(window.SPM.rankingSnapshot()).length > 0; } catch (e) { return false; } })()",
+                                     timeout=90_000)
+            except PlaywrightTimeout:
+                sys.exit("Ranking snapshot failed: the board in index.html didn't load within 90 s, so nothing was recorded.")
             out = pg.evaluate("""([hist, snaps, prev, ts, src]) => {
                 const h = SPM.normalizeHistory(hist);
                 const r = SPM.recordPublish(h, snaps, prev, SPM.rankingSnapshot(), ts, src, src === "B" ? "baseline" : "scheduled", null);
