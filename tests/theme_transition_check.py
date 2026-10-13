@@ -124,7 +124,7 @@ with sync_playwright() as p:
         ok(pg.evaluate("localStorage.getItem('spm_theme')") == to, f"{frm} -> {to}: remembered")
         ok(pg.get_attribute("#theme-toggle", "aria-pressed") == str(to == "light").lower()
            and pg.get_attribute("#theme-toggle", "aria-label") == f"Switch to {'dark' if to == 'light' else 'light'} mode", f"{frm} -> {to}: toggle label and state")
-        ok(pg.get_attribute("#theme-color", "content") == ("#F7F7F8" if to == "light" else "#08090B"), f"{frm} -> {to}: browser theme-color")
+        ok(pg.get_attribute("#theme-color", "content") == ("#ECEEF2" if to == "light" else "#08090B"), f"{frm} -> {to}: browser theme-color")
     toggle(pg); pg.reload(); pg.wait_for_selector("#rank-body tr.player")
     ok(theme(pg) == "light" and bg(pg) == BG["light"], "Reload keeps the switched theme")
     # a quick run of clicks: the last one wins, nothing left behind
