@@ -2072,8 +2072,7 @@ dialog.signin label.signin-remember { margin: 10px 0 0; text-transform: none; le
 .fmt-note { font-size: 0.68rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .fmt-note b { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.64rem; }
 .bm { display: inline-block; margin-left: 5px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: 1px; }
-.bm-up { color: var(--rb); }
-.bm-down { color: var(--rose); }
+.bm-up, .bm-down { color: var(--text-secondary); }   /* a comparison, not a gain or loss: neutral (Oct 13 audit) */
 @media (max-width: 560px) {
   .fmt-row { grid-template-columns: 1fr; gap: 6px; }
   .fc-format { display: none; }
@@ -3184,7 +3183,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .cmp-table td:first-child { text-align: right; }
 .cmp-table th { width: 20%; text-align: center; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
 .cmp-table td.cmp-win { color: var(--heading); font-weight: 800; background: color-mix(in srgb, var(--gold) 6%, transparent); }
-.cmp-up { display: inline-block; margin: 0 6px; font-size: 0.6rem; color: var(--am-red-text); vertical-align: 1px; }
+.cmp-up { display: inline-block; margin: 0 6px; font-size: 0.55rem; color: var(--text-secondary); vertical-align: 2px; }
 .cmp-table td small { font-size: 0.68rem; font-weight: 550; color: var(--muted); }
 .cmp-sec-h td { padding: 12px 16px 6px !important; text-align: left !important; font-size: 0.6rem !important; font-weight: 600 !important; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted) !important; background: var(--surface-2); width: auto !important; }
 .cmp-sec:not(.lead) td:not(.cmp-sec-h td), .cmp-sec:not(.lead) th { padding-block: 7px; }
@@ -6721,7 +6720,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("rank-body").innerHTML = out.length ? out.join("") : `<tr><td class="empty" colspan="5">${query ? `No players match “${esc(query)}”.` : "No players with market data here."}</td></tr>`;
     const notes = [`${list.length} player${list.length === 1 ? "" : "s"} · ${M.label}`];
     if (none) notes.push(`${none} without ${src ? (src === "fc" ? "FantasyCalc" : "Flock") : "market"} data`);
-    notes.push("▲ = AM ranks him higher than the market (buy) · ▼ = the market ranks him higher (sell)");
+    notes.push("AM +N = AM ranks him N spots higher at his position than the market (buy) · Mkt +N = the market ranks him higher (sell)");
     $("rank-count").textContent = notes.join(" · ");
     updateEditorBar(); queueRail();
     if ($("player-modal").open) markCurrent();
@@ -10673,7 +10672,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
+      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. Under each rank, “AM #12” is his spot on the AM Board.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
       : `<span>Showing the AM Board · <b>${esc(formatLabel())}</b></span>`;
     if (!d) {
       $("fmt-override").hidden = true; $("league-chip").classList.remove("custom");
@@ -12116,8 +12115,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const vs = r => {
       const dlt = r.recRank - r.x.power;
       if (!played || !dlt) return `<span class="muted">–</span>`;
-      return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">▲${dlt} <small>roster ahead</small></span>`
-                     : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">▼${-dlt} <small>record ahead</small></span>`;
+      return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">+${dlt} <small>roster ahead</small></span>`
+                     : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">+${-dlt} <small>record ahead</small></span>`;
     };
     const row = (r, rk) => `<tr class="st-row${r.t.mine ? " mine" : ""}" data-standing-team="${r.t.rosterId}" tabindex="0">
           <td class="rk">${rk}</td>
@@ -12136,7 +12135,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
     const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its AM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${poRule(divs, spots)}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
     const toggle = divs ? `<div class="view-toggle st-view" role="group" aria-label="Standings view"><button class="vt-btn" type="button" data-st-view="div" aria-pressed="${byDiv}">By division</button><button class="vt-btn" type="button" data-st-view="league" aria-pressed="${!byDiv}">League</button></div>` : "";
-    return `<div class="st-top-row"><p class="method-note">Actual standings next to AM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
+    return `<div class="st-top-row"><p class="method-note">Actual standings next to AM Power Rank (roster strength). Difference: “roster ahead” when the roster ranks higher than the record so far, “record ahead” when the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
       <div class="table-scroll"><table class="st-table">
         <thead><tr><th scope="col">${byDiv ? "Div" : "Rk"}</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">AM Power Rank</th><th scope="col">Difference</th><th scope="col" class="st-odds-h">Playoff odds ${infoIcon(oddsInfo, "How playoff odds work")}</th></tr></thead>
         <tbody>${body}</tbody>
@@ -13565,7 +13564,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return `<tr class="player fa-row" data-player="${esc(p.sleeperId)}" tabindex="0" aria-label="${esc(p.name)}: open player page">
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
-        <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span>${tc ? `<span class="fa-trend" title="Added in ${tc.toLocaleString("en-US")} Sleeper leagues in the last 24 hours (all of Sleeper, not just this league)">▲ ${trendCount(tc)} adds · 24h</span>` : ""}</div></div></td>
+        <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span>${tc ? `<span class="fa-trend" title="Added in ${tc.toLocaleString("en-US")} Sleeper leagues in the last 24 hours (all of Sleeper, not just this league)">+${trendCount(tc)} adds · 24h</span>` : ""}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
       <td class="fa-proj ${pj.kind}"${hcWk(p, pj.o, currentWeek())}>${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
       <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
@@ -15251,8 +15250,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (a == null && b == null) return "";
         const win = cmpLead(a, b, better), fa = a == null ? "–" : show(a, A), fb = b == null ? "–" : show(b, B);
         all.push({ theme, label, a, b, better, fa: String(fa).replace(/<[^>]+>.*$/, ""), fb: String(fb).replace(/<[^>]+>.*$/, "") });
-        const cellA = `<td class="${win === "a" ? "cmp-win" : ""}">${win === "a" ? `<span class="cmp-up" aria-label="leads">▲</span>` : ""}${fa}</td>`;
-        const cellB = `<td class="${win === "b" ? "cmp-win" : ""}">${fb}${win === "b" ? `<span class="cmp-up" aria-label="leads">▲</span>` : ""}</td>`;
+        const cellA = `<td class="${win === "a" ? "cmp-win" : ""}">${win === "a" ? `<span class="cmp-up" aria-label="leads" title="Leads">●</span>` : ""}${fa}</td>`;
+        const cellB = `<td class="${win === "b" ? "cmp-win" : ""}">${fb}${win === "b" ? `<span class="cmp-up" aria-label="leads" title="Leads">●</span>` : ""}</td>`;
         return `<tr>${cellA}<th scope="row">${label}</th>${cellB}</tr>`;
       }).join("");
       return body ? `<tbody class="cmp-sec${LEAD.includes(key) ? " lead" : ""}"><tr class="cmp-sec-h"><td colspan="3">${title}</td></tr>${body}</tbody>` : "";
@@ -15266,7 +15265,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <div class="view-toggle cmp-lens" role="group" aria-label="Compare lens">${CMP_LENSES.map(([k, l]) => `<button type="button" class="vt-btn" data-cmp-lens="${k}" aria-pressed="${lens === k}">${l}</button>`).join("")}</div>
         <table class="cmp-table">${secHtml}</table>
         ${mixed}
-        <p class="pp-note">${STATS_SEASONS[0]} per game · ${esc(scoringLabel())}. ▲ marks the leader where the gap is 4% or more.${notes.length ? "<br>" + notes.join("<br>") : ""} Route data (routes run, route participation, per-route rates) isn't in our free data sources, so it isn't shown. <button class="footer-link" type="button" data-pm-uncompare>Stop comparing</button></p>
+        <p class="pp-note">${STATS_SEASONS[0]} per game · ${esc(scoringLabel())}. ● marks the leader where the gap is 4% or more.${notes.length ? "<br>" + notes.join("<br>") : ""} Route data (routes run, route participation, per-route rates) isn't in our free data sources, so it isn't shown. <button class="footer-link" type="button" data-pm-uncompare>Stop comparing</button></p>
       </div>`;
   }
 
@@ -16333,7 +16332,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const amt = r.lvl === 3 ? "far" : r.lvl === 2 ? "substantially" : "a little";
     return `AM values him ${amt} ${hi ? "higher" : "lower"} than ${who}.`;
   }
-  const mkEdgeTxt = n => (n > 0 ? `▲ +${n}` : n < 0 ? `▼ ${n}`.replace("-", "−") : "=");
+  const mkEdgeTxt = n => (n > 0 ? `AM +${n}` : n < 0 ? `Mkt +${-n}` : "=");   // ▲/▼ only mean movement over time (Oct 13 audit)
   const mkPill = r => `<span class="mk-pill ${r.dir > 0 ? "buy" : r.dir < 0 ? "sell" : "even"} l${r.lvl}" title="${esc(mkSentence(r))}">${esc(r.bucket)}</span>`;
   function mkFresh(srcs) {
     return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list exported ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "synced"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
