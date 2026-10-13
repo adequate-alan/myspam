@@ -1580,7 +1580,7 @@ button.rs-card:focus-visible { outline: 2px solid var(--focus-ring); outline-off
 .ri { display: flex; flex-direction: column; gap: 8px; }
 .ri-row { display: grid; grid-template-columns: minmax(120px, 0.9fr) minmax(170px, 1fr) minmax(120px, 1.2fr); align-items: center; gap: 12px; }
 .ri-name { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ri-name.side-A { color: var(--am-red-text); } .ri-name.side-B { color: var(--side-b); }
+.ri-name { color: var(--heading); }   /* team names are neutral: red means selection / your team (Oct 13) */
 .ri-txt { font-size: 0.84rem; color: var(--ink-2); }
 .ri-txt b { color: var(--cream); font-variant-numeric: tabular-nums; }
 .ri-bar { position: relative; height: 6px; background: var(--track); border-radius: 3px; }
@@ -3569,9 +3569,14 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tv3-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(130px, auto) minmax(0, 1.4fr); align-items: baseline; gap: 6px 16px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
 .tv3-row:last-child { border-bottom: 0; padding-bottom: 0; }
 .tv3-name { font-weight: 750; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tv3-name.side-A { color: var(--am-red-text); } .tv3-name.side-B { color: var(--side-b); } .tv3-name.side-C { color: var(--cream); }
-.tv3-verdict { font-weight: 850; font-stretch: 110%; font-size: 1.15rem; text-transform: uppercase; color: var(--cream); }
-.tv3-verdict.up { color: var(--am-red-text); } .tv3-verdict.down { color: var(--rose); }
+.tv3-name { color: var(--heading); }
+/* 3-team verdicts read like the 2-team headline (Alan, Oct 13): neutral type, a filled dot for a team that comes out
+   ahead, a hollow ring for an even deal, nothing for a team that gives up value (its words say so, in quieter type). */
+.tv3-verdict { font-weight: 700; font-size: 1rem; color: var(--heading); }
+.tv3-verdict.up::before, .tv3-verdict.fair::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 0.12em; }
+.tv3-verdict.up::before { background: var(--text-secondary); }
+.tv3-verdict.fair::before { box-shadow: inset 0 0 0 2px var(--text-muted); }
+.tv3-verdict.down { color: var(--text-secondary); font-weight: 600; }
 .tv3-nums { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .lc-cols.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .bd-table.three { max-width: 720px; }
@@ -5838,7 +5843,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T15:50Z";
+  const BUILD_ID = "2026-10-13T16:50Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
