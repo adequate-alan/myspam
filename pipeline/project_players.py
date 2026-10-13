@@ -5,7 +5,8 @@ opportunity values fitted on the previous seasons, partial own efficiency, team 
 remaining schedule, small-sample shrinkage); ros_backtest.py scores it against 2024-25. This script runs it on
 data/stats/<SEASON>.json (so build_stats.py must run first) and writes one row per player keyed by Sleeper ID:
     sleeper_id, player, pos, team, games, g_eff, prior_g, ppg, healthy_ppg, base_ppg, env, sched, env4, sched4, env1, sched1,
-    proj_ppg, n4_ppg, n1_ppg, conf, rank_score, proj_rank, line_json (the projected per-game stat line, which the browser scores with the league's scoring)
+    proj_ppg, n4_ppg, n1_ppg, conf, rank_score, proj_rank, line_json (the projected per-game stat line, which the browser scores with the league's scoring),
+    cur_share (share of his projected main opportunity that comes from this season's games), moved (on a new team since last season)
 merge_projections.py puts proj_ppg / rank_score / games into RANKINGS_CSV and the per-player factors into data/projections.json.
 
     python3 project_players.py [games.csv]     (default: nflverse's games.csv)
@@ -19,7 +20,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SEASON = 2026
 HIST_SEASONS = [2024, 2025]
 COLS = ["sleeper_id", "player", "pos", "team", "games", "g_eff", "prior_g", "ppg", "healthy_ppg", "base_ppg", "env", "sched",
-        "env4", "sched4", "env1", "sched1", "proj_ppg", "n4_ppg", "n1_ppg", "conf", "rank_score", "proj_rank", "line_json"]
+        "env4", "sched4", "env1", "sched1", "proj_ppg", "n4_ppg", "n1_ppg", "conf", "rank_score", "proj_rank", "line_json",
+        "cur_share", "moved"]
 
 def norm(name):
     """Name key used by the name-based fallbacks (merge_projections.py, build_sleeper_ids.py)."""
@@ -33,15 +35,19 @@ def project(games_path=tr.GAMES_URL, season=SEASON):
     import json
     sc = m.scoring()
     hist = {y: m.load_stats(stats_path(y)) for y in HIST_SEASONS}
-    rates = m.league_rates([m.frame(hist[y], sc) for y in HIST_SEASONS])
+    frames = {y: m.frame(hist[y], sc) for y in HIST_SEASONS}
+    rates = m.league_rates(list(frames.values()))
+    kw = m.prior_weights(frames[HIST_SEASONS[-2]], frames[HIST_SEASONS[-1]])   # the two latest complete seasons
     stats = m.load_stats(stats_path(season))
     games = pd.read_csv(games_path)
-    out = m.project(stats, games, stats["through_week"], prior_stats=hist[season - 1], rates=rates, use_future_lines=True, sc=sc)
+    out = m.project(stats, games, stats["through_week"], prior_stats=hist[season - 1], rates=rates, use_future_lines=True, sc=sc, kw=kw)
     out["line_json"] = out.line.map(json.dumps)
-    return out[COLS], rates
+    return out[COLS], rates, kw
 
 if __name__ == "__main__":
-    out, rates = project(sys.argv[1] if len(sys.argv) > 1 else tr.GAMES_URL)
+    out, rates, kw = project(sys.argv[1] if len(sys.argv) > 1 else tr.GAMES_URL)
+    print(f"prior weights ({HIST_SEASONS[-2]} -> {HIST_SEASONS[-1]}, games of evidence; a new team: K / {kw['move']:.2f}, level x {kw['lvl']:.3f}):")
+    print(pd.DataFrame(kw["K"]).round(2).to_string())
     print("league rates (2024-25):"); print(pd.DataFrame({p: {k: v for k, v in r.items() if k != "opps"} for p, r in rates.items()}).round(3).to_string())
     out.round(3).sort_values("proj_ppg", ascending=False).to_csv("projections.csv", index=False)
     for p in m.POS:
