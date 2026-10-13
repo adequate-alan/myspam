@@ -5792,7 +5792,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
-     BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
+     BUILD_ID is "dev" in the repo; the deploy stamps a hash of the page's code into it (tests/release_fingerprint.py
+     --page), so it changes with every code update and never needs a manual bump. If the live page has a different one,
+     offer a refresh. */
   // Scroll hints for tab rows that can scroll sideways: fade whichever edge has more tabs past it,
   // and keep the selected tab in view
   function scrollHints(el) {
@@ -5838,7 +5840,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T16:00Z";
+  const BUILD_ID = "dev";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
