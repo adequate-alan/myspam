@@ -156,6 +156,34 @@ with sync_playwright() as p:
     s = state(pg)
     ok("+0.0%" not in s["gap"] and not s["lens"] and "starting-lineup value" not in s["hint"], f"One-sided trade (Alpha gives nothing): no fake roster impact read ({s['gap'][:120]})")
     pg.close()
+    # 3b. 3-team (Oct 13 audit): a team set to get its own player. The "from" fallback used to credit him to another
+    # team, which then "sent" a player it doesn't have, and the verdicts read it as a real trade ("Robbing the others")
+    inv = {v: k for k, v in sid.items()}
+    team3 = next(inv[str(x)] for x in league_data(False)[2][2]["players"] if str(x) in inv)
+    pg = page(False)
+    pg.click("#add-third"); pg.wait_for_timeout(400)
+    pg.evaluate("""() => { const s = document.getElementById('team-C'); s.value = '3'; s.dispatchEvent(new Event('change', { bubbles: true })); }"""); pg.wait_for_timeout(400)
+    def three(pg):
+        return pg.evaluate("""() => ({ rows: [...document.querySelectorAll('#three-verdicts .tv3-row')].map(r => r.textContent.replace(/\\s+/g, ' ').trim()),
+          why: document.getElementById('tc-why-body').textContent, from: Object.fromEntries([...document.querySelectorAll('select[data-from]')].map(x => [x.dataset.recv, x.value])) })""")
+    add(pg, "A", HUB); add(pg, "B", team3); add(pg, "C", WIL)
+    s, t = state(pg), three(pg)
+    ok("Chuba Hubbard" in s["warn"] and "already on Team Alpha's roster" in s["warn"] and "Team Beta's roster" not in s["warn"],
+       f"3-team: a team set to get its own player is flagged as the wrong card, not as missing from another roster ({s['warn'][:160]})")
+    ok(not s["flip"] and "Remove" in s["warn"], "3-team: no Flip players (no single other side), Remove is offered")
+    ok(len(t["rows"]) == 3 and all("Fix the sides above" in r for r in t["rows"]) and not re.search(r"robb|overpay|loss|even|edge", " ".join(t["rows"]), re.I),
+       f"3-team: no value verdicts while a team gets its own player ({t['rows']})")
+    ok(HUB + " for" not in t["why"] and "Fix the sides" in t["why"], f"3-team: nobody is said to send a player he doesn't have ({t['why'][:120]})")
+    pg.click("#tc-warn [data-tc-remove]"); pg.wait_for_timeout(500)
+    ok(not state(pg)["warn"], "3-team: Remove takes the player off the wrong card")
+    pg.evaluate("() => { const b = [...document.querySelectorAll('#panel-trade button')].find(x => x.textContent.trim() === 'Clear'); b && b.click(); }"); pg.wait_for_timeout(300)
+    if pg.locator("#add-third").is_visible(): pg.click("#add-third"); pg.wait_for_timeout(300)
+    pg.evaluate("""() => { const s = document.getElementById('team-C'); s.value = '3'; s.dispatchEvent(new Event('change', { bubbles: true })); }"""); pg.wait_for_timeout(300)
+    add(pg, "A", WIL); add(pg, "B", team3); add(pg, "C", HUB)
+    s, t = state(pg), three(pg)
+    ok(not s["warn"] and t["from"] == {"A": "B", "B": "C", "C": "A"}, f"3-team entered the right way: no warning, each player from his owner ({s['warn'][:100]} | {t['from']})")
+    ok(len(t["rows"]) == 3 and not any("Fix the sides" in r for r in t["rows"]), f"3-team entered the right way: verdicts for all three teams ({t['rows']})")
+    pg.close()
     # 4. real lineup holes: Alpha (weak RB2 + TE) receives Hubbard + Kincaid for Wilson + Kelce. An old saved roster-needs
     # setting ("desperately need RB", "set at WR") is in this browser and must change nothing.
     pg = page(True, needs=True)

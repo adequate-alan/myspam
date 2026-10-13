@@ -122,7 +122,7 @@ def ancestors(j, seen=None):
         if d not in seen: seen.add(d); ancestors(d, seen)
     return seen
 
-def run(event, lane="fast", schedule=None, full_ci=False, refresh="success", plan="success", verify="success", targeted="success", full="success", build="success", current="true", fork=False, cancelled=False):
+def run(event, lane="fast", schedule=None, full_ci=False, refresh="success", plan="success", verify="success", targeted="success", full="success", build="success", current="true", fork=False, cancelled=False, skip=""):
     """Walk the graph like Actions: a job runs when its `if` is true (jobs without one need every dependency to succeed)."""
     res, out = {}, {}
     ctx = {"result": res, "outputs": out, "event": event, "schedule": schedule, "full_ci": full_ci, "fork": fork, "cancelled": cancelled}
@@ -134,6 +134,7 @@ def run(event, lane="fast", schedule=None, full_ci=False, refresh="success", pla
         runs = bool(evaluate(cond, ctx) if cond else True) and (ok_up or (cond is not None and re.search(r"always\(\)|failure\(\)|cancelled\(\)", str(cond)) is not None))
         res[j] = actual if runs else "skipped"
     go("refresh", refresh)
+    out["refresh"] = {"skip": skip} if res["refresh"] == "success" else {}
     go("plan", plan)
     deploy_flag = evaluate(next(s for s in jobs["plan"]["steps"] if s.get("id") == "ref")["run"].split("deploy=")[1].split("}}")[0] + "}}", ctx)
     out["plan"] = {"lane": "full" if (schedule == NIGHTLY or full_ci) else lane, "deploy": "true" if deploy_flag else "false"} if res["plan"] == "success" else {}
@@ -157,6 +158,8 @@ cases = [
     ("build (Pages artifact) fails", dict(event="push", lane="fast", build="failure"), False),
     ("main moved on before the build (stale commit)", dict(event="push", lane="fast", current="false"), False),
     ("scheduled refresh passes (data: fast lane)", dict(event="schedule", schedule="0 15 * * 1", lane="fast"), True),
+    ("catch-up schedule with nothing missing (refresh does nothing)", dict(event="schedule", schedule="37 15 * * 2", lane="fast", skip="true"), False),
+    ("catch-up that ran the weekly refresh", dict(event="schedule", schedule="37 15 * * 2", lane="fast", skip="false"), True),
     ("scheduled refresh fails its data check", dict(event="schedule", schedule="0 15 * * 1", refresh="failure"), False),
     ("nightly full CI passes", dict(event="schedule", schedule=NIGHTLY), False),
     ("manual full CI passes", dict(event="workflow_dispatch", full_ci=True), False),
@@ -202,6 +205,68 @@ ok(g_pr == "pr-x" and cnl(event="pull_request") is True, "Concurrency: a pull re
 ok(g_night == g_full == "full-ci" and g_night != g_push and not cnl(event="schedule", schedule=NIGHTLY), f"Concurrency: nightly and manual full CI share their own group, never the release group, and never cancel ({g_night})")
 ok(g_ref == "refresh" and g_ref != g_push and not cnl(event="schedule", schedule="0 15 * * 1"), "Concurrency: the data refresh has its own group and isn't cancelled by a push")
 ok(jobs["deploy"].get("concurrency", {}).get("group") == "pages-deploy" and jobs["deploy"]["concurrency"].get("cancel-in-progress") is False, "Deploys are serialized in their own group")
+
+# weekly catch-up (Oct 13): when the weekly projections refresh runs, never twice, never over a newer one; missed runs alarm
+WD = os.path.join(ROOT, "pipeline/weekly_due.py")
+def wd(updated, now):
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump({"updated": updated} if updated else {}, f)
+    o = subprocess.run([sys.executable, WD, "--file", f.name, "--now", now], capture_output=True, text=True).stdout
+    os.unlink(f.name); return o.split()[2].rstrip(":")
+ok([wd("2026-10-13T15:40Z", n) for n in ("2026-10-13T16:00Z", "2026-10-15T09:00Z", "2026-10-20T13:59Z")] == ["done"] * 3,
+   "weekly_due: a refresh after Tuesday's games counts for the whole week (Tue 14:00 → next Tue 14:00)")
+ok(wd("2026-10-13T05:00Z", "2026-10-13T16:00Z") == "done" and wd("2026-10-13T03:00Z", "2026-10-13T16:00Z") == "due",
+   "weekly_due: a manual run Tuesday morning after MNF counts, one before 04:00 UTC doesn't")
+ok([wd("2026-10-06T14:20Z", n) for n in ("2026-10-13T14:01Z", "2026-10-14T23:59Z", "2026-10-15T00:01Z", "2026-10-19T12:00Z")] == ["due", "due", "overdue", "overdue"]
+   and wd(None, "2026-10-13T15:00Z") == "due", "weekly_due: missing → due until Thursday 00:00 UTC, then overdue; an unreadable file is missing")
+crs = [c["cron"] for c in on["schedule"]]
+cu = [c for c in crs if c.startswith("37 ")]
+ok("0 14 * * 2" in crs and len(cu) >= 5 and all(c.split()[4] in ("2", "3") for c in cu), f"The Tuesday 14:00 schedule stays, with off-hour Tue/Wed catch-up schedules ({cu})")
+mode = next(st for st in jobs["refresh"]["steps"] if st.get("id") == "mode")["run"]
+def pick(event, cron, state, stats_only=False, tmpd=None):
+    """Run the real 'Pick refresh type' step against a scratch origin whose main holds projections in `state`."""
+    d = tempfile.mkdtemp()
+    try:
+        org, wk = os.path.join(d, "o.git"), os.path.join(d, "w")
+        g = lambda *a, cwd=None: subprocess.run(["git", *a], cwd=cwd, capture_output=True, check=True)
+        g("init", "-q", "--bare", "-b", "main", org); g("clone", "-q", org, wk)
+        os.makedirs(os.path.join(wk, "data")); os.makedirs(os.path.join(wk, "pipeline")); shutil.copy(WD, os.path.join(wk, "pipeline"))
+        json.dump({"updated": {"done": "2026-10-13T15:40Z", "due": "2026-10-06T14:20Z"}[state]}, open(os.path.join(wk, "data/projections.json"), "w"))
+        g("-c", "user.name=t", "-c", "user.email=t@t", "add", "-A", cwd=wk); g("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x", cwd=wk); g("push", "-q", "origin", "main", cwd=wk)
+        sc = (mode.replace("${{ github.event_name }}", event).replace("${{ github.event.schedule }}", cron)
+                  .replace("${{ inputs.stats_only }}", "true" if stats_only else "false"))
+        out, summ = os.path.join(d, "out"), os.path.join(d, "sum")
+        subprocess.run(["bash", "-ec", sc], cwd=wk, check=True, capture_output=True,
+                       env={**os.environ, "GITHUB_OUTPUT": out, "GITHUB_STEP_SUMMARY": summ, "RUNNER_TEMP": d, "WEEKLY_DUE_NOW": "2026-10-13T20:00Z"})
+        kv = dict(l.split("=", 1) for l in open(out).read().splitlines() if "=" in l)
+        return kv.get("stats"), kv.get("catchup", "")
+    finally: shutil.rmtree(d, ignore_errors=True)
+picks = {(e, c, st, so): pick(e, c, st, so) for e, c, st, so in [
+    ("schedule", "37 15 * * 2", "done", False), ("schedule", "37 15 * * 2", "due", False),
+    ("schedule", "0 14 * * 2", "due", False), ("schedule", "0 14 * * 2", "done", False),
+    ("schedule", "20 */8 * * *", "due", False), ("schedule", "20 */8 * * *", "done", False),
+    ("schedule", "0 22 * * 3", "due", False), ("schedule", "0 15 * * 1", "done", False),
+    ("workflow_dispatch", "", "done", False), ("workflow_dispatch", "", "due", True)]}
+want = {("schedule", "37 15 * * 2", "done", False): ("skip", ""), ("schedule", "37 15 * * 2", "due", False): ("false", "true"),
+        ("schedule", "0 14 * * 2", "due", False): ("false", ""), ("schedule", "0 14 * * 2", "done", False): ("true", ""),
+        ("schedule", "20 */8 * * *", "due", False): ("false", "true"), ("schedule", "20 */8 * * *", "done", False): ("market", ""),
+        ("schedule", "0 22 * * 3", "due", False): ("false", "true"), ("schedule", "0 15 * * 1", "done", False): ("true", ""),
+        ("workflow_dispatch", "", "done", False): ("false", ""), ("workflow_dispatch", "", "due", True): ("true", "")}
+bad = {k: v for k, v in picks.items() if v != want[k]}
+ok(not bad, "Refresh type: missing → the weekly refresh runs from whichever schedule fires (a catch-up when not the Tuesday one); "
+   f"already done → a late Tuesday run or another schedule never runs it twice, a catch-up schedule does nothing; manual runs do what was asked {bad}")
+cm = next(st for st in jobs["refresh"]["steps"] if st.get("name") == "Commit refreshed site")
+ok(cm["run"].index("weekly_due.py") < cm["run"].index("git commit") and "origin/main:data/projections.json" in cm["run"] and "skip=true" in cm["run"]
+   and "catch-up" in cm["run"] and "Recovery" in cm["run"],
+   "A catch-up re-checks main just before committing and commits nothing if a weekly refresh landed meanwhile; recovery is reported")
+fr = jobs.get("freshness", {})
+ok(fr.get("permissions") == {"contents": "read"} and "exit 1" in str(fr.get("steps")) and "overdue" in str(fr.get("steps"))
+   and evaluate(fr.get("if", "False"), {"result": {"refresh": "skipped"}, "outputs": {}, "event": "schedule", "schedule": NIGHTLY})
+   and not evaluate(fr.get("if", "False"), {"result": {}, "outputs": {}, "event": "push"}) and not evaluate(fr.get("if", "False"), {"result": {}, "outputs": {}, "event": "pull_request"}),
+   "Missed-run alarm: every scheduled run (the nightly included) fails, read-only, once this week's refresh is overdue; never on pushes or PRs")
+ok(not evaluate(jobs["plan"]["if"], {"result": {"refresh": "success"}, "outputs": {"refresh": {"skip": "true"}}, "event": "schedule"})
+   and evaluate(jobs["plan"]["if"], {"result": {"refresh": "skipped"}, "outputs": {}, "event": "push"}),
+   "A refresh that did nothing doesn't plan, verify or redeploy main")
 
 # 6. pull requests: nothing that writes runs for them
 pr_jobs = [j for j in jobs if run(event="pull_request", lane="full")[1].get(j) not in ("skipped", None)] + [j for j in jobs if run(event="pull_request", lane="targeted")[1].get(j) not in ("skipped", None)]

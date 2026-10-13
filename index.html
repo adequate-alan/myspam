@@ -1577,7 +1577,7 @@ button.rs-card:focus-visible { outline: 2px solid var(--focus-ring); outline-off
 .ri { display: flex; flex-direction: column; gap: 8px; }
 .ri-row { display: grid; grid-template-columns: minmax(120px, 0.9fr) minmax(170px, 1fr) minmax(120px, 1.2fr); align-items: center; gap: 12px; }
 .ri-name { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ri-name.side-A { color: var(--am-red-text); } .ri-name.side-B { color: var(--side-b); }
+.ri-name { color: var(--heading); }   /* team names are neutral: red means selection / your team (Oct 13) */
 .ri-txt { font-size: 0.84rem; color: var(--ink-2); }
 .ri-txt b { color: var(--cream); font-variant-numeric: tabular-nums; }
 .ri-bar { position: relative; height: 6px; background: var(--track); border-radius: 3px; }
@@ -2069,8 +2069,7 @@ dialog.signin label.signin-remember { margin: 10px 0 0; text-transform: none; le
 .fmt-note { font-size: 0.68rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .fmt-note b { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.64rem; }
 .bm { display: inline-block; margin-left: 5px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: 1px; }
-.bm-up { color: var(--rb); }
-.bm-down { color: var(--rose); }
+.bm-up, .bm-down { color: var(--text-secondary); }   /* a comparison, not a gain or loss: neutral (Oct 13 audit) */
 @media (max-width: 560px) {
   .fmt-row { grid-template-columns: 1fr; gap: 6px; }
   .fc-format { display: none; }
@@ -3181,7 +3180,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .cmp-table td:first-child { text-align: right; }
 .cmp-table th { width: 20%; text-align: center; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
 .cmp-table td.cmp-win { color: var(--heading); font-weight: 800; background: var(--fill-1); }
-.cmp-up { display: inline-block; margin: 0 6px; font-size: 0.6rem; color: var(--am-red-text); vertical-align: 1px; }
+.cmp-up { display: inline-block; margin: 0 6px; font-size: 0.55rem; color: var(--text-secondary); vertical-align: 2px; }
 .cmp-table td small { font-size: 0.68rem; font-weight: 550; color: var(--muted); }
 .cmp-sec-h td { padding: 12px 16px 6px !important; text-align: left !important; font-size: 0.6rem !important; font-weight: 600 !important; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted) !important; background: var(--surface-2); width: auto !important; }
 .cmp-sec:not(.lead) td:not(.cmp-sec-h td), .cmp-sec:not(.lead) th { padding-block: 7px; }
@@ -3203,6 +3202,29 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .scroll-hint.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
 .pp-tabs .chip-btn { flex: none; white-space: nowrap; }
 .pp-tabs .chip-btn::after { bottom: 0; }
+/* Phones: three primary sections + More (bottom sheet). Rows are 44px tall for touch. */
+.pp-tabs.pp-tabs-phone { gap: 8px; justify-content: space-between; }
+.pp-tablist { display: contents; }
+.pp-tabs-phone .chip-btn { height: 44px; }
+.pp-more-btn { display: inline-flex; align-items: center; gap: 6px; }
+.pp-more-chev { flex: none; transition: transform .15s ease; }
+.pp-more-btn[aria-expanded="true"] .pp-more-chev { transform: rotate(180deg); }
+.pp-sheet-scrim { position: fixed; inset: 0; z-index: 60; background: var(--backdrop); }
+.pp-sheet { position: fixed; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); z-index: 61; max-width: 480px; margin: 0 auto;
+  max-height: 75vh; overflow-y: auto; padding: 6px 8px 8px; background: var(--surface-raised); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: var(--r-lg, 12px); box-shadow: 0 -8px 30px -12px var(--shadow-color); }
+.pp-sheet-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 6px 8px; font: 600 0.72rem var(--font-body);
+  text-transform: uppercase; letter-spacing: var(--eyebrow-ls, 0.09em); color: var(--text-muted); }
+.pp-sheet-x { width: 36px; height: 36px; border: 0; border-radius: var(--r-sm, 6px); background: var(--fill-1); color: var(--text-secondary); font-size: 1.2rem; line-height: 1; cursor: pointer; }
+.pp-sheet-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.pp-sheet-list button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 0 12px;
+  border: 0; border-left: 2px solid transparent; border-radius: var(--r-sm, 6px); background: none; color: var(--text-primary);
+  font: 600 0.95rem var(--font-body); text-align: left; cursor: pointer; }
+.pp-sheet-list button:hover { background: var(--fill-1); }
+.pp-sheet-list button[aria-current="true"] { border-left-color: var(--am-red); background: var(--fill-1); border-radius: 0 var(--r-sm, 6px) var(--r-sm, 6px) 0; }
+.pp-sheet-list button svg { color: var(--am-red-text); flex: none; }
+@media (max-width: 360px) { .pp-tabs-phone .chip-btn { font-size: 0.82rem; } }
+@media (prefers-reduced-motion: reduce) { .pp-more-chev { transition: none; } }
 .pp-sub { gap: 20px; margin-bottom: 16px; border-bottom: 0 !important; }
 .pp-sub .chip-btn { height: 30px; font-size: 0.72rem; }
 .pp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -3566,9 +3588,14 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .tv3-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(130px, auto) minmax(0, 1.4fr); align-items: baseline; gap: 6px 16px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
 .tv3-row:last-child { border-bottom: 0; padding-bottom: 0; }
 .tv3-name { font-weight: 750; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tv3-name.side-A { color: var(--am-red-text); } .tv3-name.side-B { color: var(--side-b); } .tv3-name.side-C { color: var(--cream); }
-.tv3-verdict { font-weight: 850; font-stretch: 110%; font-size: 1.15rem; text-transform: uppercase; color: var(--cream); }
-.tv3-verdict.up { color: var(--am-red-text); } .tv3-verdict.down { color: var(--rose); }
+.tv3-name { color: var(--heading); }
+/* 3-team verdicts read like the 2-team headline (Alan, Oct 13): neutral type, a filled dot for a team that comes out
+   ahead, a hollow ring for an even deal, nothing for a team that gives up value (its words say so, in quieter type). */
+.tv3-verdict { font-weight: 700; font-size: 1rem; color: var(--heading); }
+.tv3-verdict.up::before, .tv3-verdict.fair::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 0.12em; }
+.tv3-verdict.up::before { background: var(--text-secondary); }
+.tv3-verdict.fair::before { box-shadow: inset 0 0 0 2px var(--text-muted); }
+.tv3-verdict.down { color: var(--text-secondary); font-weight: 600; }
 .tv3-nums { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .lc-cols.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .bd-table.three { max-width: 720px; }
@@ -4835,6 +4862,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           </table>
         </div>
         <p class="count" id="rank-count"></p>
+        <p class="count" id="ed-reveal-wrap" hidden><button class="btn link inline" type="button" id="ed-reveal">Edit rankings</button></p>
       </div>
       <aside class="rk-rail" id="rk-rail" aria-label="Rankings summary" hidden></aside>
     </div>
@@ -5542,6 +5570,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   let maxValue = Math.max(1, ...players.map(p => p.value));
   const hasPicks = players.some(p => p.pos === "PICK");
   const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
+  /* Phones (Alan, Oct 13, after the full audit): a visitor who can't publish doesn't get the editor's chrome (the bar,
+     the drag and arrow column, tier tools, value buttons): it took ~90px of a 390px board. It shows for a signed-in
+     editor (a saved token), with ?debug, while this browser has unsaved or unpublished edits, or after "Edit rankings"
+     under the board (this tab only). Wider screens are unchanged. */
+  const EDIT_PHONE = matchMedia("(max-width: 760px)");
+  let editReveal = false;
+  try { editReveal = sessionStorage.getItem("spm_edit_reveal") === "1"; } catch (e) {}
+  function editorShown() {
+    if (!editor.on) return false;
+    if (!EDIT_PHONE.matches || editor.token || editReveal || /[?&]debug\b/.test(location.search)) return true;
+    try { return savedCsv != null && (changedRows().length > 0 || Object.keys(localEdits).length > 0); } catch (e) { return false; }
+  }
   /* Diagnostics (Phase 1): the last 50 publish steps and uncaught errors, kept in memory in this tab only, with any token
      redacted. Nothing is sent anywhere. SPM.diagnostics() lists them; with ?debug they're also logged to the console. */
   const DIAG = [], DIAG_DEBUG = /[?&]debug\b/.test(location.search);
@@ -5893,6 +5933,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* ---------- Tabs ---------- */
   const tabs = { rankings: $("tab-rankings"), myteam: $("tab-myteam"), league: $("tab-league"), finder: $("tab-finder"), trade: $("tab-trade") };
   let currentTab = "rankings", tradeStale = false;
+  const viewStale = new Set();
   function showTab(name) {
     if (name === "fa") { name = "league"; try { LT.sub = "fa"; } catch (e) { window.spmWantFA = true; } }   // Free Agents lives in League now (old #fa links; LT may not exist yet at start-up)
     if (!tabs[name] || tabs[name].hidden) name = "rankings";
@@ -5914,7 +5955,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if ($("player-modal").open) renderPlayer();
       } catch (e) { console.warn("tab redraw", e); }
     }
-    if (name === "trade" && tradeStale && !flip) renderTrade();
+    // tabs left stale by an AM Board / League-adjusted switch (only the board is redrawn then; see renderViewSwitch)
+    if (viewStale.delete(name) && !flip) {
+      try { ({ myteam: renderMyTeam, league: () => { renderLeague(); renderFA(); }, trade: renderTrade }[name] || (() => {}))(); } catch (e) { console.warn("tab redraw", e); }
+    } else if (name === "trade" && tradeStale && !flip) renderTrade();
     if (name === "finder" && typeof renderFinder === "function") renderFinder();
   }
   for (const [k, btn] of Object.entries(tabs)) {
@@ -6177,7 +6221,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (mkOn()) return renderMkt();
     if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
     let list, rk, group;
-    const editing = editor.on && !leagueView();
+    const editing = editorShown() && !leagueView();
     maxValue = Math.max(1, ...players.map(dv));
     const canReorder = editing && (EDIT_POS.includes(posFilter) || (posFilter === "ALL" && hasOverall()));
     const numOf = p => posFilter === "ALL" ? p.rank : p.posNum;
@@ -6709,7 +6753,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("rank-body").innerHTML = out.length ? out.join("") : `<tr><td class="empty" colspan="5">${query ? `No players match “${esc(query)}”.` : "No players with market data here."}</td></tr>`;
     const notes = [`${list.length} player${list.length === 1 ? "" : "s"} · ${M.label}`];
     if (none) notes.push(`${none} without ${src ? (src === "fc" ? "FantasyCalc" : "Flock") : "market"} data`);
-    notes.push("▲ = AM ranks him higher than the market (buy) · ▼ = the market ranks him higher (sell)");
+    notes.push("AM +N = AM ranks him N spots higher at his position than the market (buy) · Mkt +N = the market ranks him higher (sell)");
     $("rank-count").textContent = notes.join(" · ");
     updateEditorBar(); queueRail();
     if ($("player-modal").open) markCurrent();
@@ -7016,7 +7060,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         ? `<span>This is a past trade: ${names(stray)} ${stray.length === 1 ? "has" : "have"} moved since, and the rosters from the time of the trade couldn't be rebuilt from the transaction log${TC.hist.why ? ` (${esc(TC.hist.why)})` : ""}, so there's no roster impact read. The sides come straight from the transaction.</span>`
         : own.length
         ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster impact is off until the sides are fixed.</span>
-          <span class="tc-warn-acts"><button class="btn primary" type="button" data-tc-flip>Flip players</button> <button class="btn" type="button" data-tc-remove>Remove</button></span>`
+          <span class="tc-warn-acts">${TC3.on ? "" : `<button class="btn primary" type="button" data-tc-flip>Flip players</button> `}<button class="btn" type="button" data-tc-remove>Remove</button></span>`
         : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
           <button class="btn" type="button" data-tc-remove>Remove</button>`;
     }
@@ -7053,9 +7097,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!tcLeague()) return [];
     const out = [];
     if (TC3.on) {
+      // a player already on the team whose card he's on is on the wrong card (each card lists what that team gets);
+      // before this check the "from" fallback credited him to another team, which then "sent" a player it doesn't have
       SIDES3.forEach(r => sides[r].forEach(id => {
-        const g = originOf(id, r), t = sideTeam(g), p = byId.get(id);
-        if (t && p && !rosterIds(t).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
+        const g = originOf(id, r), t = sideTeam(g), p = byId.get(id), mine = sideTeam(r);
+        if (!p) return;
+        if (mine && rosterIds(mine).includes(String(p.sleeperId))) out.push({ p, side: r, from: t ? t.name : sideName(g), own: mine.name });
+        else if (t && !rosterIds(t).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
       }));
       return out;
     }
@@ -7852,6 +7900,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function rosterContext3() {
     const d = activeData(), T = Object.fromEntries(SIDES3.map(s => [s, sideTeam(s)]));
     if (!d || SIDES3.some(s => !T[s]) || new Set(SIDES3.map(s => T[s].rosterId)).size < 3) return null;
+    if (tcStray().some(x => x.own)) return null;   // a team set to get its own player: no roster read (see the warning)
     const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
@@ -7900,18 +7949,26 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return;
     }
     const ctx = tcLeague() ? rosterContext3() : null;
+    const wrong = tcStray().some(x => x.own);   // a team set to get its own player: its "sender" is a guess, so no verdicts
     const short = s => {
       const r = res[s];
+      if (wrong) return "Fix the sides above";
       if (!r.recv.length) return "Receives nothing yet";
       if (!r.sent.length) return "Sends nothing yet";
       return `Receives ${fmt(r.m.a)} · sends ${fmt(r.m.b)} · ${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}%`;
     };
     box.innerHTML = SIDES3.map(s => {
-      const o = res[s].outcome;
+      const o = wrong ? null : res[s].outcome;
       return `<div class="tv3-row"><span class="tv3-name side-${s}">${esc(names[s])}</span>
         <span class="tv3-verdict${o ? (o.fair ? " fair" : o.ahead ? " up" : " down") : ""}">${esc(o ? o.label : "–")}</span>
         <span class="tv3-nums">${esc(short(s))}</span></div>`;
     }).join("");
+    if (wrong) {
+      ["tc-why-body", "tc-breakdown-body"].forEach(id => { $(id).innerHTML = `<p class="pp-note">A team is set to get a player it already has. Fix the sides above to see this.</p>`; });
+      $("tc-analysis").hidden = false; $("tc-analysis").innerHTML = `<p class="pp-note">No roster read until every team gets a player it doesn't already have.</p>`;
+      $("tc-impact-hint").textContent = "Fix the sides above"; $("balance-btn").hidden = true; $("balance").hidden = true;
+      return;
+    }
     // Why: what each team accomplished
     const why = SIDES3.map(s => {
       const r = res[s], who = names[s], you = who === "You";
@@ -7941,8 +7998,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       $("tc-impact-hint").textContent = `· Biggest lineup gain: ${names[best]}`;
     } else {
       $("tc-analysis").hidden = !tcLeague();
-      $("tc-analysis").innerHTML = tcLeague() ? `<p class="pp-note">Pick all three teams above to see each lineup change.</p>` : "";
-      $("tc-impact-hint").textContent = tcLeague() ? "Pick all three teams" : "";
+      const picked = SIDES3.every(s => sideTeam(s));
+      $("tc-analysis").innerHTML = tcLeague() ? `<p class="pp-note">${picked ? "No roster read until every team gets a player it doesn't already have and sends one it owns." : "Pick all three teams above to see each lineup change."}</p>` : "";
+      $("tc-impact-hint").textContent = tcLeague() ? (picked ? "Fix the sides above" : "Pick all three teams") : "";
     }
     // Value breakdown
     const raw = list => list.reduce((a, id) => a + tv(byId.get(id)), 0);
@@ -8276,7 +8334,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     renderValueCheck();
     renderMarketAudit();
     if (RV && RV.open) renderReview();
-    $("editor-bar").hidden = !editor.on;
+    $("editor-bar").hidden = !editorShown();
+    $("ed-reveal-wrap").hidden = !editor.on || editorShown() || leagueView() || prodOn() || mkOn() || wkOn();
     if (!editor.on || savedCsv == null) return;
     const n = changedRows().length, local = Object.keys(localEdits).length;
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
@@ -9897,7 +9956,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function forgetToken() {
     clearToken();
     Object.assign(editor, { token: null, login: "" });
-    updateEditorBar(); toast("Signed out. Your GitHub token was removed from this browser.");
+    if (EDIT_PHONE.matches && !drag) renderRankings(); else updateEditorBar();
+    toast("Signed out. Your GitHub token was removed from this browser.");
   }
 
   $("eb-save").addEventListener("click", saveLocal);
@@ -9945,10 +10005,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (async () => {
     const st = storedToken();
     if (!st) return;
-    try { await verifyToken(st.token); updateEditorBar(); }
+    // on phones the board's edit controls depend on the token (editorShown), so the board is redrawn, not just the bar
+    const shown = () => (EDIT_PHONE.matches && !drag ? renderRankings() : updateEditorBar());
+    try { await verifyToken(st.token); shown(); }
     catch (err) {
       if (err.kind === "auth") { editor.token = null; clearToken(); }
-      else if (err.kind === "network" || err.kind === "server" || err.kind === "rate") { editor.token = st.token; updateEditorBar(); }
+      else if (err.kind === "network" || err.kind === "server" || err.kind === "rate") { editor.token = st.token; shown(); }
       else editor.token = null;
       diag("signin", `saved token not verified (${err.kind || "error"})`);
     }
@@ -10647,7 +10709,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. ▲/▼ shows how far he moved.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
+      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. Under each rank, “AM #12” is his spot on the AM Board.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
       : `<span>Showing the AM Board · <b>${esc(formatLabel())}</b></span>`;
     if (!d) {
       $("fmt-override").hidden = true; $("league-chip").classList.remove("custom");
@@ -10724,7 +10786,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     menu.hidden = !open; chip.setAttribute("aria-expanded", open);
     if (open) keepOnScreen(menu);
   }
+  /* The AM Board / League-adjusted switch (Oct 13 audit: it ran renderLeagueAll, re-pricing the league and redrawing
+     every hidden tab, 0.6–0.8s per click and ~3s on a slow phone). The switch changes only which values the Rankings
+     tab shows: the league's values are the same and every other tab always shows them (§2.8), so only the header, the
+     board, its rail and an open drawer are redrawn; the other tabs are redrawn when they're next opened. */
+  function renderViewSwitch() {
+    LG.mode = LG.active ? (sl.view === "base" ? "base" : "league") : fmtView;
+    renderLeagueUI(); renderRankings();
+    if ($("player-modal").open) renderPlayer();
+    ["myteam", "league", "trade"].forEach(k => viewStale.add(k));
+    if (typeof renderFinder === "function" && currentTab === "finder") renderFinder();
+  }
   function renderLeagueAll() {
+    viewStale.clear();
     leagueRecalc();
     renderLeagueUI();
     renderRankings(); renderTrade(); renderMyTeam(); renderLeague(); renderFA(); renderFinder();
@@ -11408,9 +11482,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!b) return;
     if (activeData()) { sl.view = b.dataset.view; writeSl(); }
     else { fmtView = b.dataset.view; try { localStorage.setItem(FMT_VIEW_KEY, fmtView); } catch (err) {} }
-    renderLeagueAll();
+    renderViewSwitch();
   });
   $("owner-filter").addEventListener("change", e => { LG.ownerFilter = e.target.value; renderRankings(); });
+  $("ed-reveal").addEventListener("click", () => {
+    editReveal = true; try { sessionStorage.setItem("spm_edit_reveal", "1"); } catch (e) {}
+    renderRankings();
+  });
+  EDIT_PHONE.addEventListener("change", () => { if (!drag) renderRankings(); });
 
   /* Player helpers for roster views (ranked or not) */
   const bySleeper = () => new Map(players.filter(p => p.sleeperId).map(p => [p.sleeperId, p]));
@@ -12078,8 +12157,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const vs = r => {
       const dlt = r.recRank - r.x.power;
       if (!played || !dlt) return `<span class="muted">–</span>`;
-      return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">▲${dlt} <small>roster ahead</small></span>`
-                     : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">▼${-dlt} <small>record ahead</small></span>`;
+      return dlt > 0 ? `<span class="bm bm-up" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the roster ranks ${dlt} spot${dlt === 1 ? "" : "s"} better than the record">+${dlt} <small>roster ahead</small></span>`
+                     : `<span class="bm bm-down" title="Standings ${ordinal(r.recRank)}, AM Power Rank ${ordinal(r.x.power)}: the record ranks ${-dlt} spot${dlt === -1 ? "" : "s"} better than the roster">+${-dlt} <small>record ahead</small></span>`;
     };
     const row = (r, rk) => `<tr class="st-row${r.t.mine ? " mine" : ""}" data-standing-team="${r.t.rosterId}" tabindex="0">
           <td class="rk">${rk}</td>
@@ -12098,7 +12177,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
     const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its AM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${poRule(divs, spots)}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
     const toggle = divs ? `<div class="view-toggle st-view" role="group" aria-label="Standings view"><button class="vt-btn" type="button" data-st-view="div" aria-pressed="${byDiv}">By division</button><button class="vt-btn" type="button" data-st-view="league" aria-pressed="${!byDiv}">League</button></div>` : "";
-    return `<div class="st-top-row"><p class="method-note">Actual standings next to AM Power Rank (roster strength). ▲ the roster ranks higher than the record so far; ▼ the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
+    return `<div class="st-top-row"><p class="method-note">Actual standings next to AM Power Rank (roster strength). Difference: “roster ahead” when the roster ranks higher than the record so far, “record ahead” when the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
       <div class="table-scroll"><table class="st-table">
         <thead><tr><th scope="col">${byDiv ? "Div" : "Rk"}</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">AM Power Rank</th><th scope="col">Difference</th><th scope="col" class="st-odds-h">Playoff odds ${infoIcon(oddsInfo, "How playoff odds work")}</th></tr></thead>
         <tbody>${body}</tbody>
@@ -13527,7 +13606,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return `<tr class="player fa-row" data-player="${esc(p.sleeperId)}" tabindex="0" aria-label="${esc(p.name)}: open player page">
       <td class="rk">${overallRank(p)}</td>
       <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text"><span class="pl-head">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
-        <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span>${tc ? `<span class="fa-trend" title="Added in ${tc.toLocaleString("en-US")} Sleeper leagues in the last 24 hours (all of Sleeper, not just this league)">▲ ${trendCount(tc)} adds · 24h</span>` : ""}</div></div></td>
+        <span class="fa-avail ${wv ? "waivers" : "fa"}">${wv ? `On waivers · clears ${esc(new Date(wv).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}` : "Free agent"}</span>${tc ? `<span class="fa-trend" title="Added in ${tc.toLocaleString("en-US")} Sleeper leagues in the last 24 hours (all of Sleeper, not just this league)">+${trendCount(tc)} adds · 24h</span>` : ""}</div></div></td>
       <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span></td>
       <td class="fa-proj ${pj.kind}"${hcWk(p, pj.o, currentWeek())}>${pj.kind === "ok" || pj.kind === "final" ? `<b>${pj.text}</b>` : esc(pj.text)}${pj.sub ? `<small>${esc(pj.sub)}</small>` : ""}</td>
       <td class="fa-l3">${recentFormHtml(form.get(p.id))}</td>
@@ -14263,11 +14342,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         </div>
         </div>${loaded && info.team ? `<div class="pm-right">${thisWeekCard(info, true)}</div>` : ""}</div>
         ${PP.picking ? comparePicker() : ""}
-        <div class="chips pp-tabs" role="tablist" aria-label="Player sections">
-          ${tabsList.map(([k, label]) => `<button class="chip-btn" type="button" role="tab" data-pp-tab="${k}" aria-selected="${PP.tab === k}" aria-pressed="${PP.tab === k}">${label}</button>`).join("")}
-        </div>
+        ${ppTabBar(tabsList)}
       </div>
-      <div class="pm-body">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}${loaded ? statsStamp() : ""}</div>`;
+      <div class="pm-body" role="tabpanel" id="pp-panel" aria-labelledby="pp-tab-${esc(ppTabVisible(PP.tab))}">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}${loaded ? statsStamp() : ""}</div>`;
+    if (PP.moreFocus) { PP.moreFocus = false; const mb = box.querySelector("[data-pp-more]"); if (mb) mb.focus({ preventScroll: true }); }
     const bar = box.querySelector(".pp-tabs"), on = bar && bar.querySelector('[aria-pressed="true"]');
     scrollHints(bar);
     if (on) {   // keep the open section in view on phones
@@ -14278,6 +14356,39 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (PP.picking) { const inp = box.querySelector("#pm-pick"); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }
     drawCharts();
   }
+  /* Section tabs. Phones (the full-screen sheet, ≤760px) show the three primary sections plus a "More" button that opens
+     a bottom sheet with the other seven (Alan, Oct 13: discoverable, clear labels, 44px targets); while one of those is
+     open the button carries its short name and the chevron ("History ⌄"). The desktop drawer keeps the single scrolling row of every section. */
+  const PP_PRIMARY = ["overview", "log", "schedule"];
+  const PP_SHORT = { perf: "Fantasy", history: "History", value: "Value", depth: "Depth", practice: "Practice" };
+  const ppPhoneTabs = () => !DRAWER_MQ.matches;
+  const ppTabVisible = k => (ppPhoneTabs() && !PP_PRIMARY.includes(k) ? "more" : k);
+  function ppTabBar(tabsList) {
+    const tab = ([k, label]) => `<button class="chip-btn" type="button" role="tab" id="pp-tab-${k}" data-pp-tab="${k}" aria-controls="pp-panel" aria-selected="${PP.tab === k}" aria-pressed="${PP.tab === k}" tabindex="${PP.tab === k ? 0 : -1}">${label}</button>`;
+    if (!ppPhoneTabs()) return `<div class="chips pp-tabs" role="tablist" aria-label="Player sections">${tabsList.map(tab).join("")}</div>`;
+    const rest = tabsList.filter(([k]) => !PP_PRIMARY.includes(k)), cur = rest.find(([k]) => k === PP.tab);
+    const primary = tabsList.filter(([k]) => PP_PRIMARY.includes(k));
+    const chev = `<svg class="pp-more-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return `<div class="chips pp-tabs pp-tabs-phone">
+        <div class="pp-tablist" role="tablist" aria-label="Player sections">${primary.map(tab).join("")}</div>
+        <button class="chip-btn pp-more-btn" type="button" id="pp-tab-more" data-pp-more aria-haspopup="dialog" aria-expanded="false" aria-pressed="${!!cur}"
+          aria-label="${cur ? `More sections, current: ${esc(cur[1])}` : "More sections"}">${cur ? esc(PP_SHORT[cur[0]] || cur[1]) : "More"}${chev}</button>
+      </div>
+      <div class="pp-sheet-scrim" data-pp-more-close hidden></div>
+      <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="pp-sheet-h" hidden>
+        <div class="pp-sheet-h"><span id="pp-sheet-h">Player sections</span><button class="pp-sheet-x" type="button" data-pp-more-close aria-label="Close">×</button></div>
+        <ul class="pp-sheet-list">${rest.map(([k, label]) => `<li><button type="button" data-pp-tab="${k}" data-pp-sheet${PP.tab === k ? ` aria-current="true"` : ""}>${esc(label)}${PP.tab === k ? `<svg width="14" height="10" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5l4 4 8-8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}</button></li>`).join("")}</ul>
+      </div>`;
+  }
+  function ppMore(open) {
+    const box = $("player-body"), sheet = box.querySelector(".pp-sheet"), scrim = box.querySelector(".pp-sheet-scrim"), btn = box.querySelector("[data-pp-more]");
+    if (!sheet) return;
+    sheet.hidden = scrim.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    if (open) (sheet.querySelector("[aria-current]") || sheet.querySelector("button[data-pp-tab]")).focus();
+    else btn.focus({ preventScroll: true });
+  }
+  const ppMoreOpen = () => { const s = $("player-body").querySelector(".pp-sheet"); return !!s && !s.hidden; };
   function comparePicker() {
     const q = PP.pickQuery.trim().toLowerCase();
     const list = q ? players.filter(x => x.pos !== "PICK" && x.sleeperId && x.sleeperId !== PP.sid && (x.name + " " + x.team).toLowerCase().includes(q)).sort((a, b) => dv(b) - dv(a)).slice(0, 6) : [];
@@ -15213,8 +15324,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (a == null && b == null) return "";
         const win = cmpLead(a, b, better), fa = a == null ? "–" : show(a, A), fb = b == null ? "–" : show(b, B);
         all.push({ theme, label, a, b, better, fa: String(fa).replace(/<[^>]+>.*$/, ""), fb: String(fb).replace(/<[^>]+>.*$/, "") });
-        const cellA = `<td class="${win === "a" ? "cmp-win" : ""}">${win === "a" ? `<span class="cmp-up" aria-label="leads">▲</span>` : ""}${fa}</td>`;
-        const cellB = `<td class="${win === "b" ? "cmp-win" : ""}">${fb}${win === "b" ? `<span class="cmp-up" aria-label="leads">▲</span>` : ""}</td>`;
+        const cellA = `<td class="${win === "a" ? "cmp-win" : ""}">${win === "a" ? `<span class="cmp-up" aria-label="leads" title="Leads">●</span>` : ""}${fa}</td>`;
+        const cellB = `<td class="${win === "b" ? "cmp-win" : ""}">${fb}${win === "b" ? `<span class="cmp-up" aria-label="leads" title="Leads">●</span>` : ""}</td>`;
         return `<tr>${cellA}<th scope="row">${label}</th>${cellB}</tr>`;
       }).join("");
       return body ? `<tbody class="cmp-sec${LEAD.includes(key) ? " lead" : ""}"><tr class="cmp-sec-h"><td colspan="3">${title}</td></tr>${body}</tbody>` : "";
@@ -15228,7 +15339,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <div class="view-toggle cmp-lens" role="group" aria-label="Compare lens">${CMP_LENSES.map(([k, l]) => `<button type="button" class="vt-btn" data-cmp-lens="${k}" aria-pressed="${lens === k}">${l}</button>`).join("")}</div>
         <table class="cmp-table">${secHtml}</table>
         ${mixed}
-        <p class="pp-note">${STATS_SEASONS[0]} per game · ${esc(scoringLabel())}. ▲ marks the leader where the gap is 4% or more.${notes.length ? "<br>" + notes.join("<br>") : ""} Route data (routes run, route participation, per-route rates) isn't in our free data sources, so it isn't shown. <button class="footer-link" type="button" data-pm-uncompare>Stop comparing</button></p>
+        <p class="pp-note">${STATS_SEASONS[0]} per game · ${esc(scoringLabel())}. ● marks the leader where the gap is 4% or more.${notes.length ? "<br>" + notes.join("<br>") : ""} Route data (routes run, route participation, per-route rates) isn't in our free data sources, so it isn't shown. <button class="footer-link" type="button" data-pm-uncompare>Stop comparing</button></p>
       </div>`;
   }
 
@@ -15413,9 +15524,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const t = e.target;
     if (t.closest("[data-pm-close]")) { closePlayer(); return; }
     if (t.closest("[data-pm-back]")) { const prev = PP.trail.pop(); if (prev) { PP.sid = prev; if (PP.tab === "compare") PP.tab = "overview"; renderPlayer(); } return; }
+    if (t.closest("[data-pp-more]")) { ppMore(true); return; }
+    if (t.closest("[data-pp-more-close]")) { ppMore(false); return; }
     const tab = t.closest("[data-pp-tab]");
     if (tab) {
       PP.tab = tab.dataset.ppTab;
+      if (tab.hasAttribute("data-pp-sheet")) PP.moreFocus = true;   // back to the More button, now named after the open section
       if (PP.tab === "compare" && !PP.compare && !PP.picking) { PP.picking = true; PP.pickQuery = ""; setCompareMode(canBoardPick()); }   // no Player B yet: open the search
       renderPlayer(); return;
     }
@@ -15450,6 +15564,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const inp = $("pm-pick"); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
   });
   $("player-body").addEventListener("keydown", e => {
+    if (ppMoreOpen()) {   // the More sheet: Escape closes it (not the player page), Tab stays inside
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); ppMore(false); return; }
+      if (e.key === "Tab") {
+        const f = [...$("player-body").querySelectorAll(".pp-sheet button")], i = f.indexOf(document.activeElement);
+        if (e.shiftKey ? i <= 0 : i === f.length - 1) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+        return;
+      }
+    }
+    if (e.target.matches('[role="tab"][data-pp-tab]') && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {   // arrow keys move between tabs
+      const all = [...e.target.closest('[role="tablist"]').querySelectorAll('[role="tab"]')], i = all.indexOf(e.target);
+      const n = e.key === "Home" ? 0 : e.key === "End" ? all.length - 1 : (i + (e.key === "ArrowRight" ? 1 : -1) + all.length) % all.length;
+      e.preventDefault(); all[n].focus(); return;
+    }
     if (e.target.id === "pm-pick" && e.key === "Enter") { const first = $("player-body").querySelector("[data-pm-pick]"); if (first) first.click(); e.preventDefault(); }
     if (e.target.id === "pm-pick" && e.key === "Escape" && e.target.value) { e.preventDefault(); e.stopPropagation(); PP.pickQuery = ""; PP.picking = false; renderPlayer(); }
   });
@@ -16295,7 +16422,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const amt = r.lvl === 3 ? "far" : r.lvl === 2 ? "substantially" : "a little";
     return `AM values him ${amt} ${hi ? "higher" : "lower"} than ${who}.`;
   }
-  const mkEdgeTxt = n => (n > 0 ? `▲ +${n}` : n < 0 ? `▼ ${n}`.replace("-", "−") : "=");
+  const mkEdgeTxt = n => (n > 0 ? `AM +${n}` : n < 0 ? `Mkt +${-n}` : "=");   // ▲/▼ only mean movement over time (Oct 13 audit)
   const mkPill = r => `<span class="mk-pill ${r.dir > 0 ? "buy" : r.dir < 0 ? "sell" : "even"} l${r.lvl}" title="${esc(mkSentence(r))}">${esc(r.bucket)}</span>`;
   function mkFresh(srcs) {
     return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list exported ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "synced"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
