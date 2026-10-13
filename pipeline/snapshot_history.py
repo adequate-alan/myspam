@@ -54,7 +54,9 @@ def main():
             pg = b.new_page()
             pg.route("**/*", lambda r: r.abort() if not r.request.url.startswith(url.rsplit("/", 1)[0]) else r.continue_())
             pg.goto(url)
-            pg.wait_for_function("window.SPM && window.SPM.rankingSnapshot")
+            # A function-valued predicate is called by Playwright, so rankingSnapshot() ran before the board loaded
+            # (players still null) and threw. Wait for a non-empty board instead.
+            pg.wait_for_function("(() => { try { return Object.keys(window.SPM.rankingSnapshot()).length > 0; } catch (e) { return false; } })()")
             out = pg.evaluate("""([hist, snaps, prev, ts, src]) => {
                 const h = SPM.normalizeHistory(hist);
                 const r = SPM.recordPublish(h, snaps, prev, SPM.rankingSnapshot(), ts, src, src === "B" ? "baseline" : "scheduled", null);
