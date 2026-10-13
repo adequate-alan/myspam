@@ -4834,6 +4834,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           </table>
         </div>
         <p class="count" id="rank-count"></p>
+        <p class="count" id="ed-reveal-wrap" hidden><button class="btn link inline" type="button" id="ed-reveal">Edit rankings</button></p>
       </div>
       <aside class="rk-rail" id="rk-rail" aria-label="Rankings summary" hidden></aside>
     </div>
@@ -5541,6 +5542,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   let maxValue = Math.max(1, ...players.map(p => p.value));
   const hasPicks = players.some(p => p.pos === "PICK");
   const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
+  /* Phones (Alan, Oct 13, after the full audit): a visitor who can't publish doesn't get the editor's chrome (the bar,
+     the drag and arrow column, tier tools, value buttons): it took ~90px of a 390px board. It shows for a signed-in
+     editor (a saved token), with ?debug, while this browser has unsaved or unpublished edits, or after "Edit rankings"
+     under the board (this tab only). Wider screens are unchanged. */
+  const EDIT_PHONE = matchMedia("(max-width: 760px)");
+  let editReveal = false;
+  try { editReveal = sessionStorage.getItem("spm_edit_reveal") === "1"; } catch (e) {}
+  function editorShown() {
+    if (!editor.on) return false;
+    if (!EDIT_PHONE.matches || editor.token || editReveal || /[?&]debug\b/.test(location.search)) return true;
+    try { return savedCsv != null && (changedRows().length > 0 || Object.keys(localEdits).length > 0); } catch (e) { return false; }
+  }
   /* Diagnostics (Phase 1): the last 50 publish steps and uncaught errors, kept in memory in this tab only, with any token
      redacted. Nothing is sent anywhere. SPM.diagnostics() lists them; with ?debug they're also logged to the console. */
   const DIAG = [], DIAG_DEBUG = /[?&]debug\b/.test(location.search);
@@ -5834,7 +5847,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T15:20Z";
+  const BUILD_ID = "2026-10-13T16:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6173,7 +6186,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (mkOn()) return renderMkt();
     if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
     let list, rk, group;
-    const editing = editor.on && !leagueView();
+    const editing = editorShown() && !leagueView();
     maxValue = Math.max(1, ...players.map(dv));
     const canReorder = editing && (EDIT_POS.includes(posFilter) || (posFilter === "ALL" && hasOverall()));
     const numOf = p => posFilter === "ALL" ? p.rank : p.posNum;
@@ -8272,7 +8285,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     renderValueCheck();
     renderMarketAudit();
     if (RV && RV.open) renderReview();
-    $("editor-bar").hidden = !editor.on;
+    $("editor-bar").hidden = !editorShown();
+    $("ed-reveal-wrap").hidden = !editor.on || editorShown() || leagueView() || prodOn() || mkOn() || wkOn();
     if (!editor.on || savedCsv == null) return;
     const n = changedRows().length, local = Object.keys(localEdits).length;
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
@@ -9893,7 +9907,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function forgetToken() {
     clearToken();
     Object.assign(editor, { token: null, login: "" });
-    updateEditorBar(); toast("Signed out. Your GitHub token was removed from this browser.");
+    if (EDIT_PHONE.matches && !drag) renderRankings(); else updateEditorBar();
+    toast("Signed out. Your GitHub token was removed from this browser.");
   }
 
   $("eb-save").addEventListener("click", saveLocal);
@@ -9941,10 +9956,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (async () => {
     const st = storedToken();
     if (!st) return;
-    try { await verifyToken(st.token); updateEditorBar(); }
+    // on phones the board's edit controls depend on the token (editorShown), so the board is redrawn, not just the bar
+    const shown = () => (EDIT_PHONE.matches && !drag ? renderRankings() : updateEditorBar());
+    try { await verifyToken(st.token); shown(); }
     catch (err) {
       if (err.kind === "auth") { editor.token = null; clearToken(); }
-      else if (err.kind === "network" || err.kind === "server" || err.kind === "rate") { editor.token = st.token; updateEditorBar(); }
+      else if (err.kind === "network" || err.kind === "server" || err.kind === "rate") { editor.token = st.token; shown(); }
       else editor.token = null;
       diag("signin", `saved token not verified (${err.kind || "error"})`);
     }
@@ -11407,6 +11424,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     renderLeagueAll();
   });
   $("owner-filter").addEventListener("change", e => { LG.ownerFilter = e.target.value; renderRankings(); });
+  $("ed-reveal").addEventListener("click", () => {
+    editReveal = true; try { sessionStorage.setItem("spm_edit_reveal", "1"); } catch (e) {}
+    renderRankings();
+  });
+  EDIT_PHONE.addEventListener("change", () => { if (!drag) renderRankings(); });
 
   /* Player helpers for roster views (ranked or not) */
   const bySleeper = () => new Map(players.filter(p => p.sleeperId).map(p => [p.sleeperId, p]));
