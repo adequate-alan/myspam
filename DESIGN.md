@@ -213,7 +213,7 @@ These are the shared primitives (the "Shared components" block at the end of the
   - Plain `title` text moves into the card while it is open.
   - Nothing essential lives only in a tooltip.
 - **Focus:** a visible neutral 2px ring (`--focus-ring`), never red.
-- **Movement glyphs:** ▲ / ▼ always mean movement over time (since the last update, or a change between two dates). A comparison between two boards, such as League-adjusted vs the AM Board, is a labelled reference ("AM #12"), never an arrow.
+- **Movement glyphs:** ▲ / ▼ always mean movement over time (since the last update, or a change between two dates). A comparison between two boards, such as League-adjusted vs the AM Board, is a labelled reference ("AM #12"), never an arrow. The same goes for market edge ("AM +3" / "Mkt +2"), Standings ("+2 roster ahead"), the Compare leader (a neutral ●) and trending adds ("+4.2k adds").
 - **Verdict headline (Trade Calculator):** neutral type; the words carry the result. A small neutral dot marks that one side is ahead, a hollow ring that it is even or split. Never a side color.
 - **Player drawer key figures:** two equal blocks, AM rank + value and ROS PPG. Season numbers and production ranks sit on one quieter line beneath them.
 
