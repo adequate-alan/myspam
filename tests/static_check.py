@@ -8,7 +8,7 @@ Run from the repo root:  python3 tests/static_check.py [--base REF] [--frozen-ra
                        For automated jobs: nothing scheduled ever changes rankings (CLAUDE.md §2, §8).
 
 Checks:
- 1. Every inline <script> parses (node --check) and BUILD_ID is set.
+ 1. Every inline <script> parses (node --check) and BUILD_ID is the "dev" placeholder the deploy stamps.
  2. Exactly one RANKINGS_CSV block, and the rankings pass the same rules the editor checks before publishing: all
     columns, every row the header's width, names and positions, ranks 1..N with no gaps or duplicates, whole-number tiers,
     numeric or blank values, manual/auto source, a Sleeper ID for every player and none repeated, no player twice,
@@ -141,7 +141,8 @@ def main():
         ok(scripts and not bad, f"All {len(scripts)} inline scripts parse {bad}")
     else:
         ok(False, "node is needed to check the scripts' syntax (install Node.js)")
-    ok(re.search(r'const BUILD_ID = "[^"]+";', html) is not None, "BUILD_ID is set")
+    ok(len(re.findall(r'const BUILD_ID = "dev";', html)) == 1 and len(re.findall(r'^\s*const BUILD_ID = ', html, re.M)) == 1,
+       'BUILD_ID is the "dev" placeholder (the deploy stamps the real one; never bump it by hand)')
 
     # 2. rankings
     text, n = rankings(html)
