@@ -5821,7 +5821,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T15:10Z";
+  const BUILD_ID = "2026-10-13T15:30Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -6998,7 +6998,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         ? `<span>This is a past trade: ${names(stray)} ${stray.length === 1 ? "has" : "have"} moved since, and the rosters from the time of the trade couldn't be rebuilt from the transaction log${TC.hist.why ? ` (${esc(TC.hist.why)})` : ""}, so there's no roster impact read. The sides come straight from the transaction.</span>`
         : own.length
         ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster impact is off until the sides are fixed.</span>
-          <span class="tc-warn-acts"><button class="btn primary" type="button" data-tc-flip>Flip players</button> <button class="btn" type="button" data-tc-remove>Remove</button></span>`
+          <span class="tc-warn-acts">${TC3.on ? "" : `<button class="btn primary" type="button" data-tc-flip>Flip players</button> `}<button class="btn" type="button" data-tc-remove>Remove</button></span>`
         : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
           <button class="btn" type="button" data-tc-remove>Remove</button>`;
     }
@@ -7035,9 +7035,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!tcLeague()) return [];
     const out = [];
     if (TC3.on) {
+      // a player already on the team whose card he's on is on the wrong card (each card lists what that team gets);
+      // before this check the "from" fallback credited him to another team, which then "sent" a player it doesn't have
       SIDES3.forEach(r => sides[r].forEach(id => {
-        const g = originOf(id, r), t = sideTeam(g), p = byId.get(id);
-        if (t && p && !rosterIds(t).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
+        const g = originOf(id, r), t = sideTeam(g), p = byId.get(id), mine = sideTeam(r);
+        if (!p) return;
+        if (mine && rosterIds(mine).includes(String(p.sleeperId))) out.push({ p, side: r, from: t ? t.name : sideName(g), own: mine.name });
+        else if (t && !rosterIds(t).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
       }));
       return out;
     }
@@ -7834,6 +7838,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function rosterContext3() {
     const d = activeData(), T = Object.fromEntries(SIDES3.map(s => [s, sideTeam(s)]));
     if (!d || SIDES3.some(s => !T[s]) || new Set(SIDES3.map(s => T[s].rosterId)).size < 3) return null;
+    if (tcStray().some(x => x.own)) return null;   // a team set to get its own player: no roster read (see the warning)
     const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
@@ -7882,18 +7887,26 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return;
     }
     const ctx = tcLeague() ? rosterContext3() : null;
+    const wrong = tcStray().some(x => x.own);   // a team set to get its own player: its "sender" is a guess, so no verdicts
     const short = s => {
       const r = res[s];
+      if (wrong) return "Fix the sides above";
       if (!r.recv.length) return "Receives nothing yet";
       if (!r.sent.length) return "Sends nothing yet";
       return `Receives ${fmt(r.m.a)} · sends ${fmt(r.m.b)} · ${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}%`;
     };
     box.innerHTML = SIDES3.map(s => {
-      const o = res[s].outcome;
+      const o = wrong ? null : res[s].outcome;
       return `<div class="tv3-row"><span class="tv3-name side-${s}">${esc(names[s])}</span>
         <span class="tv3-verdict${o ? (o.fair ? " fair" : o.ahead ? " up" : " down") : ""}">${esc(o ? o.label : "–")}</span>
         <span class="tv3-nums">${esc(short(s))}</span></div>`;
     }).join("");
+    if (wrong) {
+      ["tc-why-body", "tc-breakdown-body"].forEach(id => { $(id).innerHTML = `<p class="pp-note">A team is set to get a player it already has. Fix the sides above to see this.</p>`; });
+      $("tc-analysis").hidden = false; $("tc-analysis").innerHTML = `<p class="pp-note">No roster read until every team gets a player it doesn't already have.</p>`;
+      $("tc-impact-hint").textContent = "Fix the sides above"; $("balance-btn").hidden = true; $("balance").hidden = true;
+      return;
+    }
     // Why: what each team accomplished
     const why = SIDES3.map(s => {
       const r = res[s], who = names[s], you = who === "You";
@@ -7923,8 +7936,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       $("tc-impact-hint").textContent = `· Biggest lineup gain: ${names[best]}`;
     } else {
       $("tc-analysis").hidden = !tcLeague();
-      $("tc-analysis").innerHTML = tcLeague() ? `<p class="pp-note">Pick all three teams above to see each lineup change.</p>` : "";
-      $("tc-impact-hint").textContent = tcLeague() ? "Pick all three teams" : "";
+      const picked = SIDES3.every(s => sideTeam(s));
+      $("tc-analysis").innerHTML = tcLeague() ? `<p class="pp-note">${picked ? "No roster read until every team gets a player it doesn't already have and sends one it owns." : "Pick all three teams above to see each lineup change."}</p>` : "";
+      $("tc-impact-hint").textContent = tcLeague() ? (picked ? "Fix the sides above" : "Pick all three teams") : "";
     }
     // Value breakdown
     const raw = list => list.reduce((a, id) => a + tv(byId.get(id)), 0);
