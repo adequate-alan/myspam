@@ -5821,7 +5821,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T13:40Z";
+  const BUILD_ID = "2026-10-13T15:10Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -14160,7 +14160,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId], proj = p ? projPPGOf(p) : null;
     if (!f || f.length < 8 || proj == null || !(f[6] > 0)) return null;
     const [g, base, env, sched, env4, sched4, hppg, priorG] = f, L = Math.log;
-    const early = g < 4 && priorG >= 4;   // last season's role still carries most of the weight
+    // last season's role still carries most of the weight: f[9] = share of his projected workload from this season's
+    // games (Oct 13, per-stat prior weights); older files only have games of evidence
+    const early = f.length >= 10 ? f[9] < 0.5 && priorG >= 4 : g < 4 && priorG >= 4;
     const items = [
       { k: "role", v: L(base / hppg), up: early ? "last season's role and efficiency weigh in above this year's points" : "projected opportunities and efficiency support more than he has scored",
         down: early ? "last season's role and efficiency weigh in below this year's points" : "TD / efficiency regression toward his projected stat line" },
@@ -14184,7 +14186,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId]; if (!f) return null;
     const g = f[0], games = `${g} game${g === 1 ? "" : "s"} of evidence this season (an injury-shortened game counts as a fraction of a game)`;
     if (f.length >= 9) {   // the model's confidence score (Oct 15): healthy games, the prior, role stability, injury signals; never touches AM rank
-      const c = f[8], tip = `Projection confidence ${Math.round(c * 100)}%: ${games}; last season's sample, how stable his role has been and injury signals also count`;
+      const share = f.length >= 10 && f[7] >= 4 ? `; ${Math.round(f[9] * 100)}% of his projected workload comes from this season's games${f[10] ? " (last season was with another team, so it counts less)" : ""}` : "";
+      const c = f[8], tip = `Projection confidence ${Math.round(c * 100)}%: ${games}; last season's sample, how stable his role has been and injury signals also count${share}`;
       return c < 0.4 ? { cls: "low", label: "Low sample", tip: `Low sample. ${tip}` } : c < 0.7 ? { cls: "mod", label: "Moderate confidence", tip } : { cls: "high", label: "High confidence", tip };
     }
     if (g < 3) return { cls: "low", label: "Low sample", tip: `Low sample: ${games}. The projection leans on the position average until he has played more.` };

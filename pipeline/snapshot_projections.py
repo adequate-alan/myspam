@@ -31,12 +31,13 @@ def main(proj_path="projections.csv", stats_path="../data/stats/2026.json", out_
             base=round(float(r.base_ppg), 2), env=round(float(r.env), 3), sched=round(float(r.sched), 3),
             env4=round(float(r.env4), 3), sched4=round(float(r.sched4), 3), env1=round(float(r.env1), 3), sched1=round(float(r.sched1), 3),
             g_eff=round(float(r.g_eff), 2), prior_g=int(r.prior_g), healthy_ppg=round(float(r.healthy_ppg), 2),
-            conf=round(float(r.conf), 3), line=json.loads(r.line_json), props=None)   # props: filled in once a props feed exists
+            conf=round(float(r.conf), 3), cur_share=round(float(getattr(r, "cur_share", 1.0)), 3), moved=str(getattr(r, "moved", False)) in ("True", "1", "1.0"),
+            line=json.loads(r.line_json), props=None)   # props: filled in once a props feed exists
         ro = roles.get(str(r.sleeper_id))
         if ro and ro[7] == week:   # role for this very week: multiplier, chance to start, depth, designation
             recs[str(r.sleeper_id)].update(role=ro[0], start=ro[2], depth=ro[4], status=ro[5], n1_exp=round(float(r.n1_ppg) * ro[0], 2))
     json.dump({"season": season, "week": week, "made": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"),
-               "model": "ros-v2", "roles": bool(roles), "scoring": "base", "players": recs}, open(out, "w"), separators=(",", ":"))
+               "model": "ros-v3", "roles": bool(roles), "scoring": "base", "players": recs}, open(out, "w"), separators=(",", ":"))
     print(f"stored {len(recs)} forecasts for week {week} in {out}")
 
 if __name__ == "__main__":
