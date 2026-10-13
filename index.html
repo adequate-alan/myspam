@@ -12,7 +12,7 @@
     try { t = localStorage.getItem("spm_theme"); } catch (e) {}
     if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", t);
-    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
+    var m = document.getElementById("theme-color"); if (m) m.content = t === "light" ? "#ECEEF2" : "#08090B";
   })();
 </script>
 <meta name="description" content="Adequate: fantasy football rankings, trade calculator and Trade Finder, with values for any league format.">
@@ -5815,7 +5815,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   /* ---------- New version check ----------
      GitHub Pages can hand a browser its cached copy of the page for a few minutes after an update.
-     BUILD_ID changes with every code update; if the live page has a different one, offer a refresh. */
+     BUILD_ID is "dev" in the repo; the deploy stamps a hash of the page's code into it (tests/release_fingerprint.py
+     --page), so it changes with every code update and never needs a manual bump. If the live page has a different one,
+     offer a refresh. */
   // Scroll hints for tab rows that can scroll sideways: fade whichever edge has more tabs past it,
   // and keep the selected tab in view
   function scrollHints(el) {
@@ -5861,7 +5863,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T16:40Z";
+  const BUILD_ID = "dev";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5886,14 +5888,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* ---------- Theme (light / dark) ----------
      All colors come from the theme tokens at the top of the stylesheet; this only flips
      data-theme on <html> and remembers it. Charts and every page follow automatically. */
-  let themeSeq = 0;
+  let themeSeq = 0, themeWant = null;   // themeWant: the theme the latest switch asked for (data-theme flips a frame later)
   function setTheme(t, animate) {
     const root = document.documentElement, seq = ++themeSeq;
+    themeWant = t;
     const apply = () => {
       if (animate) root.classList.add("theme-switching");   // same style pass as the flip: no element runs its own color transition (see CSS)
       root.setAttribute("data-theme", t);
       try { localStorage.setItem("spm_theme", t); } catch (e) {}
-      const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
+      const m = $("theme-color"); if (m) m.content = t === "light" ? "#ECEEF2" : "#08090B";
       const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
       btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
       btn.setAttribute("aria-pressed", String(t === "light"));
@@ -5909,7 +5912,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     apply(); requestAnimationFrame(() => requestAnimationFrame(end));   // reduced motion, a hidden tab or no View Transitions: instant
   }
   setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark", false);
-  $("theme-toggle").addEventListener("click", () => setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light", true));
+  $("theme-toggle").addEventListener("click", () => setTheme(themeWant === "light" ? "dark" : "light", true));
   // another tab changed the theme
   window.addEventListener("storage", e => { if (e.key === "spm_theme" && (e.newValue === "light" || e.newValue === "dark")) setTheme(e.newValue, true); });
 
