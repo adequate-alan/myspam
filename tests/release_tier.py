@@ -1,6 +1,7 @@
 """Release lane of a push (Alan, Oct 14): how much CI it needs before it may deploy.
 
   python3 tests/release_tier.py --head SHA [--start SHA] [--ok-keys FILE] [--force-full] [--json] [--github-output]
+  python3 tests/release_tier.py --base REF --head SHA     (compare two commits directly)
 
 Three lanes:
   fast      CSS, copy and labels, docs, BUILD_ID, comments, and data (JSON under data/, the RANKINGS_CSV block).
@@ -27,6 +28,10 @@ entry "verified-<code fingerprint>", tests/release_fingerprint.py), walking back
 --head) up to 30 commits. So a push that was cancelled by a newer one, or one that failed its checks, is still part of
 the next push's diff, and code that never passed can't ride out with a later CSS tweak or rankings publish. No verified
 commit within reach → full lane.
+Candidates (Oct 13): that first-parent base, plus any other parent of --head that is verified (a merge commit's second
+parent, i.e. the PR head that passed its checks); the lowest lane wins. The workflow trusts records made on main and on
+same-repo pull requests (never forks), so a merged PR whose code already passed runs the fast checks on main; a squash
+merge whose tree matches the verified PR head has the same fingerprint and is fast too.
 
 How index.html is read. Every changed line is placed by region (the rankings block, CSS, markup, the settings script,
 or the top-level JavaScript declaration it belongs to); everything else is placed by its path. Copy and labels: a
@@ -211,6 +216,24 @@ def ok_base(start, ok_fps, limit=WALK):
         except subprocess.CalledProcessError: return None   # history cut off (shallow clone)
     return None
 
+def pick_base(head, start, ok_fps, force=False):
+    """The verified commit to diff from, and the lane that gives. Candidates: the newest verified commit on the first-parent
+    walk from `start`, and any other parent of `head` whose code passed (a merge commit's second parent: the pull request
+    head that was verified before the merge). Every candidate passed its own lane, so each diff is classified by the same
+    rules; the lowest lane wins (the nearest candidate on a tie)."""
+    cands = []
+    b = ok_base(start, ok_fps)
+    if b: cands.append(b)
+    from release_fingerprint import fingerprint
+    for p in git("rev-list", "--parents", "-n", "1", head).split()[2:]:
+        try:
+            if p not in cands and fingerprint(p) in ok_fps: cands.append(p)
+        except subprocess.CalledProcessError: pass
+    if not cands: return None, classify(None, head, force)
+    rank = {"fast": 0, "targeted": 1, "full": 2}
+    best = min(((classify(b, head, force), i, b) for i, b in enumerate(cands)), key=lambda t: (rank[t[0]["lane"]], t[1]))
+    return best[2], best[0]
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--head", default="HEAD"); ap.add_argument("--start", default="")
@@ -220,11 +243,10 @@ if __name__ == "__main__":
     ap.add_argument("--github-output", action="store_true")
     a = ap.parse_args()
     head = git("rev-parse", a.head).strip()
-    if a.base: base = a.base
+    if a.base: base = a.base; c = classify(base, head, a.force_full)
     else:
         keys = open(a.ok_keys).read().split() if a.ok_keys and os.path.exists(a.ok_keys) else []
-        base = ok_base(a.start or head, {k[len("verified-"):] for k in keys if k.startswith("verified-")})
-    c = classify(base, head, a.force_full)
+        base, c = pick_base(head, a.start or head, {k[len("verified-"):] for k in keys if k.startswith("verified-")}, a.force_full)
     if a.github_output and os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
             f.write(f"lane={c['lane']}\nsuites={','.join(c['suites'])}\nlane_base={base or ''}\n")
