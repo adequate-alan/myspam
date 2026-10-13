@@ -1523,6 +1523,11 @@ button.rs-card:focus-visible { outline: 2px solid var(--focus-ring); outline-off
 .bd-table tbody th { text-align: left; font-weight: 550; color: var(--ink-2); white-space: nowrap; }
 .bd-table td { color: var(--ink); width: 30%; }
 .bd-scroll { overflow-x: auto; }
+@media (max-width: 560px) {   /* the calculator's detail tables made the whole page scroll sideways on phones (audit Oct 13): headers wrap, a table still too wide scrolls inside its own box */
+  .tc-more-body, #tc-breakdown-body { overflow-x: auto; }
+  .tc-mkt-t thead th, .bd-table thead th { white-space: normal; vertical-align: bottom; }
+  .bd-table tbody th { white-space: normal; }
+}
 .bd-table.bd-fmt { max-width: 760px; }
 .bd-table.bd-fmt td { width: auto; }
 .bd-table.bd-fmt thead th { white-space: normal; vertical-align: bottom; }
@@ -1736,6 +1741,7 @@ tr.tier-none td { padding: 12px 22px; text-align: center; font-size: 0.72rem; co
 tr.tier-drop td { padding: 14px 22px; text-align: center; font-size: 0.74rem; color: var(--text-muted); border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--accent-primary) 4%, transparent); }
 tr.tier-edit.drop-before td, tr.tier-edit.drop-after td, tr.tier-drop.drop-before td, tr.tier-drop.drop-after td { box-shadow: inset 0 -2px 0 var(--accent-primary); }
 @media (hover: none) { .tier-tools, .tier-pen { opacity: 1; } }
+@media (max-width: 560px) { .tier-tools { flex-wrap: wrap; margin-left: 0; } .tier-row { min-width: 0; } }   /* the tools' one long row pushed the Value column past the board's edge on position tabs (audit Oct 13) */
 
 .pp-updated { margin: 18px 0 0; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 0.7rem; color: var(--text-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .pp-updated .btn.link { font-size: 0.7rem; }
@@ -1978,10 +1984,17 @@ button.tr-player:hover:not(:disabled) { background: var(--surface-2); }
 .theme-toggle .ti-moon { display: none; }
 :root[data-theme="light"] .theme-toggle .ti-sun { display: none; }
 :root[data-theme="light"] .theme-toggle .ti-moon { display: block; }
-/* smooth swap when the theme changes (not on first paint) */
-html.theme-anim, html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, fill 0.25s ease, stroke 0.25s ease !important;
-}
+/* Theme switch (Alan, Oct 13): one coordinated 200ms crossfade of the whole page (setTheme). The old per-element
+   transition on every element (html.theme-anim *) made the browser build ~50k CSS transitions on the ~9,700-element
+   board: 1.5–2.5s of style work, so the page froze and then snapped (9s on a throttled phone). Now the page is
+   snapshotted, the theme flips in one style pass, and the two pictures crossfade on the compositor, so backgrounds,
+   text, borders, shadows, images and icons change at exactly the same moment. During the swap no element runs its own
+   color transition (they'd finish at their own speeds inside the new picture). Reduced motion: an instant swap. */
+html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition: none !important; }
+html.theme-vt::view-transition { pointer-events: none; }
+html.theme-vt::view-transition-group(root) { animation: none; }
+html.theme-vt::view-transition-old(root), html.theme-vt::view-transition-new(root) { animation-duration: 200ms; animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
+@media (prefers-reduced-motion: reduce) { html.theme-vt::view-transition-old(root), html.theme-vt::view-transition-new(root) { animation: none; } }
 
 /* ---------- League settings (by hand) and league imports ---------- */
 .fmt-chip {
@@ -2440,7 +2453,11 @@ th.fa-proj { text-align: right; }
 .fa-fit-t.start { color: var(--rb); font-weight: 600; }
 .fa-fit-t.deep { color: var(--muted); }
 #fa-wrap .controls { flex-wrap: wrap; gap: 10px; }
-@media (max-width: 1240px) { .fa-fit-t { white-space: normal; } }   /* below the 1180px wrap the Fit text wraps instead of pushing the table past the edge */
+@media (max-width: 1240px) { .fa-fit-t { white-space: normal; } }
+/* 901–1180px: the ten columns were 1,083px in a 969px box at 1024, cutting FPTS, PPG and Fit (audit Oct 13). Tighter
+   cells first; below 1080 the season rank steps aside (its number stays in the FPTS and PPG cells' hover card) */
+@media (min-width: 901px) and (max-width: 1180px) { #fa-wrap .fa-table tbody td, #fa-wrap .fa-table thead th { padding-inline: 10px; } }
+@media (min-width: 901px) and (max-width: 1079px) { #fa-wrap .fa-srk { display: none; } #fa-wrap .fa-mx { white-space: normal; } }   /* below the 1180px wrap the Fit text wraps instead of pushing the table past the edge */
 @media (max-width: 900px) {
   .mx-row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "ta mid tb" "sa mid sb"; gap: 4px 8px; padding: 12px 12px 6px; }
   .mx-team.A { grid-area: ta; } .mx-team.B { grid-area: tb; } .mx-sc.A { grid-area: sa; } .mx-sc.B { grid-area: sb; } .mx-mid { grid-area: mid; }
@@ -3667,7 +3684,6 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .verdict h2 { font-size: 1.45rem; }
   .mast-right { width: 100%; justify-content: space-between; }
   .lc-format { display: none; }
-  .league-menu { right: auto; left: 0; }
   .strength-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .panel-title { font-size: 1.4rem; }
   .owner { display: block; margin-left: 0; margin-top: 2px; }
@@ -4070,6 +4086,10 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   .masthead-top { flex-wrap: wrap; align-items: center; justify-content: space-between; padding-top: 10px; gap: 4px 16px; }
   .masthead .tabs { order: 3; flex: 1 0 100%; height: 44px; } .masthead .tab { line-height: 43px; } .masthead .tabs { overflow-x: auto; scrollbar-width: none; margin-inline: -12px; }
   .masthead .tabs::-webkit-scrollbar { display: none; }
+  /* the right-hand group shrinks instead of pushing Connect league past the edge (561–859px without a league,
+     audit Oct 13): the format text truncates with an ellipsis, the full text stays in the chip's tooltip */
+  .mast-right { flex: 0 1 auto; min-width: 0; }
+  .fmt-chip { min-width: 0; }
 }
 
 /* ---- editor bar: a slim utility strip, not a card. Quiet while everything is saved; Save turns red only with
@@ -5818,7 +5838,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T14:20Z";
+  const BUILD_ID = "2026-10-13T15:50Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -5843,15 +5863,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* ---------- Theme (light / dark) ----------
      All colors come from the theme tokens at the top of the stylesheet; this only flips
      data-theme on <html> and remembers it. Charts and every page follow automatically. */
+  let themeSeq = 0;
   function setTheme(t, animate) {
-    const root = document.documentElement;
-    if (animate) { root.classList.add("theme-anim"); clearTimeout(setTheme.timer); setTheme.timer = setTimeout(() => root.classList.remove("theme-anim"), 320); }
-    root.setAttribute("data-theme", t);
-    try { localStorage.setItem("spm_theme", t); } catch (e) {}
-    const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
-    const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
-    btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
-    btn.setAttribute("aria-pressed", String(t === "light"));
+    const root = document.documentElement, seq = ++themeSeq;
+    const apply = () => {
+      if (animate) root.classList.add("theme-switching");   // same style pass as the flip: no element runs its own color transition (see CSS)
+      root.setAttribute("data-theme", t);
+      try { localStorage.setItem("spm_theme", t); } catch (e) {}
+      const m = $("theme-color"); if (m) m.content = t === "light" ? "#F7F7F8" : "#08090B";
+      const next = t === "light" ? "dark" : "light", btn = $("theme-toggle");
+      btn.setAttribute("aria-label", `Switch to ${next} mode`); btn.title = `Switch to ${next} mode`;
+      btn.setAttribute("aria-pressed", String(t === "light"));
+    };
+    if (!animate) { apply(); return; }
+    // a newer switch owns the classes; an older one finishing (or skipped by it) leaves them alone
+    const end = () => { if (seq === themeSeq) root.classList.remove("theme-switching", "theme-vt"); };
+    const motion = !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (motion && document.startViewTransition && document.visibilityState === "visible") {
+      root.classList.add("theme-vt");
+      try { document.startViewTransition(apply).finished.finally(end); return; } catch (e) { root.classList.remove("theme-vt"); }
+    }
+    apply(); requestAnimationFrame(() => requestAnimationFrame(end));   // reduced motion, a hidden tab or no View Transitions: instant
   }
   setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark", false);
   $("theme-toggle").addEventListener("click", () => setTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light", true));
@@ -6440,6 +6472,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const pop = $("rk-cols-pop"), btn = $("rk-cols-btn");
     if (open) renderColsPop();
     pop.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+    if (open && innerWidth > 760) keepOnScreen(pop);   // phones show it as a bottom sheet
     if (open) { const f = pop.querySelector("input:not(:disabled)"); if (f) f.focus(); }
   }
   $("rk-cols-btn").addEventListener("click", () => setColsPop(!WK_POP.open));
@@ -10676,11 +10709,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <button class="lm-action danger" type="button" role="menuitem" data-act="disconnect">Disconnect Sleeper</button>
       <div class="lm-foot">@${esc(sl.username)} · Synced ${d ? ago(d.syncedAt) : "never"}</div>`;
   }
+  // A popover anchored to its button can land past the screen's edge when the button sits near it (the league menu
+  // at 320–779px, the Columns popover at 800–1360px; audit Oct 13): shift it sideways to stay 16px inside.
+  function keepOnScreen(el) {
+    el.style.translate = "";
+    const r = el.getBoundingClientRect(), cw = document.documentElement.clientWidth;
+    const dx = r.left < 16 ? 16 - r.left : r.right > cw - 16 ? Math.max(16 - r.left, cw - 16 - r.right) : 0;
+    if (dx) el.style.translate = `${Math.round(dx)}px 0`;
+  }
   function toggleMenu(open) {
     const menu = $("league-menu"), chip = $("league-chip");
     open = open ?? menu.hidden;
     if (open) renderLeagueMenu();
     menu.hidden = !open; chip.setAttribute("aria-expanded", open);
+    if (open) keepOnScreen(menu);
   }
   function renderLeagueAll() {
     leagueRecalc();
@@ -14145,7 +14187,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId], proj = p ? projPPGOf(p) : null;
     if (!f || f.length < 8 || proj == null || !(f[6] > 0)) return null;
     const [g, base, env, sched, env4, sched4, hppg, priorG] = f, L = Math.log;
-    const early = g < 4 && priorG >= 4;   // last season's role still carries most of the weight
+    // last season's role still carries most of the weight: f[9] = share of his projected workload from this season's
+    // games (Oct 13, per-stat prior weights); older files only have games of evidence
+    const early = f.length >= 10 ? f[9] < 0.5 && priorG >= 4 : g < 4 && priorG >= 4;
     const items = [
       { k: "role", v: L(base / hppg), up: early ? "last season's role and efficiency weigh in above this year's points" : "projected opportunities and efficiency support more than he has scored",
         down: early ? "last season's role and efficiency weigh in below this year's points" : "TD / efficiency regression toward his projected stat line" },
@@ -14169,7 +14213,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId]; if (!f) return null;
     const g = f[0], games = `${g} game${g === 1 ? "" : "s"} of evidence this season (an injury-shortened game counts as a fraction of a game)`;
     if (f.length >= 9) {   // the model's confidence score (Oct 15): healthy games, the prior, role stability, injury signals; never touches AM rank
-      const c = f[8], tip = `Projection confidence ${Math.round(c * 100)}%: ${games}; last season's sample, how stable his role has been and injury signals also count`;
+      const share = f.length >= 10 && f[7] >= 4 ? `; ${Math.round(f[9] * 100)}% of his projected workload comes from this season's games${f[10] ? " (last season was with another team, so it counts less)" : ""}` : "";
+      const c = f[8], tip = `Projection confidence ${Math.round(c * 100)}%: ${games}; last season's sample, how stable his role has been and injury signals also count${share}`;
       return c < 0.4 ? { cls: "low", label: "Low sample", tip: `Low sample. ${tip}` } : c < 0.7 ? { cls: "mod", label: "Moderate confidence", tip } : { cls: "high", label: "High confidence", tip };
     }
     if (g < 3) return { cls: "low", label: "Low sample", tip: `Low sample: ${games}. The projection leans on the position average until he has played more.` };
