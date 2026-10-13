@@ -61,6 +61,11 @@ KW_BOUNDS = (0.25, 8.0)   # last season is worth at most 8 games: the larger est
                           # ~30 quarterbacks and made projections worse when fitted on half the players and scored on the other
 KW_PARENT = {"rz_rush": "rush_att", "rz_tgt": "rec_tgt"}   # red-zone work follows the role; its own counts are too sparse
 KW_MAIN = {"QB": ["pass_att", "rush_att"], "RB": ["rush_att", "rec_tgt"], "WR": ["rec_tgt"], "TE": ["rec_tgt"]}
+# positions that keep the weighting from before Oct 13 (last season at face value, K_PRIOR_FALLBACK games, no team-change
+# factor). Alan, Oct 13: TEs stay on it for now. With an unbiased TE workload the backtest showed TE PPG under-projected
+# (-1.3): an efficiency bias the old workload over-projection had been hiding, to be investigated on its own before
+# TE workload weighting changes (reports/ros-prior-weighting/te-efficiency-followup.md in the project files).
+KW_OLD_POS = frozenset({"TE"})
 
 def prior_weights(prev, cur):
     """Empirical-Bayes prior for each position and opportunity stat, from two complete seasons' frames (frame()):
@@ -268,13 +273,16 @@ def project_from(ctx, params=PARAMS):
         # 1-2. role: current per-full-game opportunities blended with the prior by games of evidence
         cur = {o: float(np.sum(g["opps"][o] / rf * w) / w.sum()) for o in OPPS}
         pr = g["prior"]
-        moved = bool(pr and pr.get("team") and pr["team"] != g["team"])
+        # fitted weights (prior_weights) unless K_PRIOR forces one weight, none were fitted, or his position keeps the old
+        # weighting (KW_OLD_POS); `moved` = a team change that made last season count less (always False on the old path)
+        use_kw = params.get("K_PRIOR") is None and bool(ctx.get("kw")) and pos not in params.get("KW_OLD_POS", KW_OLD_POS)
+        moved = bool(use_kw and pr and pr.get("team") and pr["team"] != g["team"])
         if pr and pr["g"] >= params["MIN_PRIOR_G"]:
             base = pr["opps"]
-            if params.get("K_PRIOR") is None and ctx.get("kw") and params.get("PRIOR_REGRESS", True):
+            if use_kw and params.get("PRIOR_REGRESS", True):
                 kw = ctx["kw"]   # last season regressed toward what such a role becomes a year later (prior_weights)
                 base = {o: (kw["a"][pos][o] + kw["b"][pos][o] * base[o]) * (kw["lvl"] if moved else 1.0) for o in OPPS}
-            if params.get("K_PRIOR") is not None or not ctx.get("kw"):   # one weight for every stat (the model before Oct 13)
+            if not use_kw:   # one weight for every stat (the model before Oct 13)
                 kp = {o: params["K_PRIOR"] if params.get("K_PRIOR") is not None else params["K_PRIOR_FALLBACK"] for o in OPPS}
             else:   # per position and stat, and lighter for a player on a new team (prior_weights)
                 kw = ctx["kw"]; kp = {o: kw["K"][pos][o] / (kw["move"] if moved else 1.0) for o in OPPS}
@@ -324,7 +332,7 @@ def project_from(ctx, params=PARAMS):
         last_short = bool(len(f) and (f[-2:] < 1).any())
         kwi = ctx.get("kw")
         conf = confidence(int(full.sum()), pr["g"] if pr else 0, cv, last_short, g["status"],
-                          prior_info=(1.0 / kwi["move"]) if (moved and kwi and params.get("K_PRIOR") is None) else 1.0)
+                          prior_info=(1.0 / kwi["move"]) if moved else 1.0)
         rows.append(dict(sleeper_id=g["sid"], player=g["name"], pos=pos, team=g["team"], games=len(f), g_eff=round(g_eff, 2),
                          ppg=ppg, healthy_ppg=hppg, prior_g=(pr["g"] if pr else 0), base_ppg=base_pts, env=env, sched=sched,
                          env4=env4, sched4=sched4, env1=env1, sched1=sched1, proj_ppg=proj, n4_ppg=base_pts * env4 * sched4,

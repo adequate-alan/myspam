@@ -63,7 +63,7 @@ def write_json(site_path, out_path, proj_path="projections.csv"):
     """ROS projections for the browser (keyed by Sleeper ID): never touches RANKINGS_CSV, so values can't move.
     `ppg` = ROS PPG in the site's scoring; `f` = [games of evidence, base PPG (role × efficiency, before environment and
     schedule), environment, schedule, next-4 environment, next-4 schedule, healthy PPG, prior-season games, confidence 0-1,
-    share of his projected workload from this season's games 0-1, on a new team 1/0];
+    share of his projected workload from this season's games 0-1, a team change that made last season count less 1/0 (never for TEs: ros_model.KW_OLD_POS)];
     `line` = the projected per-game stat line, which the browser scores with the league's own scoring."""
     import json, datetime
     find = _lookup(proj_path)

@@ -15,6 +15,7 @@ No browser; synthetic seasons, plus the repo's 2024 -> 2025 files for the estima
      model's and more than the same player who stayed on his team; one 3-TD game doesn't move his projected carries;
      his efficiency still carries last season (yards per carry well under his hot 4-game rate); confidence is lower
      than for the same player on his old team; the old fixed weight (K_PRIOR 2) reproduces the old numbers.
+  TE: tight ends keep the old weighting (KW_OLD_POS, Alan, Oct 13) until the TE efficiency bias is understood.
   C. The repo's data: the estimated 2024 -> 2025 weights are finite and inside the bounds, RB carries react faster
      than WR targets (the backtest's finding), a team change divides K, the projection code never touches the
      rankings (index.html's RANKINGS_CSV is unchanged by a projection run).
@@ -77,17 +78,17 @@ f0s, f1s = synth_pair(move_sd=3.0)
 ok(m.prior_weights(f0s, f1s)["move"] < kwm["move"], "...and when changing teams doesn't change roles more, the factor is smaller")
 
 # ---------------------------------------------------------------- B. a synthetic Walker
-def walker_seasons(new_team=True, td_game=False, n_others=40):
+def walker_seasons(new_team=True, td_game=False, n_others=40, pos="RB"):
     prev, cur = {}, {}
-    prev["kw3"] = ("RB", [rb_game(w, "SEA", 13, 2, 0.47, rz=2, td=int(w % 4 == 0), ypc=4.6) for w in range(1, 17)])
+    prev["kw3"] = (pos, [rb_game(w, "SEA", 13, 2, 0.47, rz=2, td=int(w % 4 == 0), ypc=4.6) for w in range(1, 17)])
     team = "KC" if new_team else "SEA"
     games = [rb_game(w, team, c, t, s, rz=r, td=1, ypc=6.2) for w, c, t, s, r in [(1, 23, 6, 0.68, 3), (2, 24, 10, 0.82, 5), (3, 18, 2, 0.73, 7), (4, 22, 1, 0.75, 4)]]
     if td_game: games[3] = dict(games[3], rush_td=4)
-    cur["kw3"] = ("RB", games)
+    cur["kw3"] = (pos, games)
     for i in range(n_others):   # a background league so league rates exist
         sid = f"o{i}"; c = int(8 + i % 12)
-        prev[sid] = ("RB", [rb_game(w, "ZZZ", c, 3, 0.55, td=int(w % 3 == 0)) for w in range(1, 17)])
-        cur[sid] = ("RB", [rb_game(w, "ZZZ", c, 3, 0.55, td=int(w % 3 == 0)) for w in range(1, 5)])
+        prev[sid] = (pos, [rb_game(w, "ZZZ", c, 3, 0.55, td=int(w % 3 == 0)) for w in range(1, 17)])
+        cur[sid] = (pos, [rb_game(w, "ZZZ", c, 3, 0.55, td=int(w % 3 == 0)) for w in range(1, 5)])
     s0, s1 = season(2025, prev), season(2026, cur); s1["through_week"] = 4
     return s0, s1
 
@@ -125,6 +126,15 @@ ok(4.4 < ypc < 5.6, f"Efficiency keeps its slower prior: projected {ypc:.2f} yar
 ok(abs(nokw.line["rush_att"] - old.line["rush_att"]) < 1e-9, "Without fitted weights the model falls back to the old fixed weight (K_PRIOR_FALLBACK 2)")
 g_eff = 4.0
 ok(abs(old.line["rush_att"] - (g_eff * cur_car + 2 * 13) / (g_eff + 2)) < 0.05, f"The old path (K_PRIOR 2) reproduces the old blend: {old.line['rush_att']:.2f} carries")
+
+# TEs keep the weighting from before Oct 13 (Alan, Oct 13: KW_OLD_POS, until the TE efficiency bias is understood)
+te_s = walker_seasons(pos="TE")
+te_new, te_old = run(*te_s, m.PARAMS, KW), run(*te_s, dict(m.PARAMS, K_PRIOR=2.0), KW)
+ok("TE" in m.KW_OLD_POS and all(abs(te_new.line[k] - te_old.line[k]) < 1e-9 for k in te_new.line) and abs(te_new.proj_ppg - te_old.proj_ppg) < 1e-9,
+   f"A TE who changed teams gets exactly the old projection ({te_old.proj_ppg:.2f} PPG): raw last season, 2 games, no team-change factor")
+ok(not te_new.moved and abs(te_new.conf - te_old.conf) < 1e-9, "...his team change isn't reported as counting less, and his confidence is the old one")
+te_on = run(*te_s, dict(m.PARAMS, KW_OLD_POS=frozenset()), KW)
+ok(te_on.moved and abs(te_on.proj_ppg - te_old.proj_ppg) > 1e-6, "Taking TE out of KW_OLD_POS switches the new weighting back on for TEs")
 
 # ---------------------------------------------------------------- C. the repo's data
 Kr = KW["K"]
