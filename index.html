@@ -5896,6 +5896,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* ---------- Tabs ---------- */
   const tabs = { rankings: $("tab-rankings"), myteam: $("tab-myteam"), league: $("tab-league"), finder: $("tab-finder"), trade: $("tab-trade") };
   let currentTab = "rankings", tradeStale = false;
+  const viewStale = new Set();
   function showTab(name) {
     if (name === "fa") { name = "league"; try { LT.sub = "fa"; } catch (e) { window.spmWantFA = true; } }   // Free Agents lives in League now (old #fa links; LT may not exist yet at start-up)
     if (!tabs[name] || tabs[name].hidden) name = "rankings";
@@ -5917,7 +5918,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if ($("player-modal").open) renderPlayer();
       } catch (e) { console.warn("tab redraw", e); }
     }
-    if (name === "trade" && tradeStale && !flip) renderTrade();
+    // tabs left stale by an AM Board / League-adjusted switch (only the board is redrawn then; see renderViewSwitch)
+    if (viewStale.delete(name) && !flip) {
+      try { ({ myteam: renderMyTeam, league: () => { renderLeague(); renderFA(); }, trade: renderTrade }[name] || (() => {}))(); } catch (e) { console.warn("tab redraw", e); }
+    } else if (name === "trade" && tradeStale && !flip) renderTrade();
     if (name === "finder" && typeof renderFinder === "function") renderFinder();
   }
   for (const [k, btn] of Object.entries(tabs)) {
@@ -10727,7 +10731,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     menu.hidden = !open; chip.setAttribute("aria-expanded", open);
     if (open) keepOnScreen(menu);
   }
+  /* The AM Board / League-adjusted switch (Oct 13 audit: it ran renderLeagueAll, re-pricing the league and redrawing
+     every hidden tab, 0.6–0.8s per click and ~3s on a slow phone). The switch changes only which values the Rankings
+     tab shows: the league's values are the same and every other tab always shows them (§2.8), so only the header, the
+     board, its rail and an open drawer are redrawn; the other tabs are redrawn when they're next opened. */
+  function renderViewSwitch() {
+    LG.mode = LG.active ? (sl.view === "base" ? "base" : "league") : fmtView;
+    renderLeagueUI(); renderRankings();
+    if ($("player-modal").open) renderPlayer();
+    ["myteam", "league", "trade"].forEach(k => viewStale.add(k));
+    if (typeof renderFinder === "function" && currentTab === "finder") renderFinder();
+  }
   function renderLeagueAll() {
+    viewStale.clear();
     leagueRecalc();
     renderLeagueUI();
     renderRankings(); renderTrade(); renderMyTeam(); renderLeague(); renderFA(); renderFinder();
@@ -11411,7 +11427,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!b) return;
     if (activeData()) { sl.view = b.dataset.view; writeSl(); }
     else { fmtView = b.dataset.view; try { localStorage.setItem(FMT_VIEW_KEY, fmtView); } catch (err) {} }
-    renderLeagueAll();
+    renderViewSwitch();
   });
   $("owner-filter").addEventListener("change", e => { LG.ownerFilter = e.target.value; renderRankings(); });
 
