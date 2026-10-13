@@ -128,9 +128,15 @@ with sync_playwright() as p:
     toggle(pg); pg.reload(); pg.wait_for_selector("#rank-body tr.player")
     ok(theme(pg) == "light" and bg(pg) == BG["light"], "Reload keeps the switched theme")
     # a quick run of clicks: the last one wins, nothing left behind
-    pg.evaluate("() => { for (let i = 0; i < 5; i++) document.getElementById('theme-toggle').click(); }"); pg.wait_for_timeout(900)
-    ok(theme(pg) == "dark" and bg(pg) == BG["dark"], f"Five quick clicks from light end in dark ({theme(pg)})")
-    ok(pg.evaluate("!/theme-(switching|vt)/.test(document.documentElement.className)"), "Five quick clicks: classes cleared")
+    # every click counts, even one made before the previous switch has flipped data-theme
+    pg.evaluate("() => { for (let i = 0; i < 4; i++) document.getElementById('theme-toggle').click(); }"); pg.wait_for_timeout(900)
+    ok(theme(pg) == "light" and bg(pg) == BG["light"], f"Four clicks in one task from light end in light ({theme(pg)})")
+    for _ in range(5):
+        pg.evaluate("document.getElementById('theme-toggle').click()"); pg.wait_for_timeout(40)
+    pg.wait_for_timeout(900)
+    ok(theme(pg) == "dark" and bg(pg) == BG["dark"], f"Five clicks 40ms apart from light end in dark ({theme(pg)})")
+    ok(pg.evaluate("localStorage.getItem('spm_theme')") == "dark", "Quick clicks: the final theme is the saved one")
+    ok(pg.evaluate("!/theme-(switching|vt)/.test(document.documentElement.className)"), "Quick clicks: classes cleared")
     for _ in range(6):   # spaced repeats
         toggle(pg, 260)
     pg.wait_for_timeout(500)
