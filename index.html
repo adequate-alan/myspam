@@ -3206,6 +3206,29 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .scroll-hint.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
 .pp-tabs .chip-btn { flex: none; white-space: nowrap; }
 .pp-tabs .chip-btn::after { bottom: 0; }
+/* Phones: three primary sections + More (bottom sheet). Rows are 44px tall for touch. */
+.pp-tabs.pp-tabs-phone { gap: 8px; justify-content: space-between; }
+.pp-tablist { display: contents; }
+.pp-tabs-phone .chip-btn { height: 44px; }
+.pp-more-btn { display: inline-flex; align-items: center; gap: 6px; }
+.pp-more-chev { flex: none; transition: transform .15s ease; }
+.pp-more-btn[aria-expanded="true"] .pp-more-chev { transform: rotate(180deg); }
+.pp-sheet-scrim { position: fixed; inset: 0; z-index: 60; background: var(--backdrop); }
+.pp-sheet { position: fixed; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); z-index: 61; max-width: 480px; margin: 0 auto;
+  max-height: 75vh; overflow-y: auto; padding: 6px 8px 8px; background: var(--surface-raised); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: var(--r-lg, 12px); box-shadow: 0 -8px 30px -12px var(--shadow-color); }
+.pp-sheet-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 6px 8px; font: 600 0.72rem var(--font-body);
+  text-transform: uppercase; letter-spacing: var(--eyebrow-ls, 0.09em); color: var(--text-muted); }
+.pp-sheet-x { width: 36px; height: 36px; border: 0; border-radius: var(--r-sm, 6px); background: var(--fill-1); color: var(--text-secondary); font-size: 1.2rem; line-height: 1; cursor: pointer; }
+.pp-sheet-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.pp-sheet-list button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 0 12px;
+  border: 0; border-left: 2px solid transparent; border-radius: var(--r-sm, 6px); background: none; color: var(--text-primary);
+  font: 600 0.95rem var(--font-body); text-align: left; cursor: pointer; }
+.pp-sheet-list button:hover { background: var(--fill-1); }
+.pp-sheet-list button[aria-current="true"] { border-left-color: var(--am-red); background: var(--fill-1); border-radius: 0 var(--r-sm, 6px) var(--r-sm, 6px) 0; }
+.pp-sheet-list button svg { color: var(--am-red-text); flex: none; }
+@media (max-width: 360px) { .pp-tabs-phone .chip-btn { font-size: 0.82rem; } }
+@media (prefers-reduced-motion: reduce) { .pp-more-chev { transition: none; } }
 .pp-sub { gap: 20px; margin-bottom: 16px; border-bottom: 0 !important; }
 .pp-sub .chip-btn { height: 30px; font-size: 0.72rem; }
 .pp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -5838,7 +5861,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   (() => { const c = document.querySelector("#panel-rankings .controls"); if (!c) return;
     const set = () => document.documentElement.style.setProperty("--ctl-h", (getComputedStyle(c).position === "sticky" ? c.offsetHeight : 0) + "px");
     set(); if (window.ResizeObserver) new ResizeObserver(set).observe(c); window.addEventListener("resize", set); })();
-  const BUILD_ID = "2026-10-13T15:50Z";
+  const BUILD_ID = "2026-10-13T16:20Z";
   let lastBuildCheck = 0;
   async function checkForUpdate() {
     if (Date.now() - lastBuildCheck < 5 * 60e3) return;
@@ -14263,11 +14286,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         </div>
         </div>${loaded && info.team ? `<div class="pm-right">${thisWeekCard(info, true)}</div>` : ""}</div>
         ${PP.picking ? comparePicker() : ""}
-        <div class="chips pp-tabs" role="tablist" aria-label="Player sections">
-          ${tabsList.map(([k, label]) => `<button class="chip-btn" type="button" role="tab" data-pp-tab="${k}" aria-selected="${PP.tab === k}" aria-pressed="${PP.tab === k}">${label}</button>`).join("")}
-        </div>
+        ${ppTabBar(tabsList)}
       </div>
-      <div class="pm-body">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}${loaded ? statsStamp() : ""}</div>`;
+      <div class="pm-body" role="tabpanel" id="pp-panel" aria-labelledby="pp-tab-${esc(ppTabVisible(PP.tab))}">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}${loaded ? statsStamp() : ""}</div>`;
+    if (PP.moreFocus) { PP.moreFocus = false; const mb = box.querySelector("[data-pp-more]"); if (mb) mb.focus({ preventScroll: true }); }
     const bar = box.querySelector(".pp-tabs"), on = bar && bar.querySelector('[aria-pressed="true"]');
     scrollHints(bar);
     if (on) {   // keep the open section in view on phones
@@ -14278,6 +14300,39 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (PP.picking) { const inp = box.querySelector("#pm-pick"); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }
     drawCharts();
   }
+  /* Section tabs. Phones (the full-screen sheet, ≤760px) show the three primary sections plus a "More" button that opens
+     a bottom sheet with the other seven (Alan, Oct 13: discoverable, clear labels, 44px targets); while one of those is
+     open the button carries its short name and the chevron ("History ⌄"). The desktop drawer keeps the single scrolling row of every section. */
+  const PP_PRIMARY = ["overview", "log", "schedule"];
+  const PP_SHORT = { perf: "Fantasy", history: "History", value: "Value", depth: "Depth", practice: "Practice" };
+  const ppPhoneTabs = () => !DRAWER_MQ.matches;
+  const ppTabVisible = k => (ppPhoneTabs() && !PP_PRIMARY.includes(k) ? "more" : k);
+  function ppTabBar(tabsList) {
+    const tab = ([k, label]) => `<button class="chip-btn" type="button" role="tab" id="pp-tab-${k}" data-pp-tab="${k}" aria-controls="pp-panel" aria-selected="${PP.tab === k}" aria-pressed="${PP.tab === k}" tabindex="${PP.tab === k ? 0 : -1}">${label}</button>`;
+    if (!ppPhoneTabs()) return `<div class="chips pp-tabs" role="tablist" aria-label="Player sections">${tabsList.map(tab).join("")}</div>`;
+    const rest = tabsList.filter(([k]) => !PP_PRIMARY.includes(k)), cur = rest.find(([k]) => k === PP.tab);
+    const primary = tabsList.filter(([k]) => PP_PRIMARY.includes(k));
+    const chev = `<svg class="pp-more-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return `<div class="chips pp-tabs pp-tabs-phone">
+        <div class="pp-tablist" role="tablist" aria-label="Player sections">${primary.map(tab).join("")}</div>
+        <button class="chip-btn pp-more-btn" type="button" id="pp-tab-more" data-pp-more aria-haspopup="dialog" aria-expanded="false" aria-pressed="${!!cur}"
+          aria-label="${cur ? `More sections, current: ${esc(cur[1])}` : "More sections"}">${cur ? esc(PP_SHORT[cur[0]] || cur[1]) : "More"}${chev}</button>
+      </div>
+      <div class="pp-sheet-scrim" data-pp-more-close hidden></div>
+      <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="pp-sheet-h" hidden>
+        <div class="pp-sheet-h"><span id="pp-sheet-h">Player sections</span><button class="pp-sheet-x" type="button" data-pp-more-close aria-label="Close">×</button></div>
+        <ul class="pp-sheet-list">${rest.map(([k, label]) => `<li><button type="button" data-pp-tab="${k}" data-pp-sheet${PP.tab === k ? ` aria-current="true"` : ""}>${esc(label)}${PP.tab === k ? `<svg width="14" height="10" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5l4 4 8-8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}</button></li>`).join("")}</ul>
+      </div>`;
+  }
+  function ppMore(open) {
+    const box = $("player-body"), sheet = box.querySelector(".pp-sheet"), scrim = box.querySelector(".pp-sheet-scrim"), btn = box.querySelector("[data-pp-more]");
+    if (!sheet) return;
+    sheet.hidden = scrim.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    if (open) (sheet.querySelector("[aria-current]") || sheet.querySelector("button[data-pp-tab]")).focus();
+    else btn.focus({ preventScroll: true });
+  }
+  const ppMoreOpen = () => { const s = $("player-body").querySelector(".pp-sheet"); return !!s && !s.hidden; };
   function comparePicker() {
     const q = PP.pickQuery.trim().toLowerCase();
     const list = q ? players.filter(x => x.pos !== "PICK" && x.sleeperId && x.sleeperId !== PP.sid && (x.name + " " + x.team).toLowerCase().includes(q)).sort((a, b) => dv(b) - dv(a)).slice(0, 6) : [];
@@ -15413,9 +15468,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const t = e.target;
     if (t.closest("[data-pm-close]")) { closePlayer(); return; }
     if (t.closest("[data-pm-back]")) { const prev = PP.trail.pop(); if (prev) { PP.sid = prev; if (PP.tab === "compare") PP.tab = "overview"; renderPlayer(); } return; }
+    if (t.closest("[data-pp-more]")) { ppMore(true); return; }
+    if (t.closest("[data-pp-more-close]")) { ppMore(false); return; }
     const tab = t.closest("[data-pp-tab]");
     if (tab) {
       PP.tab = tab.dataset.ppTab;
+      if (tab.hasAttribute("data-pp-sheet")) PP.moreFocus = true;   // back to the More button, now named after the open section
       if (PP.tab === "compare" && !PP.compare && !PP.picking) { PP.picking = true; PP.pickQuery = ""; setCompareMode(canBoardPick()); }   // no Player B yet: open the search
       renderPlayer(); return;
     }
@@ -15450,6 +15508,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const inp = $("pm-pick"); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
   });
   $("player-body").addEventListener("keydown", e => {
+    if (ppMoreOpen()) {   // the More sheet: Escape closes it (not the player page), Tab stays inside
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); ppMore(false); return; }
+      if (e.key === "Tab") {
+        const f = [...$("player-body").querySelectorAll(".pp-sheet button")], i = f.indexOf(document.activeElement);
+        if (e.shiftKey ? i <= 0 : i === f.length - 1) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); }
+        return;
+      }
+    }
+    if (e.target.matches('[role="tab"][data-pp-tab]') && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {   // arrow keys move between tabs
+      const all = [...e.target.closest('[role="tablist"]').querySelectorAll('[role="tab"]')], i = all.indexOf(e.target);
+      const n = e.key === "Home" ? 0 : e.key === "End" ? all.length - 1 : (i + (e.key === "ArrowRight" ? 1 : -1) + all.length) % all.length;
+      e.preventDefault(); all[n].focus(); return;
+    }
     if (e.target.id === "pm-pick" && e.key === "Enter") { const first = $("player-body").querySelector("[data-pm-pick]"); if (first) first.click(); e.preventDefault(); }
     if (e.target.id === "pm-pick" && e.key === "Escape" && e.target.value) { e.preventDefault(); e.stopPropagation(); PP.pickQuery = ""; PP.picking = false; renderPlayer(); }
   });
