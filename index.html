@@ -5914,7 +5914,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if ($("update-bar")) return;
     const bar = document.createElement("div");
     bar.id = "update-bar"; bar.className = "update-bar"; bar.setAttribute("role", "status");
-    bar.innerHTML = `<span>A new version of AM is available.</span><button class="btn primary" type="button">Refresh</button>`;
+    bar.innerHTML = `<span>A new version of Adequate is available.</span><button class="btn primary" type="button">Refresh</button>`;
     bar.querySelector("button").addEventListener("click", () => location.reload());
     document.body.appendChild(bar);
   }
