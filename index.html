@@ -3884,7 +3884,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
 .rk-rail .rail-title, .rk-rail h3, .rk-rail .section-label { color: var(--muted); }
 /* league context is navy */
 .fc-label { color: var(--muted); }
-.league-chip.custom .fc-label, .fmt-chip.custom .fc-label { color: var(--warn); }   /* a custom format over a league stays flagged (§9) */
+.league-chip.custom .fc-label, .fmt-chip.custom .fc-label { color: var(--warn-text); }   /* a custom format over a league stays flagged (§9) */
 .fmt-note [data-open-fmt] { color: var(--navy-ink); }
 /* position badges: faint tint, the text and border carry the color */
 .pos { background: color-mix(in srgb, var(--c) calc(var(--badge-a) * 100%), transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) calc(var(--badge-b) * 100%), transparent); }
@@ -4678,6 +4678,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
    Move to rank button showed no visible focus (an older `.select:focus { outline: none }` and `outline: none` rules won), and
    about twenty rules drew it in brand red, which reads as "selected" (DESIGN.md: focus is neutral, never red). */
 :is(.dd-btn, .select, .search, .info, .rk-btn, .val-input, .mv-input):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/* Remaining AA near-misses (audit Oct 13, after the follow-ups merged): active text that sat at 4.0–4.4:1.
+   Disabled Save / Cancel are exempt (WCAG 1.4.3) and stay as they are. */
+:root[data-theme="light"] { --vt-ink: #50545C; }                                   /* the unselected AM Board / League-adjusted segment: 4.39 → 6+ */
+:root[data-theme="light"] :is(.league-chip, .fmt-chip):not(.custom) :is(.lc-format, .fc-label) { color: var(--text-secondary); }   /* league chip format, "League settings": 4.28 on the control fill */
+.face-i { color: var(--text-secondary); }                                          /* photo fallback initials on the face fill: 4.0 dark / 4.3 light */
+#rank-body tr.player:is(.mine, :hover) .tier-tag { color: var(--text-secondary); }  /* "Tier 1" on your rows' red wash and on the hover fill: 4.16 dark */
 </style>
 </head>
 <body>
