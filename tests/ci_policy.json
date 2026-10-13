@@ -62,7 +62,8 @@
       "inflight_check",
       "form_trend_check",
       "market_sync_check",
-      "qb_role_check"
+      "qb_role_check",
+      "ros_prior_check"
     ],
     "weights": {
       "inflight_check": 400,
@@ -80,6 +81,7 @@
       "production_check": 70,
       "week_stats_check": 60,
       "qb_role_check": 25,
+      "ros_prior_check": 6,
       "drag_scroll_check": 55,
       "drawer_check": 45,
       "form_trend_check": 40,
