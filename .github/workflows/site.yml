@@ -31,6 +31,16 @@ on:
     # FantasyCalc market values only, every 8 hours (Alan, Oct 9): 00:20, 08:20 and 16:20 UTC. Stdlib only, no
     # stats, projections or snapshot; failures keep the last file. Never touches ranks, tiers or values.
     - cron: "20 */8 * * *"
+    # Weekly catch-up (Alan, Oct 13: GitHub's scheduler dropped the Tuesday 14:00 run). Off the hour, where GitHub drops
+    # fewer runs. Each one runs the weekly refresh only when this week's is missing (pipeline/weekly_due.py) and
+    # otherwise does nothing. Any other scheduled refresh between Tuesday 14:00 and Thursday 00:00 UTC also runs the
+    # weekly refresh instead when it's missing, so there are about 15 chances.
+    - cron: "37 15 * * 2"   # Tue 15:37 UTC
+    - cron: "37 18 * * 2"   # Tue 18:37 UTC
+    - cron: "37 21 * * 2"   # Tue 21:37 UTC
+    - cron: "37 3 * * 3"    # Wed 03:37 UTC
+    - cron: "37 11 * * 3"   # Wed 11:37 UTC
+    - cron: "37 19 * * 3"   # Wed 19:37 UTC
     # Nightly full CI (Alan, Oct 14): the whole regression suite on main, 07:15 UTC = 3:15 AM ET. Never deploys, never
     # refreshes data, runs in its own concurrency group, so it can't delay a push. A failure shows as a red run.
     - cron: "15 7 * * *"
@@ -85,6 +95,7 @@ jobs:
       contents: write
     outputs:
       sha: ${{ steps.done.outputs.sha }}
+      skip: ${{ steps.mode.outputs.stats == 'skip' || steps.done.outputs.skip == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -92,13 +103,28 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Scheduled runs ask whether this week's projections refresh is missing (pipeline/weekly_due.py, read from the
+      # latest main, since a run can start long after it was scheduled). Missing (due): the weekly refresh runs now,
+      # whichever schedule fired, the Tuesday 14:00 one included. Already there (done): the Tuesday 14:00 run arriving
+      # late and the other schedules refresh stats only, never the weekly refresh a second time, and a catch-up
+      # schedule does nothing. Manual runs do what was asked.
       - name: Pick refresh type
         id: mode
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "20 */8 * * *" ]; then echo "stats=market" >> "$GITHUB_OUTPUT";
-          elif [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "0 14 * * 2" ]; then echo "stats=true" >> "$GITHUB_OUTPUT";
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.stats_only }}" = "true" ]; then echo "stats=true" >> "$GITHUB_OUTPUT";
-          else echo "stats=false" >> "$GITHUB_OUTPUT"; fi
+          git fetch --no-tags --depth=1 origin main
+          git show origin/main:data/projections.json > "$RUNNER_TEMP/proj.json" || : > "$RUNNER_TEMP/proj.json"
+          python pipeline/weekly_due.py --file "$RUNNER_TEMP/proj.json" --github-output
+          due=$(grep -c '^state=due$' "$GITHUB_OUTPUT" || true)
+          cron="${{ github.event.schedule }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.stats_only }}" = "true" ]; then echo "stats=true" >> "$GITHUB_OUTPUT"; else echo "stats=false" >> "$GITHUB_OUTPUT"; fi
+          elif [ "$due" -gt 0 ]; then
+            echo "stats=false" >> "$GITHUB_OUTPUT"
+            [ "$cron" = "0 14 * * 2" ] || echo "catchup=true" >> "$GITHUB_OUTPUT"
+          elif [ "${cron#37 }" != "$cron" ]; then echo "stats=skip" >> "$GITHUB_OUTPUT"
+          elif [ "$cron" = "20 */8 * * *" ]; then echo "stats=market" >> "$GITHUB_OUTPUT"
+          else echo "stats=true" >> "$GITHUB_OUTPUT"; fi
+          echo "Refresh type: $(grep '^stats=' "$GITHUB_OUTPUT" | tail -1) (schedule '${cron}')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Refresh player stats only (after game days / editor refresh)
         if: steps.mode.outputs.stats == 'true'
@@ -143,11 +169,26 @@ jobs:
       # Nothing scheduled may change a rank, tier, value or source, drop a player or rewrite history (CLAUDE.md §2, §8).
       # A failure here stops before the commit, so nothing is committed or deployed.
       - name: Check the refreshed data before committing
+        if: steps.mode.outputs.stats != 'skip'
         run: python tests/static_check.py --base HEAD --frozen-rankings
 
       - name: Commit refreshed site
         id: done
+        if: steps.mode.outputs.stats != 'skip'
         run: |
+          # A catch-up commits only if this week's refresh is still missing on main right now: a weekly refresh that
+          # landed while this one ran (a manual run, say) is never overwritten with this run's older data.
+          if [ "${{ steps.mode.outputs.catchup }}" = "true" ]; then
+            git fetch --no-tags origin main
+            git show origin/main:data/projections.json > "$RUNNER_TEMP/proj-now.json" || : > "$RUNNER_TEMP/proj-now.json"
+            if python pipeline/weekly_due.py --file "$RUNNER_TEMP/proj-now.json" | grep -q '^weekly refresh done'; then
+              echo "::notice::Catch-up not committed: this week's weekly refresh landed on main while it ran."
+              echo "Catch-up not committed: this week's weekly refresh landed on main while it ran." >> "$GITHUB_STEP_SUMMARY"
+              echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            echo "::notice::Recovery: the scheduled weekly refresh was missing, so this run did it (${{ steps.mode.outputs.message }})."
+            echo "**Recovery:** the scheduled weekly refresh was missing, so this run did it. ${{ steps.mode.outputs.message }}" >> "$GITHUB_STEP_SUMMARY"
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html data/sleeper_players.json data/platform_ids.json data/stats/2026.json data/rank_history.json
@@ -158,7 +199,7 @@ jobs:
           if [ -d data/projections ]; then git add data/projections; fi
           if [ -f data/market/redraft.json ]; then git add data/market/redraft.json; fi
           if [ -d data/opportunity ]; then git add data/opportunity; fi
-          git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'market' && 'Market values refresh' || steps.mode.outputs.stats == 'true' && 'Player stats refresh' || 'Weekly projections and stats refresh' }}"
+          git diff --cached --quiet || git commit -m "${{ steps.mode.outputs.stats == 'market' && 'Market values refresh' || steps.mode.outputs.stats == 'true' && 'Player stats refresh' || steps.mode.outputs.catchup == 'true' && 'Weekly projections and stats refresh (catch-up: the scheduled run was missed)' || 'Weekly projections and stats refresh' }}"
           git pull --rebase origin main && git push
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -169,7 +210,7 @@ jobs:
   # queued behind them: PR #33's three pushes took 44 minutes end to end for 15 minutes of checks.
   plan:
     needs: refresh
-    if: "!cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')"
+    if: "!cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') && needs.refresh.outputs.skip != 'true'"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -413,3 +454,29 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Missed-run alarm (Alan, Oct 13): GitHub's scheduler can drop the catch-up runs too. Every scheduled or manual run
+  # (stats, market, nightly full CI…) checks whether this week's projections refresh is on main. Past the catch-up
+  # window (Thursday 00:00 UTC) with it still missing, this job fails, so the run turns red and GitHub sends its failure
+  # notice; inside the window it only warns. Never changes anything.
+  freshness:
+    needs: refresh
+    if: "!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Weekly projections refresh is on main
+        run: |
+          python3 pipeline/weekly_due.py --github-output
+          case "$(grep '^state=' "$GITHUB_OUTPUT" | tail -1)" in
+            state=overdue) echo "::error::Weekly projections refresh missed: $(python3 pipeline/weekly_due.py). Run the workflow manually (Run workflow, stats_only off)."
+                           echo "**Missed:** $(python3 pipeline/weekly_due.py). Run the workflow manually with stats_only off." >> "$GITHUB_STEP_SUMMARY"; exit 1 ;;
+            state=due)     echo "::warning::Weekly projections refresh still missing: $(python3 pipeline/weekly_due.py). A catch-up run will do it before Thursday 00:00 UTC." ;;
+            *)             echo "$(python3 pipeline/weekly_due.py)" >> "$GITHUB_STEP_SUMMARY" ;;
+          esac
