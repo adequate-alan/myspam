@@ -56,22 +56,29 @@ concurrency:
   group: ${{ github.event_name == 'push' && 'release' || github.event_name == 'pull_request' && format('pr-{0}', github.ref) || ((github.event_name == 'schedule' && github.event.schedule == '15 7 * * *') || (github.event_name == 'workflow_dispatch' && inputs.full_ci)) && 'full-ci' || 'refresh' }}
   cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
-# Release flow (Alan, Oct 14: three lanes, tests/release_tier.py):
+# Release flow (Alan, Oct 14: three lanes, tests/release_tier.py; CI speed pass Oct 13):
 #   refresh (scheduled / manual only)  pipeline jobs → static checks on the result (rankings must not change) → commit
-#   verify                              static + pipeline + smoke checks on the exact commit, then picks the lane from the
-#                                       diff since the newest commit whose code already passed its checks:
-#     fast      CSS, copy and labels, docs, BUILD_ID, comments, data → deploy right after verify (~2–3 min)
+#   plan                                no browser: the commit, its code fingerprint and the lane, from the diff since the
+#                                       nearest commit whose code already passed (main's records, or a same-repo PR's, so a
+#                                       merged PR doesn't re-run its suites on main; a merge's second parent counts):
+#     fast      CSS, copy and labels, docs, comments, data → deploy right after verify (~2 min)
 #     targeted  known UI features of one family → their suites (job `targeted`, the independent suites and the
 #               timing-sensitive drag suites on two runners at once) → deploy (~4–7 min; an editor feature ~6–9).
 #               A browser / server crash in a suite is retried once inside the job (tests/run_ci.py), never the job
-#     full      risky / core / unknown / CI → the whole suite (job `full`, 3 shards) → deploy (~12–14 min)
+#     full      risky / core / unknown / CI → the whole suite (job `full`, 4 shards, 2 suites at a time) → deploy
+#   verify                              static + pipeline + smoke checks on the exact commit, beside the lane's suites
+#                                       (they start together; nothing deploys unless both pass)
 #   build → deploy                      only after the lane's checks passed, and only if the commit is still main's head;
+#                                       build stamps BUILD_ID with a hash of the page's code (the repo keeps "dev");
 #                                       pull requests, the nightly run and manual full CI never deploy
 #   mark-verified                       records the code fingerprint once its lane passed (the next push diffs from it)
+# Every job uses !cancelled(), never always(): a run cancelled by a newer push stops at once instead of finishing its
+# suites while the new run waits in the same concurrency group (Oct 13: that queue cost 7–11 minutes per push).
 # No trailing full suite after fast or targeted releases: it runs nightly and on demand (Run workflow → full_ci).
 # Known baseline failures and advisory timing checks are listed in tests/ci_policy.json.
 jobs:
   refresh:
+    timeout-minutes: 45
     if: (github.event_name == 'schedule' && github.event.schedule != '15 7 * * *') || (github.event_name == 'workflow_dispatch' && !inputs.full_ci)
     runs-on: ubuntu-latest
     permissions:
@@ -155,13 +162,20 @@ jobs:
           git pull --rebase origin main && git push
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-  verify:
+  # Picks the lane in ~20 s (git + Python, no browser), so the lane's suites start right away instead of after the fast
+  # checks; the fast checks run beside them in `verify` and every deploy still needs both.
+  # Cancellation (Oct 13): every job below uses !cancelled(), never always(). A job whose `if` is always() keeps running
+  # when its run is cancelled, so a superseded run's suites ran to the end and the newer run (same concurrency group)
+  # queued behind them: PR #33's three pushes took 44 minutes end to end for 15 minutes of checks.
+  plan:
     needs: refresh
-    if: always() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')
+    if: "!cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')"
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
-      actions: read   # lists the verified-code records (Actions cache keys) to find the last commit that passed
+      actions: read         # lists the verified-code records (Actions cache keys) to find the last commit that passed
+      pull-requests: read   # a record from a pull request counts only when that pull request's branch is in this repo
     outputs:
       sha: ${{ steps.ref.outputs.sha }}
       lane: ${{ steps.lane.outputs.lane }}
@@ -182,22 +196,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Install the test browser (pinned Playwright + its Chromium)
-        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
-        run: |
-          pip install -r tests/requirements-ci.txt
-          python -m playwright install --with-deps chromium
-      - name: Pick the comparison commit
-        id: base
-        run: |
-          before="${{ github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha || '' }}"
-          if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then echo "args=--base $before" >> "$GITHUB_OUTPUT";
-          elif git cat-file -e HEAD~1 2>/dev/null; then echo "args=--base HEAD~1" >> "$GITHUB_OUTPUT"; fi
-      - name: Static checks and smoke test
-        run: python tests/run_ci.py fast --logs "$RUNNER_TEMP/ci-logs" --static-args "${{ steps.base.outputs.args }}"
       - name: Code fingerprint
         id: fp
         run: echo "fp=$(python tests/release_fingerprint.py)" >> "$GITHUB_OUTPUT"
@@ -205,12 +203,56 @@ jobs:
         id: lane
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
-          # verified-code records on main; if GitHub can't list them, the lane is full (nothing to diff from)
-          gh api -X GET "repos/${{ github.repository }}/actions/caches" -f key=verified- -f ref=refs/heads/main -f per_page=100 --paginate \
-            --jq '.actions_caches[].key' > "$RUNNER_TEMP/ok-keys" || : > "$RUNNER_TEMP/ok-keys"
-          python tests/release_tier.py --head HEAD --start "${{ github.event.pull_request.base.sha || 'HEAD' }}" --ok-keys "$RUNNER_TEMP/ok-keys" \
+          # verified-code records: main's, and those of pull requests whose branch lives in this repository (a fork's
+          # run could write any key, so its records never count). If GitHub can't list them, the lane is full.
+          gh api -X GET "repos/$REPO/actions/caches" -f key=verified- -f per_page=100 --paginate \
+            --jq '.actions_caches[] | "\(.key) \(.ref)"' > "$RUNNER_TEMP/caches" || : > "$RUNNER_TEMP/caches"
+          declare -A own
+          while read -r key ref; do
+            case "$ref" in
+              refs/heads/main) echo "$key" ;;
+              refs/pull/*/merge)
+                n=${ref#refs/pull/}; n=${n%/merge}
+                [ -n "${own[$n]+x}" ] || own[$n]=$(gh api "repos/$REPO/pulls/$n" --jq .head.repo.full_name 2>/dev/null || true)
+                [ "${own[$n]}" = "$REPO" ] && echo "$key" ;;
+            esac
+          done < "$RUNNER_TEMP/caches" > "$RUNNER_TEMP/ok-keys"
+          echo "$(wc -l < "$RUNNER_TEMP/ok-keys") verified-code records usable"
+          python tests/release_tier.py --head HEAD --ok-keys "$RUNNER_TEMP/ok-keys" \
             --github-output ${{ ((github.event_name == 'schedule' && github.event.schedule == '15 7 * * *') || (github.event_name == 'workflow_dispatch' && inputs.full_ci) || contains(github.event.pull_request.labels.*.name, 'full-ci')) && '--force-full' || '' }}
+
+  # The fast checks (static + pipeline + smoke), on every run whatever the lane.
+  verify:
+    needs: plan
+    if: "!cancelled() && needs.plan.result == 'success'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          fetch-depth: 60   # the comparison commit for static_check
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the test browser (pinned Playwright + its Chromium)
+        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
+        run: |
+          pip install -r tests/requirements-ci.txt
+          python -m playwright install --with-deps --only-shell chromium
+      - name: Pick the comparison commit
+        id: base
+        run: |
+          before="${{ github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha || '' }}"
+          if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then echo "args=--base $before" >> "$GITHUB_OUTPUT";
+          elif git cat-file -e HEAD~1 2>/dev/null; then echo "args=--base HEAD~1" >> "$GITHUB_OUTPUT"; fi
+      - name: Static checks and smoke test
+        run: python tests/run_ci.py fast --jobs 3 --logs "$RUNNER_TEMP/ci-logs" --static-args "${{ steps.base.outputs.args }}"
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -219,12 +261,13 @@ jobs:
           path: ${{ runner.temp }}/ci-logs
           retention-days: 14
 
-  # always(): GitHub skips a job without a status function whenever ANY upstream job was skipped, and `refresh` is
+  # !cancelled(): GitHub skips a job without a status function whenever ANY upstream job was skipped, and `refresh` is
   # skipped on every push and pull request (PR #1's first run skipped the full suite that way).
   targeted:
-    needs: verify
-    if: always() && needs.verify.result == 'success' && needs.verify.outputs.lane == 'targeted'
+    needs: plan
+    if: "!cancelled() && needs.plan.result == 'success' && needs.plan.outputs.lane == 'targeted'"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -232,21 +275,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify.outputs.sha }}
+          ref: ${{ needs.plan.outputs.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
       - name: Install the test browser (pinned Playwright + its Chromium)
         timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
         run: |
           pip install -r tests/requirements-ci.txt
-          python -m playwright install --with-deps chromium
-      - name: The changed features' suites, ${{ matrix.group }} group (${{ needs.verify.outputs.suites }})
-        run: python tests/run_ci.py targeted --suites "${{ needs.verify.outputs.suites }}" --group ${{ matrix.group }} --jobs 3 --logs "$RUNNER_TEMP/ci-logs"
+          python -m playwright install --with-deps --only-shell chromium
+      - name: The changed features' suites, ${{ matrix.group }} group (${{ needs.plan.outputs.suites }})
+        run: python tests/run_ci.py targeted --suites "${{ needs.plan.outputs.suites }}" --group ${{ matrix.group }} --jobs 3 --logs "$RUNNER_TEMP/ci-logs"
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -255,32 +295,32 @@ jobs:
           path: ${{ runner.temp }}/ci-logs
           retention-days: 14
 
+  # The whole suite on 4 runners, 2 independent suites at a time on each (4 cores); the timing-sensitive drag suites
+  # run alone at the end of their shard; inflight_check runs as 2 parts (tests/ci_policy.json suites.parts).
   full:
-    needs: verify
-    if: always() && needs.verify.result == 'success' && needs.verify.outputs.lane == 'full'
+    needs: plan
+    if: "!cancelled() && needs.plan.result == 'success' && needs.plan.outputs.lane == 'full'"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify.outputs.sha }}
+          ref: ${{ needs.plan.outputs.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
       - name: Install the test browser (pinned Playwright + its Chromium)
         timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
         run: |
           pip install -r tests/requirements-ci.txt
-          python -m playwright install --with-deps chromium
-      - name: Full regression suite (shard ${{ matrix.shard }} of 3)
-        run: python tests/run_ci.py full --shard ${{ matrix.shard }}/3 --logs "$RUNNER_TEMP/ci-logs"
+          python -m playwright install --with-deps --only-shell chromium
+      - name: Full regression suite (shard ${{ matrix.shard }} of 4)
+        run: python tests/run_ci.py full --shard ${{ matrix.shard }}/4 --jobs 2 --logs "$RUNNER_TEMP/ci-logs"
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -289,11 +329,15 @@ jobs:
           path: ${{ runner.temp }}/ci-logs
           retention-days: 14
 
-  # After the lane's checks passed: this exact code is verified, and the next push's lane is picked from the diff since it.
+  # After the lane's checks and the fast checks passed: this exact code is verified, and the next run's lane is picked from
+  # the diff since it. Pull requests from this repository record it too (scoped to the pull request), so a follow-up push
+  # to the same pull request diffs from it, and the merge to main of code identical to a verified head releases on the
+  # fast lane instead of running the same suites again. Forks never record.
   mark-verified:
-    needs: [verify, targeted, full]
-    if: always() && github.event_name != 'pull_request' && needs.verify.result == 'success' && (needs.verify.outputs.lane == 'fast' || (needs.verify.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.verify.outputs.lane == 'full' && needs.full.result == 'success'))
+    needs: [plan, verify, targeted, full]
+    if: "!cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.plan.result == 'success' && needs.verify.result == 'success' && (needs.plan.outputs.lane == 'fast' || (needs.plan.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.plan.outputs.lane == 'full' && needs.full.result == 'success'))"
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       # an existing record is restored instead (that counts as use, so code that only changes nightly or by rankings
       # publishes isn't evicted after GitHub's 7 days without access)
@@ -301,35 +345,50 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/verified
-          key: verified-${{ needs.verify.outputs.fingerprint }}
+          key: verified-${{ needs.plan.outputs.fingerprint }}
       - if: steps.have.outputs.cache-hit != 'true'
-        run: mkdir -p "$RUNNER_TEMP/verified" && echo "${{ needs.verify.outputs.sha }}" > "$RUNNER_TEMP/verified/sha"
+        run: mkdir -p "$RUNNER_TEMP/verified" && echo "${{ needs.plan.outputs.sha }}" > "$RUNNER_TEMP/verified/sha"
       - if: steps.have.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         continue-on-error: true
         with:
           path: ${{ runner.temp }}/verified
-          key: verified-${{ needs.verify.outputs.fingerprint }}
+          key: verified-${{ needs.plan.outputs.fingerprint }}
 
   build:
-    needs: [verify, targeted, full]
-    # deploy only after the lane's own checks passed: fast = verify; targeted = verify + its suites; full = verify + the
-    # whole suite. A lane whose check job was skipped for any other reason never deploys.
-    if: always() && needs.verify.outputs.deploy == 'true' && needs.verify.result == 'success' && (needs.verify.outputs.lane == 'fast' || (needs.verify.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.verify.outputs.lane == 'full' && needs.full.result == 'success'))
+    needs: [plan, verify, targeted, full]
+    # deploy only after the fast checks and the lane's own checks passed: fast = verify; targeted = verify + its suites;
+    # full = verify + the whole suite. A lane whose check job was skipped for any other reason never deploys.
+    if: "!cancelled() && needs.plan.outputs.deploy == 'true' && needs.plan.result == 'success' && needs.verify.result == 'success' && (needs.plan.outputs.lane == 'fast' || (needs.plan.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.plan.outputs.lane == 'full' && needs.full.result == 'success'))"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       current: ${{ steps.head.outputs.current }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify.outputs.sha }}
+          ref: ${{ needs.plan.outputs.sha }}
           persist-credentials: false
       - name: Still the newest commit on main?
         id: head
         run: |
           head=$(git ls-remote "https://github.com/${{ github.repository }}" refs/heads/main | cut -f1)
-          if [ "$head" = "${{ needs.verify.outputs.sha }}" ] || [ -z "$head" ]; then echo "current=true" >> "$GITHUB_OUTPUT";
+          if [ "$head" = "${{ needs.plan.outputs.sha }}" ] || [ -z "$head" ]; then echo "current=true" >> "$GITHUB_OUTPUT";
           else echo "current=false" >> "$GITHUB_OUTPUT"; echo "main moved on to $head: that commit's own run deploys it" >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Stamp the build ID
+        # The repo keeps BUILD_ID = "dev" (no hand bumps, so no merge conflicts on it); the deployed copy gets a hash of
+        # the page's code, so open browsers are offered a refresh only when the page itself changed.
+        if: steps.head.outputs.current == 'true'
+        run: |
+          id=$(python3 tests/release_fingerprint.py --page)
+          python3 - "$id" <<'EOF'
+          import re, sys
+          html = open("index.html", encoding="utf-8").read()
+          new, n = re.subn(r'const BUILD_ID = "dev";', f'const BUILD_ID = "{sys.argv[1]}";', html)
+          if n != 1 or not re.fullmatch(r"[0-9a-f]{12}", sys.argv[1]): sys.exit(f"BUILD_ID stamp: {n} placeholders, id {sys.argv[1]!r}")
+          open("index.html", "w", encoding="utf-8").write(new)
+          EOF
+          echo "BUILD_ID $id" >> "$GITHUB_STEP_SUMMARY"
       - if: steps.head.outputs.current == 'true'
         uses: actions/configure-pages@v5
       - if: steps.head.outputs.current == 'true'
@@ -339,8 +398,9 @@ jobs:
 
   deploy:
     needs: build
-    if: always() && needs.build.result == 'success' && needs.build.outputs.current == 'true'
+    if: "!cancelled() && needs.build.result == 'success' && needs.build.outputs.current == 'true'"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     concurrency:
       group: pages-deploy
       cancel-in-progress: false
