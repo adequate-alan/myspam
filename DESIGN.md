@@ -123,7 +123,7 @@ The palette has three kinds of color only: AM red, the semantic position colors,
 These colors are one palette shared by badges, value meters and lineup slots: QB coral #E8735F, RB emerald #2FB67E, WR blue #4F8EE0, TE violet #9D7FE0, FLEX amber #DDA23C, SF rose #D16C8C. Bench, IR and draft picks are gray. Light mode uses deeper versions (QB #C24A38, RB #1A8A5A, WR #2E69BD, TE #6E4CC2, FLEX #A06F17, SF #A8486A).
 
 ### Semantic: states
-- **Warnings** are amber (`--warn`), never red.
+- **Warnings** are amber (`--warn` for fills and edges, `--warn-text` when amber is text: light `#7E5311`), never red.
 - **Negatives** (fallers, losing sides, destructive actions) use a softer brick: #E0806F in dark, #A63A2E in light. It never reads as the brand.
 - **Strong performances** (the Game Log's weekly finishes) use the RB emerald at low opacity: an elite finish gets a 15% tint (13% light) and the finish in green; a good finish a 10% tint (8% light) with neutral text (`--gl-elite-*` / `--gl-good-bg`). No left edge: an inset edge means yours / selected / current everywhere else. Two levels only, neutral for everything else, never a red or brick background for a bad game.
 - **Practice and injury status:** one `--st-*` system covers FP, LP, DNP, Out, Questionable, Doubtful and IR.
