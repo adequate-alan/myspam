@@ -33,7 +33,11 @@ def ok(cond, msg):
 SF_PATH, PPR_PATH = "data/market/flock_sf.json", "data/market/flock_ppr.json"
 SNAP_PATH = "data/market/flock_snapshots/flock-sf/2026-10.json"
 raw = lambda p: open(os.path.join(ROOT, p), "rb").read()
-SF, SNAPF = json.loads(raw(SF_PATH)), json.loads(raw(SNAP_PATH))
+# the lists as the migration published them (tests/fixtures/flock/, copies at 15046cb), served and committed in place of
+# the live files, so a real list published from the manager never changes what this suite starts from
+FIX = {SF_PATH: "tests/fixtures/flock/flock_sf.json", PPR_PATH: "tests/fixtures/flock/flock_ppr.json", SNAP_PATH: "tests/fixtures/flock/flock-sf-2026-10.json"}
+fixed = lambda p: raw(FIX.get(p, p))
+SF, SNAPF = json.loads(fixed(SF_PATH)), json.loads(fixed(SNAP_PATH))
 SNAP_CSV = SNAPF["snapshots"][0]["csv"]
 C = {c: i for i, c in enumerate(SF["cols"])}
 SF_SIDS = {r[C["sleeper_id"]] for r in SF["rows"]}
@@ -75,7 +79,7 @@ def serve():
     return srv.server_address[1]
 port = serve()
 
-repo = Repo({SF_PATH: raw(SF_PATH), PPR_PATH: raw(PPR_PATH), SNAP_PATH: raw(SNAP_PATH)}, login="tester")
+repo = Repo({SF_PATH: fixed(SF_PATH), PPR_PATH: fixed(PPR_PATH), SNAP_PATH: fixed(SNAP_PATH)}, login="tester")
 def tree_files(commit):
     out, todo = {}, [("", repo.commits[commit]["tree"])]
     while todo:
@@ -95,6 +99,8 @@ with sync_playwright() as p:
         pg.on("dialog", lambda d: (errs.append("dialog: " + d.message), d.dismiss()))
         pg.route(re.compile(r"https://(?!api\.github\.com).*"), lambda r: r.abort())
         pg.route("https://api.github.com/**", repo.handle)
+        pg.route(re.compile(r".*/(data/market/flock_(?:sf|ppr)\.json)(\?.*)?$"), lambda r: r.fulfill(status=200, content_type="application/json",
+                 body=fixed(re.match(r".*/(data/market/flock_(?:sf|ppr)\.json)", r.request.url).group(1))))
         pg.add_init_script("window.__SPM_TEST_HOOKS = true;" + ("try { localStorage.setItem('spm_editor_token', 'test-token'); } catch (e) {}" if token else "") + init)
         pg.goto(f"http://127.0.0.1:{port}/#rankings"); until(pg, "() => document.querySelector(\"#rank-body tr.player\")")
         until(pg, "() => SPM.market && SPM.market().lists.some(l => l.loaded)", 20)
