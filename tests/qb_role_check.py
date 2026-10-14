@@ -126,8 +126,20 @@ for r in R.values():
 ok(len(by) >= 32, f"Real depth charts: quarterback rooms for {len(by)} teams")
 bad = [t for t, rs in by.items() if sum(r["s"] for r in rs) > 1 + 1e-9 or sum(r["sl"] for r in rs) > 1 + 1e-9]
 ok(not bad, f"Real data: each team's start chances sum to at most 1 (next game and later){' · ' + ', '.join(bad) if bad else ''}")
-two = [t for t, rs in by.items() if sum(1 for r in rs if r["n"] >= 0.5) > 1]
-ok(not two, f"Real data: no team has two quarterbacks expected to start{' · ' + ', '.join(two) if two else ''}")
+# Confirmed vs ambiguous starter (Alan, Oct 14): a quarterback is the expected starter only when his start chance is
+# more than half. An exact 50/50 (TB on Oct 14: Mayfield on last week's Doubtful vs Daniels listed QB1) is an
+# ambiguous room, reported as information and never as a modeling error; genuine conflicts still fail:
+#   · two confirmed starters in one room
+#   · a confirmed starter beside another quarterback projected like a starter (expected multiplier n >= 0.5, e.g. a
+#     relief share inflating QB2)
+conf = {t: [r for r in rs if r["s"] > 0.5] for t, rs in by.items()}
+two = [t for t, c in conf.items() if len(c) > 1]
+ok(not two, f"Real data: no team has two confirmed starting quarterbacks (start chance > 50%){' · ' + ', '.join(two) if two else ''}")
+shadow = [t for t, rs in by.items() if conf[t] and any(r["n"] >= 0.5 for r in rs if r not in conf[t])]
+ok(not shadow, f"Real data: beside a confirmed starter, no other quarterback is projected like a starter{' · ' + ', '.join(shadow) if shadow else ''}")
+amb_txt = lambda rs: " / ".join(f"QB{r['depth']} {r['s']:.2f}" for r in rs if r["s"] >= 0.25)
+amb = [f"{t} ({amb_txt(rs)})" for t, rs in by.items() if not conf[t] and any(r["s"] > 0 for r in rs)]
+print("INFO ambiguous starting quarterback (no one above 50%): " + (", ".join(amb) if amb else "none"))
 third = [f"{r['team']} QB{r['depth']}" for rs in by.values() for r in rs if r["depth"] >= 3 and r["n"] >= 0.5 and not all(x["avail"] < 0.5 for x in rs if x["depth"] < r["depth"])]
 ok(not third, f"Real data: no third-string or deeper QB expected to start while someone ahead of him is likely available{' · ' + ', '.join(third) if third else ''}")
 

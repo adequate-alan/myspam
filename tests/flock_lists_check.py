@@ -2,7 +2,9 @@
 
 Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/flock_lists_check.py
 
-Checks, on the real files (data/market/flock_sf.json, flock_ppr.json and the snapshot of the migrated list):
+Checks, on the migrated lists as published by the migration (tests/fixtures/flock/, a copy of data/market/flock_sf.json
+and flock_ppr.json at 15046cb, served to the page in place of the live files, so publishing a real list from the list
+manager never breaks this suite) and the first, append-only snapshot of the migrated list:
   · every row of the migrated export is accounted for: matched rows + unmatched rows = the export's rows, ranks 1..N
   · the page's import parser matches the snapshot's original CSV exactly like pipeline/flock_v2_migrate.py did
   · Flock IDs that belong to another player are never trusted (Flock's Chris Bell 13269 is Sleeper's Mendoza); a matching
@@ -25,8 +27,9 @@ def ok(cond, msg):
     print(("PASS " if cond else "FAIL ") + msg)
     if not cond: failures.append(msg)
 
-SF = json.load(open(os.path.join(ROOT, "data/market/flock_sf.json")))
-PPR = json.load(open(os.path.join(ROOT, "data/market/flock_ppr.json")))
+FIX = os.path.join(ROOT, "tests/fixtures/flock")
+SF = json.load(open(os.path.join(FIX, "flock_sf.json")))
+PPR = json.load(open(os.path.join(FIX, "flock_ppr.json")))
 SNAP = json.load(open(os.path.join(ROOT, "data/market/flock_snapshots/flock-sf/2026-10.json")))["snapshots"][0]
 C = {c: i for i, c in enumerate(SF["cols"])}
 src_rows = list(csv.DictReader(io.StringIO(SNAP["csv"])))
@@ -75,6 +78,8 @@ with sync_playwright() as p:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.route(re.compile(r"https://.*"), lambda r: r.abort())   # no network: Sleeper, photos, fonts
         if not flock: pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))
+        else: pg.route(FLOCK_FILES, lambda r: r.fulfill(status=200, content_type="application/json",
+                                                         body=open(os.path.join(FIX, "flock_%s.json" % FLOCK_FILES.match(r.request.url).group(1)), "rb").read()))
         pg.add_init_script("window.__SPM_TEST_HOOKS = true;" + (f"localStorage.setItem('spm_flock', {json.dumps(json.dumps(legacy))});" if legacy else ""))
         pg.goto(f"http://127.0.0.1:{port}/{q}#rankings"); pg.wait_for_selector("#rank-body tr.player")
         pg.wait_for_function("() => SPM.market && SPM.market().srcs.length > 0", timeout=20000); pg.wait_for_timeout(500)

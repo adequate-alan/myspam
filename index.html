@@ -8088,7 +8088,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const mm = tcMarketModel(), out = {};
     for (const s of ["A", "B"]) {
       const X = ctx[s], best = X.before.starters.concat(X.before.bench).slice().sort((a, b) => dv(b) - dv(a))[0];
-      out[s] = acceptFor({ imp: X.fit, val: vrSide(valueRead(res, valueFloor()), s), mkt: mm ? sideVal(mm, s) : null });
+      out[s] = acceptFor({ imp: X.fit, val: vrSide(valueRead(res, valueFloor()), s), mkt: mm ? (s === "A" ? 1 : -1) * mkGapPct(mm.a, mm.b, valueFloor()) : null });
     }
     return out;
   }
@@ -8161,7 +8161,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const vr = valueRead(res, valueFloor()), X = ctx[s], v = vrSide(vr, s), r = rationale(X, ctx.n, v, vr, s), nm = names[s], a = acc[s];
       const val = vr.kind === "split" ? `split on value (raw ${pctS(s === "A" ? vr.raw : -vr.raw)}, package-adjusted ${pctS(s === "A" ? vr.adj : -vr.adj)})` : Math.abs(v) < 3 ? `about even on value (${pctS(v)})` : v > 0 ? `receives ${v.toFixed(1)}% more value` : `gives up ${Math.abs(v).toFixed(1)}% more value`;
       return `<div class="lc-col rat side-${s}"><h4>${esc(nm)} <span class="tf-pill conf ${ACC_CLS[a.label]}" title="A heuristic read of how realistic it is that ${esc(nm)} agrees, not a probability: half how the deal looks in value (the average of AM's and the market's view${mm ? "" : "; AM only here, no complete market data"}), half its lineup change. Needs, depth and losing a top player are already inside those two. Separate from the value verdict.">Acceptance: ${a.label}</span></h4>
-        <p class="rat-val">${esc(nm.charAt(0).toUpperCase() + nm.slice(1))} ${esc(val)}${mm ? ` · market ${pctS(sideVal(mm, s))}` : ""}</p>
+        <p class="rat-val">${esc(nm.charAt(0).toUpperCase() + nm.slice(1))} ${esc(val)}${mm ? ` · market ${pctS((s === "A" ? 1 : -1) * mkGapPct(mm.a, mm.b, valueFloor()))}` : ""}</p>
         <span class="ctl-label">Why ${esc(nm)} might accept</span>${r.pros.length ? `<ul class="rat-pro">${r.pros.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<p class="pp-note">Nothing on the roster side: no new starter, no room improves.</p>`}
         <span class="ctl-label">What ${esc(nm)} gives up</span>${r.cons.length ? `<ul class="rat-con">${r.cons.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : `<p class="pp-note">Nothing that weakens the lineup.</p>`}</div>`;
     };
@@ -8276,8 +8276,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <div class="tc-more-body"><p class="pp-note">A market line needs a FantasyCalc or Flock value for every player in the trade; AM's value never stands in for a missing one. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
       el.hidden = false; return;
     }
-    const nA = sideName("A"), nB = sideName("B"), pref = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b); return Math.abs(d) < 3 ? 0 : Math.sign(d); };
-    const row = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b), w = pref(l);
+    // every line's gap uses the AM verdict's denominator (the smaller side or an average starter's value), so a market
+    // line never reads -183.6% beside an AM verdict that measures the same two bench pieces as a few percent
+    const VF = valueFloor(), gap = l => mkGapPct(l.a, l.b, VF), small = lines.some(l => Math.min(l.a, l.b) < VF);
+    const nA = sideName("A"), nB = sideName("B"), pref = l => { const d = gap(l); return Math.abs(d) < 3 ? 0 : Math.sign(d); };
+    const row = l => { const d = gap(l), w = pref(l);
       return `<tr${l.am ? ' class="am"' : ""}><th scope="row">${esc(l.k)}</th><td>${fmt(l.a)}</td><td>${fmt(l.b)}</td><td class="${w > 0 ? "up" : w < 0 ? "down" : ""}">${w === 0 ? "About even" : `${esc(w > 0 ? nA : nB)} +${Math.abs(d).toFixed(1)}%`}</td></tr>`; };
     // the summary names what the table compares: AM against the consensus (two or more sources) or the one source loaded;
     // no league = "your side" / "the other side", never the "You" / "They" labels in a possessive (Alan, Oct 12)
@@ -8289,7 +8292,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : amP ? `AM and ${M} both favor ${sideOf(amP)}.` : `AM and ${M} agree this trade is about even.`;
     el.innerHTML = `<details class="tc-mkt-d"${amP && mkP && amP !== mkP ? " open" : ""}><summary>Market comparison <span class="sum-hint">${esc(say)}</span></summary>
       <div class="tc-more-body"><table class="tc-mkt-t"><thead><tr><th></th><th>${esc(getsLabel("A"))}</th><th>${esc(getsLabel("B"))}</th><th>Prefers</th></tr></thead><tbody>${lines.map(row).join("")}</tbody></table>
-      <p class="pp-note">AM is the verdict above. Market lines put FantasyCalc and Flock on AM's value scale (one scale factor for both, so the market's own price ratios are kept: FantasyCalc's trade values, and Flock's rank priced on FantasyCalc's curve as a Flock-implied market value; the consensus weights them FantasyCalc 60 / Flock 40 by default, then by format match and freshness), with the same package adjustment; they are never mixed into AM's number. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
+      <p class="pp-note">AM is the verdict above. Market lines put FantasyCalc and Flock on AM's value scale (one scale factor for both, so the market's own price ratios are kept: FantasyCalc's trade values, and Flock's rank priced on FantasyCalc's curve as a Flock-implied market value; the consensus weights them FantasyCalc 60 / Flock 40 by default, then by format match and freshness), with the same package adjustment; they are never mixed into AM's number.${small ? ` Small values: every gap is measured against an average starter's value (${fmt(VF)}), like the AM verdict.` : ""} ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
     el.hidden = false;
   }
   function renderTrade() {
@@ -16552,7 +16555,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!give.concat(get).every(p => mkOf(p))) return null;
     const mm = runModel(get.map(p => p.id), give.map(p => p.id), mkVal, dv);
     if (mm.error || !(mm.a > 0 && mm.b > 0)) return null;
-    const them = 100 * (mm.b - mm.a) / Math.min(mm.a, mm.b);   // + = by the market, T gets more
+    const them = mkGapPct(mm.b, mm.a, K.vf ?? (K.vf = valueFloor(dv)));   // + = by the market, T gets more (AM's denominator)
     if (them < -8) return null;
     const base = K.base.get(T.rosterId), n = LG.teams.length, low = n - Math.ceil(n / 3);
     const getsStarter = fT.inc.some(e => e.starts), nStart = fT.inc.filter(e => e.starts).length;
@@ -16625,11 +16628,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return out.slice(0, 3).join(" ");
   }
   // the market's view of a deal for the team receiving `toT` (+ = it gets more), package adjustment included; null without data
+  /* A market gap in %, + = `a` ahead, measured exactly like the AM verdict (valueRead): against the smaller side or an
+     average starter's value (valueFloor), whichever is bigger (Oct 14). Before, market gaps used the smaller side alone,
+     so two bench pieces worth a few hundred points read -183.6% where the AM verdict beside them read a few percent. */
+  function mkGapPct(a, b, floor) { const base = Math.max(Math.min(a, b), floor || 0); return base > 0 ? 100 * (a - b) / base : 0; }
   function mktFor(fromT, toT) {
     if (!(typeof MK_READY !== "undefined" && MK_READY && mkAll().srcs.length)) return null;
     if (!fromT.concat(toT).every(p => mkOf(p))) return null;
     const m = runModel(fromT.map(p => p.id), toT.map(p => p.id), mkVal, dv);
-    return m.error || !(m.a > 0 && m.b > 0) ? null : 100 * (m.b - m.a) / Math.min(m.a, m.b);
+    return m.error || !(m.a > 0 && m.b > 0) ? null : mkGapPct(m.b, m.a, valueFloor(dv));
   }
   // target: one player, or a 2-player package from the same roster (shopped together)
   function findTrades(target, mode, S, opts) {
@@ -17243,14 +17250,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return { lvl: Math.min(lr, lv), dir: Math.sign(oO - amO), score: Math.sign(oO - amO) * (Math.min(lr, lv) * 10 + Math.min(r, 2) + dv / 4000) };
     };
     /* Market prices, independent of AM's curve (Oct 14). FantasyCalc's price curve per position = its values high to low in
-       this format's file (every player it lists, not only AM's), ranks 1–12 as they are (real cliffs stay), deeper ranks
-       smoothed over 3 spots in log space. One scale factor s puts market prices on AM's scale: AM's total value of the
+       this format's file (every player it lists, not only AM's), every rank as it is, so the same position rank in both
+       sources gets the same price and real cliffs (the Superflex starter line QB24 → QB25) stay. (A 3-spot log smoothing of
+       ranks 13+ was dropped on Oct 14: it moved mid-board prices by up to ~230 AM points and up to 42% in the deep tail
+       without changing a single buy / sell label, and a sorted curve has no noise to smooth.) One scale factor s puts market prices on AM's scale: AM's total value of the
        league's starter-level pool ÷ the market's total for the same number of slots, curve against curve. */
     const fcS = srcs.find(x => x.id === "fc"), curve = {}, curveRaw = {}, lu = lineupOf(F.vl), slots = {};
     if (fcS) EDIT_POS.forEach(pos => {
       const c = desc([...fcS.rows.values()].filter(r => r.pos === pos && Number(r.raw) > 0).map(r => Number(r.raw)));
       curveRaw[pos] = c;
-      curve[pos] = c.map((v, i) => (i < 12 ? v : Math.exp([c[i - 1], v, c[i + 1]].filter(x => x > 0).reduce((a, x, _, l) => a + Math.log(x) / l.length, 0))));
+      curve[pos] = c.slice();
     });
     let amTot = 0, mkTot = 0;
     if (fcS) EDIT_POS.forEach(pos => {
@@ -18009,11 +18018,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Extra numbers and a realism score for one Target-a-player idea
   function enrichTarget(it, K, X) {
     const sum = (list, f) => list.reduce((a, p) => a + f(p), 0);
-    it.amDiff = pctOf(sum(it.get, p => p.value || 0), sum(it.give, p => p.value || 0));
-    it.adjDiff = pctOf(it.m.a, it.m.b);
+    // every difference on the card uses the AM verdict's denominator (smaller side or an average starter's value)
+    const vfB = K.vfB ?? (K.vfB = valueFloor(null, true)), vf = K.vf ?? (K.vf = valueFloor(dv));
+    it.amDiff = mkGapPct(sum(it.get, p => p.value || 0), sum(it.give, p => p.value || 0), vfB);
+    it.adjDiff = mkGapPct(it.m.a, it.m.b, vf);
     // market numbers only when every player has a market value (never AM's value standing in; Oct 14 audit, D7)
     const hasMk = mkAll().srcs.length > 0 && it.get.concat(it.give).every(p => mkOf(p)), mg = hasMk ? sum(it.get, mkVal) : null, mo = hasMk ? sum(it.give, mkVal) : null;
-    it.mktDiff = mg != null && mo != null ? pctOf(mg, mo) : null;
+    it.mktDiff = mg != null && mo != null ? mkGapPct(mg, mo, vf) : null;
     // the players with no market value, named on the card instead of a market number (Alan, Oct 14)
     it.mkMissing = mkAll().srcs.length > 0 ? it.get.concat(it.give).filter(p => !mkOf(p)).map(p => p.name) : [];
     // market leverage: you sell what the market likes more than AM, and buy what AM likes more than the market
@@ -18668,7 +18679,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const ps = A.concat(B).map(id => byId.get(id)), all = ps.every(p => mkOf(p)), d = r => (r && r.adj ? r.adj.depth : null);
     return { lgDepth: LG.depth || 1, all, am: d(runModel(A, B, tv)), mk: all ? d(runModel(A, B, p => mkOf(p).cv, tv)) : null,
       finderAm: d(runModel(A, B, dv)), finderMk: all ? d(runModel(A, B, mkVal, dv)) : null,
-      mktFor: mktFor(A.map(id => byId.get(id)), B.map(id => byId.get(id))) };
+      mktFor: mktFor(A.map(id => byId.get(id)), B.map(id => byId.get(id))), floor: valueFloor(dv),
+      mk2: all ? (r => r && { a: r.a, b: r.b })(runModel(A, B, mkVal, dv)) : null };
   };
   if (window.__SPM_TEST_HOOKS === true) SPM.edit = Object.assign(EDIT_API, { draft: () => tableToCsv(draft), unsaved: () => changedRows().length,
     reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn(); draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); } });

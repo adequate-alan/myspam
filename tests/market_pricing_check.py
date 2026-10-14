@@ -9,8 +9,9 @@ Checks:
    s = AM's starter-level total ÷ the market's total for the same slots (recomputed here).
 2. Market independence: the same market on a board whose AM values are changed (a non-proportional transform, same
    order) gives exactly the same market prices in market units; only s changes.
-3. Flock is priced on FantasyCalc's curve for that position (ranks 1-12 as they are, deeper ranks smoothed over 3 spots
-   in log space); a Flock rank past the curve's end gets no price ("below market depth"), never an extrapolated one.
+3. Flock is priced on FantasyCalc's curve for that position, every rank as it is (no smoothing since Oct 14: the same
+   position rank in both sources is the same price, real cliffs stay); a Flock rank past the curve's end gets no price
+   ("below market depth"), never an extrapolated one.
 4. No AM substitution: a player only Flock ranks, below market depth, has no market read at all (mkOf null, no market
    % in SPM.marketReads).
 5. Weights: default FantasyCalc 60 / Flock 40, this browser's override (spm_mk_weights, the Source details control),
@@ -142,17 +143,25 @@ with sync_playwright() as p:
     curve = {pos: sorted([r[0] for r in fc.values() if r[2] == pos], reverse=True) for pos in BASE}
     def implied(pos, k):
         c = curve[pos]
-        if k > len(c): return None
-        if k <= 12: return c[k - 1]
-        nb = [x for x in (c[k - 2], c[k - 1], c[k] if k < len(c) else None) if x]
-        return math.exp(sum(math.log(x) for x in nb) / len(nb))
+        return c[k - 1] if 1 <= k <= len(c) else None
     flp = [(sid, r["pos"], r["per"]["fl"]) for sid, r in R.items() if "fl" in r["per"]]
     bad = [(sid, x["own"], x["mv"], implied(pos, x["own"])) for sid, pos, x in flp if implied(pos, x["own"]) is None or abs(x["mv"] - implied(pos, x["own"])) > 1e-6]
-    ok(len(flp) > 150 and not bad and all(x["implied"] for _, _, x in flp), f"Flock's position rank is priced on FantasyCalc's curve (1-12 as is, deeper smoothed): {len(flp)} players, {bad[:3]}")
+    ok(len(flp) > 150 and not bad and all(x["implied"] for _, _, x in flp), f"Flock's position rank is priced on FantasyCalc's curve, every rank as it is: {len(flp)} players, {bad[:3]}")
+    same = [(sid, r["per"]["fc"]["mv"], r["per"]["fl"]["mv"]) for sid, r in R.items() if "fc" in r["per"] and "fl" in r["per"] and r["per"]["fc"]["own"] == r["per"]["fl"]["own"]]
+    ok(len(same) >= 5 and all(abs(a - b) < 1e-9 for _, a, b in same), f"Same position rank in FantasyCalc and Flock = the same price, deep ranks too ({len(same)} players, {[x for x in same if abs(x[1] - x[2]) >= 1e-9][:3]})")
     deep = R.get(DEEP)
     ok(deep is None, f"A Flock rank past FantasyCalc's depth gets no price and, with no FantasyCalc value either, no market read at all: {deep}")
     reads = pg.evaluate(f"() => SPM.marketReads(['{DEEP}'], ['{WR[40]}'])")
     ok(reads["all"] is False and reads["mk"] is None and reads["mktFor"] is None, f"No AM value stands in for the missing market value: {reads}")
+    # market gaps use the AM verdict's denominator (Oct 14): the smaller side or an average starter's value
+    byc = sorted(((r["cv"], sid) for sid, r in R.items() if r["cv"] > 0))
+    lo_v, lo_s = byc[0]
+    hi_s = next(sid for v, sid in byc if v >= 2.5 * lo_v)   # a bench piece worth 2.5x+ the cheapest, still far below a starter
+    rd = pg.evaluate(f"() => SPM.marketReads(['{hi_s}'], ['{lo_s}'])")
+    a_, b_, fl_ = rd["mk2"]["a"], rd["mk2"]["b"], rd["floor"]
+    want = 100 * (b_ - a_) / max(min(a_, b_), fl_)   # mktFor: + = the receiving side (second list) ahead
+    ok(rd["all"] and fl_ > max(a_, b_) and abs(rd["mktFor"] - want) < 1e-6 and abs(rd["mktFor"]) < 100 and abs(100 * (b_ - a_) / min(a_, b_)) >= 100,
+       f"A market gap between two cheap players is measured against an average starter's value like the AM verdict: {rd['mktFor']:.2f}% (sides {a_:.0f} / {b_:.0f}, floor {fl_:.0f}; smaller side alone would read {100 * (b_ - a_) / min(a_, b_):.1f}%)")
     # 6. agreement
     lab = lambda a, b: (lambda sp: "Strong split" if sp >= 0.4 else "Split" if sp >= 0.15 else "Agree")(abs(math.log((a + 3) / (b + 3))))
     both = [(sid, r) for sid, r in R.items() if r["srcN"] == 2]
