@@ -13,7 +13,7 @@ Checks:
     columns, every row the header's width, names and positions, ranks 1..N with no gaps or duplicates, whole-number tiers,
     numeric or blank values, manual/auto source, a Sleeper ID for every player and none repeated, no player twice,
     position ranks following the overall order, and no character that would break index.html.
- 3. data/rank_history.json: version 2, every entry [timestamp, rank, position rank, tier, value, source, kind?] and the
+ 3. data/rank_history.json (and each other board's, data/boards/<id>/): version 2, every entry [timestamp, rank, position rank, tier, value, source, kind?] and the
     publish events; data/rank_snapshots/*.json well formed, and every event's snapshot month file exists. With --base,
     entries, events and snapshots from that commit are unchanged (they only grow).
  4. Every data/*.json file parses; files the page loads by a fixed path exist (data/projections.json is optional:
@@ -31,6 +31,9 @@ OPTIONAL = {"data/projections.json"}
 # other ranking sets (BOARDS in index.html, Alan, Oct 14): each block passes the same rules, values strictly down the
 # board (only 0s tie), and the same players as the original board (matched by Sleeper ID)
 BOARD_RES = {"RANKINGS_CSV_PPR": re.compile(r"const RANKINGS_CSV_PPR = `\n([\s\S]*?)\n`;")}
+OVERALL_TIERS = {"RANKINGS_CSV_PPR"}   # boards whose tiers are one scale down the overall order (tierScope "overall")
+# each board's ranking history and snapshot folder (Oct 14: AM PPR has its own, from its baseline)
+HIST_SETS = [("data/rank_history.json", "data/rank_snapshots"), ("data/boards/ppr/rank_history.json", "data/boards/ppr/rank_snapshots")]
 
 failures = []
 def ok(cond, msg):
@@ -167,25 +170,33 @@ def main():
         if any(v < 0 for _, v in vals): errs.append("a missing value")
         ids, mids = {bid(bh, r) for r in brows if len(r) == len(bh)}, {bid(mh, r) for r in mrows if len(r) == len(mh)}
         if ids != mids: errs.append(f"players differ from RANKINGS_CSV (only here {sorted(ids - mids)[:3]}, missing {sorted(mids - ids)[:3]})")
+        if name in OVERALL_TIERS:   # overall tiers stay in one piece down the board (tag tiers 90+ aside)
+            tiers = [int(t) for _, t in sorted((int(r[bh.index("rank")]), r[bh.index("tier")]) for r in brows if len(r) == len(bh)) if t.isdigit() and int(t) < 90]
+            split = [f"Tier {a} → {b}" for a, b in zip(tiers, tiers[1:]) if b < a]
+            if split: errs.append(f"overall tiers split {split[:3]}")
         ok(not errs, f"{name} passes the publish rules ({len(brows)} players) {errs[:5]}")
 
-    # 3. ranking history
-    try: hist = json.load(open(os.path.join(ROOT, "data/rank_history.json"), encoding="utf-8"))
-    except Exception as e: hist = None; ok(False, f"data/rank_history.json parses ({e})")
-    if hist is not None:
-        errs = history_errors(hist)
-        ok(not errs, f"Ranking history is well formed ({sum(len(v) for v in hist['players'].values())} entries) {errs[:3]}")
-
-    snaps = sorted(glob.glob(os.path.join(ROOT, "data", "rank_snapshots", "*.json")))
-    errs = []
-    for f in snaps:
-        try: errs += snapshot_errors(os.path.relpath(f, ROOT), json.load(open(f, encoding="utf-8")))
-        except Exception as e: errs.append(f"{os.path.relpath(f, ROOT)}: {e}")
-    ok(not errs, f"Board snapshots are well formed ({len(snaps)} month file(s)) {errs[:3]}")
-    if hist is not None and isinstance(hist.get("events"), list):
-        months = {e["snap"] for e in hist["events"] if e.get("snap")}
-        missing = sorted(m for m in months if not os.path.exists(os.path.join(ROOT, "data", "rank_snapshots", m + ".json")))
-        ok(not missing, f"Every publish event's snapshot month file exists {missing}")
+    # 3. ranking history: every board's history file and snapshot folder
+    hists = {}
+    for hpath, sdir in HIST_SETS:
+        if not os.path.exists(os.path.join(ROOT, hpath)) and hpath != HIST_SETS[0][0]: ok(False, f"{hpath} exists"); continue
+        try: hist = json.load(open(os.path.join(ROOT, hpath), encoding="utf-8"))
+        except Exception as e: hist = None; ok(False, f"{hpath} parses ({e})")
+        hists[hpath] = hist
+        tag = "" if hpath == HIST_SETS[0][0] else f" ({hpath})"
+        if hist is not None:
+            errs = history_errors(hist)
+            ok(not errs, f"Ranking history is well formed{tag} ({sum(len(v) for v in hist['players'].values())} entries) {errs[:3]}")
+        snaps = sorted(glob.glob(os.path.join(ROOT, sdir, "*.json")))
+        errs = []
+        for f in snaps:
+            try: errs += snapshot_errors(os.path.relpath(f, ROOT), json.load(open(f, encoding="utf-8")))
+            except Exception as e: errs.append(f"{os.path.relpath(f, ROOT)}: {e}")
+        ok(not errs, f"Board snapshots are well formed{tag} ({len(snaps)} month file(s)) {errs[:3]}")
+        if hist is not None and isinstance(hist.get("events"), list):
+            months = {e["snap"] for e in hist["events"] if e.get("snap")}
+            missing = sorted(m for m in months if not os.path.exists(os.path.join(ROOT, sdir, m + ".json")))
+            ok(not missing, f"Every publish event's snapshot month file exists{tag} {missing}")
 
     # 4. data files
     bad = []
@@ -238,17 +249,19 @@ def main():
                     for name, rx in BOARD_RES.items():
                         ob, nb = rx.findall(old_html), rx.findall(html)
                         if ob: ok(nb[:1] == ob[:1], f"{name} unchanged since {a.base[:10]} (automated job)")
-        old_hist = git_show(a.base, "data/rank_history.json")
-        if old_hist and hist is not None:
+        for hpath, sdir in HIST_SETS:
+          hist = hists.get(hpath)
+          old_hist = git_show(a.base, hpath)
+          if old_hist and hist is not None:
             try: oh = json.loads(old_hist)
             except Exception: oh = None
             if oh and oh.get("version") == 2:
                 changed = [sid for sid, lst in oh["players"].items() if hist["players"].get(sid, [])[:len(lst)] != lst]
-                ok(not changed, f"Every ranking-history entry from {a.base[:10]} is unchanged (history only grows) {changed[:5]}")
+                ok(not changed, f"Every ranking-history entry in {hpath} from {a.base[:10]} is unchanged (history only grows) {changed[:5]}")
                 oe, ne = oh.get("events", []), hist.get("events", [])
-                ok(ne[:len(oe)] == oe, f"Every publish event from {a.base[:10]} is unchanged ({len(oe)} → {len(ne)})")
-        old_snaps = subprocess.run(["git", "ls-tree", "--name-only", a.base, "data/rank_snapshots/"], cwd=ROOT, capture_output=True, text=True).stdout.split()
-        for path in old_snaps:
+                ok(ne[:len(oe)] == oe, f"Every publish event in {hpath} from {a.base[:10]} is unchanged ({len(oe)} → {len(ne)})")
+          old_snaps = subprocess.run(["git", "ls-tree", "--name-only", a.base, sdir + "/"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+          for path in old_snaps:
             o = git_show(a.base, path)
             try: o = json.loads(o) if o else None; n = json.load(open(os.path.join(ROOT, path), encoding="utf-8"))
             except Exception: o, n = None, None
