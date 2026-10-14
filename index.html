@@ -347,6 +347,35 @@ Jaxson Dart,QB,NYG,260,45,99,0,16.72,2,14.35,12508,manual,Out for season
 `;
 
 /* =====================================================================
+   RANKING SETS ("boards"; Alan, Oct 14, multi-board architecture)
+   Each board is an independently maintained ranking set: its own ranks, position
+   order, tiers, tier names, values, editor state, history and snapshots, priced in
+   its own native format. League formats are adjusted from ONE board, and only for
+   what differs from that board's format, so nothing is converted twice.
+   Fields:
+     id         stable id (storage keys, URLs, history); never reused
+     label      shown in the UI; short = compact form
+     block      the rankings block in this file holding the board's data
+     fmt        the board's native format (the Custom format fields; see FMT_DEFAULT)
+     tierScope  "position": tiers are groupings inside each position (this board);
+                "overall": tiers are cross-position groupings of the overall order
+                (a list like Alan's 1QB PPR reference list)
+     keySuffix  appended to this board's browser storage keys ("" = the original
+                spm_* keys, which are never renamed)
+     history / snaps   this board's ranking history file and snapshot folder
+   Only AM SF PPR TE+ is registered so far. A league is valued on the board matching its QB
+   format (1QB → a 1QB board, Superflex / 2QB → a Superflex board), then adjusted from that
+   board's native scoring and lineup to the league's own (Alan, Oct 14). More boards (and later ones a visitor
+   creates or duplicates) are entries here; features read them through the registry.
+   ===================================================================== */
+const BOARDS = [
+  { id: "sf-tep", label: "AM SF PPR TE+", short: "SF PPR TE+", block: "RANKINGS_CSV",
+    fmt: { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 },
+    tierScope: "position", keySuffix: "", history: "data/rank_history.json", snaps: "data/rank_snapshots/", componentsBase: true }
+];
+const BOARD_BLOCKS = { RANKINGS_CSV };   // block name → its data
+
+/* =====================================================================
    SLOT 3 — VALUE MODEL (redraft, 12-team, full PPR, TE premium, superflex)
    Any player without a number in the CSV "value" column gets a value
    from his positional rank here. Type a value in the CSV to override.
@@ -5595,7 +5624,28 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     list.forEach(p => { p.value = Math.round(p.value); });
   }
 
-  let players = loadPlayers(RANKINGS_CSV);
+  // Ranking sets (see BOARDS in the settings). ACTIVE_BOARD owns the data loaded into players / the editor;
+  // boardKey() gives a board its own browser storage keys (the original board keeps the original spm_* names).
+  const boardById = id => BOARDS.find(b => b.id === id) || null;
+  const DEFAULT_BOARD = BOARDS[0];
+  var ACTIVE_BOARD = DEFAULT_BOARD;
+  const boardCsv = b => BOARD_BLOCKS[b.block];
+  const boardKey = (name, b = ACTIVE_BOARD) => name + (b.keySuffix || "");
+  // Which board a league is valued on (Alan, Oct 14): QB format first (1QB → a 1QB board; Superflex / 2QB → a Superflex
+  // board), then the closest TE premium, PPR and league size. A per-league override comes with the board switch.
+  function autoBoardFor(vl) {
+    if (!vl) return DEFAULT_BOARD;
+    const lu = lineupOf(vl), sc = vl.scoring_settings || {}, one = !lu.SUPER_FLEX && lu.QB < 2;
+    const dist = b => (((b.fmt.qb === "1") !== one) ? 1000 : 0) + 10 * Math.abs((Number(sc.bonus_rec_te) || 0) - (Number(b.fmt.tep) || 0))
+      + 5 * Math.abs((Number(sc.rec) || 0) - (Number(b.fmt.rec) || 0)) + 0.1 * Math.abs((lu.teams || 12) - b.fmt.teams);
+    return BOARDS.reduce((best, b) => (dist(b) < dist(best) ? b : best), BOARDS[0]);
+  }
+  function leagueBoard() { return autoBoardFor(valueLeague()); }   // League tabs, Trade Finder, calculator, Power Rankings
+  // The board shown on the Rankings tab is chosen separately (Alan, Oct 14): browsing another board there never changes
+  // the board a connected league's features are valued on. null = show the league's board.
+  var RANK_BOARD = null;
+  function viewBoard() { return RANK_BOARD || leagueBoard(); }
+  let players = loadPlayers(boardCsv(ACTIVE_BOARD));
   let byId = new Map(players.map(p => [p.id, p]));
   let maxValue = Math.max(1, ...players.map(p => p.value));
   const hasPicks = players.some(p => p.pos === "PICK");
@@ -5825,7 +5875,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const valueLeague = () => {
     const lg = syncedLeague();
     if (lg && FMT_SRC !== "custom") return lg;
-    return FMT ? fmtLeague(FMT) : lg ? fmtLeague(FMT_DEFAULT) : null;   // custom format (AM default if none picked)
+    return FMT ? fmtLeague(FMT) : lg ? boardLeague() : null;   // custom format (the board's own format if none picked)
   };
   const usingCustom = () => !!syncedLeague() && FMT_SRC === "custom";
   // League-adjusted values and position ranks apply whenever a league (or hand-picked settings) is set,
@@ -8179,11 +8229,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      GitHub (the site redeploys in about a minute). Normal visitors never see any
      of these controls. */
   const REPO = SITE.repo, FILE = "index.html", BRANCH = "main", TOKEN_KEY = "spm_editor_token";
-  const CSV_RE = /(const RANKINGS_CSV = `\n)([\s\S]*?)(\n`;)/;
+  const CSV_RE = new RegExp(`(const ${ACTIVE_BOARD.block} = \`\\n)([\\s\\S]*?)(\\n\`;)`);   // this board's block, exactly one
   const EDIT_COLS = ["rank", "pos_rank", "tier", "value", "source", "tier_name"];
-  const LOCAL_KEY = "spm_local_edits";
+  const LOCAL_KEY = boardKey("spm_local_edits");
   var LAST_FIT = null;   // the last stateValues result (proposed values, tail steps)
-  let publishedCsv = RANKINGS_CSV.trim();   // what everyone sees on the live site
+  let publishedCsv = boardCsv(ACTIVE_BOARD).trim();   // what everyone sees on the live site
   // savedCsv = published + edits saved in this browser; draft = unsaved work on top of that
 
   function csvToTable(csv) { const rows = parseCSV(csv); return { head: rows.shift() || [], rows }; }
@@ -8424,7 +8474,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* The session is measured against the live (published) board. Its bookkeeping (base tiers, standing moves, tier drops,
      position-tab placements) is saved with the browser edits (spm_edit_session, tied to the published and saved boards it
      belongs to): Save writes it, Cancel goes back to it, Discard and a publish clear it. */
-  var SESSION_KEY = "spm_edit_session";   // var: the editor bar reads these during start-up
+  var SESSION_KEY = boardKey("spm_edit_session");   // var: the editor bar reads these during start-up
   var EDIT_SESSION = null, SESSION_AT_SAVE = null;
   const textId = t => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + ":" + t.length; };
   const SESSION_MAPS = ["touch", "memo", "drops", "moves", "base"];
@@ -9550,7 +9600,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       try {
         players = loadPlayers(csv);
         LG.adj = new Map(); LG.adjPos = new Map(); LG.adjRank = new Map(); LG.factor = new Map();
-        const vl = fmtLeague({ ...FMT_DEFAULT, qb: "1", tep: 0 }); LG.depth = leagueDepth(vl);
+        const vl = fmtLeague({ ...ACTIVE_BOARD.fmt, qb: ACTIVE_BOARD.fmt.qb === "1" ? "sf" : "1", tep: 0 }); LG.depth = leagueDepth(vl);   // the other QB format, no TE premium
         adjustValues(vl);
         const bad = players.filter(p => p.pos !== "PICK" && !Number.isFinite(LG.adj.get(p.id)));
         if (bad.length) errs.push(`the league adjustment gave no value for ${bad.length} player${bad.length === 1 ? "" : "s"} (${bad[0].name})`);
@@ -9595,7 +9645,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      Publishing compares the live rankings with it, so a field someone else published a different value for since then
      is a conflict that stops the publish, instead of being overwritten. Edits saved before this existed fall back to the
      rankings this page loaded with. */
-  const LOCAL_BASE_KEY = "spm_local_base";
+  const LOCAL_BASE_KEY = boardKey("spm_local_base");
   function readBase() { try { return JSON.parse(localStorage.getItem(LOCAL_BASE_KEY) || "{}") || {}; } catch (e) { return {}; } }
   function baseFor(edits, prev) {   // keep the earliest recorded base for every field still edited
     const pub = csvToTable(publishedCsv), pm = new Map(pub.rows.map(r => [keyOf(pub, r), r])), out = {};
@@ -9634,7 +9684,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      { v, pv, edit } (value and position-curve value at the anchor; edit = the anchor is a value you set). Saved with the
      edits (TOUCH_KEY), cleared by Publish, Discard and Cancel back to the saved set. Everyone else keeps his published
      value (stateValues). */
-  var TOUCH_KEY = "spm_value_touch", touchSaved = new Map(), touchDraft = new Map(), PUB_STATE = { csv: null };
+  var TOUCH_KEY = boardKey("spm_value_touch"), touchSaved = new Map(), touchDraft = new Map(), PUB_STATE = { csv: null };
   function pubState() {   // published values and position curve, by player key
     if (PUB_STATE.csv !== publishedCsv) {
       const ps = loadPlayers(publishedCsv).filter(p => p.pos !== "PICK");
@@ -9829,7 +9879,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* A publish whose branch update got no answer may have landed anyway. Its commit is remembered here (Phase 1) until it's
      settled, so the next publish checks GitHub first: landed = those history entries are already recorded and aren't
      queued again; not landed = forgotten. */
-  const PUBLISH_KEY = "spm_publish_pending";
+  const PUBLISH_KEY = boardKey("spm_publish_pending");
   const readPublish = () => { try { return JSON.parse(localStorage.getItem(PUBLISH_KEY) || "null"); } catch (e) { return null; } };
   const writePublish = v => { try { if (v) localStorage.setItem(PUBLISH_KEY, JSON.stringify(v)); else localStorage.removeItem(PUBLISH_KEY); } catch (e) {} };
 
@@ -10110,7 +10160,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     };
   }
   // The one place format labels come from: the AM base format, or a league / your custom settings
-  function formatLabel(league) { return formatParts(league || fmtLeague(FMT_DEFAULT)).join(" · "); }
+  function formatLabel(league) { return formatParts(league || boardLeague()).join(" · "); }
   // TE premium shorthand for display: one "+" per 0.5 points per catch (+0.5 → "TE Premium +", +1.0 → "++").
   // Values that aren't a multiple of 0.5 keep the number. Calculations always use the real value.
   function tepLabel(n) {
@@ -10229,7 +10279,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function scarcityIndex(vl) {
     const curves = curvesFor(vl.scoring_settings || {}), lu = lineupOf(vl);
     const P = modelParts(curves, lu, VALUE_MODEL.benchWeight * leagueDepth(vl));
-    const B = modelParts(curvesFor(comps.base_scoring), BASE_LINEUP());
+    const B = modelParts(curvesFor(boardScoring()), boardLineup());
     const por = {}, cross = {};
     for (const p of EDIT_POS) { por[p] = curves[p].map(v => v - P.repl[p]); cross[p] = curves[p].map(v => (B.top > 0 ? 10000 * P.raw(p, v) / B.top : 0)); }
     return { repl: { ...P.repl }, waiver: { ...P.waiver }, por, cross };
@@ -10239,6 +10289,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     FLEX: comps.flex.n, WRRB_FLEX: 0, REC_FLEX: 0, SUPER_FLEX: comps.superflex.n,
     bench: Object.values(comps.bench).reduce((a, b) => a + b, 0)
   });
+  // A board's native scoring and lineup: the base its league adjustments measure from (AM SF PPR TE+ is the format
+  // the curve components were built for, so it reads them directly; other boards take their own format)
+  // (function declarations: valueLeague and the format label can run before this line)
+  function boardScoring(b = ACTIVE_BOARD) { return b.componentsBase ? comps.base_scoring : fmtLeague(b.fmt).scoring_settings; }
+  function boardLineup(b = ACTIVE_BOARD) { return b.componentsBase ? BASE_LINEUP() : lineupOf(fmtLeague(b.fmt)); }
+  function boardLeague(b = ACTIVE_BOARD) { return fmtLeague(b.fmt); }
 
   function activeData() { return sl && sl.activeId && sl.data ? sl.data[sl.activeId] : null; }
 
@@ -10289,7 +10345,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function adjustValues(vl) {
     const FA = FORMAT_ADJUST, raw = new Map();
     if (comps) {
-      const base = modelTable(curvesFor(comps.base_scoring), BASE_LINEUP());
+      const base = modelTable(curvesFor(boardScoring()), boardLineup());
       const lg = modelTable(curvesFor(vl.scoring_settings || {}), lineupOf(vl), VALUE_MODEL.benchWeight * LG.depth);   // shallow leagues: depth counts less
       // A player's value = the league curve at his rank + his own distance from the base curve (your tiers,
       // projections), shrunk in proportion when the position is worth less here. A flat shift would let a
@@ -10492,7 +10548,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   var TIER_EDGE = true;         // formatCheck: false = one factor per tier (the pricing before Oct 14)
   var SF_SMOOTH = true;         // formatCheck: false = no Superflex smoothing (the scarcity model alone), "noguard" = no 8-team cliff guard
   function adjMapFor(vl) {
-    const key = JSON.stringify([lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH, TIER_EDGE]);
+    const key = JSON.stringify([ACTIVE_BOARD.id, lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH, TIER_EDGE]);
     if (adjCache.has(key)) return adjCache.get(key);
     const keep = { adj: LG.adj, adjPos: LG.adjPos, adjRank: LG.adjRank, factor: LG.factor, depth: LG.depth };
     try {
@@ -10507,7 +10563,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function formatSteps(p) {
     const vl = valueLeague();
     if (!vl || !comps || !LG.adj.has(p.id)) return null;
-    const base = fmtLeague(FMT_DEFAULT), bsc = base.scoring_settings, sc = vl.scoring_settings || {};
+    const base = boardLeague(), bsc = base.scoring_settings, sc = vl.scoring_settings || {};
     const withSc = x => ({ ...base, scoring_settings: x });
     const lu = lineupOf(vl), b = lineupOf(base);
     const v1 = adjMapFor(withSc({ ...sc, bonus_rec_te: bsc.bonus_rec_te || 0 })).get(p.id);   // the league's scoring, base TE premium
@@ -10709,7 +10765,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       for (const [name, f] of Object.entries(F)) {
         const lg0 = fmtLeague({ ...FMT_DEFAULT, ...f }), adj = adjMapFor(lg0), lu = lineupOf(lg0);
         const keep = TIER_EDGE; TIER_EDGE = false; let blk; try { blk = adjMapFor(lg0); } finally { TIER_EDGE = keep; }
-        const B = modelTable(curvesFor(comps.base_scoring), BASE_LINEUP()), L = modelTable(curvesFor(lg0.scoring_settings || {}), lu, VALUE_MODEL.benchWeight * leagueDepth(lg0));
+        const B = modelTable(curvesFor(boardScoring()), boardLineup()), L = modelTable(curvesFor(lg0.scoring_settings || {}), lu, VALUE_MODEL.benchWeight * leagueDepth(lg0));
         const sc = (pos, n) => { const i = Math.min(n, B[pos].length) - 1; return B[pos][i] > 0 ? L[pos][i] / B[pos][i] : 0; };
         for (const pos of EDIT_POS) {
           const g = players.filter(p => p.pos === pos && p.posNum != null && !p.tail && !isTagTier(p.tier)).sort((a, b) => a.posNum - b.posNum);
@@ -10727,6 +10783,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       check("Nearly flat board tier boundaries (<= 5%) don't become 25%+ format drops the scarcity curve doesn't have", cliffs, cliffs.length === 0);
       check("Tier boundary easing keeps each position's weekly starters within 2% of one-factor tier pricing", drift, drift.length === 0);
+    }
+    // Ranking sets (Alan, Oct 14): the AM default format is AM SF PPR TE+'s own format, a league in a board's own format
+    // gives exactly that board's values, and every format family picks a registered board
+    check("The AM default format is AM SF PPR TE+'s native format", [JSON.stringify(boardById("sf-tep").fmt)], fmtSame(boardById("sf-tep").fmt, FMT_DEFAULT));
+    {
+      const own = players.filter(p => Math.round(adjMapFor(boardLeague()).get(p.id)) !== Math.round(p.value));
+      check(`A league in ${ACTIVE_BOARD.label}'s own format gives exactly its values`, own.map(p => p.name), own.length === 0);
+      const picks = [{ qb: "1", tep: 0 }, { qb: "1", tep: 1, teams: 10 }, { qb: "sf" }, { qb: "2", tep: 0 }, { qb: "sf", rec: 0.5, teams: 14 }]
+        .map(f => autoBoardFor(fmtLeague({ ...FMT_DEFAULT, ...f })));
+      check("Every league format is valued on a registered board", picks.map(b => b && b.id), picks.every(b => b && BOARDS.includes(b)));
     }
     const same = players.filter(p => Math.round(adjMapFor(fmtLeague(FMT_DEFAULT)).get(p.id)) !== Math.round(p.value));
     check("A league in the base format gives exactly the base values", same.map(p => p.name), same.length === 0);
@@ -10788,9 +10854,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       return null;
     }
-    const key = JSON.stringify(sc) + "|" + players.map(p => p.id + ":" + p.posNum).join(",");
+    const key = ACTIVE_BOARD.id + "|" + JSON.stringify(sc) + "|" + players.map(p => p.id + ":" + p.posNum).join(",");
     if (factorCache.key === key) return factorCache.map;
-    const baseSc = comps.base_scoring, ratio = new Map();
+    const baseSc = boardScoring(), ratio = new Map();
     players.forEach(p => {
       if (!EDIT_POS.includes(p.pos) || !p.sleeperId) return;
       const games = [];
@@ -10838,7 +10904,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("meta").hidden = !!d;
     $("fmt-chip").hidden = !!d;
     setMeta();
-    $("fc-format").textContent = formatParts(FMT ? fmtLeague(FMT) : fmtLeague(FMT_DEFAULT)).join(" · ");
+    $("fc-format").textContent = formatParts(FMT ? fmtLeague(FMT) : boardLeague()).join(" · ");
     $("fmt-chip").classList.toggle("custom", !!FMT);
     $("fmt-chip").title = FMT ? "Values follow the settings you picked. Click to change." : "Pick your league's scoring and lineup";
     tabs.myteam.hidden = tabs.league.hidden = tabs.finder.hidden = !d;
@@ -13850,7 +13916,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function loadHistory() {
     if (rankHistory !== undefined) return Promise.resolve(rankHistory);
     if (!historyLoading) {
-      historyLoading = fetch("data/rank_history.json", { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
+      historyLoading = fetch(ACTIVE_BOARD.history, { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
         .then(d => { rankHistory = d; return d; });
     }
     return historyLoading;
@@ -14134,7 +14200,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!EDIT_POS.includes(pos)) return null;
     if (!comps) return VALUE_MODEL.replacement[pos] ?? null;
     const d = activeData();
-    const lv = d ? replLevels(curvesFor(d.league.scoring_settings || {}), lineupOf(d.league)) : replLevels(curvesFor(comps.base_scoring), BASE_LINEUP());
+    const lv = d ? replLevels(curvesFor(d.league.scoring_settings || {}), lineupOf(d.league)) : replLevels(curvesFor(boardScoring()), boardLineup());
     return lv.repl[pos];
   }
 
@@ -14929,7 +14995,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function lineupNow() {
     const d = activeData();
     // the selected league, else your Custom format, else the AM default: the same precedence as scoringNow()
-    return d ? lineupOf(d.league) : FMT ? lineupOf(fmtLeague(FMT)) : comps ? BASE_LINEUP() : { teams: 12, QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1, WRRB_FLEX: 0, REC_FLEX: 0, SUPER_FLEX: 1 };
+    return d ? lineupOf(d.league) : FMT ? lineupOf(fmtLeague(FMT)) : comps ? boardLineup() : { teams: 12, QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1, WRRB_FLEX: 0, REC_FLEX: 0, SUPER_FLEX: 1 };
   }
   function posStartable(pos, lu = lineupNow()) {
     const flexShare = { QB: lu.SUPER_FLEX, RB: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX, WR: 0.45 * lu.FLEX + 0.5 * lu.WRRB_FLEX + 0.8 * lu.REC_FLEX, TE: 0.1 * lu.FLEX + 0.2 * lu.REC_FLEX };
@@ -16403,7 +16469,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return FLOCK_SITE.v;
   }
   function mkFmt() {
-    const vl = valueLeague() || fmtLeague(FMT_DEFAULT), lu = lineupOf(vl), sc = vl.scoring_settings || {};
+    const vl = valueLeague() || boardLeague(), lu = lineupOf(vl), sc = vl.scoring_settings || {};
     return { vl, sf: lu.SUPER_FLEX > 0 || lu.QB >= 2, teams: lu.teams, rec: Number(sc.rec ?? 1), tep: Number(sc.bonus_rec_te || 0) };
   }
   const recName = r => (r === 1 ? "Full PPR" : r === 0.5 ? "Half PPR" : r === 0 ? "Standard" : `${r} PPR`);
@@ -16456,7 +16522,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const F = mkFmt(), srcs = mkSources(F);
     const amV = p => Math.max(0, adjOf(p)), amPos = p => (LG.fmtOn && LG.adjPos.has(p.id) ? LG.adjPos.get(p.id) : p.posNum);
     const pool = players.filter(p => p.sleeperId && EDIT_POS.includes(p.pos) && p.posNum != null && Number(p.tier) !== OUT_TIER);
-    const key = JSON.stringify([F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + s.at + s.notes.join()), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
+    const key = JSON.stringify([ACTIVE_BOARD.id, F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + s.at + s.notes.join()), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
     if (MK_CACHE.key === key) return MK_CACHE;
     const desc = arr => arr.slice().sort((a, b) => b - a);
     const ovCurve = desc(pool.map(amV)), posCurve = {}, posList = {};
@@ -17186,7 +17252,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        (historical trades) and for rebuilding an old board exactly.
      Save changes queues entries in this browser (PENDING_KEY) so the player page shows them as "not published";
      Publish to live site records the published board itself (one entry per changed player, at the publish time). */
-  const HISTORY_FILE = "data/rank_history.json", PENDING_KEY = "spm_history_pending", SNAP_DIR = "data/rank_snapshots/";
+  const HISTORY_FILE = ACTIVE_BOARD.history, PENDING_KEY = boardKey("spm_history_pending"), SNAP_DIR = ACTIVE_BOARD.snaps;
   const HISTORY_VALUE_MIN = { abs: 10, pct: 0.005 };   // smaller automatic value moves aren't a visible entry yet
   const HISTORY_SOURCE = { M: "Manual edit", S: "Scheduled update", P: "Published update", B: "Baseline snapshot" };
   const snapMonth = ts => String(ts).slice(0, 7);
@@ -17315,6 +17381,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     touched: () => [...touchDraft.keys()], board: () => players.filter(p => p.pos !== "PICK" && p.rank != null).map(p => ({ id: p.id, name: p.name, pos: p.pos, rank: p.rank, posNum: p.posNum, tier: String(p.tier), value: p.value, source: p.source, curve: p.curve, tail: p.tail })),
     save: () => saveLocal(), tierNotice: (id, oldTier, oldVal) => tierMoveNotice(byId.get(id), String(oldTier), oldVal, true), cancel: () => $("eb-cancel").click(), lastFit: () => LAST_FIT && { moved: LAST_FIT.moved } };
   window.SPM = { formulaPreview, stateValues, scarcityIndex, rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, snapshotOf: csv => rankingSnapshot(loadPlayers(csv)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
+  // Ranking sets, read only (tests and the console): the registry, the board loaded, the league's board, the Rankings board,
+  // and the automatic pick for any Custom format fields (e.g. SPM.boards({ qb: "1", tep: 0 }))
+  SPM.boards = f => ({ boards: BOARDS.map(b => ({ id: b.id, label: b.label, tierScope: b.tierScope, fmt: { ...b.fmt } })), active: ACTIVE_BOARD.id,
+    league: leagueBoard().id, view: viewBoard().id, auto: f ? autoBoardFor(fmtLeague({ ...FMT_DEFAULT, ...f })).id : undefined });
   /* The editor's own functions for the tests (SPM.edit): only when a test sets window.__SPM_TEST_HOOKS before the page
      loads. Visitors never get them; they can only change this browser's unsaved draft, like the arrows. */
   // One player's weekly outlook, read only (tests and the console): kind, expected and conditional points, role multiplier
