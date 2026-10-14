@@ -3460,6 +3460,48 @@ dialog.pm[open] { animation: pm-in 0.16s ease-out; }
 .mk-imp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .mk-paste { width: 100%; min-height: 70px; resize: vertical; font: 0.78rem/1.4 var(--font-body); color: var(--text-primary); background: var(--bg, transparent); border: 1px solid var(--border); border-radius: var(--r-sm, 6px); padding: 8px; box-sizing: border-box; }
 .mk-msg { font-size: 0.74rem; color: var(--text-secondary); }
+.mk-msg:empty { display: none; }
+/* Flock list manager (Alan, Oct 14): both Flock lists, opened from the Market edge bar */
+.fm { gap: 10px; }
+.fm p { margin: 0; }
+.fm-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.fm-note, .fm-sub { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+.fm-sub { margin-left: 6px; }
+.fm-k { font: 600 var(--micro-fs, 0.62rem)/1.4 var(--font-body); letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--text-muted); }
+.fm-state { display: grid; gap: 3px; margin: 0; font-size: 0.76rem; }
+.fm-state > div { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 2px 10px; align-items: baseline; }
+.fm-state dt { font: 600 var(--micro-fs, 0.62rem)/1.4 var(--font-body); letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--text-muted); }
+.fm-state dd { margin: 0; color: var(--text-secondary); min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.fm-state b, .fm-sum b { color: var(--text-primary); font-weight: 700; }
+.fm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fm-actions:empty { display: none; }
+.fm-imp, .fm-work { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.fm-sum { font-size: 0.78rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.fm-warn { color: var(--warn-text); }
+.fm-err { color: var(--danger-text); }
+.fm-sec { border-top: 1px solid var(--border); padding-top: 6px; min-width: 0; }
+.fm-sec > summary { cursor: pointer; font: 600 0.76rem var(--font-body); color: var(--text-secondary); padding: 2px 0; }
+.fm-sec > summary:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.fm-ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 0.76rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; max-height: 280px; overflow-y: auto; }
+.fm-mvd { display: inline-block; min-width: 3em; font-weight: 600; }
+.fm-mvd.up { color: var(--rb-text); } .fm-mvd.down { color: var(--danger-text); }
+.fm-t { width: 100%; border-collapse: collapse; font-size: 0.76rem; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.fm-t th { text-align: left; font: 600 var(--micro-fs, 0.62rem)/1.3 var(--font-body); letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--text-muted); padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.fm-t td { padding: 3px 6px; border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: middle; }
+.fm-t td.fm-nm { color: var(--text-primary); font-weight: 600; min-width: 7.5em; }   /* names never break mid-word */
+.fm-t td:first-child { white-space: nowrap; }
+.fm-why-m { display: none; font-weight: 500; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+.fm-t tr.fm-un td.fm-nm { color: var(--text-secondary); }
+.fm-t td.fm-act { text-align: right; white-space: nowrap; }
+.fm-t .btn { height: 26px; padding: 0 8px; font-size: 0.72rem; }
+.fm-t .btn.link { padding: 0 5px; }
+.fm-t .btn.fm-rk { font-weight: 700; color: var(--text-primary); text-decoration: underline dotted; text-underline-offset: 3px; }
+.fm-tool { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); }
+.fm-res { display: flex; flex-wrap: wrap; gap: 6px; }
+.fm-res .btn { height: auto; min-height: 30px; padding: 4px 10px; font-size: 0.76rem; }
+.fm .search { width: 100%; max-width: 360px; box-sizing: border-box; }
+.fm .mv-input { width: 84px; text-align: left; }
+@media (max-width: 600px) { .fm-t .fm-hide, .fm-t .fm-why { display: none; } .fm-why-m { display: block; } .fm-t td.fm-act .btn { display: block; margin: 2px 0 2px auto; } .fm-state > div { grid-template-columns: 1fr; gap: 0; } .fm .view-toggle { flex-wrap: wrap; } }
 .mk-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .mk-ranks { display: inline-flex; flex-direction: column; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .mk-ranks b { font: 600 0.84rem var(--font-display); color: var(--text-primary); }
@@ -7285,54 +7327,55 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   function renderMkBar(all) {
     const F = all.F || mkFmt(), srcs = all.srcs || [];
-    const fl = srcs.find(s => s.id === "fl"), set = flockSetFor(F), mine = !!FLOCK[set.id];
+    const fl = srcs.find(s => s.id === "fl"), set = flockSetFor(F);
     $("mk-bar").innerHTML = `<div class="mk-bar-row">
         <p class="mk-fmt"><b>AM ROS</b> vs <b>${srcs.length ? srcs.map(s => esc(s.id === "fl" ? s.list : s.name)).join(" + ") : "no market source"}</b> · ${esc(formatLabel(F.vl))}</p>
-        <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}">${fl ? `${esc(set.label)}${fl.site ? " (built in)" : ""}` : `Import ${esc(set.label)}`}</button>
+        <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}" aria-controls="fm">${MK_UI.open ? "Close Flock lists" : fl ? `Flock lists · ${esc(set.label)}${fl.site ? "" : " (draft)"}` : `Flock lists · import ${esc(set.label)}`}</button>
       </div>
       ${mkStatusHtml(srcs)}
-      ${MK_UI.open ? `<div class="mk-import">
-        <p class="pp-note">Adequate keeps two separate Flock lists: <b>Flock Superflex</b> (Superflex and 2QB leagues) and <b>Flock Regular PPR</b> (1QB leagues). This format uses ${esc(set.label)}${fl && fl.site ? `, built into the site (${esc(set.file)})` : ""}. An import here goes into the list its format belongs to and stays in this browser only. Use a Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or paste a ranked list, then confirm the list's format: nothing is assumed.</p>
-        <div class="mk-imp-row">
-          <label class="btn" for="mk-file">Choose CSV file</label><input type="file" id="mk-file" accept=".csv,text/csv,text/plain" hidden>
-          <select class="select" id="mk-fl-qb" aria-label="Flock list: QB format"><option value="">QB format…</option><option value="sf">Superflex</option><option value="1qb">1QB (Regular PPR list)</option></select>
-          <select class="select" id="mk-fl-teams" aria-label="Flock list: league size"><option value="">League size…</option><option value="8">8 teams</option><option value="10">10 teams</option><option value="12">12 teams</option><option value="14">14 teams</option></select>
-          <select class="select" id="mk-fl-tep" aria-label="Flock list: TE premium"><option value="">TE premium…</option><option value="0">No TE premium</option><option value="0.5">TE Premium +</option><option value="1">TE Premium ++</option></select>
-          <select class="select" id="mk-fl-rec" aria-label="Flock list: scoring"><option value="">Scoring…</option><option value="1">Full PPR</option><option value="0.5">Half PPR</option><option value="0">Standard</option></select>
-        </div>
-        <textarea id="mk-paste" class="mk-paste" rows="4" placeholder="…or paste the rankings here"></textarea>
-        <div class="mk-imp-row"><button class="btn primary" type="button" data-mk-import>Import</button>${mine ? `<button class="btn" type="button" data-mk-clear>Remove this browser's ${esc(set.label)} list</button>` : ""}<span class="mk-msg" role="status">${esc(MK_UI.msg)}</span></div>
-      </div>` : ""}`;
+      ${MK_UI.open ? `<div class="mk-import fm" id="fm">${fmHtml()}</div>` : ""}`;
   }
   $("mk-bar").addEventListener("click", e => {
-    if (e.target.closest("[data-mk-flock]")) { MK_UI.open = !MK_UI.open; MK_UI.msg = ""; renderMkBar(mkAll()); return; }
+    if (e.target.closest("[data-mk-flock]")) { MK_UI.open = !MK_UI.open; FM.msg = ""; renderMkBar(mkAll()); return; }
     if (e.target.closest("[data-mk-details]")) { MK_UI.details = !MK_UI.details; renderMkBar(mkAll()); if (MK_UI.details) { const d = $("mk-st-detail"); if (d) d.scrollIntoView({ block: "nearest" }); } return; }
-    if (e.target.closest("[data-mk-clear]")) { const m = flockSetFor(mkFmt()); flockClear(m); MK_UI.msg = `${m.label}: this browser's list removed${FLOCK_SITE[m.id].d && FLOCK_SITE[m.id].d.rows && FLOCK_SITE[m.id].d.rows.length ? "; the list built into the site is back" : ""}.`; renderRankings(); return; }
-    if (e.target.closest("[data-mk-import]")) {
-      const text = $("mk-paste").value;
-      if (!text.trim()) { MK_UI.msg = "Choose a CSV file or paste a list first."; renderMkBar(mkAll()); return; }
-      mkImport(text, "");
-    }
+    fmClick(e);
   });
   $("mk-bar").addEventListener("change", e => {
-    if (e.target.id !== "mk-file" || !e.target.files || !e.target.files[0]) return;
-    const f = e.target.files[0], rd = new FileReader();
-    rd.onload = () => mkImport(String(rd.result || ""), f.name);
-    rd.readAsText(f);
+    if (e.target.id === "mk-file" && e.target.files && e.target.files[0]) {
+      const f = e.target.files[0], rd = new FileReader();
+      rd.onload = () => mkImport(String(rd.result || ""), f.name);
+      rd.readAsText(f);
+      return;
+    }
+    fmChange(e);
   });
+  $("mk-bar").addEventListener("input", e => fmInput(e));
+  $("mk-bar").addEventListener("keydown", e => fmKey(e));
+  // A new version of a Flock list (CSV file or pasted text) → the manager's preview; nothing is saved until Save draft
   async function mkImport(text, file) {
-    const v = id => $(id).value, need = ["mk-fl-qb", "mk-fl-teams", "mk-fl-tep", "mk-fl-rec"].filter(id => v(id) === "");
-    if (need.length) { MK_UI.msg = "Confirm the list's format first (QB format, league size, TE premium, scoring): Adequate doesn't assume it."; renderMkBar(mkAll()); return; }
-    const fmt = { sf: v("mk-fl-qb") === "sf", teams: Number(v("mk-fl-teams")), tep: Number(v("mk-fl-tep")), rec: Number(v("mk-fl-rec")) };
-    if (!slPlayers) { try { const r = await fetch("data/sleeper_players.json"); if (r.ok) slPlayers = await r.json(); } catch (e) {} }
-    const known = new Map(Object.entries(slPlayers || {}).map(([sid, x]) => [sid, [x[0], x[1], x[2] || ""]]));
-    players.forEach(p => { if (p.sleeperId) known.set(p.sleeperId, [p.name, p.pos, p.team || ""]); });
-    const res = flockParse(text, known);
-    if (!res.rows.length) { MK_UI.msg = "No players could be matched in that list."; renderMkBar(mkAll()); return; }
-    const m = flockSave(res, fmt, file), here = flockSetFor(mkFmt());
-    MK_UI.msg = `Imported ${res.rows.length} of ${res.total} players into ${m.label}${res.missed.length ? ` · ${res.missed.length} unmatched (${res.missed.slice(0, 3).join(", ")}${res.missed.length > 3 ? "…" : ""})` : ""}${res.renamed ? ` · ${res.renamed} matched by name because Flock's ID didn't belong to that player` : ""}${res.unknownIds ? ` · ${res.unknownIds} of them with a Flock ID no player in our files has (kept unmatched, not priced, until verified)` : ""}${m !== here ? `. This format uses ${here.label}, so the import shows in ${m.qb === "sf" ? "Superflex" : "1QB"} formats` : ""}.`;
-    renderRankings();
-    if ($("player-modal").open && PP.sid) renderPlayer();
+    const m = fmSet(), v = id => ($(id) ? $(id).value : ""), ids = ["mk-fl-qb", "mk-fl-teams", "mk-fl-tep", "mk-fl-rec"];
+    ids.forEach((id, i) => { FM.fmt[["qb", "teams", "tep", "rec"][i]] = v(id); });
+    if (ids.some(id => v(id) === "")) return fmSay("Confirm the list's format first (QB format, league size, TE premium, scoring): Adequate doesn't assume it. Nothing was saved.", true);
+    const sf = FM.fmt.qb === "sf";
+    // the list being edited decides: a Superflex export never goes into the Regular PPR list or the other way round
+    if (sf !== (m.qb === "sf")) return fmSay(`${m.label} takes ${m.qb === "sf" ? "a Superflex / 2QB" : "a 1QB"} export, and this one is confirmed as ${sf ? "Superflex / 2QB" : "1QB"}. Switch to ${MARKET_SETS.find(x => x !== m).label} above if that's the list it belongs to. Nothing was saved.`, true);
+    if (!String(text || "").trim()) return fmSay("Choose a CSV file or paste a list first.", true);
+    const known = await fmKnown(), R = flockRows(text, known);
+    if (!R.raw.length) return fmSay("No QB, RB, WR or TE rows were found in that list. Nothing was saved.", true);
+    const prev = fmBaseItems(m), used = new Set(R.raw.filter(r => r.sid).map(r => r.sid));
+    const items = R.raw.map(r => {
+      const it = { fid: r.id || "", name: r.name, pos: r.pos, team: r.team || "", tier: r.tier ?? "", er: r.er ?? null, sid: r.sid || "", how: r.sid ? r.how : "", reason: r.sid ? "" : r.how, dup: r.dup || "", old: "" };
+      // a player you picked by hand for this Flock ID and name before is picked again (still your own verified match)
+      const was = !it.sid && !it.dup && it.fid && prev.find(o => o.how === "manual" && o.fid === it.fid && o.pos === it.pos && flNorm(o.name) === flNorm(it.name));
+      if (was && !used.has(was.sid)) { it.sid = was.sid; it.how = "manual"; it.reason = ""; used.add(was.sid); }
+      return it;
+    });
+    const S = FLOCK_SITE[m.id].d;
+    FM.work = { v: 2, set: m.id, at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), sf, teams: Number(FM.fmt.teams), tep: Number(FM.fmt.tep), rec: Number(FM.fmt.rec),
+      file: file || "", csv: String(text).length <= 300000 ? String(text) : "", edited: false, from: S && S.published || null, fmtBy: `confirmed at import${editor.login ? " by @" + editor.login : ""} on ${new Date().toISOString().slice(0, 10)}`,
+      items: fmNormalize(items), pre: { total: R.total, skipped: R.skipped, dupRanks: R.dupRanks, dupIds: R.dupIds } };
+    FM.pick = FM.mv = -1; FM.q = ""; FM.n = 50;
+    fmSay(`Preview of the new ${m.label} list: nothing is saved until Save draft.`);
   }
   // Rankings summary (rail on large desktops, strip above the table on laptops/tablets, hidden on phones):
   // last update, active format, your power rank (league only), biggest risers and fallers since the last snapshot day
@@ -17026,16 +17069,25 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     { id: "flock-sf", provider: "flock", label: "Flock Superflex", file: "data/market/flock_sf.json", keySuffix: ":sf", qb: "sf" },
     { id: "flock-ppr", provider: "flock", label: "Flock Regular PPR", file: "data/market/flock_ppr.json", keySuffix: ":ppr", qb: "1" }
   ];
+  var FL_PRICED = ["id", "name", "manual"];   // the only identities ever priced: Flock ID + full name, full name, or picked by hand
+  var FL_COLS = ["sleeper_id", "rank", "pos", "pos_rank", "tier", "name", "team", "expert_rank", "flock_id", "match"];
   var FLOCK_KEY = "spm_flock";   // the pre-Oct 14 single browser list; read once into the matching list's key, never deleted
   function flockSetFor(F) { return MARKET_SETS.find(m => (m.qb === "sf") === !!F.sf); }
   function flockKey(m) { return FLOCK_KEY + m.keySuffix; }
+  // this browser's draft of each list (the list manager; flockDraft). A draft saved by an older page, without the
+  // manager's per-row identities, comes back as a draft whose rows aren't priced until they're re-imported or resolved.
   var FLOCK = {};
-  MARKET_SETS.forEach(m => { try { FLOCK[m.id] = JSON.parse(localStorage.getItem(flockKey(m)) || "null"); } catch (e) { FLOCK[m.id] = null; } });
-  try {   // one-time move of an old browser import into the list its own format belongs to (by its sf flag)
+  MARKET_SETS.forEach(m => {
+    let raw = null; try { raw = JSON.parse(localStorage.getItem(flockKey(m)) || "null"); } catch (e) {}
+    FLOCK[m.id] = flockDraft(raw, m);
+    if (raw && FLOCK[m.id] && !Array.isArray(raw.items)) { try { localStorage.setItem(flockKey(m), JSON.stringify(FLOCK[m.id])); } catch (e) {} }
+  });
+  try {   // one-time move of an old browser import (spm_flock) into the list its own format belongs to (by its sf flag),
+          // as an unpublished draft: never published, never priced until its players are verified; spm_flock itself is kept
     const old = JSON.parse(localStorage.getItem(FLOCK_KEY) || "null");
     if (old && old.rows && !localStorage.getItem(FLOCK_KEY + ":moved")) {
       const m = MARKET_SETS.find(x => (x.qb === "sf") === !!old.sf);
-      if (!FLOCK[m.id]) { FLOCK[m.id] = old; localStorage.setItem(flockKey(m), JSON.stringify(old)); }
+      if (!FLOCK[m.id]) { FLOCK[m.id] = flockDraft(old, m); localStorage.setItem(flockKey(m), JSON.stringify(FLOCK[m.id])); }
       localStorage.setItem(FLOCK_KEY + ":moved", "1");
     }
   } catch (e) {}
@@ -17043,12 +17095,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   var FLOCK_SITE = Object.fromEntries(MARKET_SETS.map(m => [m.id, { d: null, v: null, err: "" }]));
   function flockNow(m) {
     if (!m) return null;
-    if (FLOCK[m.id]) return FLOCK[m.id];
+    if (FLOCK[m.id] && FLOCK[m.id].rows && FLOCK[m.id].rows.length) return FLOCK[m.id];   // this browser's draft, when it has verified rows
     const S = FLOCK_SITE[m.id], d = S.d;
     if (!d || !Array.isArray(d.rows) || !d.rows.length || !d.fmt) return null;
     if (!S.v) {   // every row of the list, matched or not to an AM board: market coverage never depends on AM's rankings
       const c = (d.cols || []).reduce((o, k, i) => (o[k] = i, o), {}), at = k => (c[k] != null ? c[k] : -1);
-      const rows = d.rows.filter(r => r[at("sleeper_id")]).map(r => [String(r[at("sleeper_id")]), Number(r[at("rank")]), Number(r[at("pos_rank")]), at("tier") >= 0 ? r[at("tier")] || "" : ""]);
+      // only verified identities are priced (match id / name / manual); a file without a match column predates it
+      const rows = d.rows.filter(r => r[at("sleeper_id")] && (at("match") < 0 || FL_PRICED.includes(r[at("match")]))).map(r => [String(r[at("sleeper_id")]), Number(r[at("rank")]), Number(r[at("pos_rank")]), at("tier") >= 0 ? r[at("tier")] || "" : ""]);
       S.v = { at: d.exported, published: d.published, sf: d.fmt.qb === "sf", teams: Number(d.fmt.teams) || 12, tep: Number(d.fmt.tep) || 0, rec: Number(d.fmt.rec ?? 1), file: d.file || "", rows, site: true, set: m.id };
     }
     return S.v;
@@ -17292,7 +17345,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const fl = { id: "fl", name: set.label, set: set.id, kind: "Expert rankings", provider: null, changed: null, fmt: fmtOf("fl") };
     if (FL && FL.at) {
       fl.synced = Date.parse(FL.at); fl.site = !!FL.site; fl.file = FL.file || "";
-      fl.how = FL.site ? `Exported from Flock${FL.file ? ` (${FL.file})` : ""} and built into the site${FL.published ? `; published ${etStamp(FL.published)}` : ""}` : `Imported in this browser${FL.file ? ` (${FL.file})` : " (pasted list)"}; the export time isn't in the file`;
+      fl.how = FL.site ? `Exported from Flock${FL.file ? ` (${FL.file})` : ""} and built into the site${FL.published ? `; published ${etStamp(FL.published)}` : ""}` : `Imported in this browser as an unpublished draft${FL.file ? ` (${FL.file})` : " (pasted list)"}; the export time isn't in the file`;
       fl.status = daysOld(FL.at) > MK_STALE.fl ? "Stale" : "Current";
       if (daysOld(FL.at) >= MK_DEAD.fl) fl.note = `Older than ${MK_DEAD.fl} days, so it's left out of the market comparison.`;
     } else if (FS.err) { fl.status = "Sync failed"; fl.error = `The built-in ${set.label} list couldn't be loaded (${FS.err}).`; }
@@ -17376,7 +17429,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         else if (r.id && !kn) how = "unresolved Flock ID: no player in our files has this ID or this name and position";
         else how = kn ? `its ID belongs to ${kn[0]} (${kn[1]})` : "no player with this name and position";
       }
-      if (sid && seen.has(sid)) { sid = ""; how = "a second row for a player already listed higher"; }
+      if (sid && seen.has(sid)) { r.dup = sid; sid = ""; how = "a second row for a player already listed higher"; }
       if (sid) seen.add(sid);
       r.sid = sid; r.how = how;
     });
@@ -17388,14 +17441,24 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      (flockMatch), not against the AM board alone, so a player AM doesn't rank still counts for the market. A row that can't
      be matched safely is left unmatched (named in the message), never guessed. known = Sleeper ID → [name, pos, team]. */
   function flockParse(text, known) {
-    const lines = String(text || "").split(/\r?\n/).filter(l => l.trim());
-    if (!lines.length) return { rows: [], missed: [], total: 0, unknownIds: 0, renamed: 0 };
     known = known || new Map(players.filter(p => p.sleeperId).map(p => [p.sleeperId, [p.name, p.pos, p.team || ""]]));
+    const { raw } = flockRows(text, known);
+    if (!raw.length) return { rows: [], missed: [], total: 0, unknownIds: 0, renamed: 0 };
+    const pc = {}, rows = [], missed = [];
+    raw.forEach(r => { pc[r.pos] = (pc[r.pos] || 0) + 1; if (r.sid) rows.push([r.sid, r.rank, pc[r.pos], r.tier]); else missed.push(`${r.name}${r.id ? ` · Flock ID ${r.id}` : ""} (${r.how})`); });
+    return { rows, missed, total: raw.length, unknownIds: raw.filter(r => !r.sid && /^unresolved/.test(r.how)).length, renamed: raw.filter(r => r.how === "name" && r.id).length };
+  }
+  // the rows of an export in rank order, matched (flockMatch), plus what the preview reports: rows skipped because they
+  // aren't QB/RB/WR/TE, ranks given to two rows, Flock IDs on two rows
+  function flockRows(text, known) {
+    const lines = String(text || "").split(/\r?\n/).filter(l => l.trim());
+    if (!lines.length) return { raw: [], total: 0, skipped: 0, dupRanks: [], dupIds: [] };
     const split = l => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if ((ch === "," || ch === "\t") && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(x => x.trim()); };
     const head = split(lines[0]).map(h => h.toLowerCase());
     const col = (...names) => head.findIndex(h => names.includes(h));
-    const iId = col("player_id", "sleeper_id", "id"), iRank = col("rank", "overall", "ovr"), iName = col("name", "player"), iPos = col("position", "pos"), iTier = col("tier"), iTeam = col("team");
+    const iId = col("player_id", "sleeper_id", "id"), iRank = col("rank", "overall", "ovr"), iName = col("name", "player"), iPos = col("position", "pos"), iTier = col("tier"), iTeam = col("team"), iEr = col("expert rank", "expert_rank");
     const raw = [], hasHead = iRank >= 0 || iName >= 0 || iId >= 0;
+    let skipped = 0;
     (hasHead ? lines.slice(1) : lines).forEach((l, n) => {
       const c = split(l);
       let id = iId >= 0 ? String(c[iId] || "").trim() : "", pos = iPos >= 0 ? String(c[iPos] || "").toUpperCase() : "", name = iName >= 0 ? c[iName] : "", team = iTeam >= 0 ? String(c[iTeam] || "").toUpperCase() : "";
@@ -17405,23 +17468,378 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         name = l.replace(/^\s*\d+[.)]?\s*/, "").replace(/\b(QB|RB|WR|TE)\s?\d*\b/gi, " ").replace(/\b[A-Z]{2,3}\b/g, " ");
       }
       if (!EDIT_POS.includes(pos) && known.has(id)) pos = known.get(id)[1];
-      if (!EDIT_POS.includes(pos)) return;
+      if (!EDIT_POS.includes(pos)) { skipped++; return; }
       const rk = Number(iRank >= 0 ? c[iRank] : (l.match(/^\s*(\d+)/) || [])[1]) || n + 1;
-      raw.push({ id, pos, team, rank: rk, tier: iTier >= 0 ? c[iTier] : "", name: String(name || l.slice(0, 40)).replace(/\s+/g, " ").trim() });
+      const er = iEr >= 0 && c[iEr] !== "" && isFinite(Number(c[iEr])) ? Number(c[iEr]) : null;
+      raw.push({ id, pos, team, rank: rk, tier: iTier >= 0 ? c[iTier] : "", er, name: String(name || l.slice(0, 40)).replace(/\s+/g, " ").trim() });
     });
+    const twice = arr => { const n = new Map(); arr.forEach(x => n.set(x, (n.get(x) || 0) + 1)); return [...n].filter(([x, k]) => k > 1).map(([x]) => x); };
+    const dupRanks = twice(raw.map(r => r.rank)), dupIds = twice(raw.map(r => r.id).filter(Boolean));
     raw.sort((a, b) => a.rank - b.rank);
     flockMatch(raw, known);
-    const pc = {}, rows = [], missed = [];
-    raw.forEach(r => { pc[r.pos] = (pc[r.pos] || 0) + 1; if (r.sid) rows.push([r.sid, r.rank, pc[r.pos], r.tier]); else missed.push(`${r.name}${r.id ? ` · Flock ID ${r.id}` : ""} (${r.how})`); });
-    return { rows, missed, total: raw.length, unknownIds: raw.filter(r => !r.sid && /^unresolved/.test(r.how)).length, renamed: raw.filter(r => r.how === "name" && r.id).length };
+    return { raw, total: raw.length, skipped, dupRanks, dupIds };
   }
-  // fmt = the format confirmed on import: { sf, teams, tep, rec }; saved into the list that format belongs to
-  function flockSave(parsed, fmt, file) {
-    const m = flockSetFor(fmt);
-    FLOCK[m.id] = { at: new Date().toISOString(), sf: !!fmt.sf, teams: fmt.teams, tep: fmt.tep, rec: fmt.rec, file: file || "", rows: parsed.rows, missed: parsed.missed || [], set: m.id };
-    try { localStorage.setItem(flockKey(m), JSON.stringify(FLOCK[m.id])); } catch (e) {}
-    MK_CACHE.key = "";
-    return m;
+  /* ===== Flock list manager (Alan, Oct 14) =====
+     Both Flock lists (MARKET_SETS) are kept here, opened from the Market edge bar ("Flock lists"): import a new version
+     (a Flock CSV export or pasted text) with its format confirmed by hand, preview it against the published list, edit
+     single rows, save a draft in this browser (spm_flock:sf / spm_flock:ppr) and publish it. Rules (Alan, Oct 14):
+       · the confirmed QB format must be the list's own: a Superflex export never goes into Flock Regular PPR or the other
+         way round (refused, nothing saved), and the format is never assumed;
+       · every exported row is kept: matched rows are priced, the rest stay in `unmatched` with Flock's ID and the reason;
+       · only verified identities are priced (FL_PRICED): "id" / "name" (flockMatch) or "manual", a player picked by hand
+         here (same position, never a player already in the list). A second row for the same player is shown in the
+         preview and stays unmatched until you resolve it;
+       · Publish = ONE commit with that list's file (data/market/flock_<sf|ppr>.json, version 2) and one entry appended to
+         its snapshot month (data/market/flock_snapshots/<set>/<YYYY-MM>.json; existing entries stay byte for byte), both
+         read from the same base commit and read back afterwards (repoSnapshot / repoCommit, unchanged). A draft remembers
+         the published list it started from: a list published elsewhere since then stops the publish until you confirm.
+     A draft is this browser's market list for its format (flockNow) until it's published or discarded. Nothing here
+     touches the AM boards, the AM editor, rankings publishing or ranking history. */
+  var FM = { set: "", work: null, fmt: { qb: "", teams: "", tep: "", rec: "" }, paste: "", q: "", n: 50, msg: "", err: false, busy: false, pick: -1, pq: "", mv: -1, force: "", known: null };
+  var FL_OLD = "saved by an older version of this page, which didn't record how the player was matched: not priced until you re-import the list or pick the player";
+  function fmSet() { return MARKET_SETS.find(m => m.id === FM.set) || flockSetFor(mkFmt()); }
+  // one row of a list: { fid (Flock's player_id), name, pos, team, tier, er (expert rank), sid, how (id | name | manual, or "" when
+  // unmatched), reason (why unmatched), dup (the player a second row repeats), old (an older page's unverified Sleeper ID) }
+  function fmItem(x) {
+    return { fid: String(x.fid || ""), name: String(x.name || ""), pos: String(x.pos || ""), team: String(x.team || ""), tier: x.tier ?? "", er: x.er ?? null,
+      sid: String(x.sid || ""), how: String(x.how || ""), reason: String(x.reason || ""), dup: String(x.dup || ""), old: String(x.old || "") };
+  }
+  // only verified identities keep a Sleeper ID; a second row for a player already in the list stays unmatched
+  function fmNormalize(items) {
+    const seen = new Set();
+    items.forEach(it => {
+      if (it.sid && FL_PRICED.includes(it.how) && ["QB", "RB", "WR", "TE"].includes(it.pos) && !seen.has(it.sid)) { seen.add(it.sid); it.reason = ""; return; }
+      if (it.sid && seen.has(it.sid)) { it.dup = it.sid; it.reason = "a second row for a player already listed higher"; }
+      else if (it.sid) it.reason = it.reason || "the player's identity isn't verified";
+      it.sid = ""; it.how = ""; it.reason = it.reason || "not matched";
+    });
+    return items;
+  }
+  // a stored draft (or one saved by an older page) → the manager's draft; null when there's nothing usable
+  function flockDraft(o, m) {
+    if (!o || typeof o !== "object") return null;
+    let items;
+    if (Array.isArray(o.items)) items = o.items.filter(x => x && typeof x === "object").map(fmItem);
+    else if (Array.isArray(o.rows)) {   // an older page kept only Sleeper IDs, matched by rules that trusted Flock's IDs
+      items = o.rows.filter(r => Array.isArray(r) && r[0]).slice().sort((a, b) => Number(a[1]) - Number(b[1])).map(r => fmItem({ tier: r[3] || "", old: r[0], reason: FL_OLD }));
+      (Array.isArray(o.missed) ? o.missed : []).forEach(x => items.push(fmItem({ name: String(x).replace(/\s*[·(].*$/, ""), reason: "unmatched in the older import" })));
+    } else return null;
+    if (!items.length) return null;
+    fmNormalize(items);
+    const num = (x, d) => (x === "" || x == null || !isFinite(Number(x)) ? d : Number(x));
+    const D = { v: 2, set: m.id, draft: true, at: o.at || null, sf: m.qb === "sf", teams: num(o.teams, null), tep: num(o.tep, null), rec: num(o.rec, null),
+      file: String(o.file || ""), csv: typeof o.csv === "string" ? o.csv : "", edited: !!o.edited, from: o.from || null, fmtBy: String(o.fmtBy || ""),
+      pending: o.pending || null, pendingSaved: o.pendingSaved || null, saved: o.saved || o.at || null, legacy: !Array.isArray(o.items) || !!o.legacy, items };
+    D.rows = fmLists(items).compact; D.missed = [];
+    return D;
+  }
+  // ranks 1..N in list order, position ranks over the whole list (matched or not): Flock's own order
+  function fmLists(items) {
+    const pc = {}, rows = [], unmatched = [], compact = [];
+    items.forEach((it, i) => {
+      const rank = i + 1, pr = it.pos ? (pc[it.pos] = (pc[it.pos] || 0) + 1) : null;
+      if (it.sid && FL_PRICED.includes(it.how)) { rows.push([it.sid, rank, it.pos, pr, it.tier ?? "", it.name, it.team, it.er ?? null, it.fid, it.how]); compact.push([it.sid, rank, pr, it.tier || ""]); }
+      else unmatched.push({ rank, pos: it.pos, pos_rank: pr, name: it.name, team: it.team, flock_id: it.fid, reason: it.reason || "not matched" });
+    });
+    return { rows, unmatched, compact };
+  }
+  // a published list file (version 2) → rows in rank order
+  function fmFromFile(d) {
+    if (!d || !Array.isArray(d.rows)) return [];
+    const c = (d.cols || []).reduce((o, k, i) => (o[k] = i, o), {}), g = (r, k) => (c[k] != null ? r[c[k]] : undefined);
+    const all = d.rows.map(r => ({ rank: Number(g(r, "rank")), it: fmItem({ fid: g(r, "flock_id"), name: g(r, "name"), pos: g(r, "pos"), team: g(r, "team"), tier: g(r, "tier") ?? "", er: g(r, "expert_rank") ?? null, sid: g(r, "sleeper_id"), how: c.match != null ? g(r, "match") : "" }) }))
+      .concat((d.unmatched || []).map(u => ({ rank: Number(u.rank), it: fmItem({ fid: u.flock_id, name: u.name, pos: u.pos, team: u.team, reason: u.reason || "not matched" }) })));
+    all.sort((a, b) => a.rank - b.rank);
+    return fmNormalize(all.map(x => x.it));
+  }
+  const fmPub = m => { const d = FLOCK_SITE[m.id].d; return d && Array.isArray(d.rows) && d.rows.length ? d : null; };
+  const fmBaseItems = m => (FLOCK[m.id] && FLOCK[m.id].items) || fmFromFile(fmPub(m));
+  // moved / new / no longer listed: the matched players of two versions, by Sleeper ID
+  function fmDiff(items, pubItems) {
+    const P = new Map(fmLists(pubItems).rows.map(r => [r[0], r])), W = fmLists(items).rows, Wm = new Set(W.map(r => r[0]));
+    const moved = [], added = [];
+    W.forEach(r => { const p = P.get(r[0]); if (!p) added.push(r); else if (p[1] !== r[1]) moved.push({ r, p, d: p[1] - r[1] }); });
+    moved.sort((a, b) => Math.abs(b.d) - Math.abs(a.d) || a.r[1] - b.r[1]);
+    return { moved, added, dropped: [...P.values()].filter(r => !Wm.has(r[0])) };
+  }
+  // what blocks a save or a publish
+  function fmCheck(W, m) {
+    const e = [], ok = x => x != null && x !== "" && isFinite(Number(x));
+    if (!ok(W.teams) || !ok(W.tep) || !ok(W.rec)) e.push("The list's format isn't confirmed (QB format, league size, TE premium, scoring): import it again with its format.");
+    if (!!W.sf !== (m.qb === "sf")) e.push(`A ${W.sf ? "Superflex" : "1QB"} list can't go into ${m.label}.`);
+    const L = fmLists(W.items), sids = L.rows.map(r => r[0]);
+    if (!L.rows.length) e.push("No player in this list has a verified identity, so there's nothing to price.");
+    if (new Set(sids).size !== sids.length) e.push("A player is listed twice.");
+    if (L.rows.some(r => !FL_PRICED.includes(r[9]) || !["QB", "RB", "WR", "TE"].includes(r[2]) || !/^\d+$/.test(r[0]))) e.push("A priced row has no verified identity.");
+    if (L.unmatched.some(u => !u.reason)) e.push("An unmatched row has no reason.");
+    return e;
+  }
+  // Sleeper ID → [name, pos, team]: the player file plus the AM board (as flockMatch has always used)
+  async function fmKnown() {
+    if (!slPlayers) { try { const r = await fetch("data/sleeper_players.json"); if (r.ok) slPlayers = await r.json(); } catch (e) {} }
+    const known = new Map(Object.entries(slPlayers || {}).map(([sid, x]) => [sid, [x[0], x[1], x[2] || ""]]));
+    players.forEach(p => { if (p.sleeperId) known.set(p.sleeperId, [p.name, p.pos, p.team || ""]); });
+    FM.known = known;
+    return known;
+  }
+  const fmDay = ts => (ts && isFinite(Date.parse(ts)) ? etStamp(ts) : "—");
+  const fmFmtText = (qb, teams, rec, tep) => `${qb === "sf" ? "Superflex" : "1QB"} · ${teams}-team · ${recName(Number(rec))} · ${Number(tep) > 0 ? tepLabel(Number(tep)) || `TE premium +${tep}` : "no TE premium"}`;
+  const fmHow = it => (it.how === "id" ? "By Flock ID" : it.how === "name" ? "By name" : it.how === "manual" ? "Picked by hand" : it.dup ? "Duplicate" : "Unmatched");
+  function fmSay(msg, err) { FM.msg = msg; FM.err = !!err; fmRender(); }
+  function fmRender() {
+    const el = $("fm"); if (!el) return;
+    const keep = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : "";
+    const open = [...el.querySelectorAll("details[data-fm-sec]")].map(d => [d.dataset.fmSec, d.open]);   // sections stay as you left them
+    el.innerHTML = fmHtml();
+    open.forEach(([k, o]) => { const d = el.querySelector(`details[data-fm-sec="${k}"]`); if (d) d.open = o; });
+    if (keep && $(keep)) $(keep).focus();
+  }
+  function fmName(it) {   // an older page's row shows the player it claimed, marked as unverified
+    if (it.name) return it.name;
+    const k = it.old && FM.known && FM.known.get(it.old);
+    return k ? `${k[0]} (unverified)` : it.old ? `Sleeper ID ${it.old} (unverified)` : "—";
+  }
+  function fmHtml() {
+    const m = fmSet(), here = flockSetFor(mkFmt()), pub = fmPub(m), D = FLOCK[m.id], W = FM.work && FM.work.set === m.id ? FM.work : null, S = FLOCK_SITE[m.id];
+    if (D && D.legacy && !FM.known) fmKnown().then(() => fmRender());
+    const tabs = `<div class="view-toggle fm-lists" role="group" aria-label="Flock list">${MARKET_SETS.map(x => `<button type="button" class="vt-btn" data-fm-set="${x.id}" aria-pressed="${x.id === m.id}">${esc(x.label)}</button>`).join("")}</div>`;
+    const use = `${m.qb === "sf" ? "Superflex and 2QB leagues" : "1QB leagues"} read this list${m === here ? "; this format uses it" : `; this format uses ${esc(here.label)}`}.`;
+    const pu = pub ? fmLists(fmFromFile(pub)).unmatched : [];
+    const pubLine = pub ? `Exported ${esc(fmDay(pub.exported))} · published ${esc(fmDay(pub.published))}${pub.by ? ` by @${esc(pub.by)}` : ""} · <b>${pub.rows.length}</b> players · ${pu.length} unmatched${pub.fmt ? ` · ${esc(fmFmtText(pub.fmt.qb, pub.fmt.teams, pub.fmt.rec, pub.fmt.tep))}` : ""}`
+      : S.err ? `<span class="fm-err">couldn't be loaded (${esc(S.err)})</span>` : "No list published yet";
+    const dl = D ? fmLists(D.items) : null;
+    const draftLine = D ? `Saved in this browser ${esc(fmDay(D.saved))} · <b>${dl.rows.length}</b> priced · ${dl.unmatched.length} unmatched · not published${D.legacy ? ` · <span class="fm-warn">from an older import: rows aren't priced until re-imported or picked by hand</span>` : ""}${D.pending ? ` · <span class="fm-warn">an earlier publish wasn't confirmed: Publish checks whether it landed</span>` : ""}${D.teams != null ? ` · ${esc(fmFmtText(m.qb, D.teams, D.rec, D.tep))}` : ""}`
+      : "No draft in this browser";
+    const unmTable = (list, act) => `<table class="fm-t"><thead><tr><th>#</th><th>Player</th><th class="fm-hide">Flock ID</th><th class="fm-why">Why unmatched</th>${act ? "<th></th>" : ""}</tr></thead><tbody>${list.map(u => `<tr><td>${u.rank}</td><td class="fm-nm">${esc(u.name || "—")}<span class="fm-sub">${esc(u.pos)}${u.team ? " · " + esc(u.team) : ""}</span><span class="fm-why-m">${u.flock_id ? `Flock ID ${esc(u.flock_id)} · ` : ""}${esc(u.reason)}</span></td><td class="fm-hide">${esc(u.flock_id || "—")}</td><td class="fm-why">${esc(u.reason)}</td>${act ? `<td class="fm-act">${act(u)}</td>` : ""}</tr>`).join("")}</tbody></table>`;
+    let h = `<div class="fm-head">${tabs}<p class="fm-note">${use} Flock has no feed: a list comes from your export, and its format is never assumed.</p></div>
+      <dl class="fm-state"><div><dt>Published</dt><dd>${pubLine}</dd></div><div><dt>Draft</dt><dd>${draftLine}</dd></div></dl>`;
+    if (pu.length && !W) h += `<details class="fm-sec"><summary>Unmatched in the published list (${pu.length})</summary>${unmTable(pu)}</details>`;
+    if (W) h += fmWorkHtml(W, m, pub);
+    else {
+      const sel = (id, lab, k, opts) => `<select class="select" id="${id}" aria-label="${lab}">${opts.map(([v, t]) => `<option value="${v}"${String(FM.fmt[k]) === v ? " selected" : ""}>${t}</option>`).join("")}</select>`;
+      h += `<div class="fm-actions">${D ? `<button class="btn" type="button" data-fm-edit="draft">Edit draft</button><button class="btn primary" type="button" data-fm-publish${FM.busy ? " disabled" : ""}>${FM.busy ? "Publishing…" : FM.force === m.id ? "Publish over it" : "Publish draft"}</button><button class="btn" type="button" data-mk-clear>Discard draft</button>` : pub ? `<button class="btn" type="button" data-fm-edit="pub">Edit the published list</button>` : ""}</div>
+        <div class="fm-imp"><p class="fm-k">Import a new version of ${esc(m.label)}</p>
+        <p class="pp-note">A Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or a pasted ranked list. Confirm the list's format first: ${m.qb === "sf" ? "this list takes Superflex / 2QB exports only" : "this list takes 1QB exports only"}. You'll see a preview before anything is saved.</p>
+        <div class="mk-imp-row">
+          ${sel("mk-fl-qb", "Flock list: QB format", "qb", [["", "QB format…"], ["sf", "Superflex / 2QB"], ["1qb", "1QB"]])}
+          ${sel("mk-fl-teams", "Flock list: league size", "teams", [["", "League size…"], ["8", "8 teams"], ["10", "10 teams"], ["12", "12 teams"], ["14", "14 teams"]])}
+          ${sel("mk-fl-tep", "Flock list: TE premium", "tep", [["", "TE premium…"], ["0", "No TE premium"], ["0.5", "TE Premium +"], ["1", "TE Premium ++"]])}
+          ${sel("mk-fl-rec", "Flock list: scoring", "rec", [["", "Scoring…"], ["1", "Full PPR"], ["0.5", "Half PPR"], ["0", "Standard"]])}
+        </div>
+        <textarea id="mk-paste" class="mk-paste" rows="3" placeholder="Paste the rankings here, or choose a CSV file">${esc(FM.paste)}</textarea>
+        <div class="mk-imp-row"><label class="btn" for="mk-file">Choose CSV file</label><input type="file" id="mk-file" accept=".csv,text/csv,text/plain" hidden><button class="btn primary" type="button" data-mk-import>Preview pasted list</button></div></div>`;
+    }
+    return h + `<p class="mk-msg${FM.err ? " fm-err" : ""}" role="status">${esc(FM.msg)}</p>`;
+  }
+  function fmWorkHtml(W, m, pub) {
+    const L = fmLists(W.items), n = h => W.items.filter(it => it.sid && it.how === h).length, dups = W.items.filter(it => !it.sid && it.dup);
+    const pre = W.pre || {}, diff = fmDiff(W.items, pub ? fmFromFile(pub) : []), idx = new Map(W.items.map((it, i) => [it, i]));
+    const nameOf = sid => { const it = W.items.find(o => o.sid === sid); return it ? `#${W.items.indexOf(it) + 1} ${it.name}` : sid; };
+    const warn = [];
+    if (pre.dupRanks && pre.dupRanks.length) warn.push(`Rank ${pre.dupRanks.slice(0, 5).join(", ")} appears on two rows in the export; they're kept in file order`);
+    if (pre.dupIds && pre.dupIds.length) warn.push(`Flock ID ${pre.dupIds.slice(0, 5).join(", ")} appears on two rows`);
+    let h = `<div class="fm-work"><p class="fm-k">${pre.total != null ? "Preview of the import" : "Editing"} · ${esc(m.label)} · ${esc(fmFmtText(m.qb, W.teams, W.rec, W.tep))}${W.file ? ` · ${esc(W.file)}` : ""}</p>
+      <p class="fm-sum" data-fm-sum><b>${W.items.length}</b> rows · <b>${L.rows.length}</b> matched (${n("id")} by Flock ID · ${n("name")} by name · ${n("manual")} picked by hand) · <b>${L.unmatched.length}</b> unmatched · <b>${dups.length}</b> duplicate${dups.length === 1 ? "" : "s"}${pre.skipped ? ` · ${pre.skipped} skipped (not QB, RB, WR or TE)` : ""}</p>
+      <p class="fm-sum" data-fm-diff>${pub ? `Against the published list: <b>${diff.moved.length}</b> moved · <b>${diff.added.length}</b> new · <b>${diff.dropped.length}</b> no longer listed` : "No published list to compare with yet"}</p>
+      ${warn.length ? `<p class="fm-sum fm-warn">${esc(warn.join(" · "))}.</p>` : ""}`;
+    // one tool at a time: pick the player for an unmatched row, or move a row to a rank
+    if (FM.pick >= 0 && W.items[FM.pick]) {
+      const it = W.items[FM.pick];
+      h += `<div class="fm-tool" data-fm-tool="pick"><p class="fm-k">Pick the player for #${FM.pick + 1} ${esc(it.name || fmName(it))} (${esc(it.pos)}${it.team ? " · " + esc(it.team) : ""}${it.fid ? ` · Flock ID ${esc(it.fid)}` : ""})</p>
+        <p class="pp-note">Only a ${esc(it.pos)} not already in this list. The match is recorded as picked by hand.</p>
+        <input class="search" id="fm-pq" type="search" autocomplete="off" placeholder="Search players" aria-label="Search players to match" value="${esc(FM.pq)}">
+        <div class="fm-res" id="fm-res">${fmPickHtml(W, it)}</div>
+        <div class="mk-imp-row"><button class="btn" type="button" data-fm-close>Cancel</button></div></div>`;
+    } else if (FM.mv >= 0 && W.items[FM.mv]) {
+      const it = W.items[FM.mv];
+      h += `<div class="fm-tool" data-fm-tool="mv"><label class="mk-imp-row"><span class="fm-k">Move #${FM.mv + 1} ${esc(fmName(it))} to rank</span>
+        <input class="mv-input" id="fm-mvn" type="number" min="1" max="${W.items.length}" step="1" inputmode="numeric" value="${FM.mv + 1}"></label>
+        <div class="mk-imp-row"><button class="btn primary" type="button" data-fm-mv-go>Move</button><button class="btn" type="button" data-fm-close>Cancel</button></div></div>`;
+    }
+    const unm = W.items.map((it, i) => [it, i]).filter(([it]) => !it.sid);
+    const act = i => `<button class="btn" type="button" data-fm-pick="${i}">Pick player</button><button class="btn link" type="button" data-fm-rm="${i}" aria-label="Remove row ${i + 1}">Remove</button>`;
+    if (unm.length) h += `<details class="fm-sec" open data-fm-sec="unmatched"><summary>Unmatched (${unm.length}): kept in the list, not priced</summary><table class="fm-t"><thead><tr><th>#</th><th>Player</th><th class="fm-hide">Flock ID</th><th class="fm-why">Why</th><th></th></tr></thead><tbody>
+      ${unm.map(([it, i]) => { const why = esc(it.reason) + (it.dup ? ` (same player as ${esc(nameOf(it.dup))})` : ""); return `<tr><td>${i + 1}</td><td class="fm-nm">${esc(fmName(it))}<span class="fm-sub">${esc(it.pos)}${it.team ? " · " + esc(it.team) : ""}</span><span class="fm-why-m">${it.fid ? `Flock ID ${esc(it.fid)} · ` : ""}${why}</span></td><td class="fm-hide">${esc(it.fid || "—")}</td><td class="fm-why">${why}</td><td class="fm-act">${act(i)}</td></tr>`; }).join("")}</tbody></table></details>`;
+    if (dups.length) h += `<details class="fm-sec" open data-fm-sec="dups"><summary>Duplicates (${dups.length}): a second row for a player, never priced twice</summary><ul class="fm-ul">${dups.map(it => `<li>#${idx.get(it) + 1} ${esc(it.name)} ${esc(it.pos)}${it.fid ? ` · Flock ID ${esc(it.fid)}` : ""} · same player as ${esc(nameOf(it.dup))}</li>`).join("")}</ul></details>`;
+    const row3 = r => `${esc(r[5])} <span class="fm-sub">${esc(r[2])}${r[3]}</span>`;
+    if (diff.moved.length) h += `<details class="fm-sec" data-fm-sec="moved"><summary>Moved since the published list (${diff.moved.length})</summary><ul class="fm-ul">${diff.moved.slice(0, 40).map(x => `<li><span class="fm-mvd ${x.d > 0 ? "up" : "down"}">${x.d > 0 ? "▲" : "▼"}${Math.abs(x.d)}</span> #${x.r[1]} ${row3(x.r)} <span class="fm-sub">was #${x.p[1]} · ${esc(x.p[2])}${x.p[3]}</span></li>`).join("")}${diff.moved.length > 40 ? `<li class="fm-sub">…and ${diff.moved.length - 40} more</li>` : ""}</ul></details>`;
+    if (diff.added.length) h += `<details class="fm-sec" data-fm-sec="new"><summary>New in this version (${diff.added.length})</summary><ul class="fm-ul">${diff.added.map(r => `<li>#${r[1]} ${row3(r)}</li>`).join("")}</ul></details>`;
+    if (diff.dropped.length) h += `<details class="fm-sec" data-fm-sec="dropped"><summary>No longer listed (${diff.dropped.length})</summary><ul class="fm-ul">${diff.dropped.map(r => `<li>${row3(r)} <span class="fm-sub">was #${r[1]}</span></li>`).join("")}</ul></details>`;
+    h += `<details class="fm-sec" data-fm-sec="all"${FM.q ? " open" : ""}><summary>Every row (${W.items.length}): move, remove</summary>
+      <input class="search fm-q" id="fm-q" type="search" autocomplete="off" placeholder="Find a player in this list" aria-label="Find a player in this list" value="${esc(FM.q)}">
+      <div id="fm-rows">${fmRowsHtml(W)}</div></details>
+      <div class="fm-actions"><button class="btn primary" type="button" data-fm-save>Save draft</button><button class="btn" type="button" data-fm-cancel>Cancel</button><span class="fm-sub">Saved in this browser only; Publish sends it to the live site.</span></div></div>`;
+    return h;
+  }
+  function fmRowsHtml(W) {
+    const q = flNorm(FM.q), list = W.items.map((it, i) => [it, i]).filter(([it]) => !q || flNorm(fmName(it) + " " + it.team).includes(q));
+    const pc = {}, prs = W.items.map(it => (it.pos ? (pc[it.pos] = (pc[it.pos] || 0) + 1) : ""));
+    const shown = list.slice(0, FM.n), N = W.items.length;
+    return `<table class="fm-t fm-all"><thead><tr><th>#</th><th>Player</th><th>Pos</th><th class="fm-hide">Match</th><th></th></tr></thead><tbody>${shown.map(([it, i]) => `<tr${it.sid ? "" : ` class="fm-un"`}>
+      <td><button class="btn link fm-rk" type="button" data-fm-mv="${i}" title="Move to rank…" aria-label="Move ${esc(fmName(it))} to another rank">${i + 1}</button></td>
+      <td class="fm-nm">${esc(fmName(it))}${it.team ? `<span class="fm-sub">${esc(it.team)}</span>` : ""}</td>
+      <td>${it.pos ? `<span class="pos ${esc(it.pos)}">${esc(it.pos)}${prs[i]}</span>` : "—"}</td>
+      <td class="fm-hide fm-sub">${fmHow(it)}</td>
+      <td class="fm-act"><button class="btn link" type="button" data-fm-up="${i}" aria-label="Move ${esc(fmName(it))} up"${i === 0 ? " disabled" : ""}>▲</button><button class="btn link" type="button" data-fm-dn="${i}" aria-label="Move ${esc(fmName(it))} down"${i === N - 1 ? " disabled" : ""}>▼</button>${it.sid ? "" : `<button class="btn link" type="button" data-fm-pick="${i}">Pick</button>`}<button class="btn link" type="button" data-fm-rm="${i}" aria-label="Remove ${esc(fmName(it))}">×</button></td></tr>`).join("")}</tbody></table>
+      ${list.length > shown.length ? `<button class="btn link" type="button" data-fm-more>Show ${Math.min(100, list.length - shown.length)} more of ${list.length - shown.length}</button>` : ""}${!list.length ? `<p class="fm-sub">No row matches “${esc(FM.q)}”.</p>` : ""}`;
+  }
+  function fmPickHtml(W, it) {
+    const q = flNorm(FM.pq), known = FM.known;
+    if (!known) { fmKnown().then(() => { const r = $("fm-res"); if (r && FM.work) r.innerHTML = fmPickHtml(FM.work, FM.work.items[FM.pick] || it); }); return `<span class="fm-sub">Loading players…</span>`; }
+    if (q.length < 2) return `<span class="fm-sub">Type at least two letters.</span>`;
+    const inList = new Set(W.items.filter(o => o.sid).map(o => o.sid));
+    const score = n => (n === q ? 0 : n.startsWith(q) ? 1 : 2);   // the exact name first, then names that start with it
+    const hits = [...known].filter(([sid, k]) => k[1] === it.pos && flNorm(k[0]).includes(q)).sort((x, y) => score(flNorm(x[1][0])) - score(flNorm(y[1][0]))).slice(0, 10);
+    return hits.length ? hits.map(([sid, k]) => `<button class="btn" type="button" data-fm-sid="${esc(sid)}"${inList.has(sid) ? ` disabled title="Already in this list"` : ""}>${esc(k[0])} <span class="fm-sub">${esc(k[1])}${k[2] ? " · " + esc(k[2]) : ""} · ${esc(sid)}${inList.has(sid) ? " · already listed" : ""}</span></button>`).join("") : `<span class="fm-sub">No ${esc(it.pos)} named “${esc(FM.pq)}” in our player files.</span>`;
+  }
+  // explicit, user-verified match of one unmatched row; refused for another position or a player already in the list
+  function fmResolve(i, sid) {
+    const W = FM.work, it = W && W.items[i], k = FM.known && FM.known.get(sid);
+    if (!it || !k) return fmSay("That player isn't in our player files.", true);
+    if (k[1] !== it.pos) return fmSay(`${k[0]} is a ${k[1]}, and this row is a ${it.pos}: not matched.`, true);
+    const j = W.items.findIndex((o, n) => n !== i && o.sid === sid);
+    if (j >= 0) return fmSay(`${k[0]} is already in this list at #${j + 1}. Remove or re-check that row first: a player is never listed twice. Nothing changed.`, true);
+    if (!it.name) { it.name = k[0]; it.team = it.team || k[2]; }
+    Object.assign(it, { sid, how: "manual", reason: "", dup: "", old: "" });
+    W.edited = true; FM.pick = -1; FM.pq = "";
+    fmSay(`#${i + 1} is ${k[0]} (picked by hand).`);
+  }
+  function fmMove(i, to) {
+    const W = FM.work; if (!W || !W.items[i]) return;
+    to = Math.max(1, Math.min(W.items.length, Math.round(to)));
+    const [it] = W.items.splice(i, 1); W.items.splice(to - 1, 0, it); W.edited = true; FM.mv = -1;
+    fmSay(`${fmName(it)} moved to #${to}.`);
+  }
+  function fmSaveDraft() {
+    const W = FM.work, m = W && MARKET_SETS.find(x => x.id === W.set); if (!W || !m) return;
+    fmNormalize(W.items);
+    const errs = fmCheck(W, m); if (errs.length) return fmSay(errs.join(" ") + " Nothing was saved.", true);
+    const prev = FLOCK[m.id], D = flockDraft({ ...W, saved: new Date().toISOString(), pending: prev && prev.pending || null, pendingSaved: prev && prev.pendingSaved || null, legacy: W.items.some(it => it.old) }, m);
+    try { localStorage.setItem(flockKey(m), JSON.stringify(D)); }
+    catch (e) { return fmSay("This browser is blocking site storage, so the draft couldn't be saved.", true); }
+    FLOCK[m.id] = D; FM.work = null; FM.pick = FM.mv = -1; MK_CACHE.key = "";
+    const here = flockSetFor(mkFmt()), L = fmLists(D.items);
+    FM.msg = `Draft saved into ${m.label} in this browser: ${L.rows.length} priced, ${L.unmatched.length} unmatched. Not published yet.${m !== here ? ` This format uses ${here.label}, so the draft shows in ${m.qb === "sf" ? "Superflex" : "1QB"} formats.` : ""}`; FM.err = false;
+    renderRankings();
+    if ($("player-modal").open && PP.sid) renderPlayer();
+  }
+  // the list file as published: version 2, the same layout as pipeline/flock_v2_migrate.py writes
+  const fmJson = o => JSON.stringify(o).split("],[").join("],\n[");
+  function fmFileObj(D, m, cur, ts, login) {
+    const L = fmLists(D.items);
+    return { version: 2, set: m.id, label: m.label,
+      note: "Flock redraft rankings, added by Alan for his own non-commercial use. Market data, never an AM board: nothing here changes AM ranks, tiers or values. `exported` = when the list was exported from Flock (Flock publishes no time for its own ranking changes; for a list imported in the manager, the import time); `published` = when it went live on Adequate. `flock_id` = Flock's own player_id; `match` = how the row was matched to a Sleeper ID (id / name: see pipeline/flock_v2_migrate.py; manual: picked by hand in the list manager); rows that can't be verified are in `unmatched` with Flock's ID and the reason. Every published version is kept in data/market/flock_snapshots/" + m.id + "/.",
+      fmt: { qb: m.qb, teams: Number(D.teams), rec: Number(D.rec), tep: Number(D.tep) },
+      fmt_source: D.fmtBy || (cur && cur.fmt_source) || "confirmed at import",
+      exported: D.at, published: ts, by: login || null, file: D.file || "", cols: FL_COLS, rows: L.rows, unmatched: L.unmatched };
+  }
+  // one entry appended to the month's snapshot file; the entries already there stay exactly as they were, byte for byte
+  function fmSnapText(text, m, entry, path) {
+    if (text == null) return fmJson({ version: 1, set: m.id, note: "Every published version of this Flock list, never rewritten (Alan, Oct 14).", snapshots: [entry] }) + "\n";
+    const old = parseOr(text, path, null);
+    if (!old || old.version !== 1 || old.set !== m.id || !Array.isArray(old.snapshots)) throw ghError("data", `${path} on GitHub isn't a snapshot file of ${m.label}, so nothing was written.`);
+    const body = text.replace(/\s+$/, "");
+    if (!body.endsWith("]}")) throw ghError("data", `${path} on GitHub has an unexpected layout, so nothing was written.`);
+    const out = body.slice(0, -2) + (old.snapshots.length ? ",\n" : "") + fmJson(entry) + "]}\n";
+    const back = JSON.parse(out);
+    if (back.snapshots.length !== old.snapshots.length + 1 || JSON.stringify(back.snapshots.slice(0, -1)) !== JSON.stringify(old.snapshots) || JSON.stringify(back.snapshots[back.snapshots.length - 1]) !== JSON.stringify(entry))
+      throw ghError("data", `Appending to ${path} didn't keep its earlier entries intact, so nothing was written.`);
+    return out;
+  }
+  function fmStore(m, D) { FLOCK[m.id] = D; try { localStorage.setItem(flockKey(m), JSON.stringify(D)); } catch (e) {} }
+  function fmLanded(m, obj) {   // the published list is now this browser's list; the draft is done
+    const S = FLOCK_SITE[m.id]; S.d = obj; S.v = null; S.err = "";
+    flockClear(m); FM.force = "";
+  }
+  async function fmPublish(m) {
+    const D0 = FLOCK[m.id];
+    if (!D0 || !D0.items) return fmSay("There's no saved draft of this list to publish.", true);
+    if (!editor.token) return fmSay("Publishing needs a GitHub editor token: sign in from the editor bar (Publish to live site), then publish the draft here. The draft stays in this browser.", true);
+    const errs = fmCheck(D0, m); if (errs.length) return fmSay(errs.join(" ") + " Nothing was published.", true);
+    const force = FM.force === m.id, login = editor.login || "";
+    FM.busy = true; fmSay(`Publishing ${m.label}…`);
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const D = FLOCK[m.id], ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), snapPath = `data/market/flock_snapshots/${m.id}/${ts.slice(0, 7)}.json`;
+        const base = await repoSnapshot([m.file, snapPath]);   // both files from the same commit
+        const cur = parseOr(base.files[m.file].text, m.file, null), curPub = (cur && cur.published) || null;
+        if (D.pending && curPub === D.pending) {   // an earlier attempt whose answer was lost did land
+          if (D.saved === D.pendingSaved) { fmLanded(m, cur); FM.busy = false; fmSay(`The earlier publish had landed: ${m.label} is published (${(cur.rows || []).length} players). Nothing was committed twice.`); renderRankings(); return true; }
+          Object.assign(D, { from: curPub, pending: null, pendingSaved: null }); fmStore(m, D);
+        }
+        if ((D.from || null) !== curPub && !force) {
+          FM.force = m.id; FM.busy = false;
+          fmSay(`${m.label} was published elsewhere since this draft was made (${curPub ? `published ${fmDay(curPub)}${cur.by ? " by @" + cur.by : ""}` : "removed"}). Nothing was written; your draft is kept. Click Publish over it if your draft should replace that list.`, true);
+          return false;
+        }
+        const obj = fmFileObj(D, m, cur, ts, login);
+        const entry = { exported: obj.exported, published: ts, by: obj.by, fmt: obj.fmt, file: obj.file, cols: FL_COLS, rows: obj.rows, unmatched: obj.unmatched };
+        if (D.csv) entry.csv = D.csv;
+        if (D.edited) entry.edited = true;
+        const files = [{ path: m.file, text: fmJson(obj) + "\n" }, { path: snapPath, text: fmSnapText(base.files[snapPath].text, m, entry, snapPath) }];
+        Object.assign(D, { pending: ts, pendingSaved: D.saved }); fmStore(m, D);   // remembered in case GitHub's answer is lost
+        const res = await repoCommit(base, files, `${m.label} list${login ? " by @" + login : ""} (${obj.rows.length} players)`);
+        if (!res) { Object.assign(D, { pending: null, pendingSaved: null }); fmStore(m, D); continue; }   // the branch moved: read again
+        fmLanded(m, obj); FM.busy = false;
+        fmSay(`Published and confirmed: ${m.label}, ${obj.rows.length} players${obj.unmatched.length ? `, ${obj.unmatched.length} unmatched` : ""}. The live site updates in about a minute.`);
+        renderRankings();
+        return true;
+      }
+      throw ghError("conflict", "GitHub's main branch kept changing while publishing; nothing was written. Try again.");
+    } catch (err) {
+      FM.busy = false;
+      const D = FLOCK[m.id];
+      if (D && err.kind !== "unconfirmed" && D.pending) { D.pending = null; D.pendingSaved = null; fmStore(m, D); }
+      fmSay(err.kind === "unconfirmed" ? `Publish not confirmed: ${redact(err.message)}. Your draft is kept; Publish again checks whether it landed and never commits it twice.`
+        : `Publish failed: ${redact(err.message)}. Your draft is still saved in this browser.`, true);
+      return false;
+    }
+  }
+  function fmClick(e) {
+    const t = sel => e.target.closest(sel), W = FM.work, m = fmSet();
+    let b;
+    if ((b = t("[data-fm-set]"))) { FM.set = b.dataset.fmSet; FM.msg = ""; FM.pick = FM.mv = -1; return fmRender(); }
+    if (t("[data-mk-import]")) { const ta = $("mk-paste"); if (ta) FM.paste = ta.value; return mkImport(FM.paste, ""); }
+    if (t("[data-mk-clear]")) {
+      flockClear(m); FM.force = "";
+      FM.msg = `${m.label}: this browser's draft discarded${fmPub(m) ? "; the published list is back" : ""}.`; FM.err = false;
+      return renderRankings();
+    }
+    if ((b = t("[data-fm-edit]"))) {
+      const D = FLOCK[m.id], pub = fmPub(m);
+      if (b.dataset.fmEdit === "draft" && D) FM.work = JSON.parse(JSON.stringify({ ...D, pre: null }));
+      else if (pub) FM.work = { v: 2, set: m.id, at: pub.exported, sf: m.qb === "sf", teams: pub.fmt.teams, tep: pub.fmt.tep, rec: pub.fmt.rec, file: pub.file || "", csv: "", edited: false, from: pub.published || null, fmtBy: pub.fmt_source || "", items: fmFromFile(pub), pre: null };
+      FM.pick = FM.mv = -1; FM.q = ""; FM.n = 50;
+      if (FM.work && FM.work.legacy && !FM.known) fmKnown().then(fmRender);
+      return fmSay("");
+    }
+    if (t("[data-fm-publish]")) return fmPublish(m);
+    if (!W) return;
+    if (t("[data-fm-save]")) return fmSaveDraft();
+    if (t("[data-fm-cancel]")) { FM.work = null; FM.pick = FM.mv = -1; return fmSay("Nothing was saved."); }
+    if (t("[data-fm-close]")) { FM.pick = FM.mv = -1; return fmRender(); }
+    if ((b = t("[data-fm-pick]"))) { FM.pick = Number(b.dataset.fmPick); FM.mv = -1; FM.pq = ""; fmRender(); const q = $("fm-pq"); if (q) q.focus(); return; }
+    if ((b = t("[data-fm-sid]"))) return fmResolve(FM.pick, b.dataset.fmSid);
+    if ((b = t("[data-fm-mv]"))) { FM.mv = Number(b.dataset.fmMv); FM.pick = -1; fmRender(); const q = $("fm-mvn"); if (q) { q.focus(); q.select(); } return; }
+    if (t("[data-fm-mv-go]")) { const v = Number(($("fm-mvn") || {}).value); if (!(v >= 1 && v <= W.items.length && Number.isInteger(v))) return fmSay(`Enter a rank from 1 to ${W.items.length}.`, true); return fmMove(FM.mv, v); }
+    if ((b = t("[data-fm-up]"))) { const i = Number(b.dataset.fmUp); if (i > 0) fmMove(i, i); return; }
+    if ((b = t("[data-fm-dn]"))) { const i = Number(b.dataset.fmDn); if (i < W.items.length - 1) fmMove(i, i + 2); return; }
+    if ((b = t("[data-fm-rm]"))) { const i = Number(b.dataset.fmRm), [it] = W.items.splice(i, 1); W.edited = true; FM.pick = FM.mv = -1; return fmSay(`${fmName(it)} removed from the list (#${i + 1}).`); }
+    if (t("[data-fm-more]")) { FM.n += 100; const r = $("fm-rows"); if (r) r.innerHTML = fmRowsHtml(W); }
+  }
+  function fmChange(e) {
+    const k = { "mk-fl-qb": "qb", "mk-fl-teams": "teams", "mk-fl-tep": "tep", "mk-fl-rec": "rec" }[e.target.id];
+    if (k) FM.fmt[k] = e.target.value;
+  }
+  function fmInput(e) {
+    const id = e.target.id;
+    if (id === "mk-paste") FM.paste = e.target.value;
+    else if (id === "fm-q" && FM.work) { FM.q = e.target.value; FM.n = 50; const r = $("fm-rows"); if (r) r.innerHTML = fmRowsHtml(FM.work); }
+    else if (id === "fm-pq" && FM.work) { FM.pq = e.target.value; const r = $("fm-res"); if (r) r.innerHTML = fmPickHtml(FM.work, FM.work.items[FM.pick]); }
+  }
+  function fmKey(e) {
+    if (e.key === "Enter" && e.target.id === "fm-mvn") { e.preventDefault(); const go = document.querySelector("[data-fm-mv-go]"); if (go) go.click(); }
+    else if (e.key === "Escape" && (FM.pick >= 0 || FM.mv >= 0)) { e.stopPropagation(); FM.pick = FM.mv = -1; fmRender(); }
   }
   var MK_READY = true;
   function flockClear(m) { FLOCK[m.id] = null; try { localStorage.removeItem(flockKey(m)); localStorage.setItem(FLOCK_KEY + ":moved", "1"); } catch (e) {} MK_CACHE.key = ""; }
@@ -18104,7 +18522,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   SPM.market = () => { const all = mkAll(), F = all.F || mkFmt(), set = flockSetFor(F);
     return { set: set.id, list: set.label, sf: !!F.sf, teams: F.teams, rec: F.rec, tep: F.tep, players: all.map.size,
       srcs: all.srcs.map(x => ({ id: x.id, name: x.name, list: x.list || null, set: x.set || null, w: Math.round(x.w * 1000) / 1000, fmt: x.fmt, notes: x.notes.slice(), rows: x.rows.size })),
-      lists: MARKET_SETS.map(m => { const L = flockNow(m); return { id: m.id, label: m.label, qb: m.qb, loaded: !!L, rows: L ? L.rows.length : 0, site: !!(L && L.site), exported: L ? L.at : null }; }) }; };
+      lists: MARKET_SETS.map(m => { const L = flockNow(m); return { id: m.id, label: m.label, qb: m.qb, loaded: !!L, rows: L ? L.rows.length : 0, site: !!(L && L.site), draft: !!(L && L.draft), exported: L ? L.at : null }; }) }; };
   SPM.rolesNote = () => rolesNote();   // "" when the depth-chart roles are current and complete
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
   // one team's 3-team read (what it receives vs what it sends, values as numbers) next to the 2-team read of the same
@@ -18121,6 +18539,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // the import's parser and ID matching on a text, with this page's player files (tests: the page and
   // pipeline/flock_v2_migrate.py must match rows the same way)
   // `known` (optional, [[sid, [name, pos, team]], …]) replaces the player files for a synthetic test
+  if (window.__SPM_TEST_HOOKS === true) SPM.flockManager = () => FM;   // the Flock list manager's state (tests only)
   if (window.__SPM_TEST_HOOKS === true) SPM.flockParse = async (text, known) => {
     if (known) return flockParse(text, new Map(known));
     if (!slPlayers) { try { const r = await fetch("data/sleeper_players.json"); if (r.ok) slPlayers = await r.json(); } catch (e) {} }

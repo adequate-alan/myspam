@@ -11,7 +11,8 @@ Checks, on the real files (data/market/flock_sf.json, flock_ppr.json and the sna
     out to be someone else's Sleeper ID
   · a Superflex format reads Flock Superflex; a 1QB format never reads the Superflex list (FantasyCalc alone while
     there is no Regular PPR list), and the page names the missing list
-  · a list saved by an older page (spm_flock) moves into the list its format belongs to, the old key kept
+  · a list saved by an older page (spm_flock) moves into the list its format belongs to as an unpublished, unpriced
+    draft, the old key kept
   · the AM board (ranks, position ranks, tiers, values) is identical with and without the Flock lists and the old key
   · no page errors
 """
@@ -125,7 +126,11 @@ with sync_playwright() as p:
     st = pg.evaluate("() => ({ ppr: localStorage.getItem('spm_flock:ppr'), sf: localStorage.getItem('spm_flock:sf'), old: localStorage.getItem('spm_flock') })")
     m = pg.evaluate("() => SPM.market()")
     ok(st["ppr"] and not st["sf"] and st["old"], "A list saved by the older page (1QB) moves into Flock Regular PPR; the old key is kept, nothing goes into Superflex")
-    ok(any(s["id"] == "fl" and s["set"] == "flock-ppr" for s in m["srcs"]), "That browser list is read in a 1QB format")
+    moved = json.loads(st["ppr"])
+    # the list manager (Oct 14): it lands as an unpublished draft, and its rows (matched by an older page that trusted
+    # Flock's IDs) aren't priced until they're re-imported or picked by hand
+    ok(moved["draft"] and moved["legacy"] and not moved["rows"] and not any(s["id"] == "fl" for s in m["srcs"]),
+       "That browser list is an unpublished draft with no unverified row priced (FantasyCalc alone until it's verified)")
     pg.close()
 
     pg = page(flock=False)
