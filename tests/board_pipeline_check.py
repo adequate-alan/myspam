@@ -8,7 +8,8 @@ Run from the repo root:  python3 tests/board_pipeline_check.py
 Checks:
 1. pipeline/sync_teams.py: a player who changed teams is updated in both blocks (team column only, every other byte of
    index.html unchanged); a player Sleeper doesn't know keeps his team; a page without the AM PPR block still syncs
-   the main block; more than MAX_MOVES changes in one block raises and apply() writes nothing.
+   the main block; more than MAX_MOVES changes in one block skips that block only (left byte-identical, a warning names
+   it) while the other block still syncs; over the limit in both writes nothing.
 2. tests/static_check.py --frozen-rankings: a team change in RANKINGS_CSV_PPR passes, a rank or value change there fails.
 3. pipeline/snapshot_history.py: with nothing changed, neither board writes anything; a changed AM PPR value records one
    scheduled event and one snapshot in data/boards/ppr/ only (the snapshot is the AM PPR board, the SF files are
@@ -62,14 +63,31 @@ ok(npp[both[20]][nph.index("team")] == pp[both[20]][ph.index("team")], "A player
 no_ppr = re.sub(r"const RANKINGS_CSV_PPR = `\n[\s\S]*?\n`;", "", HTML)
 n2, m2 = sync_teams.sync_all(no_ppr, players)
 ok(list(m2) == ["RANKINGS_CSV"] and len(m2["RANKINGS_CSV"]) == 1, "A page without the AM PPR block still syncs the main block")
-many = dict(players)
-for s in both[:sync_teams.MAX_MOVES + 1]: many[s] = {"team": "LV" if sf[s][sh.index("team")] != "LV" else "NYG"}
-tmp = tempfile.mkdtemp(); path = os.path.join(tmp, "index.html"); open(path, "w", encoding="utf-8").write(HTML)
-try:
-    sync_teams.apply(path, many); raised = False
-except ValueError as e:
-    raised = "limit" in str(e)
-ok(raised and open(path, encoding="utf-8").read() == HTML, f"Over {sync_teams.MAX_MOVES} changes in a block: raises and writes nothing")
+def stale(html, name, n):
+    """A copy of the page whose `name` block has a wrong team for n players (Sleeper's answer will move all of them)."""
+    m = re.search(r"(const " + name + r" = `\n)([\s\S]*?)(\n`;)", html); lines = m[2].split("\n")
+    hd = next(csv.reader([lines[0]])); ti, si = hd.index("team"), hd.index("sleeper_id"); done = 0
+    for k in range(1, len(lines)):
+        r = next(csv.reader([lines[k]]))
+        if done < n and r[si] in players and r[si] not in (sid, both[20]):
+            r[ti] = "ZZ"; o = io.StringIO(); csv.writer(o, lineterminator="").writerow(r); lines[k] = o.getvalue(); done += 1
+    return html[:m.start(2)] + "\n".join(lines) + html[m.end(2):]
+tmp = tempfile.mkdtemp(); path = os.path.join(tmp, "index.html")
+def run_apply(page):
+    open(path, "w", encoding="utf-8").write(page); buf = io.StringIO(); so = sys.stdout; sys.stdout = buf
+    try: res = sync_teams.apply(path, players)
+    finally: sys.stdout = so
+    return res, buf.getvalue(), open(path, encoding="utf-8").read()
+for big, small in (("RANKINGS_CSV_PPR", "RANKINGS_CSV"), ("RANKINGS_CSV", "RANKINGS_CSV_PPR")):
+    page = stale(HTML, big, sync_teams.MAX_MOVES + 1)
+    res, log, out = run_apply(page)
+    ok(blk(out, big) == blk(page, big) and big not in res, f"Over the limit in {big}: that block is left byte-identical")
+    th, tr = table(blk(out, small))
+    ok(len(res.get(small, [])) == 1 and tr[sid][th.index("team")] == new_team, f"... and {small} still syncs ({res.get(small)})")
+    ok(f"::warning title=Team sync skipped for {big}::" in log, f"... and the run log warns that {big} was skipped")
+page = stale(stale(HTML, "RANKINGS_CSV", sync_teams.MAX_MOVES + 1), "RANKINGS_CSV_PPR", sync_teams.MAX_MOVES + 1)
+res, log, out = run_apply(page)
+ok(out == page and not res and log.count("::warning") == 2, "Over the limit in both blocks: nothing written, both skips reported")
 
 # a scratch git copy of this checkout for the static check and the snapshot job
 work = tempfile.mkdtemp()

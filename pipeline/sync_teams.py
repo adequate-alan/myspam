@@ -11,8 +11,9 @@ reads AM PPR's teams from RANKINGS_CSV by Sleeper ID, so this keeps the PPR bloc
 player only that board lists truthful).
 
 Rules: a player Sleeper lists without a team becomes FA; a player Sleeper doesn't know keeps his team; a team code
-must be 2-3 capital letters; more than MAX_MOVES changes in one block in one run is treated as a bad response and
-nothing is written (no block).
+must be 2-3 capital letters; more than MAX_MOVES changes in one block in one run is treated as a bad response for
+that block: its sync is skipped with a warning (the block is left exactly as it was) while every other board still syncs
+(Alan, Oct 14: the limit applies to each board on its own).
 
 Use: from build_depth_charts.py --board ../index.html, or  python sync_teams.py <players.json> <index.html>
 """
@@ -35,8 +36,12 @@ def split_csv(line):
     return out
 
 
+class OverLimit(ValueError):
+    """More than MAX_MOVES team changes in one block: that board's sync is skipped."""
+
+
 def sync_block(html, players, name="RANKINGS_CSV"):
-    """One block: returns (new_html, [(name, old, new)]). Raises ValueError on anything unexpected."""
+    """One block: returns (new_html, [(name, old, new)]). Raises OverLimit over the limit, ValueError on anything else."""
     rx = block_re(name)
     m = rx.search(html)
     if not m or len(rx.findall(html)) != 1:
@@ -59,7 +64,7 @@ def sync_block(html, players, name="RANKINGS_CSV"):
         row[ti] = new
         lines[k] = ",".join(row)
     if len(moves) > MAX_MOVES:
-        raise ValueError(f"{len(moves)} team changes in {name} in one run (limit {MAX_MOVES}): not trusting this response")
+        raise OverLimit(f"{len(moves)} team changes in {name} in one run (limit {MAX_MOVES}): not trusting this response")
     return html[:m.start(2)] + "\n".join(lines) + html[m.end(2):], moves
 
 
@@ -68,20 +73,25 @@ def sync(html, players):
     return sync_block(html, players, "RANKINGS_CSV")
 
 
-def sync_all(html, players):
+def sync_all(html, players, skipped=None):
     """Returns (new_html, {block: [(name, old, new)]}). The main block must exist; other boards' blocks are optional.
-    Any block over the limit raises before anything is returned, so nothing is written."""
+    A block over the limit is left exactly as it was and named in `skipped` ({block: reason}); the others still sync.
+    A malformed page raises ValueError and nothing is written."""
     out = {}
     for name in BLOCKS:
         if name != "RANKINGS_CSV" and not block_re(name).search(html):
             continue
-        html, out[name] = sync_block(html, players, name)
+        try:
+            html, out[name] = sync_block(html, players, name)
+        except OverLimit as e:
+            if skipped is not None: skipped[name] = str(e)
     return html, out
 
 
 def apply(path, players):
     html = open(path, encoding="utf-8").read()
-    new, by_block = sync_all(html, players)
+    skipped = {}
+    new, by_block = sync_all(html, players, skipped)
     if new != html:
         with open(path, "w", encoding="utf-8") as f:
             f.write(new)
@@ -89,6 +99,8 @@ def apply(path, players):
         for n, a, b in moves:
             print(f"Team updated from Sleeper ({name}): {n} {a} -> {b}")
         print(f"{name} teams: {len(moves)} change(s)")
+    for name, why in skipped.items():   # a GitHub Actions warning annotation, so the run summary shows it
+        print(f"::warning title=Team sync skipped for {name}::{why}; {name} left unchanged, other boards synced")
     return by_block
 
 
