@@ -2094,6 +2094,9 @@ dialog.signin label.signin-remember { margin: 10px 0 0; text-transform: none; le
 }
 .face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
 .face-i { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; color: var(--muted); user-select: none; }
+/* Initials only when there's no portrait: a photo that fails removes itself (face()), so while one is loading or loaded
+   the initials stay hidden and never show through a transparent headshot */
+.face:has(> img) > .face-i { visibility: hidden; }
 .face.sm { width: 24px; height: 24px; } .face.sm .face-i { font-size: 0.54rem; }
 .face.xs { width: 20px; height: 20px; } .face.xs .face-i { font-size: 0.5rem; }
 .face.lg { width: 52px; height: 52px; } .face.lg .face-i { font-size: 0.92rem; }
