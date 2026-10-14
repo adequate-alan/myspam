@@ -10289,7 +10289,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       // what its rank spots are worth here vs on the base board), and every player in the tier moves by
       // that same factor. Your tiers decide where the value drops are and how close tiermates stay; the
       // format only decides how much each tier is worth. A league in the base format gets exactly the base values.
-      const mv = players.filter(p => !p.tail && p.rawValue != null && p.posNum != null && EDIT_POS.includes(p.pos));
+      // Only automatically valued players (source auto) are priced as the tail here; your own players below the first
+      // Auto player keep normal tier pricing (Alan, Oct 14 valuation audit)
+      const isAutoP = p => p.source === "auto";
+      const mv = players.filter(p => !isAutoP(p) && p.rawValue != null && p.posNum != null && EDIT_POS.includes(p.pos));
       const rawF = p => {
         const i = Math.min(p.posNum, base[p.pos].length) - 1, b0 = base[p.pos][i], l0 = lg[p.pos][i];
         return l0 >= b0 ? p.rawValue + (l0 - b0) : b0 > 0 ? p.rawValue * l0 / b0 : 0;
@@ -10317,13 +10320,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const f = (fac && fac.get(p.id)) || 1;
         if (f !== 1) { LG.factor.set(p.id, f); raw.set(p.id, raw.get(p.id) * f); }
       });
-      // …and the board's tail (auto-added players, see autoValues) moves by the same share as the
-      // last player above the tail at that position, and stays under him
+      // …and Auto players (see autoValues) move by the same share as the nearest of your players ranked above them at
+      // their position, and stay under everyone ranked above them there
       for (const pos of EDIT_POS) {
         const g = players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
-        const head = g.filter(p => !p.tail), last = head[head.length - 1];
-        const r = last && last.value > 0 ? raw.get(last.id) / last.value : 1, cap = last ? raw.get(last.id) * 0.99 : Infinity;
-        g.forEach(p => { if (p.tail) raw.set(p.id, Math.min(p.value * r * (LG.factor.get(p.id) || 1), cap)); });
+        let r = 1, cap = Infinity;
+        g.forEach(p => {
+          if (!isAutoP(p)) { r = p.value > 0 ? raw.get(p.id) / p.value : r; cap = Math.min(cap, raw.get(p.id) * 0.99); return; }
+          const v = Math.min(p.value * r * (LG.factor.get(p.id) || 1), cap);
+          raw.set(p.id, v); cap = Math.min(cap, v * 0.99);
+        });
+        // one of your players ranked below an Auto player at his position stays below him, as on the board
+        let prev = Infinity;
+        g.forEach(p => { const v = Math.min(raw.get(p.id), prev); raw.set(p.id, v); prev = v; });
       }
       smoothTiers(raw);
       // Superflex / 2QB, leagues over sfStarterTeams (Alan, Oct 6): pricing a tier as a block can push the last weekly
@@ -10337,7 +10346,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if ((lu.SUPER_FLEX > 0 || lu.QB >= 2) && lu.teams > (Number(FA.sfStarterTeams) || 0)) {
           const S = Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0)));
           let prev = Infinity;
-          players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum).forEach(p => {
+          players.filter(p => p.pos === "QB" && p.posNum != null && !isAutoP(p)).sort((a, b) => a.posNum - b.posNum).forEach(p => {
             if (p.posNum <= S && raw.has(p.id)) {
               const i = Math.min(p.posNum, base.QB.length) - 1, b0 = base.QB[i], l0 = lg.QB[i];
               const own = l0 >= b0 ? p.value : b0 > 0 ? p.value * l0 / b0 : 0;
@@ -10368,7 +10377,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           const from = S - (Number(FA.sfBoundaryBefore) || 0), to = S + (Number(FA.sfBoundaryAfter) || 0);
           const guard = SF_SMOOTH !== "noguard" && lu.teams <= (Number(FA.sfStarterTeams) || 0);
           const scarce = i => { const k = Math.min(i, base.QB.length) - 1, b0 = base.QB[k], l0 = lg.QB[k]; return b0 > 0 ? l0 / b0 : 0; };
-          const qbs = players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum);
+          const qbs = players.filter(p => p.pos === "QB" && p.posNum != null && !isAutoP(p)).sort((a, b) => a.posNum - b.posNum);
           for (let i = 1; i < qbs.length; i++) {
             const a = qbs[i - 1], p = qbs[i];
             if (!(a.value > 0) || !raw.has(a.id)) continue;
@@ -10407,9 +10416,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // Across positions the overall order follows the adjusted value (Alan, Oct 4: a lower value is never ranked
     // ahead of a higher one, as on the AM Board): each position keeps its own order (above), and the position
     // queues are merged by value, ties going to the earlier board slot. In the base format the values already
-    // follow the board, so the order is unchanged. The tail (auto-added players) is merged the same way after
-    // every player above it.
-    const all = seq.concat(rest), isAuto = p => !!p.tail;
+    // follow the board, so the order is unchanged. Auto players are merged the same way: each stays under everyone
+    // ranked above him at his position (above), but a format that makes a position cheap (backup QBs in 1QB) no longer
+    // drags every Auto player at the other positions down with it (Alan, Oct 14 valuation audit: the old board-wide cap
+    // put Kaleb Johnson at 11 behind Spears' 382 in 12-team 1QB).
+    const all = seq.concat(rest);
     const mergeByValue = list => {
       const q = new Map(), out = [];
       list.forEach((p, i) => { const k = p.pos; if (!q.has(k)) q.set(k, []); q.get(k).push({ p, i }); });
@@ -10423,15 +10434,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       return out;
     };
-    // the tail never shows more value than anyone ranked above it (rule 3), in league views too
-    let floorV = Infinity;
-    mergeByValue(all.filter(p => !isAuto(p))).concat(mergeByValue(all.filter(isAuto)))
-      .forEach((p, k) => {
-        LG.adjRank.set(p.id, k + 1);
-        const v = LG.adj.get(p.id);
-        if (isAuto(p) && v >= floorV && v > 0) LG.adj.set(p.id, Math.max(0, Math.min(v, Math.round(floorV * (1 - VALUE_MODEL.minRankStep)) - (floorV < 400 ? 1 : 0))));
-        floorV = Math.min(floorV, LG.adj.get(p.id));
-      });
+    mergeByValue(all).forEach((p, k) => LG.adjRank.set(p.id, k + 1));
   }
   // Adjusted values for any league object, without touching the active league layer (LG): runs the same
   // adjustValues and puts LG back. Used to split a value into its format steps and by SPM.formatCheck.
@@ -10496,6 +10499,33 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const one1 = qbs.map(q => val({ teams: t, qb: "1", tep: 0 }, q)), sf = qbs.map(q => val({ teams: t, qb: "sf", tep: 0 }, q));
       check(`${t}-team 1QB → Superflex: ${qbs.map(q => q.name).join(", ")}`, qbs.map((q, i) => `${one1[i]} → ${sf[i]}`),
         sf.every((v, i) => v > one1[i] * 1.4) && sf[qbs.length - 1] > 3 * Math.max(1, one1[qbs.length - 1]));
+    }
+    // Auto players (Alan, Oct 14 valuation audit): priced per position from your players ranked above them, never
+    // capped by a cheap position elsewhere (12-team 1QB used to put Kaleb Johnson at 11 behind Spears' 382). In each
+    // format: an Auto player stays under everyone ranked ahead of him at his position, and the first player at or after
+    // the first Auto player at a position keeps at least half the format's share of the player ahead of him.
+    {
+      const fmts = [["12-team 1QB", { qb: "1", tep: 0 }], ["14-team 1QB", { teams: 14, qb: "1", tep: 0 }], ["10-team 1QB Half PPR", { teams: 10, qb: "1", rec: 0.5, tep: 0 }],
+        ["12-team SF", { qb: "sf", tep: 0 }], ["14-team SF TE+1.0", { teams: 14, qb: "sf", tep: 1 }], ["12-team SF Standard", { qb: "sf", rec: 0, tep: 0 }]];
+      const isTag = p => Number(p.tier) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+      for (const [label, f] of fmts) {
+        const m = adjMapFor(fmtLeague({ ...FMT_DEFAULT, ...f })), bad = [];
+        for (const pos of EDIT_POS) {
+          const g = players.filter(p => p.pos === pos && p.posNum != null && !isTag(p)).sort((x, y) => x.posNum - y.posNum);
+          let hi = Infinity;
+          g.forEach((p, i) => {
+            const v = m.get(p.id);
+            if (p.source === "auto" && v > hi) bad.push(`${p.name} ${v} above ${pos}${i}`);
+            hi = Math.min(hi, v);
+          });
+          const i = g.findIndex(p => p.source === "auto");
+          if (i > 0) {
+            const x = g[i - 1], y = g[i], rx = x.value > 0 ? m.get(x.id) / x.value : 0, ry = y.value > 0 ? m.get(y.id) / y.value : 0;
+            if (rx > 0 && m.get(x.id) >= 20 && ry < 0.5 * rx) bad.push(`${x.name} ${m.get(x.id)} → ${y.name} ${m.get(y.id)}`);
+          }
+        }
+        check(`${label}: Auto players stay under the players ahead at their position, with no format cliff into them`, bad.length ? bad.slice(0, 4) : ["ok"], !bad.length);
+      }
     }
     const two = [val({ qb: "1", tep: 0 }, at("QB", 12)), val({ qb: "2", tep: 0 }, at("QB", 12))];
     check(`${at("QB", 12).name} (QB12): 1QB vs 2QB`, two, two[1] > two[0] * 1.4);
