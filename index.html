@@ -669,6 +669,8 @@ const FORMAT_ADJUST = {
   avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 },  // players used for each position's average
   // Shallow formats can price a whole tier at waiver level (10-team 1QB: QB13+ ≈ 0). Two guards:
   tierKeep: 0.40,     // a tier keeps at least 40% of the last value above it (unless your base board's own drop there is steeper)
+  tierEdge: 2,        // tier pricing eases between neighbouring tiers' format factors over this many spots each side of a boundary
+                      // (Alan, Oct 14 valuation audit: one average factor per tier turned 0.3% board boundaries into 40-60% cliffs)
   qb1Cushion: 0.5,    // 1QB leagues: QB replacement sits this share of the way from the last starting QB down to the waiver QB
                       // (teams carry and stream QBs, so the 12th QB isn't true replacement). Alan Oct 5: QB5-QB12 in 12-team
                       // 1QB were ~25% of their Superflex values; points over replacement put them nearer 35-45%.
@@ -10406,6 +10408,41 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           }
         }
       }
+      // Tier boundary easing (Alan, Oct 14 valuation audit; FORMAT_ADJUST.tierEdge). Each tier is priced with one average
+      // factor, so a tier straddling replacement level gets a low factor next to a tier above it that stays high, and a
+      // boundary drawn at 0.3% on the board became a 40-60% drop that neither the board nor the format's own scarcity has
+      // there (10-team 1QB Burrow -> Maye -40%, now -12%). After every guard, the tierEdge players either side of each
+      // boundary ease geometrically toward the neighbouring tier's factor (factor = value here / board value; halfway at
+      // the boundary itself); everyone else keeps his tier's pricing, each position's weekly starters keep their total
+      // within ~2%, and the base format (every factor 1) is unchanged. Superflex / 2QB QBs from the starter-boundary
+      // window down are left to the starter rules above. Never reorders a position.
+      const EW = TIER_EDGE === false ? 0 : Number(FA.tierEdge) || 0;
+      if (EW > 0) {
+        const lu = lineupOf(vl), sfL = lu.SUPER_FLEX > 0 || lu.QB >= 2;
+        const sfFrom = sfL ? Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0))) - (Number(FA.sfBoundaryBefore) || 0) - EW : Infinity;
+        const eased = new Map(), fac = p => raw.get(p.id) / p.value;
+        for (const pos of EDIT_POS) {
+          const g = mv.filter(p => p.pos === pos && tierKey(p) && raw.get(p.id) > 0 && p.value > 0 && !(pos === "QB" && p.posNum >= sfFrom)).sort((a, b) => a.posNum - b.posNum);
+          const blocks = [];
+          g.forEach(p => { const b = blocks[blocks.length - 1]; if (b && b.k === tierKey(p)) b.m.push(p); else blocks.push({ k: tierKey(p), m: [p] }); });
+          const gm = b => Math.exp(b.m.reduce((s, p) => s + Math.log(fac(p)), 0) / b.m.length);
+          blocks.forEach((b, bi) => {
+            const n = b.m.length, w = Math.min(EW, n / 2);
+            b.m.forEach((p, j) => {
+              let f = Math.log(fac(p));
+              const dUp = j + 0.5, dDn = n - j - 0.5;
+              if (bi > 0 && dUp < w) { const t = 0.5 * (1 - dUp / w); f = f * (1 - t) + Math.log(gm(blocks[bi - 1])) * t; }
+              if (bi < blocks.length - 1 && dDn < w) { const t = 0.5 * (1 - dDn / w); f = f * (1 - t) + Math.log(gm(blocks[bi + 1])) * t; }
+              eased.set(p.id, p.value * Math.exp(f));
+            });
+          });
+        }
+        eased.forEach((v, id) => raw.set(id, v));
+        for (const pos of EDIT_POS) {
+          let prev = Infinity;
+          players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum).forEach(p => { const v = Math.min(raw.get(p.id), prev); raw.set(p.id, v); prev = v; });
+        }
+      }
     } else players.forEach(p => raw.set(p.id, p.value));
     // each position: your order, unless the adjusted value passes the player above by more than the margin
     for (const pos of EDIT_POS) {
@@ -10452,9 +10489,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // Adjusted values for any league object, without touching the active league layer (LG): runs the same
   // adjustValues and puts LG back. Used to split a value into its format steps and by SPM.formatCheck.
   var adjCache = new Map();   // var: leagueRecalc can run before this line
+  var TIER_EDGE = true;         // formatCheck: false = one factor per tier (the pricing before Oct 14)
   var SF_SMOOTH = true;         // formatCheck: false = no Superflex smoothing (the scarcity model alone), "noguard" = no 8-team cliff guard
   function adjMapFor(vl) {
-    const key = JSON.stringify([lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH]);
+    const key = JSON.stringify([lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH, TIER_EDGE]);
     if (adjCache.has(key)) return adjCache.get(key);
     const keep = { adj: LG.adj, adjPos: LG.adjPos, adjRank: LG.adjRank, factor: LG.factor, depth: LG.depth };
     try {
@@ -10660,6 +10698,35 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const lu = lineupOf(valueLeague()), own = lineupOf(sl0);
       check(usingCustom() ? `A custom format is on (values ignore ${sl0.name}'s own settings)` : `Values use ${sl0.name}'s own lineup (${own.SUPER_FLEX ? "Superflex" : own.QB >= 2 ? "2QB" : "1QB"}, ${own.teams} teams)`,
         [JSON.stringify(lu)], !usingCustom() && lu.SUPER_FLEX === own.SUPER_FLEX && lu.QB === own.QB && lu.teams === own.teams);
+    }
+    // Tier boundaries (Alan, Oct 14 valuation audit): a boundary that's nearly flat on the board (<= 5%) never becomes a
+    // 25%+ drop in a format unless the format's own scarcity curve falls that much there, and the easing keeps each
+    // position's weekly starters within 2% of one-factor-per-tier pricing (it moves value across a boundary, not away)
+    {
+      const F = { "12-team 1QB": { qb: "1", tep: 0 }, "12-team 1QB Half": { qb: "1", tep: 0, rec: 0.5 }, "10-team 1QB": { teams: 10, qb: "1", tep: 0 },
+        "8-team 1QB": { teams: 8, qb: "1", tep: 0 }, "10-team SF": { teams: 10 }, "8-team SF": { teams: 8 }, "14-team 1QB": { teams: 14, qb: "1", tep: 0 } };
+      const cliffs = [], drift = [];
+      for (const [name, f] of Object.entries(F)) {
+        const lg0 = fmtLeague({ ...FMT_DEFAULT, ...f }), adj = adjMapFor(lg0), lu = lineupOf(lg0);
+        const keep = TIER_EDGE; TIER_EDGE = false; let blk; try { blk = adjMapFor(lg0); } finally { TIER_EDGE = keep; }
+        const B = modelTable(curvesFor(comps.base_scoring), BASE_LINEUP()), L = modelTable(curvesFor(lg0.scoring_settings || {}), lu, VALUE_MODEL.benchWeight * leagueDepth(lg0));
+        const sc = (pos, n) => { const i = Math.min(n, B[pos].length) - 1; return B[pos][i] > 0 ? L[pos][i] / B[pos][i] : 0; };
+        for (const pos of EDIT_POS) {
+          const g = players.filter(p => p.pos === pos && p.posNum != null && !p.tail && !isTagTier(p.tier)).sort((a, b) => a.posNum - b.posNum);
+          for (let i = 1; i < g.length; i++) {
+            const a = g[i - 1], b = g[i], va = adj.get(a.id), vb = adj.get(b.id);
+            if (a.tier === b.tier || !(a.value > 0) || !(va >= 300)) continue;
+            if (pos === "QB" && (lu.SUPER_FLEX > 0 || lu.QB >= 2) && b.posNum > Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0))) - (Number(FORMAT_ADJUST.sfBoundaryBefore) || 0)) continue;   // the starter rules own that stretch
+            const board = 1 - b.value / a.value, own = sc(pos, a.posNum) > 0 ? 1 - sc(pos, b.posNum) / sc(pos, a.posNum) : 0, drop = 1 - vb / va;
+            if (board <= 0.05 && own < 0.2 && drop >= 0.25) cliffs.push(`${name}: ${pos}${a.posNum} ${a.name} → ${pos}${b.posNum} ${b.name} ${Math.round(-100 * drop)}%`);
+          }
+          const n = Math.round(lu.teams * ((lu[pos] || 0) + (pos === "QB" ? lu.SUPER_FLEX || 0 : 0))) || 1;
+          const sum = m => g.slice(0, n).reduce((s, p) => s + (m.get(p.id) || 0), 0), s0 = sum(blk);
+          if (s0 > 0 && Math.abs(sum(adj) / s0 - 1) > 0.02) drift.push(`${name} ${pos} top ${n}: ${(100 * (sum(adj) / s0 - 1)).toFixed(1)}%`);
+        }
+      }
+      check("Nearly flat board tier boundaries (<= 5%) don't become 25%+ format drops the scarcity curve doesn't have", cliffs, cliffs.length === 0);
+      check("Tier boundary easing keeps each position's weekly starters within 2% of one-factor tier pricing", drift, drift.length === 0);
     }
     const same = players.filter(p => Math.round(adjMapFor(fmtLeague(FMT_DEFAULT)).get(p.id)) !== Math.round(p.value));
     check("A league in the base format gives exactly the base values", same.map(p => p.name), same.length === 0);
