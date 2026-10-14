@@ -6951,12 +6951,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   setupPicker("C");
 
   // Asset value of a trade: league-adjusted values (or val) with the package adjustment. Nothing about either roster.
-  function runModel(aIds, bIds, val = tv) {
+  // like = the AM value function whose league depth to use: a market read (FantasyCalc / Flock on AM's scale in the
+  // active format) passes the AM read it's compared with, so both apply the same package adjustment (Oct 14 audit, D6)
+  function runModel(aIds, bIds, val = tv, like = val) {
     try {
       const pick = id => { const p = byId.get(id); return { ...p, value: val(p) }; };
       const A = aIds.map(pick), B = bIds.map(pick);
       // league depth applies whenever the values are the league's (or your settings'), not base values
-      const adjusted = val === tv ? LG.fmtOn : val === dv ? leagueView() : false;
+      const adjusted = like === tv ? LG.fmtOn : like === dv ? leagueView() : false;
       LEAGUE_DEPTH = adjusted ? LG.depth || 1 : 1;
       const r = tradeModel(A, B) || {};
       if (r.adj) r.adj.depth = LEAGUE_DEPTH;
@@ -7509,7 +7511,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const all = typeof MK_READY !== "undefined" && MK_READY ? mkAll() : null;
     if (!all || !all.srcs.length) return null;
     if (![...sides.A, ...sides.B].every(id => { const p = byId.get(id); return p && mkOf(p); })) return null;
-    const m = runModel(sides.A, sides.B, p => mkOf(p).cv);
+    const m = runModel(sides.A, sides.B, p => mkOf(p).cv, tv);
     return m.error || !(m.a > 0 && m.b > 0) ? null : m;
   }
   function tcAccept(ctx, res) {
@@ -7691,12 +7693,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const all = typeof MK_READY !== "undefined" && MK_READY ? mkAll() : null;
     if (!all || !all.srcs.length || !sides.A.length || !sides.B.length || res.error) { el.hidden = true; return; }
     const ps = side => sides[side].map(id => byId.get(id)).filter(Boolean);
-    const price = (f) => { if (![...ps("A"), ...ps("B")].every(p => f(p) != null)) return null; const m = runModel(sides.A, sides.B, p => f(p), false); return m.error ? null : m; };
+    const price = (f) => { if (![...ps("A"), ...ps("B")].every(p => f(p) != null)) return null; const m = runModel(sides.A, sides.B, p => f(p), tv); return m.error ? null : m; };
     const lines = [{ k: "AM", a: res.a, b: res.b, am: true }];
     const cons = price(p => { const r = mkOf(p); return r ? r.cv : null; });
     if (cons && all.srcs.length > 1) lines.push({ k: "Market consensus", a: cons.a, b: cons.b });
     all.srcs.forEach(src => { const m = price(p => { const r = mkOf(p), x = r && r.per[src.id]; return x ? x.v : null; }); if (m) lines.push({ k: src.name, a: m.a, b: m.b }); });
-    if (lines.length < 2) { el.hidden = true; return; }
+    if (lines.length < 2) {
+      // a player without a market value: say so, never price him at his AM value (Alan, Oct 14)
+      const miss = [...ps("A"), ...ps("B")].filter(p => !mkOf(p)).map(p => p.name);
+      if (!miss.length) { el.hidden = true; return; }
+      el.innerHTML = `<details class="tc-mkt-d"><summary>Market comparison <span class="sum-hint">${esc(`No market value for ${miss.join(", ")}, so there's no market read for this trade.`)}</span></summary>
+        <div class="tc-more-body"><p class="pp-note">A market line needs a FantasyCalc or Flock value for every player in the trade; AM's value never stands in for a missing one. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
+      el.hidden = false; return;
+    }
     const nA = sideName("A"), nB = sideName("B"), pref = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b); return Math.abs(d) < 3 ? 0 : Math.sign(d); };
     const row = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b), w = pref(l);
       return `<tr${l.am ? ' class="am"' : ""}><th scope="row">${esc(l.k)}</th><td>${fmt(l.a)}</td><td>${fmt(l.b)}</td><td class="${w > 0 ? "up" : w < 0 ? "down" : ""}">${w === 0 ? "About even" : `${esc(w > 0 ? nA : nB)} +${Math.abs(d).toFixed(1)}%`}</td></tr>`; };
@@ -15796,7 +15805,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const ML_MAX = 30, ML_LEVELS = ["Small Leverage", "Good Leverage", "Strong Leverage", "Very Strong Leverage"];
   function mlAssess(K, S, T, give, get, more, tAfter, dT, fT, pl) {
     const c01 = v => Math.max(0, Math.min(1, v));
-    const mm = runModel(get.map(p => p.id), give.map(p => p.id), mkVal, false);
+    // a market read needs a market value for every player: AM's value standing in for a missing one would call the
+    // market's view "AM's view" (Oct 14 audit, D7), so without one there's no market leverage to claim
+    if (!give.concat(get).every(p => mkOf(p))) return null;
+    const mm = runModel(get.map(p => p.id), give.map(p => p.id), mkVal, dv);
     if (mm.error || !(mm.a > 0 && mm.b > 0)) return null;
     const them = 100 * (mm.b - mm.a) / Math.min(mm.a, mm.b);   // + = by the market, T gets more
     if (them < -8) return null;
@@ -15874,7 +15886,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function mktFor(fromT, toT) {
     if (!(typeof MK_READY !== "undefined" && MK_READY && mkAll().srcs.length)) return null;
     if (!fromT.concat(toT).every(p => mkOf(p))) return null;
-    const m = runModel(fromT.map(p => p.id), toT.map(p => p.id), mkVal);
+    const m = runModel(fromT.map(p => p.id), toT.map(p => p.id), mkVal, dv);
     return m.error || !(m.a > 0 && m.b > 0) ? null : 100 * (m.b - m.a) / Math.min(m.a, m.b);
   }
   // target: one player, or a 2-player package from the same roster (shopped together)
@@ -15957,7 +15969,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       // the same package adjustment the trade model applies (extra players next to the best one count for less): the
       // 3-for-1 / 2-for-4 pre-filter compares these, since their raw totals are far apart even when the trade is fair
-      const depth = LEAGUE_DEPTH > 0 ? LEAGUE_DEPTH : 1;
+      const depth = leagueView() ? LG.depth || 1 : 1;   // the depth runModel uses for dv (never whatever the last read left)
       const adjSums = (a, b) => {
         const star = Math.max(1, ...a.map(V), ...b.map(V)), n = a.length - b.length, more = n > 0 ? a : b;
         const extras = more.map(V).sort((x, y) => y - x).slice(more.length - Math.abs(n));
@@ -16487,7 +16499,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if ($("player-modal").open && PP.sid) renderPlayer();
     hcRefresh();
   }
-  const mkVal = p => { const r = mkOf(p); return r ? r.cv : dv(p); };   // a player's value as the market / consensus sees it, on AM's scale
+  const mkVal = p => { const r = mkOf(p); return r ? r.cv : dv(p); };   // a player's value as the market / consensus sees it, on AM's scale; market reads check every player has one first (mkOf)
   const mkOf = p => (p && p.sleeperId ? mkAll().map.get(p.sleeperId) || null : null);
   // one sentence: what the disagreement is
   function mkSentence(r) {
@@ -16712,8 +16724,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const sum = (list, f) => list.reduce((a, p) => a + f(p), 0);
     it.amDiff = pctOf(sum(it.get, p => p.value || 0), sum(it.give, p => p.value || 0));
     it.adjDiff = pctOf(it.m.a, it.m.b);
-    const hasMk = mkAll().srcs.length > 0, mg = hasMk ? sum(it.get, mkVal) : null, mo = hasMk ? sum(it.give, mkVal) : null;
+    // market numbers only when every player has a market value (never AM's value standing in; Oct 14 audit, D7)
+    const hasMk = mkAll().srcs.length > 0 && it.get.concat(it.give).every(p => mkOf(p)), mg = hasMk ? sum(it.get, mkVal) : null, mo = hasMk ? sum(it.give, mkVal) : null;
     it.mktDiff = mg != null && mo != null ? pctOf(mg, mo) : null;
+    // the players with no market value, named on the card instead of a market number (Alan, Oct 14)
+    it.mkMissing = mkAll().srcs.length > 0 ? it.get.concat(it.give).filter(p => !mkOf(p)).map(p => p.name) : [];
     // market leverage: you sell what the market likes more than AM, and buy what AM likes more than the market
     const amG = sum(it.get, dv), amO = sum(it.give, dv);
     it.leverage = mg != null && mo != null && amG / mg - 1 >= 0.08 && mo / amO - 1 >= 0.08;
@@ -16722,7 +16737,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // Acceptance Plausibility from their side (shared with the calculator and Market Leverage): value, market, their lineup,
     // needs, construction; realism = your lineup gain + their acceptance, never the size of your edge
     const best = K.tradable(it.team)[0];
-    it.acc = acceptFor({ imp: it.fT, val: vrSide(it.vr, "B"), mkt: it.mktDiff == null ? null : -it.mktDiff });
+    it.acc = acceptFor({ imp: it.fT, val: vrSide(it.vr, "B"), mkt: hasMk ? mktFor(it.get, it.give) : null });   // their market view, package-adjusted like the AM view
     it.real = 0.4 * utilScore(it.fS.su) + 0.6 * it.acc.score;
     it.conf = { High: "Likely", Moderate: "Plausible", Low: "Long shot" }[it.acc.label];
     return it;
@@ -16775,7 +16790,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const meW = shortWhy(it, v.cls === "fair") || (() => { const fe = it.fS.inc.find(e => e.p === X); return fe && fe.starts ? `${X.name} would start at ${fe.role} for you.` : `You add ${X.name} without weakening your starters.`; })();
     const row = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     const nums = [`<span title="Raw totals of base AM Board values, no package adjustment">AM raw ${signPct(it.amDiff)}</span>`, `<b title="League-adjusted values with the package adjustment: an extra piece counts less next to the best player in the deal. It can narrow the verdict, never create or reverse a winner on its own.">Package-adjusted ${signPct(it.adjDiff)}</b>`]
-      .concat(it.mktDiff == null ? [] : [`<span title="Raw totals of the market / expert consensus (FantasyCalc + Flock) on AM's scale, no package adjustment">Market raw ${signPct(it.mktDiff)}</span>`]);
+      .concat(it.mktDiff == null ? [] : [`<span title="Raw totals of the market / expert consensus (FantasyCalc + Flock) on AM's scale, no package adjustment">Market raw ${signPct(it.mktDiff)}</span>`])
+      .concat(it.mktDiff == null && it.mkMissing.length ? [`<span class="muted" title="A market read needs a FantasyCalc or Flock value for every player in the trade; AM's value never stands in for a missing one">Market: no value for ${esc(it.mkMissing.join(", "))}</span>`] : []);
     return `<article class="tf-card tf-tcard${v.cls === "them" ? " bad-fit" : it.conf === "Likely" ? " good-fit" : ""}">
       <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div>
         <span class="tf-pills">${it.leverage ? `<span class="tf-pill lev" title="The market values what you send more than AM does, and AM values what you get more than the market">Market leverage</span>` : ""}<span class="tf-pill conf ${it.conf === "Likely" ? "hi" : it.conf === "Plausible" ? "mid" : "lo"}" title="Acceptance Plausibility: value they receive vs give, the market's view, their lineup before → after, positional needs and roster construction (starters vs filler, losing their best player, opening a hole)">${esc(it.conf)}</span><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></span></header>
@@ -17254,6 +17270,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const F = floor == null ? valueFloor(null, true) : floor, vr = valueRead(m, F), o = teamOutcomeRead(vr);
       return { kind: vr.kind, side: vr.side, gap: vr.gap, raw: vr.raw, adj: vr.adj, small: vr.small, label: o.label, fair: o.fair, ahead: o.ahead, floor: F };
     } finally { LEAGUE_DEPTH = keep; }
+  };
+  // market reads in tests (Oct 14 audit, D6 / D7): the package depth each read uses, and what happens without a market value
+  if (window.__SPM_TEST_HOOKS === true) SPM.marketReads = (aSids, bSids) => {
+    const ids = l => l.map(s => players.find(p => String(p.sleeperId) === String(s)).id), A = ids(aSids), B = ids(bSids);
+    const ps = A.concat(B).map(id => byId.get(id)), all = ps.every(p => mkOf(p)), d = r => (r && r.adj ? r.adj.depth : null);
+    return { lgDepth: LG.depth || 1, all, am: d(runModel(A, B, tv)), mk: all ? d(runModel(A, B, p => mkOf(p).cv, tv)) : null,
+      finderAm: d(runModel(A, B, dv)), finderMk: all ? d(runModel(A, B, mkVal, dv)) : null,
+      mktFor: mktFor(A.map(id => byId.get(id)), B.map(id => byId.get(id))) };
   };
   if (window.__SPM_TEST_HOOKS === true) SPM.edit = Object.assign(EDIT_API, { draft: () => tableToCsv(draft), unsaved: () => changedRows().length,
     reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn(); draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); } });
