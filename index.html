@@ -346,6 +346,273 @@ De'Von Achane,RB,MIA,259,73,99,6,17.11,3,14.17,9226,manual,Out for season
 Jaxson Dart,QB,NYG,260,45,99,0,16.72,2,14.35,12508,manual,Out for season
 `;
 
+/* AM PPR (Alan, Oct 14): 12-team 1QB Full PPR, no TE premium. Its own ranks, position order, overall tiers and values,
+   from Alan's 150-player list; the 110 players not on it sit below #150 as provisional Auto players (tier 12). Teams and
+   projections are read from RANKINGS_CSV by Sleeper ID, so the pipeline only writes one block. See BOARDS. */
+const RANKINGS_CSV_PPR = `
+player,pos,team,rank,pos_rank,tier,value,sleeper_id,source,tier_name
+Jahmyr Gibbs,RB,DET,1,1,1,10000,9221,manual,Tier 1
+Bijan Robinson,RB,ATL,2,2,2,9644,9509,manual,Tier 2
+Kenneth Walker III,RB,KC,3,3,2,9471,8151,manual,Tier 2
+Jaxon Smith-Njigba,WR,SEA,4,1,2,9301,9488,manual,Tier 2
+Puka Nacua,WR,LAR,5,2,2,9134,9493,manual,Tier 2
+CeeDee Lamb,WR,DAL,6,3,3,7598,6786,manual,Tier 3
+Ja'Marr Chase,WR,CIN,7,4,3,7509,7564,manual,Tier 3
+Amon-Ra St. Brown,WR,DET,8,5,3,7421,7547,manual,Tier 3
+Christian McCaffrey,RB,SF,9,4,3,7334,4034,manual,Tier 3
+Derrick Henry,RB,BAL,10,5,3,7248,3198,manual,Tier 3
+Jonathan Taylor,RB,IND,11,6,3,7163,6813,manual,Tier 3
+Brock Bowers,TE,LV,12,1,3,7079,11604,manual,Tier 3
+Kyren Williams,RB,LAR,13,7,4,6366,8150,manual,Tier 4
+James Cook III,RB,BUF,14,8,4,6230,8138,manual,Tier 4
+Ashton Jeanty,RB,LV,15,9,4,6097,12527,manual,Tier 4
+Chris Olave,WR,NO,16,6,4,5967,8144,manual,Tier 4
+Drake London,WR,ATL,17,7,4,5839,8112,manual,Tier 4
+Zay Flowers,WR,BAL,18,8,4,5714,9997,manual,Tier 4
+Nico Collins,WR,HOU,19,9,4,5592,7569,manual,Tier 4
+Justin Jefferson,WR,MIN,20,10,4,5473,6794,manual,Tier 4
+Trey Mcbride,TE,ARI,21,2,4,5356,8130,manual,Tier 4
+Christian Watson,WR,GB,22,11,4,5241,8167,manual,Tier 4
+Parker Washington,WR,JAX,23,12,4,5129,9487,manual,Tier 4
+Josh Allen,QB,BUF,24,1,4,5019,4984,manual,Tier 4
+Javonte Williams,RB,DAL,25,10,4,4912,7588,manual,Tier 4
+Chase Brown,RB,CIN,26,11,5,4290,9224,manual,Tier 5
+Jaylen Warren,RB,PIT,27,12,5,4238,8228,manual,Tier 5
+Malik Nabers,WR,NYG,28,13,5,4188,11632,manual,Tier 5
+Garrett Wilson,WR,NYJ,29,14,5,4138,8146,manual,Tier 5
+Tetairoa McMillan,WR,CAR,30,15,5,4088,12526,manual,Tier 5
+D'Andre Swift,RB,CHI,31,13,5,4039,6790,manual,Tier 5
+Chuba Hubbard,RB,CAR,32,14,5,3991,7594,manual,Tier 5
+Bucky Irving,RB,TB,33,15,5,3943,11584,manual,Tier 5
+Bhaysul Tuten,RB,JAX,34,16,5,3896,12490,manual,Tier 5
+Jeremiyah Love,RB,ARI,35,17,5,3849,13287,manual,Tier 5
+George Pickens,WR,DAL,36,16,5,3803,8137,manual,Tier 5
+Tee Higgins,WR,CIN,37,17,5,3758,6801,manual,Tier 5
+Davante Adams,WR,LAR,38,18,5,3713,2133,manual,Tier 5
+Mike Evans,WR,SF,39,19,5,3668,2216,manual,Tier 5
+Matthew Golden,WR,GB,40,20,5,3625,12501,manual,Tier 5
+Michael Wilson,WR,ARI,41,21,5,3581,10232,manual,Tier 5
+DeVonta Smith,WR,PHI,42,22,6,3414,7525,manual,Tier 6
+Saquon Barkley,RB,PHI,43,18,6,3337,4866,manual,Tier 6
+George Kittle,TE,SF,44,3,6,3262,4217,manual,Tier 6
+Breece Hall,RB,NYJ,45,19,6,3189,8155,manual,Tier 6
+DJ Moore,WR,BUF,46,23,6,3117,4983,manual,Tier 6
+Rhamondre Stevenson,RB,NE,47,20,6,3047,7611,manual,Tier 6
+A.J. Brown,WR,NE,48,24,6,2979,5859,manual,Tier 6
+Rashee Rice,WR,KC,49,25,6,2912,10229,manual,Tier 6
+Jameson Williams,WR,DET,50,26,6,2846,8148,manual,Tier 6
+Sam LaPorta,TE,DET,51,4,6,2782,10859,manual,Tier 6
+Cam Skattebo,RB,NYG,52,21,6,2720,12481,manual,Tier 6
+Jalen Coker,WR,CAR,53,27,6,2659,11646,manual,Tier 6
+Isaiah Likely,TE,NYG,54,5,7,2404,8131,manual,Tier 7
+Luther Burden III,WR,CHI,55,28,7,2363,12519,manual,Tier 7
+Tyler Warren,TE,IND,56,6,7,2323,12518,manual,Tier 7
+Lamar Jackson,QB,BAL,57,2,7,2283,4881,manual,Tier 7
+Brock Purdy,QB,SF,58,3,7,2244,8183,manual,Tier 7
+Jayden Daniels,QB,WAS,59,4,7,2206,11566,manual,Tier 7
+Tucker Kraft,TE,GB,60,7,7,2169,9484,manual,Tier 7
+Jaylen Waddle,WR,DEN,61,29,7,2132,7526,manual,Tier 7
+Emeka Egbuka,WR,TB,62,30,7,2096,12514,manual,Tier 7
+Denzel Boston,WR,CLE,63,31,7,2060,13346,manual,Tier 7
+Quinshon Judkins,RB,CLE,64,22,7,2025,12512,manual,Tier 7
+Omarion Hampton,RB,LAC,65,23,7,1990,12507,manual,Tier 7
+Terry McLaurin,WR,WAS,66,32,7,1957,5927,manual,Tier 7
+Carnell Tate,WR,TEN,67,33,7,1923,13279,manual,Tier 7
+DK Metcalf,WR,PIT,68,34,7,1891,5846,manual,Tier 7
+Josh Downs,WR,IND,69,35,7,1858,9500,manual,Tier 7
+Kyle Monangai,RB,CHI,70,24,7,1827,12534,manual,Tier 7
+Joe Burrow,QB,CIN,71,5,7,1796,6770,manual,Tier 7
+Ladd McConkey,WR,LAC,72,36,7,1765,11635,manual,Tier 7
+Rome Odunze,WR,CHI,73,37,7,1735,11620,manual,Tier 7
+Stefon Diggs,WR,WAS,74,38,8,1622,2449,manual,Tier 8
+Travis Kelce,TE,KC,75,8,8,1590,1466,manual,Tier 8
+Aaron Jones Sr.,RB,MIN,76,25,8,1559,4199,manual,Tier 8
+Ollie Gordon II,RB,MIA,77,26,8,1529,12495,manual,Tier 8
+Dalton Kincaid,TE,BUF,78,9,8,1499,10236,manual,Tier 8
+Drake Maye,QB,NE,79,6,8,1470,11564,manual,Tier 8
+Tony Pollard,RB,TEN,80,27,8,1441,5967,manual,Tier 8
+Patrick Mahomes II,QB,KC,81,7,8,1413,4046,manual,Tier 8
+Woody Marks,RB,HOU,82,28,8,1385,12474,manual,Tier 8
+Caleb Williams,QB,CHI,83,8,8,1358,11560,manual,Tier 8
+Jared Goff,QB,DET,84,9,8,1332,3163,manual,Tier 8
+Dallas Goedert,TE,PHI,85,10,8,1306,5022,manual,Tier 8
+Colston Loveland,TE,CHI,86,11,8,1280,12517,manual,Tier 8
+Harold Fannin Jr.,TE,CLE,87,12,8,1255,12506,manual,Tier 8
+Juwan Johnson,TE,NO,88,13,8,1231,7002,manual,Tier 8
+David Montgomery,RB,HOU,89,29,8,1206,5892,manual,Tier 8
+Jordyn Tyson,WR,NO,90,39,8,1183,13281,manual,Tier 8
+Deebo Samuel SR.,WR,SF,91,40,8,1160,5872,manual,Tier 8
+KC Concepcion Jr.,WR,CLE,92,41,8,1137,13298,manual,Tier 8
+Dak Prescott,QB,DAL,93,10,8,1115,3294,manual,Tier 8
+Jacorey Croskey-Merritt,RB,WAS,94,30,9,1049,12533,manual,Tier 9
+Josh Jacobs,RB,GB,95,31,9,1007,5850,manual,Tier 9
+Trevor Lawrence,QB,JAX,96,11,9,966,7523,manual,Tier 9
+Blake Corum,RB,LAR,97,32,9,927,11586,manual,Tier 9
+J.K. Dobbins,RB,DEN,98,33,9,890,6806,manual,Tier 9
+RJ Harvey,RB,DEN,99,34,9,854,12489,manual,Tier 9
+Matthew Stafford,QB,LAR,100,12,9,819,421,manual,Tier 9
+Jordan Mason,RB,MIN,101,35,9,786,8408,manual,Tier 9
+TreVeyon Henderson,RB,NE,102,36,9,754,12529,manual,Tier 9
+Bryce Young,QB,CAR,103,13,9,724,9228,manual,Tier 9
+Jordan Love,QB,GB,104,14,9,695,6804,manual,Tier 9
+Travis Ettienne Jr.,RB,NO,105,37,9,667,7543,manual,Tier 9
+Alvin Kamara,RB,NO,106,38,9,640,4035,manual,Tier 9
+Braelon Allen,RB,NYJ,107,39,9,614,11576,manual,Tier 9
+Jalen Hurts,QB,PHI,108,15,10,576,6904,manual,Tier 10
+Tyler Shough,QB,NO,109,16,10,562,12545,manual,Tier 10
+Emanuel Wilson,RB,SEA,110,40,10,550,11435,manual,Tier 10
+Jadarian Price,RB,SEA,111,41,10,537,13286,manual,Tier 10
+Germie Bernard,WR,PIT,112,42,10,525,13274,manual,Tier 10
+Rico Dowdle,RB,PIT,113,42,10,513,7021,manual,Tier 10
+Marvin Harrison Jr.,WR,HOU,114,43,10,501,11628,manual,Tier 10
+Jordan Addison,WR,MIN,115,44,10,490,9756,manual,Tier 10
+Keaton Mitchell,RB,LAC,116,43,10,479,9511,manual,Tier 10
+Zach Charbonnet,RB,SEA,117,44,10,468,9753,manual,Tier 10
+Devaughn Vele,WR,NO,118,45,10,457,11834,manual,Tier 10
+C.J. Stroud,QB,HOU,119,17,10,447,9758,manual,Tier 10
+MarShawn Lloyd,RB,GB,120,45,10,436,11581,manual,Tier 10
+Xavier Worthy,WR,KC,121,46,10,426,11624,manual,Tier 10
+Emmet Johnson,RB,KC,122,46,10,417,13337,manual,Tier 10
+Kyler Murray,QB,MIN,123,18,10,407,5849,manual,Tier 10
+Brian Robinson,RB,ATL,124,47,10,398,8154,manual,Tier 10
+Romeo Doubs,WR,NE,125,47,10,389,8121,manual,Tier 10
+Jakobi Meyers,WR,JAX,126,48,10,380,5947,manual,Tier 10
+Chris Godwin Jr.,WR,TB,127,49,10,371,4037,manual,Tier 10
+Brenton Strange,TE,JAX,128,14,10,363,9480,manual,Tier 10
+Tyler Allgeier,RB,ARI,129,48,10,355,8132,manual,Tier 10
+Kaelon Black,RB,SF,130,49,10,347,13414,manual,Tier 10
+Rachaad White,RB,WAS,131,50,10,339,8136,manual,Tier 10
+Keon Coleman,WR,BUF,132,50,11,329,11637,manual,Tier 11
+Khalil Shakir,WR,BUF,133,51,11,328,8134,manual,Tier 11
+Makai Lemon,WR,PHI,134,52,11,326,13294,manual,Tier 11
+Dontayvion Wicks,WR,PHI,135,53,11,325,9486,manual,Tier 11
+Adonai Mitchell,WR,NYJ,136,54,11,323,11625,manual,Tier 11
+Wan'Dale Robinson,WR,TEN,137,55,11,322,8126,manual,Tier 11
+Ryan Flournoy,WR,DAL,138,56,11,320,11783,manual,Tier 11
+Pat Freiermuth,TE,PIT,139,15,11,319,7600,manual,Tier 11
+T.J. Hockenson,TE,MIN,140,16,11,317,5844,manual,Tier 11
+Bo Nix,QB,DEN,141,19,11,316,11563,manual,Tier 11
+Keenan Allen,WR,IND,142,57,11,314,1479,manual,Tier 11
+Antonio Williams,WR,WAS,143,58,11,313,13301,manual,Tier 11
+Josh Cameron,WR,JAX,144,59,11,311,13394,manual,Tier 11
+Mark Andrews,TE,BAL,145,17,11,310,5012,manual,Tier 11
+Kendrick Bourne,WR,ARI,146,60,11,308,4454,manual,Tier 11
+Kenyon Sadiq,TE,NYJ,147,18,11,307,13330,manual,Tier 11
+Tyler Higbee,TE,LAR,148,19,11,306,3271,manual,Tier 11
+Kyle Pitts Sr.,TE,ATL,149,20,11,304,7553,manual,Tier 11
+Justin Herbert,QB,LAC,150,20,11,303,6797,manual,Tier 11
+Jonah Coleman,RB,DEN,151,51,12,302,13345,auto,Provisional
+Mike Washington Jr.,RB,LV,152,52,12,296,13305,auto,Provisional
+Kenny Gainwell,RB,TB,153,53,12,291,7567,auto,Provisional
+Jaylen Wright,RB,MIA,154,54,12,285,11643,auto,Provisional
+Will Shipley,RB,PHI,155,55,12,280,11577,auto,Provisional
+Chris Rodriguez,RB,JAX,156,56,12,274,10219,auto,Provisional
+Jonathon Brooks,RB,CAR,157,57,12,269,11583,auto,Provisional
+Tyjae Spears,RB,TEN,158,58,12,264,9508,auto,Provisional
+Kaleb Johnson,RB,GB,159,59,12,259,12504,auto,Provisional
+Kimani Vidal,RB,LAC,160,60,12,253,11647,auto,Provisional
+Isiah Pacheco,RB,DET,161,61,12,248,8205,auto,Provisional
+Malik Washington,WR,MIA,162,61,12,243,11610,auto,Provisional
+Courtland Sutton,WR,DEN,163,62,12,238,5045,auto,Provisional
+Tre Tucker,WR,LV,164,63,12,233,10213,auto,Provisional
+Kalif Raymond,WR,CHI,165,64,12,228,3634,auto,Provisional
+Brian Thomas Jr.,WR,JAX,166,65,12,223,11631,auto,Provisional
+Michael Pittman Jr.,WR,PIT,167,66,12,219,6819,auto,Provisional
+Quentin Johnston,WR,LAC,168,67,12,214,9754,auto,Provisional
+Tyreek Hill,WR,FA,169,68,12,209,3321,auto,Provisional
+Cyrus Allen,WR,KC,170,69,12,205,13413,auto,Provisional
+Dohnte Meyers,WR,CIN,171,70,12,200,13264,auto,Provisional
+Chris Bell,WR,MIA,172,71,12,196,13311,auto,Provisional
+Rashod Batemen,WR,BAL,173,72,12,191,7571,auto,Provisional
+Caleb Douglas,WR,MIA,174,73,12,187,13296,auto,Provisional
+Alec Pierce,WR,IND,175,74,12,182,8142,auto,Provisional
+Mack Hollins,WR,NE,176,75,12,178,4177,auto,Provisional
+Pat Bryant,WR,DEN,177,76,12,174,12492,auto,Provisional
+Jauan Jennings,WR,MIN,178,77,12,170,7049,auto,Provisional
+De'Zhaun Stribling,WR,SF,179,78,12,166,13417,auto,Provisional
+Ted Hurst,WR,TB,180,79,12,162,13317,auto,Provisional
+Roman Wilson,WR,PIT,181,80,12,158,11630,auto,Provisional
+Tre Harris,WR,LAC,182,81,12,154,12509,auto,Provisional
+Travis Hunter,WR,JAX,183,82,12,150,12530,auto,Provisional
+Xavier Hutchinson,WR,HOU,184,83,12,146,10218,auto,Provisional
+Devin Singletary,RB,NYG,185,62,12,142,6130,auto,Provisional
+Kendre Miller,RB,NO,186,63,12,139,9757,auto,Provisional
+Tyrone Tracy Jr.,RB,NYG,187,64,12,135,11655,auto,Provisional
+Ja'Kobi Lane,WR,BAL,188,84,12,131,13293,auto,Provisional
+Jake Ferguson,TE,DAL,189,21,12,128,8110,auto,Provisional
+Rashid Shaheed,WR,SEA,190,85,12,124,8676,auto,Provisional
+Cooper Kupp,WR,SEA,191,86,12,121,4039,auto,Provisional
+Hunter Henry,TE,NE,192,22,12,118,3214,auto,Provisional
+Darren Waller,TE,CAR,193,23,12,114,2505,auto,Provisional
+Tank Bigsby,RB,PHI,194,65,12,111,9225,auto,Provisional
+Kirk Cousins,QB,LV,195,21,12,108,1166,auto,Provisional
+Chig Okonkwo,TE,WAS,196,24,12,105,8210,auto,Provisional
+Aaron Rodgers,QB,PIT,197,22,12,102,96,auto,Provisional
+Dalton Schultz,TE,HOU,198,25,12,99,5001,auto,Provisional
+Mike Gesicki,TE,CIN,199,26,12,96,4993,auto,Provisional
+Oronde Gadsden II,TE,LAC,200,27,12,93,12493,auto,Provisional
+Trey Benson,RB,ARI,201,66,12,90,11589,auto,Provisional
+Terrance Ferguson,TE,LAR,202,28,12,87,12487,auto,Provisional
+Sam Darnold,QB,SEA,203,23,12,84,4943,auto,Provisional
+Jayden Reed,WR,GB,204,87,12,81,10222,auto,Provisional
+Jacoby Brissett,QB,ARI,205,24,12,79,3257,auto,Provisional
+Dylan Sampson,RB,CLE,206,67,12,76,12469,auto,Provisional
+Justice Hill,RB,BAL,207,68,12,74,5995,auto,Provisional
+Baker Mayfield,QB,TB,208,25,12,71,4892,auto,Provisional
+Tory Horton,WR,SEA,209,88,12,69,12497,auto,Provisional
+Raheim Sanders,RB,CLE,210,69,12,66,12472,auto,Provisional
+Kayshon Boutte,WR,HOU,211,89,12,64,9504,auto,Provisional
+Ricky Pearsall,WR,SF,212,90,12,61,11638,auto,Provisional
+Samaje Perine,RB,CIN,213,70,12,59,4147,auto,Provisional
+Troy Franklin,WR,DEN,214,91,12,57,11627,auto,Provisional
+Cade Otton,TE,TB,215,29,12,55,8111,auto,Provisional
+Josh Palmer,WR,BUF,216,92,12,52,7670,auto,Provisional
+Jayden Higgins,WR,HOU,217,93,12,50,12484,auto,Provisional
+AJ Barner,TE,SEA,218,30,12,48,11603,auto,Provisional
+Michael Mayer,TE,LV,219,31,12,46,9482,auto,Provisional
+Zach Ertz,TE,PHI,220,32,12,44,1339,auto,Provisional
+Marquise Brown,WR,PHI,221,94,12,42,5848,auto,Provisional
+Najee Harris,RB,NYG,222,71,12,40,7528,auto,Provisional
+Elic Ayomanor,WR,TEN,223,95,12,39,12499,auto,Provisional
+Malik Willis,QB,MIA,224,26,12,37,8161,auto,Provisional
+Noah Fant,TE,NO,225,33,12,35,5857,auto,Provisional
+David Njoku,TE,LAC,226,34,12,33,4033,auto,Provisional
+DeMario Douglas,WR,NE,227,96,12,32,9501,auto,Provisional
+Daniel Jones,QB,IND,228,27,12,31,5870,auto,Provisional
+Malachi Fields,WR,NYG,229,97,12,30,13285,auto,Provisional
+Geno Smith,QB,NYJ,230,28,12,29,1373,auto,Provisional
+Deshaun Watson,QB,CLE,231,29,12,28,4017,auto,Provisional
+Michael Penix Jr.,QB,ATL,232,30,12,27,11559,auto,Provisional
+Jameis Winston,QB,NYG,233,31,12,26,2306,auto,Provisional
+Cam Ward,QB,TEN,234,32,12,25,12522,auto,Provisional
+Ty Johnson,RB,BUF,235,72,12,24,6039,auto,Provisional
+Jerry Jeudy,WR,CLE,236,98,12,23,6783,auto,Provisional
+Jake Tonges,TE,SF,237,35,12,22,8698,auto,Provisional
+Greg Dulcich,TE,MIA,238,36,12,21,8172,auto,Provisional
+Jalen Nailor,WR,LV,239,99,12,20,8180,auto,Provisional
+Mason Taylor,TE,NYJ,240,37,12,19,12498,auto,Provisional
+Theo Johnson,TE,NYG,241,38,12,18,11597,auto,Provisional
+Xavier Legette,WR,CAR,242,100,12,17,11626,auto,Provisional
+Gunnar Helm,TE,TEN,243,39,12,16,12502,auto,Provisional
+Calvin Ridley,WR,TEN,244,101,12,15,4981,auto,Provisional
+Evan Engram,TE,DEN,245,40,12,14,4066,auto,Provisional
+Colby Parkinson,TE,LAR,246,41,12,13,6865,auto,Provisional
+Tyson Bagent,QB,CHI,247,33,12,12,11256,auto,Provisional
+Marcus Mariota,QB,WAS,248,34,12,11,2307,auto,Provisional
+Carson Wentz,QB,MIN,249,35,12,10,3161,auto,Provisional
+Case Keenum,QB,CHI,250,36,12,9,1737,auto,Provisional
+Drew Lock,QB,SEA,251,37,12,8,5854,auto,Provisional
+J.J. McCarthy,QB,NYG,252,38,12,7,11565,auto,Provisional
+Tua Tagovailoa,QB,ATL,253,39,12,6,6768,auto,Provisional
+Shedeur Sanders,QB,CLE,254,40,12,5,12524,auto,Provisional
+Justin Fields,QB,KC,255,41,12,4,7591,auto,Provisional
+Mac Jones,QB,SF,256,42,12,3,7527,auto,Provisional
+Jalon Daniels,QB,TB,257,43,12,2,13425,auto,Provisional
+Fernando Mendoza,QB,LV,258,44,12,1,13269,auto,Provisional
+De'Von Achane,RB,MIA,259,73,99,0,9226,auto,Out for season
+Jaxson Dart,QB,NYG,260,45,99,0,12508,auto,Out for season
+`;
+
 /* =====================================================================
    RANKING SETS ("boards"; Alan, Oct 14, multi-board architecture)
    Each board is an independently maintained ranking set: its own ranks, position
@@ -362,8 +629,10 @@ Jaxson Dart,QB,NYG,260,45,99,0,16.72,2,14.35,12508,manual,Out for season
                 (a list like Alan's 1QB PPR reference list)
      keySuffix  appended to this board's browser storage keys ("" = the original
                 spm_* keys, which are never renamed)
-     history / snaps   this board's ranking history file and snapshot folder
-   Only AM SF PPR TE+ is registered so far. A league is valued on the board matching its QB
+     history / snaps   this board's ranking history file and snapshot folder (null: none yet)
+     readOnly   shown and used for valuations, but not editable or publishable yet
+     provisionalAuto   its Auto players are provisional (not on Alan's list): marked wherever they're valued
+   Two boards: AM SF PPR TE+ (the original board) and AM PPR (1QB). A league is valued on the board matching its QB
    format (1QB → a 1QB board, Superflex / 2QB → a Superflex board), then adjusted from that
    board's native scoring and lineup to the league's own (Alan, Oct 14). More boards (and later ones a visitor
    creates or duplicates) are entries here; features read them through the registry.
@@ -371,9 +640,14 @@ Jaxson Dart,QB,NYG,260,45,99,0,16.72,2,14.35,12508,manual,Out for season
 const BOARDS = [
   { id: "sf-tep", label: "AM SF PPR TE+", short: "SF PPR TE+", block: "RANKINGS_CSV",
     fmt: { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 },
-    tierScope: "position", keySuffix: "", history: "data/rank_history.json", snaps: "data/rank_snapshots/", componentsBase: true }
+    tierScope: "position", keySuffix: "", history: "data/rank_history.json", snaps: "data/rank_snapshots/", componentsBase: true },
+  // AM PPR (Alan, Oct 14): read-only for now (editing and publishing come next), no history yet, so trades before it
+  // existed read "No AM PPR value available then". Its Auto players are provisional (not on Alan's list).
+  { id: "ppr", label: "AM PPR", short: "PPR", block: "RANKINGS_CSV_PPR",
+    fmt: { teams: 12, qb: "1", sx: 0, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 },
+    tierScope: "overall", keySuffix: ":ppr", history: null, snaps: null, readOnly: true, provisionalAuto: true }
 ];
-const BOARD_BLOCKS = { RANKINGS_CSV };   // block name → its data
+const BOARD_BLOCKS = { RANKINGS_CSV, RANKINGS_CSV_PPR };   // block name → its data
 
 /* =====================================================================
    SLOT 3 — VALUE MODEL (redraft, 12-team, full PPR, TE premium, superflex)
@@ -4855,6 +5129,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     </div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
+      <label class="owner-filter rk-board-lab" id="rk-board-lab"><span>Board</span>
+        <select class="select" id="rk-board" aria-label="Which AM board to show"></select>
+      </label>
       <div class="league-controls" id="league-controls" hidden>
         <div class="view-toggle" role="group" aria-label="Rankings view">
           <button class="vt-btn" type="button" data-view="base" aria-pressed="false" title="AM Board: the base rankings and values (12-team Superflex, Full PPR, TE premium +)">AM Board</button>
@@ -5644,10 +5921,75 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // The board shown on the Rankings tab is chosen separately (Alan, Oct 14): browsing another board there never changes
   // the board a connected league's features are valued on. null = show the league's board.
   var RANK_BOARD = null;
+  try { RANK_BOARD = boardById(localStorage.getItem("spm_rk_board") || "") || null; } catch (e) {}
   function viewBoard() { return RANK_BOARD || leagueBoard(); }
+  // the board the Rankings tab draws: League-adjusted shows the league's own board, the AM Board view the chosen one
+  function rankBoard() { return leagueView() ? (LG.board || leagueBoard()) : viewBoard(); }
+  // the board behind what's on screen: the Rankings tab's board there, the league's board everywhere else
+  function ctxBoard() { try { if (currentTab === "rankings") return rankBoard(); } catch (e) {} return LG.board || leagueBoard(); }
   let players = loadPlayers(boardCsv(ACTIVE_BOARD));
   let byId = new Map(players.map(p => [p.id, p]));
   let maxValue = Math.max(1, ...players.map(p => p.value));
+  /* Another board's players (Alan, Oct 14; see BOARDS). Every board ranks the same player pool, so a board's players are
+     keyed to this page's players by Sleeper ID: p.id is shared, and every league map (LG.adj, LG.adjPos, ownership) works
+     for whichever board priced it. Team and projections come from this page's players (the pipeline writes one block);
+     rank, position rank, tiers, values and source are the board's own. The league layer's tier pricing reads rawValue:
+     the board's own native position curve (with the same projection blend), so a league in that board's format gives
+     exactly its values. */
+  var CALC_BOARD = ACTIVE_BOARD;   // the board the league layer is pricing right now (withBoard); the editor's board otherwise
+  const BOARD_LISTS = new Map();
+  function boardPlayers(b) {
+    if (!b || b === ACTIVE_BOARD) return players;
+    let c = BOARD_LISTS.get(b.id);
+    if (!c) { c = { list: loadPlayers(boardCsv(b)).map(q => ({ ...q, board: b.id })), at: null, raw: null }; BOARD_LISTS.set(b.id, c); }
+    if (c.at !== players) {   // re-key after every rebuild of this page's players
+      const bySid = new Map(players.map(p => [p.sleeperId, p]));
+      c.list.forEach(q => {
+        const p = q.sleeperId && bySid.get(q.sleeperId);
+        q.id = p ? p.id : "b:" + q.sleeperId;
+        if (p) { q.team = p.team; q.projPPG = p.projPPG; q.projScore = p.projScore; q.games = p.games; }
+      });
+      const groups = {};
+      c.list.forEach(q => { q.projRank = null; if (q.pos !== "PICK" && q.posNum != null && q.projScore != null) (groups[q.pos + "|" + q.source] = groups[q.pos + "|" + q.source] || []).push(q); });
+      for (const g of Object.values(groups)) {
+        const slots = g.map(q => q.posNum).sort((x, y) => x - y);
+        [...g].sort((x, y) => y.projScore - x.projScore).forEach((q, i) => { q.projRank = slots[i]; });
+      }
+      c.at = players; c.raw = null; c.byId = new Map(c.list.map(q => [q.id, q]));
+    }
+    if (!c.raw && comps) {
+      const T = modelTable(curvesFor(boardScoring(b)), boardLineup(b), VALUE_MODEL.benchWeight * leagueDepth(boardLeague(b)));
+      const at = (pos, r) => T[pos][Math.min(r, T[pos].length) - 1];
+      c.list.forEach(q => {
+        if (!EDIT_POS.includes(q.pos) || !(q.posNum >= 1)) return;
+        const w = q.projRank >= 1 ? projectionWeight(q.games) : 0;
+        q.rawValue = (1 - w) * at(q.pos, q.posNum) + w * (q.projRank >= 1 ? at(q.pos, q.projRank) : 0);
+      });
+      c.raw = true;
+    }
+    return c.list;
+  }
+  // his record on board b (the same player object on this page's own board)
+  function boardTwin(p, b) {
+    if (!p || !b || b === ACTIVE_BOARD) return p;
+    boardPlayers(b);
+    const c = BOARD_LISTS.get(b.id);
+    return (c && c.byId.get(p.id)) || null;
+  }
+  // Runs fn with board b's players in place of this page's (league pricing, the Rankings tab browsing a board).
+  // Synchronous only: everything is put back before it returns.
+  function withBoard(b, fn) {
+    const keep = { players, byId, maxValue, CALC_BOARD };
+    b = b || ACTIVE_BOARD;
+    if (b !== ACTIVE_BOARD) {
+      players = boardPlayers(b); byId = new Map(players.map(p => [p.id, p])); maxValue = Math.max(1, ...players.map(p => p.value));
+    }
+    CALC_BOARD = b;
+    try { return fn(); } finally { players = keep.players; byId = keep.byId; maxValue = keep.maxValue; CALC_BOARD = keep.CALC_BOARD; }
+  }
+  const boardLabel = b => (b || ACTIVE_BOARD).label;
+  // a provisional value: an Auto player on a board whose Auto players aren't on Alan's list yet (AM PPR)
+  const provisionalOn = (p, b) => { const q = boardTwin(p, b); return !!(b && b.provisionalAuto && q && q.source === "auto"); };
   const hasPicks = players.some(p => p.pos === "PICK");
   const editor = { on: true, token: null, login: "", saving: false };   // temporary: editing open to everyone
   /* Phones (Alan, Oct 13, after the full audit): a visitor who can't publish doesn't get the editor's chrome (the bar,
@@ -6101,6 +6443,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const b = $("rk-dir"); b.textContent = RK.dir === "desc" ? "High → Low" : "Low → High";
     b.title = RK.dir === "desc" ? "Highest first · click for lowest first" : "Lowest first · click for highest first";
   }
+  $("rk-board").addEventListener("change", e => {
+    const b = boardById(e.target.value); if (!b) return;
+    RANK_BOARD = b === leagueBoard() ? null : b;   // null: follow the league's board
+    try { if (RANK_BOARD) localStorage.setItem("spm_rk_board", RANK_BOARD.id); else localStorage.removeItem("spm_rk_board"); } catch (err) {}
+    renderLeagueUI(); renderRankings();
+  });
   $("rk-sort").addEventListener("change", e => { RK.sort = e.target.value; syncRkControls(); saveRk(); renderRankings(); });
   $("rk-min").addEventListener("change", e => { RK.min = Number(e.target.value); saveRk(); renderRankings(); });
   $("rk-week").addEventListener("change", e => {
@@ -6187,6 +6535,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const OUT_TIER = 99;   // Out for season: a tag tier every position has (see sendOut)
   // "All" view: his positional tier as a small tag beside the position badge (tiers are per position, so no bands here)
   const tierTag = p => `<span class="tier-tag${isTagTier(p.tier) ? " tagged" : ""}" title="${esc(p.pos)} ${esc(tierLabel(p.pos, p.tier))}">${isTagTier(p.tier) ? esc(tierNameOf(p.pos, p.tier) || "Tagged") : "Tier " + esc(String(p.tier))}</span>`;
+  // a player's tier label on his own board (another board's players carry their tier names; overall tiers have no presets)
+  function tierText(p) {
+    if (!p) return "";
+    if (!p.board || !p.tierName) return tierLabel(p.pos, p.tier);
+    return isTagTier(p.tier) || /^tier\b/i.test(p.tierName) ? p.tierName : `Tier ${p.tier} · ${p.tierName}`;
+  }
+  const provTag = () => `<span class="src-auto prov" title="Provisional: not on your AM PPR list yet. His spot and value are a starting point, not an approved valuation.">Provisional</span>`;
   function tierLabel(pos, tier) {
     const name = pos === "OVERALL" ? presetTierName(pos, tier) : tierNameOf(pos, tier);
     if (isTagTier(tier)) return name || "Tagged";
@@ -6226,6 +6581,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   let movesMemo = null;
   function boardMoves() {
     const out = new Map(); let h;
+    if (CALC_BOARD && CALC_BOARD !== ACTIVE_BOARD) return out;   // another board (no history of its own yet)
     try { h = rankHistory; } catch (e) { return out; }   // first render runs before the history state exists
     if (!h || !h.players) return out;
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
@@ -6293,8 +6649,26 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      The redraw waits and runs once the drag ends. */
   const DRAG_STATE = { on: false, pending: false };
   const MV = { id: null, mode: "overall", btn: null };   // Move to rank: the open popover's player (see mvOpen)
+  // Another board on the Rankings tab (AM PPR): drawn with that board's players in place, read-only (no editor, no
+  // movement arrows: it has no history yet); the editor bar and rail are drawn for it afterwards
   function renderRankings() {
+    const rb = rankBoard();
+    if (rb === ACTIVE_BOARD) return renderRankingsIn();
     if (DRAG_STATE.on) { DRAG_STATE.pending = true; return; }
+    withBoard(rb, renderRankingsIn);
+    updateEditorBar();
+  }
+  function renderBoardPick() {
+    const sel = $("rk-board"); if (!sel) return;
+    const lb = leagueBoard(), cur = viewBoard();
+    const html = BOARDS.map(b => `<option value="${esc(b.id)}"${b === cur ? " selected" : ""}>${esc(b.label)}${b === lb && (LG.fmtOn) ? " · your format" : ""}${b.readOnly ? " · view only" : ""}</option>`).join("");
+    if (sel.dataset.h !== html) { sel.innerHTML = html; sel.dataset.h = html; }
+    sel.value = cur.id;
+    $("rk-board-lab").hidden = leagueView() || BOARDS.length < 2;
+  }
+  function renderRankingsIn() {
+    if (DRAG_STATE.on) { DRAG_STATE.pending = true; return; }
+    renderBoardPick();
     DRAG_STATE.pending = false;
     $("rk-sort-wrap").hidden = posFilter === "PICK";
     $("mk-bar").hidden = !mkOn();
@@ -6304,7 +6678,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (mkOn()) return renderMkt();
     if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
     let list, rk, group;
-    const editing = editorShown() && !leagueView();
+    const editing = editorShown() && !leagueView() && CALC_BOARD === ACTIVE_BOARD;
     maxValue = Math.max(1, ...players.map(dv));
     const canReorder = editing && (EDIT_POS.includes(posFilter) || (posFilter === "ALL" && hasOverall()));
     const numOf = p => posFilter === "ALL" ? p.rank : p.posNum;
@@ -6321,7 +6695,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         list.sort((a, b) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || byPos(a, b));
         const mv = boardMoves();
         rk = p => (p.rank ?? "–") + rankMove(mv.get(p.id), false);
-        group = p => p.overallTier ? tierLabel("OVERALL", p.overallTier) : null;
+        group = p => CALC_BOARD.tierScope === "overall" ? (p.tier !== "" ? tierText(p) : null) : p.overallTier ? tierLabel("OVERALL", p.overallTier) : null;
       } else {
         // Positional stage: no overall board yet, so show each position in turn
         list.sort(byPos);
@@ -6402,7 +6776,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       out.push(`<tr class="player${own && own.mine ? " mine" : ""}${shownRank != null && shownRank <= 3 && posFilter !== "PICK" ? " top3" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>${editCol}
         <td class="rk">${(() => { const h = rk(p), n = String(numOf(p)); return canReorder && numOf(p) != null && h.startsWith(n)
           ? `<button class="rk-btn" type="button" data-mv="${p.id}" aria-haspopup="dialog" aria-expanded="${MV.id === p.id ? "true" : "false"}" title="Move to rank…" aria-label="Move ${esc(p.name)} to a rank (now ${posFilter === "ALL" ? "#" + n : esc(posLabel(p))})">${n}</button>` + h.slice(n.length) : h; })()}</td>
-        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : ""}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
+        <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : CALC_BOARD.provisionalAuto && p.source === "auto" ? provTag() : ""}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
         <td class="val"${p.hasValue === false ? "" : ` data-hc="am:${p.id}" data-hc-side="left"`}>${editing ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
@@ -6890,12 +7264,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // last update, active format, your power rank (league only), biggest risers and fallers since the last snapshot day
   let railTimer = 0;
   function queueRail() { clearTimeout(railTimer); railTimer = setTimeout(renderRail, 0); }
-  function renderRail() {
+  function renderRail() { const rb = rankBoard(); return rb === ACTIVE_BOARD ? renderRailIn() : withBoard(rb, renderRailIn); }
+  function renderRailIn() {
     const el = $("rk-rail"); if (!el) return;
     if (rankHistory === undefined) { loadHistory().then(() => { if (rankHistory !== undefined) renderRankings(); }); }
     const parts = [], vl = valueLeague();
     // board context: last update, the format the values follow, your power rank
-    const ctx = [`<div class="rr-row"><dt>Updated</dt><dd>${esc(lastUpdated().replace(/, \d{4}$/, ""))}</dd></div>`,
+    const ctx = [CALC_BOARD !== ACTIVE_BOARD ? `<div class="rr-row"><dt>Board</dt><dd>${esc(CALC_BOARD.label)}${CALC_BOARD.readOnly ? " · view only" : ""}</dd></div>`
+      : `<div class="rr-row"><dt>Updated</dt><dd>${esc(lastUpdated().replace(/, \d{4}$/, ""))}</dd></div>`,
       `<div class="rr-row"><dt>${leagueView() && vl ? "Values" : "Format"}</dt><dd>${esc(leagueView() && vl ? formatLabel(vl) : formatLabel()).replace(/ \+/g, " +")}${vl || LG.active ? ` <button class="btn link inline rr-fmt" type="button" data-open-fmt>${LG.active ? "Customize" : "Change"}</button>` : ""}</dd></div>`];
     if (LG.active && LG.myRosterId != null) {
       const ev = evaluateTeams(), me = ev.list.find(x => x.team.mine);
@@ -7027,6 +7403,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // second line; the value right-aligned so the totals add up visibly. Team-fit detail lives in a tooltip
   // and in Roster impact rather than in the row.
   const tcAdjusted = () => LG.fmtOn;
+  const tfProv = p => (LG.fmtOn && provisionalOn(p, LG.board) ? provTag() : "");
+  // which board the values come from, shown only when it isn't the original board; and the provisional players in the deal
+  const tcBoardBit = () => (LG.fmtOn && LG.board && LG.board !== DEFAULT_BOARD ? ` · <b>${esc(LG.board.label)}</b>` : "");
+  function tcProvBit() {
+    if (!LG.fmtOn) return "";
+    const ids = [...new Set(["A", "B", "C"].flatMap(s => sides[s] || []))].filter(id => provisionalOn(byId.get(id), LG.board));
+    if (!ids.length) return "";
+    const names = ids.map(id => byId.get(id).name);
+    return ` <span class="tc-prov" title="${esc(names.join(", "))}: not on your ${esc(LG.board.label)} list yet, so their values are provisional, not approved valuations">· ${ids.length} provisional value${ids.length === 1 ? "" : "s"}</span>`;
+  }
   function renderRoster(side) {
     const ids = sides[side];
     const X = !TC3.on && TC_UI.ctx ? TC_UI.ctx[side] : null;
@@ -7039,7 +7425,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const dot = `<span class="tc-pl-dot" aria-hidden="true">·</span>`;
       const meta = [p.team ? `<span class="pl-team">${esc(p.team)}</span>` : "", TC3.on ? fromMenu(id, side) : tcOwner(p, side)].filter(Boolean).join(dot);
       return `<li class="tc-pl">${face(p.sleeperId, p.name, "sm")}
-        <span class="pl-head">${nameLink(p.sleeperId, p.name, "tc-pl-name")}</span>
+        <span class="pl-head">${nameLink(p.sleeperId, p.name, "tc-pl-name")}${LG.fmtOn && provisionalOn(p, LG.board) ? provTag() : ""}</span>
         <span class="tc-pl-meta"><span class="pos ${esc(p.pos)}">${esc(tcAdjusted() ? posLabel(p) : p.posRank)}</span>${meta}</span>
         <span class="tc-pl-v${cls}" data-hc="tv:${id}:${side}" data-hc-side="left">${fmt(value)}</span>
         <button class="remove" type="button" data-id="${id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
@@ -7124,9 +7510,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("tc-teams").hidden = !on;
     $("tc-teamC").hidden = !(on && TC3.on);
     $("tc-badge").innerHTML = on
-      ? `<span class="tc-dot" aria-hidden="true"></span>League context: <b>${esc(activeData().league.name)}</b> ${infoIcon(`Values are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}`
+      ? `<span class="tc-dot" aria-hidden="true"></span>League context: <b>${esc(activeData().league.name)}</b>${tcBoardBit()} ${infoIcon(`Values come from ${boardLabel(LG.board)} (picked by the league's QB format) and are adjusted for ${activeData().league.name}'s scoring and lineup (${formatParts(activeData().league).join(", ")}). Your base rankings don't change.`, "About league-adjusted values")}${tcProvBit()}`
       : LG.fmtOn
-        ? `<span class="tc-dot" aria-hidden="true"></span>${esc(tcValuesName())} · ${esc(formatParts(valueLeague()).join(" · "))} ${infoIcon("Values are league-adjusted for these settings. Pick a league above to also use its rosters. Your base rankings don't change.", "About league-adjusted values")} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
+        ? `<span class="tc-dot" aria-hidden="true"></span>${esc(tcValuesName())} · ${esc(formatParts(valueLeague()).join(" · "))}${tcBoardBit()} ${infoIcon(`Values come from ${boardLabel(LG.board)} (picked by the QB format) and are league-adjusted for these settings. Pick a league above to also use its rosters. Your base rankings don't change.`, "About league-adjusted values")}${tcProvBit()} <button class="btn link inline" type="button" data-open-fmt>Change</button>`
         : `AM Values ${infoIcon(`Base AM values for the site's format (${formatLabel()}). Pick your league's settings, or connect a league to use its rosters and scoring.`, "About values")} <button class="btn link inline" type="button" data-open-fmt>League settings</button>`;
     $("tc-badge").classList.toggle("on", on || LG.fmtOn);
     ["A", "B", "C"].forEach(s => {
@@ -7322,7 +7708,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       adds: Object.entries(st.tx.adds || {}).map(([sid, rid]) => `+${nm(sid)} → ${teamNameOf(rid)}`), drops: Object.entries(st.tx.drops || {}).map(([sid, rid]) => `−${nm(sid)} from ${teamNameOf(rid)}`),
       issues: st.issues.map(z => `${nm(z.sid)} ${z.text}`) }));
     const then = r && r.then ? snapText(r, r.then).replace(/<[^>]+>/g, "") : null;
-    const thenWhy = r ? (r.then ? `AM values published by ${new Date(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : r.preSpam ? "No AM value existed at the time of this trade (Pre-AM trade)" : "Only some of these players had an AM value at the time, so there's no at-the-time verdict") : "";
+    const thenWhy = r ? (r.then ? `AM values published by ${new Date(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : r.noBoard ? `No ${r.noBoard} value available then` : r.preSpam ? "No AM value existed at the time of this trade (Pre-AM trade)" : "Only some of these players had an AM value at the time, so there's no at-the-time verdict") : "";
     return { t, rb, when: when(t.at), rec, checks, lines, rosters, moves, then, thenWhy, nm };
   }
   function histText(R) {   // the same check as plain text, for "Copy report"
@@ -8427,6 +8813,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
 
   function updateEditorBar() {
+    if (CALC_BOARD && CALC_BOARD !== ACTIVE_BOARD) return;   // the wrapper redraws it once the board is put back
+    if (rankBoard() !== ACTIVE_BOARD) { $("editor-bar").hidden = true; $("ed-reveal-wrap").hidden = true; return; }   // a read-only board is showing
     renderValueCheck();
     renderMarketAudit();
     if (RV && RV.open) renderReview();
@@ -10292,9 +10680,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // A board's native scoring and lineup: the base its league adjustments measure from (AM SF PPR TE+ is the format
   // the curve components were built for, so it reads them directly; other boards take their own format)
   // (function declarations: valueLeague and the format label can run before this line)
-  function boardScoring(b = ACTIVE_BOARD) { return b.componentsBase ? comps.base_scoring : fmtLeague(b.fmt).scoring_settings; }
-  function boardLineup(b = ACTIVE_BOARD) { return b.componentsBase ? BASE_LINEUP() : lineupOf(fmtLeague(b.fmt)); }
-  function boardLeague(b = ACTIVE_BOARD) { return fmtLeague(b.fmt); }
+  function boardScoring(b = CALC_BOARD || ACTIVE_BOARD) { return b.componentsBase ? comps.base_scoring : fmtLeague(b.fmt).scoring_settings; }
+  function boardLineup(b = CALC_BOARD || ACTIVE_BOARD) { return b.componentsBase ? BASE_LINEUP() : lineupOf(fmtLeague(b.fmt)); }
+  function boardLeague(b = CALC_BOARD || ACTIVE_BOARD) { return fmtLeague(b.fmt); }
 
   function activeData() { return sl && sl.activeId && sl.data ? sl.data[sl.activeId] : null; }
 
@@ -10324,7 +10712,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     LG.ownerOf = new Map(); LG.teams = []; LG.myRosterId = null;
     LG.mode = LG.active ? (sl.view === "base" ? "base" : "league") : fmtView;
     if (LG.active) leagueTeams(d);
-    if (LG.fmtOn) adjustValues(vl);
+    LG.board = leagueBoard();   // the board this league's values come from (its QB format picks it)
+    if (LG.fmtOn) withBoard(LG.board, () => adjustValues(vl));
   }
   function leagueTeams(d) {
     const users = new Map(d.users.map(u => [u.user_id, u]));
@@ -10345,7 +10734,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function adjustValues(vl) {
     const FA = FORMAT_ADJUST, raw = new Map();
     if (comps) {
-      const base = modelTable(curvesFor(boardScoring()), boardLineup());
+      // the board's own format, at its own league depth (1 for AM SF PPR TE+; AM PPR's 8 starters make it a little shallower)
+      const base = modelTable(curvesFor(boardScoring()), boardLineup(), VALUE_MODEL.benchWeight * leagueDepth(boardLeague()));
       const lg = modelTable(curvesFor(vl.scoring_settings || {}), lineupOf(vl), VALUE_MODEL.benchWeight * LG.depth);   // shallow leagues: depth counts less
       // A player's value = the league curve at his rank + his own distance from the base curve (your tiers,
       // projections), shrunk in proportion when the position is worth less here. A flat shift would let a
@@ -10547,13 +10937,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   var adjCache = new Map();   // var: leagueRecalc can run before this line
   var TIER_EDGE = true;         // formatCheck: false = one factor per tier (the pricing before Oct 14)
   var SF_SMOOTH = true;         // formatCheck: false = no Superflex smoothing (the scarcity model alone), "noguard" = no 8-team cliff guard
-  function adjMapFor(vl) {
-    const key = JSON.stringify([ACTIVE_BOARD.id, lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH, TIER_EDGE]);
+  var PIN_BOARD = null;          // formatCheck: price every format on one board (null = the board each format picks)
+  function adjMapFor(vl, b) {
+    b = b || PIN_BOARD || autoBoardFor(vl);
+    const key = JSON.stringify([b.id, lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH, TIER_EDGE]);
     if (adjCache.has(key)) return adjCache.get(key);
     const keep = { adj: LG.adj, adjPos: LG.adjPos, adjRank: LG.adjRank, factor: LG.factor, depth: LG.depth };
     try {
       LG.adj = new Map(); LG.adjPos = new Map(); LG.adjRank = new Map(); LG.factor = new Map(); LG.depth = leagueDepth(vl);
-      adjustValues(vl);
+      withBoard(b, () => adjustValues(vl));
       adjCache.set(key, LG.adj);
       return LG.adj;
     } finally { Object.assign(LG, keep); }
@@ -10563,22 +10955,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function formatSteps(p) {
     const vl = valueLeague();
     if (!vl || !comps || !LG.adj.has(p.id)) return null;
-    const base = boardLeague(), bsc = base.scoring_settings, sc = vl.scoring_settings || {};
+    const bd = LG.board || leagueBoard(), q = boardTwin(p, bd);   // steps start from the league's board (AM PPR for 1QB)
+    if (!q) return null;
+    const base = boardLeague(bd), bsc = base.scoring_settings, sc = vl.scoring_settings || {};
     const withSc = x => ({ ...base, scoring_settings: x });
     const lu = lineupOf(vl), b = lineupOf(base);
-    const v1 = adjMapFor(withSc({ ...sc, bonus_rec_te: bsc.bonus_rec_te || 0 })).get(p.id);   // the league's scoring, base TE premium
-    const v2 = adjMapFor(withSc(sc)).get(p.id);                                                // + the league's TE premium
+    const v1 = adjMapFor(withSc({ ...sc, bonus_rec_te: bsc.bonus_rec_te || 0 }), bd).get(p.id);   // the league's scoring, base TE premium
+    const v2 = adjMapFor(withSc(sc), bd).get(p.id);                                                // + the league's TE premium
     const v3 = LG.adj.get(p.id);                                                               // + the league's lineup and size
     const tepFrom = tepShort(bsc.bonus_rec_te) || "none", tepTo = tepShort(sc.bonus_rec_te) || "none";
     const luDiff = ["teams", "QB", "RB", "WR", "TE", "FLEX", "WRRB_FLEX", "REC_FLEX", "SUPER_FLEX", "bench"].some(k => lu[k] !== b[k]);
-    return { base: p.value, adj: v3, steps: [
-      { key: "scoring", label: "Scoring", d: v1 - p.value },
+    return { base: q.value, board: bd, adj: v3, steps: [
+      { key: "scoring", label: "Scoring", d: v1 - q.value },
       { key: "tep", label: `TE premium (${tepFrom} → ${tepTo})`, d: v2 - v1, on: tepFrom !== tepTo },
       { key: "lineup", label: "Lineup & league size", d: v3 - v2, on: luDiff }
     ] };
   }
   // Self-test: do the format settings reach the values? SPM.formatCheck() in the console (or tests/format_check.py).
-  async function formatCheck() {
+  // the format machinery is checked on AM SF PPR TE+ in every format (the checks were written for its players);
+  // SPM.boardCheck covers each board in its own formats and which board a league uses
+  async function formatCheck() { const keep = PIN_BOARD; PIN_BOARD = DEFAULT_BOARD; try { return await formatCheckIn(); } finally { PIN_BOARD = keep; } }
+  async function formatCheckIn() {
     if (!comps) await loadStatic();
     await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason));
     factorCache.key = null; adjCache = new Map();
@@ -10796,7 +11193,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     const same = players.filter(p => Math.round(adjMapFor(fmtLeague(FMT_DEFAULT)).get(p.id)) !== Math.round(p.value));
     check("A league in the base format gives exactly the base values", same.map(p => p.name), same.length === 0);
-    const live = LG.fmtOn ? players.slice(0, 50).filter(p => Math.round(adjMapFor(valueLeague()).get(p.id)) !== Math.round(LG.adj.get(p.id))) : [];
+    const live = LG.fmtOn ? players.slice(0, 50).filter(p => Math.round(adjMapFor(valueLeague(), LG.board).get(p.id)) !== Math.round(LG.adj.get(p.id))) : [];
     check("The active league layer matches a fresh run of its settings", live.map(p => p.name), live.length === 0);
     if (out.some(c => !c.pass)) console.warn("AM format check failed", out); else console.info("AM format check passed", out);
     return out;
@@ -10854,7 +11251,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       return null;
     }
-    const key = ACTIVE_BOARD.id + "|" + JSON.stringify(sc) + "|" + players.map(p => p.id + ":" + p.posNum).join(",");
+    const key = (CALC_BOARD || ACTIVE_BOARD).id + "|" + JSON.stringify(sc) + "|" + players.map(p => p.id + ":" + p.posNum).join(",");
     if (factorCache.key === key) return factorCache.map;
     const baseSc = boardScoring(), ratio = new Map();
     players.forEach(p => {
@@ -10917,7 +11314,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
       ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. Under each rank, “AM #12” is his spot on the AM Board.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
-      : `<span>Showing the AM Board · <b>${esc(formatLabel())}</b></span>`;
+      : `<span>Showing ${esc(viewBoard().label)} · <b>${esc(formatLabel(boardLeague(viewBoard())))}</b></span>`;
+    { const b = viewBoard(), base = $("league-controls").querySelector('[data-view="base"]');
+      if (base) base.title = `AM Board: ${b.label}'s own rankings and values (${formatLabel(boardLeague(b))})`; }
     if (!d) {
       $("fmt-override").hidden = true; $("league-chip").classList.remove("custom");
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
@@ -12508,7 +12907,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const SIDE_LABELS = [[3, "Fair", "Fair"], [7, "Slight win", "Slight loss"], [12, "Win", "Loss"], [20, "Clear win", "Clear loss"], [30, "Steal", "Lopsided loss"], [Infinity, "Robbery", "Robbed"]];
   function evalTrade(t) {
-    const map = bySleeper();
+    // the league's board (Alan, Oct 14): a 1QB league reads AM PPR values; a board with no history of its own has no
+    // value from before it existed ("No AM PPR value available then"), never another board's value converted
+    const bd = LG.board || leagueBoard(), noHist = !bd.history;
+    const map = bd === ACTIVE_BOARD ? bySleeper() : withBoard(bd, bySleeper);
     const parts = t.rosters.map(rid => ({ rid, team: LG.teams.find(x => x.rosterId === rid) || { name: `Team ${rid}`, rosterId: rid, avatar: "" }, get: [], give: [], picks: [], faab: 0 }));
     const partOf = rid => parts.find(s => s.rid === rid);
     Object.entries(t.adds).forEach(([sid, rid]) => { const s = partOf(rid); if (s) s.get.push(String(sid)); });
@@ -12518,12 +12920,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // two snapshots, never mixed: "then" = the AM values published at or before the trade, "now" = today's AM values.
     // Both are base AM Board values so they compare like for like (a league's past settings can't be rebuilt).
     const all = [...new Set(parts.flatMap(s => s.get))];
-    const then = new Map(all.map(sid => [sid, valueAt(sid, t.at)]));
+    const then = new Map(all.map(sid => [sid, noHist ? null : valueAt(sid, t.at)]));
     const valued = all.filter(sid => map.get(sid) || then.get(sid));   // K, DEF and other unranked players are never valued
     const thenAll = valued.length > 0 && valued.every(sid => then.get(sid));
     const thenNone = valued.every(sid => !then.get(sid));
     const basisTs = thenAll ? valued.map(sid => then.get(sid)).sort((a, b) => a.t - b.t).pop().ts : null;
-    const preSpam = !thenAll && t.at < spamStart();
+    const preSpam = !thenAll && (noHist || t.at < spamStart());
     parts.forEach(s => {
       s.items = s.get.map(sid => {
         const e = rosterEntry(sid, map), p = map.get(sid), h = then.get(sid) || null;
@@ -12564,7 +12966,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const fair = nets.every(n => n.vr ? n.vr.kind !== "split" && n.vr.kind !== "sensitive" && n.vr.gap < VALUE_FAIR : Math.abs(n.net) < 1);
       return { nets, totals: nets.map(n => n.got), ahead: lead, fair, diff: nets[lead].net };
     };
-    const res = { t, parts, thenAll, thenNone, basisTs, preSpam, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
+    const res = { t, parts, thenAll, thenNone, basisTs, preSpam, noBoard: noHist ? bd.label : null, nowLabel: bd === DEFAULT_BOARD ? "AM" : bd.label, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
     // what the rest of the site reads (Analyze trade): today's snapshot for two-team trades
     res.historical = thenAll;
     if (parts.length === 2) { const n = res.now; res.model = n.model; res.a = n.a; res.b = n.b; res.ahead = n.ahead; res.more = n.more; res.tier = n.tier; res.fair = n.fair; }
@@ -12647,12 +13049,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       </div>`;
     const basisDate = r.basisTs ? whenDate(r.basisTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
     const tag = r.then ? `<span class="th-tag hist">AM values at trade</span>`
+      : r.noBoard ? `<span class="th-tag pre">No ${esc(r.noBoard)} value then</span>`
       : r.preSpam ? `<span class="th-tag pre">Pre-AM trade</span>` : `<span class="th-tag now">Partial AM history</span>`;
-    const noThen = r.preSpam ? "No AM value existed at the time of this trade"
+    const noThen = r.noBoard ? `No ${esc(r.noBoard)} value available then` : r.preSpam ? "No AM value existed at the time of this trade"
       : `Not every player had an AM value at the time (${P.flatMap(s => s.items).filter(x => (x.p || x.then) && !x.then).map(x => esc(x.e.name)).join(", ")})`;
     const ages = `<section class="th-ages" aria-label="Then vs now">
         ${r.then ? thBlock(r, r.then, "then", `${basisDate} AM values`) : `<div class="th-age then none"><span class="th-age-k">Then</span><span class="th-age-none">${noThen}</span></div>`}
-        ${thBlock(r, r.now, "now", "Current AM values")}
+        ${thBlock(r, r.now, "now", `Current ${esc(r.nowLabel || "AM")} values`)}
         ${aged ? `<p class="th-aged">${esc(aged.text)}</p>` : ""}
       </section>`;
     const anyPicks = P.some(s => s.picks.length);
@@ -12694,6 +13097,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return `<div class="th-full">
         <p class="thh-basis">${r.then
           ? `<b>At the time:</b> the latest AM values published at or before the trade (${esc(tsLong(r.basisTs))}; trade completed ${esc(new Date(t.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))}). Never a ranking update from after it.`
+          : r.noBoard ? `<b>No ${esc(r.noBoard)} value available then:</b> this league is valued on ${esc(r.noBoard)}, which has no published values from the time of this trade, so only today's ${esc(r.noBoard)} values are shown. They say how the trade aged, not whether it was fair when it happened.`
           : r.preSpam ? `<b>No AM value existed at the time of this trade</b>, so only today's values are shown. They say how the trade aged, not whether it was fair when it happened.`
           : `<b>No complete AM snapshot for this date:</b> some players had no published AM value yet, so there's no at-the-time verdict. Values that did exist are shown.`}</p>
         <div class="thh-sides">${P.map(side).join("")}</div>
@@ -14476,7 +14880,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const lv = leagueView(), tip = `${lv ? (LG.active ? "League-adjusted AM rank and value" : "AM rank and value in your settings") : "AM Board rank and value"}: forward-looking${posLabel(p) !== p.posRank ? ` · AM Board ${p.posRank}` : ""}`;
     return `<div class="pk pk-am" title="${esc(tip)}"><span class="pk-k">AM rank · value</span>`
       + `<div class="pk-main"><b class="pk-big">${esc(String(posLabel(p) || "–"))}</b><b class="pk-val">${fmt(dv(p))}</b></div>`
-      + `<div class="pk-sub">#${lv ? overallRank(p) : p.rank ?? "–"} overall${p.tier ? " · " + esc(tierLabel(p.pos, p.tier)) : ""}</div></div>`;
+      + `<div class="pk-sub">#${lv ? overallRank(p) : p.rank ?? "–"} overall${p.tier ? " · " + esc(tierText(p)) : ""}${CALC_BOARD.provisionalAuto && p.source === "auto" ? " · provisional" : ""}${CALC_BOARD !== DEFAULT_BOARD ? " · " + esc(CALC_BOARD.label) : ""}</div></div>`;
   }
   // The model's factors behind his ROS PPG (data/projections.json `f`: [games of evidence, role xPPG, efficiency,
   // environment, schedule, healthy PPG], base scoring; every factor is a ratio, so it holds in any scoring).
@@ -14518,7 +14922,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (g < 6) return { cls: "mod", label: "Moderate confidence", tip: `Moderate confidence: ${games}.` };
     return null;
   }
-  function renderPlayer() {
+  // the drawer reads the board behind the screen it was opened from (AM PPR's rank, tier and value in a 1QB league)
+  function renderPlayer() { const b = ctxBoard(); return b === ACTIVE_BOARD ? renderPlayerIn() : withBoard(b, renderPlayerIn); }
+  function renderPlayerIn() {
     const box = $("player-body"), sid = PP.sid;
     if (!sid) return;
     const loaded = STATS_SEASONS.every(y => statsCache[y] !== undefined) && slPlayers;
@@ -15218,6 +15624,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return list.map(e => ({ ts: e[0], date: localDay(e[0]), rank: e[1], posRank: e[2], tier: e[3], value: e[4], src: e[5], kind: e[6] || "", local: !!e.local }));
   }
   function ppHistory(info) {
+    if (!CALC_BOARD.history) return `<p class="empty-note">${esc(CALC_BOARD.label)} has no ranking history yet: its rank, tier and value changes are recorded once it's edited and published on its own.</p>`;
     const h = historyOf(info.sid), p = info.p;
     if (!p) return `<p class="empty-note">${esc(info.name)} isn't in the AM Rankings.</p>`;
     const note = `<p class="pp-note">Ranking history shows published rank, tier and value edits, and older model repricing once it added up to 0.5% (muted). Every publish also stores the exact board. Values are base AM values.</p>`;
@@ -16189,7 +16596,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           const both = (0.45 * utilScore(Math.min(fS.su, fT.su)) + 0.2 * utilScore((fS.su + fT.su) / 2)) / 0.65;
           score = 0.4 * fair + 0.6 * both - 0.05 * size;
         }
-        ideas.push({ team: T, S, give, get, m, vr, sAhead: sAheadV, more, mid, dS, dT, sAfter, tAfter, places, fS, fT, score, scale, fit, goal: mkInfo ? "market" : edge ? opts.goal : "", mk: mkInfo });
+        // a provisional value (AM PPR's Auto players, not on Alan's list yet) is a starting point, not an approved
+        // valuation: ideas built on one rank below comparable ideas built on approved values, and the card says so
+        const prov = [...give, ...get].some(p => provisionalOn(p, LG.board));
+        if (prov) score -= 0.1;
+        ideas.push({ prov, team: T, S, give, get, m, vr, sAhead: sAheadV, more, mid, dS, dT, sAfter, tAfter, places, fS, fT, score, scale, fit, goal: mkInfo ? "market" : edge ? opts.goal : "", mk: mkInfo });
       }
     }
     ideas.sort((a, b) => b.score - a.score);
@@ -16522,7 +16933,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const F = mkFmt(), srcs = mkSources(F);
     const amV = p => Math.max(0, adjOf(p)), amPos = p => (LG.fmtOn && LG.adjPos.has(p.id) ? LG.adjPos.get(p.id) : p.posNum);
     const pool = players.filter(p => p.sleeperId && EDIT_POS.includes(p.pos) && p.posNum != null && Number(p.tier) !== OUT_TIER);
-    const key = JSON.stringify([ACTIVE_BOARD.id, F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + s.at + s.notes.join()), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
+    const key = JSON.stringify([(CALC_BOARD || ACTIVE_BOARD).id, F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + s.at + s.notes.join()), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
     if (MK_CACHE.key === key) return MK_CACHE;
     const desc = arr => arr.slice().sort((a, b) => b - a);
     const ovCurve = desc(pool.map(amV)), posCurve = {}, posList = {};
@@ -16879,7 +17290,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function mlCard(it, i, K) {
     const mk = it.mk, pm = powerMoves(it, K), full = TF.openFull.has(i), you = it.S.mine, sN = you ? "you" : it.S.name;
     const recv = you ? "You receive" : `${it.S.name} receives`, send = you ? "You send" : `${it.S.name} sends`;
-    const row = (p, note) => { const r = mkOf(p); return `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">AM ${esc(posLabel(p))}</b>${r ? ` · Market ${p.pos}${r.cRank}` : ""}${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`; };
+    const row = (p, note) => { const r = mkOf(p); return `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${tfProv(p)}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">AM ${esc(posLabel(p))}</b>${r ? ` · Market ${p.pos}${r.cRank}` : ""}${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`; };
     const lvCls = ["l0", "l1", "l2", "l3"][mk.lvl], accCls = { High: "hi", Moderate: "mid", Low: "lo" };
     const fw = full ? fullWhy(it) : [];
     const detail = full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
@@ -16921,7 +17332,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function targetCard(it, i, K, X) {
     const pm = powerMoves(it, K), v = targetVerdict(it), full = TF.openFull.has(i), fw = fullWhy(it);
     const meW = shortWhy(it, v.cls === "fair") || (() => { const fe = it.fS.inc.find(e => e.p === X); return fe && fe.starts ? `${X.name} would start at ${fe.role} for you.` : `You add ${X.name} without weakening your starters.`; })();
-    const row = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+    const row = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${tfProv(p)}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     const nums = [`<span title="Raw totals of base AM Board values, no package adjustment">AM raw ${signPct(it.amDiff)}</span>`, `<b title="League-adjusted values with the package adjustment: an extra piece counts less next to the best player in the deal. It can narrow the verdict, never create or reverse a winner on its own.">Package-adjusted ${signPct(it.adjDiff)}</b>`]
       .concat(it.mktDiff == null ? [] : [`<span title="Raw totals of the market / expert consensus (FantasyCalc + Flock) on AM's scale, no package adjustment">Market raw ${signPct(it.mktDiff)}</span>`])
       .concat(it.mktDiff == null && it.mkMissing.length ? [`<span class="muted" title="A market read needs a FantasyCalc or Flock value for every player in the trade; AM's value never stands in for a missing one">Market: no value for ${esc(it.mkMissing.join(", "))}</span>`] : []);
@@ -16964,6 +17375,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (theirs.strong.includes(p.pos)) { score += 0.1; tags.push(`They're deep at ${p.pos}`); }
         else if (theirs.needs.includes(p.pos)) score -= 0.2;   // pulling from a thin room is a hard sell
         score *= 0.6 + 0.4 * Math.min(1, dv(p) / 4000);
+        if (provisionalOn(p, LG.board)) { score *= 0.7; tags.push("Provisional value: not on your list yet"); }
         out.push({ p, T, tags, score, r, verdict: r && r.dir > 0 && r.lvl >= 2 && (canHelp.length || theirs.strong.includes(p.pos)) ? "Strong Target" : r && r.dir > 0 && r.lvl >= 1 ? "Target" : "" });
       }
     }
@@ -17094,9 +17506,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const you = S.mine, sLabel = you ? "You" : S.name;
     lead.innerHTML += tgt ? `<span class="tf-persp">Offers you could make to get ${esc(X.name)} from ${esc(owner.name)} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} ${esc(within)} · ranked by how realistic they are · + = in your favor; the verdict uses league-adjusted values, where an extra piece counts less next to the star</span>` : `<span class="tf-persp">${mode === "give" ? `Trades ${esc(you ? "you" : S.name)} could make with ${pkg ? "the pair" : "him"}` : `Ways ${esc(you ? "you" : S.name)} could get ${pkg ? "both" : "him"} from ${esc(owner.name)}`} · ${ideas.length} idea${ideas.length === 1 ? "" : "s"} ${esc(within)}</span>`;
     const prow = (p, from, tag) => `<li class="tf-pl">${face(p.sleeperId, p.name, "sm")}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>
-      <span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag">${ownPill(from, "inline")}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+      <span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${tfProv(p)}${nflTag(p.team)}</span><span class="tf-tag">${ownPill(from, "inline")}${tag ? " · " + esc(tag) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     // compact row: photo · name · value, then "RB2 · starts at RB1"
-    const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
+    const crow = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${tfProv(p)}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     // scan order: partner → verdict → players → fit; first TF_PAGE ideas, then "Show more"
     const showKey = [TF.src, TF.sid, TF.sid2, TF.from, TF.against, TF.pos, TF.send, TF.recv, TF.gap, TF.fair, TF.goal, TF.sort, TF.srcTeam].join("|");
     if (TF.showKey !== showKey) { TF.showKey = showKey; TF.show = TF_PAGE; }
@@ -17385,6 +17797,78 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // and the automatic pick for any Custom format fields (e.g. SPM.boards({ qb: "1", tep: 0 }))
   SPM.boards = f => ({ boards: BOARDS.map(b => ({ id: b.id, label: b.label, tierScope: b.tierScope, fmt: { ...b.fmt } })), active: ACTIVE_BOARD.id,
     league: leagueBoard().id, view: viewBoard().id, auto: f ? autoBoardFor(fmtLeague({ ...FMT_DEFAULT, ...f })).id : undefined });
+  SPM.leagueValues = () => ({ board: LG.board ? LG.board.id : null, adj: Object.fromEntries([...LG.adj].map(([k, v]) => [String(k), v])) });
+  /* Ranking sets self-test (Alan, Oct 14; tests/board_check.py): each board in its own format gives exactly its values,
+     the QB format picks the board, pricing one board never touches another, adjustments start from the board's own
+     format (TE premium, PPR and lineup applied once), overall tiers create no format cliffs, provisional players are marked. */
+  SPM.boardCheck = async () => {
+    if (!comps) await loadStatic();
+    await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason));
+    factorCache.key = null; adjCache = new Map();
+    const out = [], check = (name, vals, ok) => out.push({ check: name, values: vals, pass: !!ok });
+    const lg = f => fmtLeague({ ...FMT_DEFAULT, ...f });
+    const snap = L => L.map(p => [p.id, p.rank, p.posNum, String(p.tier), p.value, p.source].join("|")).join(";");
+    const before = { sf: snap(players), lists: BOARDS.map(b => snap(boardPlayers(b))) };
+    for (const b of BOARDS) {
+      const L = boardPlayers(b), m = adjMapFor(boardLeague(b), b);
+      const bad = L.filter(p => Math.round(m.get(p.id)) !== Math.round(p.value));
+      check(`${b.label}: its own format (${formatLabel(boardLeague(b))}) gives exactly its saved values`, bad.slice(0, 5).map(p => `${p.name} ${p.value} → ${m.get(p.id)}`), bad.length === 0 && L.length > 0);
+      const ranks = L.filter(p => p.pos !== "PICK").map(p => p.rank).sort((x, y) => x - y), byRank = L.filter(p => p.pos !== "PICK").sort((x, y) => x.rank - y.rank);
+      const down = byRank.filter((p, i) => i && p.value > 0 && p.value >= byRank[i - 1].value);
+      check(`${b.label}: ranks 1..${L.length}, values strictly down the board (only 0s tie)`, down.slice(0, 3).map(p => p.name), ranks.every((r, i) => r === i + 1) && !down.length);
+      const split = [];
+      for (const pos of EDIT_POS) {
+        const seen = new Set(); let last = null;
+        L.filter(p => p.pos === pos && !isTagTier(p.tier)).sort((x, y) => x.posNum - y.posNum).forEach(p => { const t = String(p.tier); if (t !== last) { if (seen.has(t)) split.push(`${pos} Tier ${t}`); seen.add(t); last = t; } });
+      }
+      check(`${b.label}: every tier in one piece down each position`, split, !split.length);
+      const missing = players.filter(p => p.sleeperId && !L.some(q => q.sleeperId === p.sleeperId));
+      check(`${b.label}: ranks the same player pool, keyed by Sleeper ID`, missing.slice(0, 5).map(p => p.name), !missing.length && L.every(q => byId.has(q.id)));
+    }
+    const ppr = boardById("ppr"), sf = DEFAULT_BOARD;
+    const fams = [];
+    for (const teams of [8, 10, 12, 14]) for (const rec of [0, 0.5, 1]) for (const tep of [0, 0.5, 1]) for (const qb of ["1", "sf", "2"]) fams.push({ teams, rec, tep, qb });
+    const wrong = fams.filter(f => autoBoardFor(lg(f)) !== (f.qb === "1" ? ppr : sf));
+    check(`The QB format picks the board in ${fams.length} formats (1QB → AM PPR, Superflex / 2QB → AM SF PPR TE+)`, wrong.slice(0, 4).map(f => JSON.stringify(f)), ppr && !wrong.length);
+    const custom = [{ qb: "1", ptd: 6, fum: -1, fd: 0.5 }, { qb: "sf", ptd: 6, int: -1, tep: 1 }, { qb: "1", te: 2, flex: 2, rec: 0.5 }, { qb: "2", rec: 0 }];
+    const cWrong = custom.filter(f => autoBoardFor(lg(f)) !== (f.qb === "1" ? ppr : sf));
+    check("Custom scoring and lineups pick the board by QB format too", cWrong.map(f => JSON.stringify(f)), !cWrong.length);
+    // a format's values come from its board only: 1QB formats equal pricing on AM PPR, never the other board
+    const sample = [{ qb: "1", teams: 10, rec: 0.5, tep: 0 }, { qb: "1", teams: 14, rec: 1, tep: 1 }, { qb: "1", ptd: 6, fum: -1 }];
+    const iso = sample.filter(f => { const a = adjMapFor(lg(f)), b = adjMapFor(lg(f), ppr), c = adjMapFor(lg(f), sf); return players.some(p => a.get(p.id) !== b.get(p.id)) || !players.some(p => a.get(p.id) !== c.get(p.id)); });
+    check("1QB leagues are priced on AM PPR (Half PPR, TE premium, custom scoring)", iso.map(f => JSON.stringify(f)), !iso.length);
+    // adjustments are measured from each board's own format, so they're applied once: TE premium lifts the top TEs by about the
+    // same share on either board (applied twice it would compound), and less PPR lowers the top WRs on AM PPR (native Full PPR)
+    const te = b => { const L = boardPlayers(b).filter(p => p.pos === "TE" && p.posNum <= 6), f = b === ppr ? { qb: "1" } : { qb: "sf" };
+      const lo = adjMapFor(lg({ ...f, tep: 0 }), b), mid = adjMapFor(lg({ ...f, tep: 0.5 }), b), hi = adjMapFor(lg({ ...f, tep: 1 }), b);
+      const r = L.map(p => [mid.get(p.id) / lo.get(p.id), hi.get(p.id) / mid.get(p.id)]); return r; };
+    const tp = te(ppr), ts = te(sf), avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const stepP = avg(tp.map(r => r[0])), stepS = avg(ts.map(r => r[0]));
+    check("TE premium none → + lifts top-6 TEs once on either board (AM PPR vs AM SF PPR TE+ step)", [stepP.toFixed(3), stepS.toFixed(3)], stepP > 1 && stepS > 1 && Math.abs(Math.log(stepP) - Math.log(stepS)) < Math.log(stepS) * 0.6 + 0.02);
+    const wr1 = boardPlayers(ppr).find(p => p.pos === "WR" && p.posNum === 1), rec = [0, 0.5, 1].map(r => Math.round(adjMapFor(lg({ qb: "1", tep: 0, rec: r }), ppr).get(wr1.id)));
+    check(`${wr1.name} (AM PPR WR1) rises with points per catch 0 → 0.5 → 1 and Full PPR is his saved value`, rec, rec[0] < rec[1] && rec[1] < rec[2] && rec[2] === Math.round(wr1.value));
+    // overall tiers don't become format cliffs: a drop of 25%+ where the board drops 5% or less and the format's own scarcity under 20%
+    const cliffs = [];
+    for (const f of fams.filter(f => f.qb === "1")) {
+      const vl = lg(f), m = adjMapFor(vl, ppr), T = modelTable(curvesFor(vl.scoring_settings), lineupOf(vl));
+      for (const pos of EDIT_POS) {
+        const g = boardPlayers(ppr).filter(p => p.pos === pos && p.source !== "auto" && !isTagTier(p.tier)).sort((x, y) => x.posNum - y.posNum);
+        for (let i = 1; i < g.length; i++) {
+          const a = g[i - 1], c = g[i], va = m.get(a.id), vc = m.get(c.id); if (!(a.value > 0) || !(va >= 300)) continue;
+          const t = T[pos], ta = t[Math.min(a.posNum, t.length) - 1], tc = t[Math.min(c.posNum, t.length) - 1];
+          const board = 1 - c.value / a.value, own = ta > 0 ? 1 - tc / ta : 0, drop = 1 - vc / va;
+          if (board <= 0.05 && own < 0.2 && drop >= 0.25) cliffs.push(`${f.teams}-team rec ${f.rec} TEP ${f.tep}: ${pos}${a.posNum} ${a.name} → ${c.name} ${Math.round(-100 * drop)}%`);
+        }
+      }
+    }
+    check("AM PPR's overall tiers create no format cliffs in 36 1QB formats", cliffs.slice(0, 5), !cliffs.length);
+    const prov = boardPlayers(ppr).filter(p => p.source === "auto"), provOk = prov.every(p => provisionalOn(byId.get(p.id), ppr)) && !players.some(p => provisionalOn(p, sf));
+    check(`AM PPR's ${prov.length} Auto players are marked provisional (AM SF PPR TE+ has none)`, [prov.length], prov.length > 0 && provOk);
+    const after = { sf: snap(players), lists: BOARDS.map(b => snap(boardPlayers(b))) };
+    check("Pricing every board in every format changed no board's ranks, tiers, values or source", [], after.sf === before.sf && after.lists.every((x, i) => x === before.lists[i]));
+    adjCache = new Map();
+    return out;
+  };
   /* The editor's own functions for the tests (SPM.edit): only when a test sets window.__SPM_TEST_HOOKS before the page
      loads. Visitors never get them; they can only change this browser's unsaved draft, like the arrows. */
   // One player's weekly outlook, read only (tests and the console): kind, expected and conditional points, role multiplier
@@ -17620,13 +18104,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function hcAm(p, opt = {}) {
     if (!p || p.pos === "PICK") return null;
     const base = p.hasValue === false ? null : p.value, adj = LG.fmtOn && LG.adj.has(p.id) ? LG.adj.get(p.id) : null;
-    const sub = `${p.team ? esc(p.team) + " · " : ""}${esc(tierLabel(p.pos, p.tier))}`;
+    const sub = `${p.team ? esc(p.team) + " · " : ""}${esc(tierText(p))}${CALC_BOARD.provisionalAuto && p.source === "auto" ? " · provisional" : ""}`;
     let body = hcRow("AM rank", `#${p.rank ?? "–"} overall · ${esc(p.posRank || "–")}`) ;
     if (adj != null) body += hcRow("League-adjusted", `#${LG.adjRank.get(p.id) ?? "–"} · ${esc(p.pos + (LG.adjPos.get(p.id) ?? "–"))}`);
-    body += hcRow("AM value", base == null ? "Value pending" : `<b>${fmt(base)}</b>`, adj != null ? "AM Board" : "");
+    body += hcRow("AM value", base == null ? "Value pending" : `<b>${fmt(base)}</b>`, adj != null ? (CALC_BOARD === DEFAULT_BOARD ? "AM Board" : CALC_BOARD.label) : CALC_BOARD !== DEFAULT_BOARD ? CALC_BOARD.label : "");
     if (adj != null) body += hcRow("In this format", `<b>${fmt(adj)}</b>`, `${base ? hcPct(pctOf(adj, base)) + " · " : ""}${esc(tcValuesName() || formatLabel(valueLeague()))}`);
     const brief = body;
-    const hist = p.sleeperId ? hcHist(p.sleeperId) : [];
+    const hist = p.sleeperId && CALC_BOARD.history ? hcHist(p.sleeperId) : [];
     if (hist && hist.length && base != null) {
       const last = hist[hist.length - 1];
       // his previous value: the latest published value that differs from today's, and the day it changed
@@ -17640,8 +18124,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (HC.brief) return hcHead(p, sub) + hcSec("", brief + hcMarketLine(p)) + `<button class="hc-more" type="button" data-hc-more>More details</button>`;
     return hcHead(p, sub) + hcSec("", body) + hcMarket(p) + (opt.foot ? hcFoot(opt.foot) : "");
   }
-  HC_KINDS.am = id => hcAm(hcPlayer(id));
-  HC_KINDS.amsid = sid => hcAm(hcPlayerBySid(sid));
+  HC_KINDS.am = id => withBoard(ctxBoard(), () => hcAm(hcPlayer(id)));
+  HC_KINDS.amsid = sid => withBoard(ctxBoard(), () => hcAm(hcPlayerBySid(sid)));
 
 
   /* Projection / week card (priority 3): what a "Wk N" cell shows, from the same weekOutlook object the cell was drawn
