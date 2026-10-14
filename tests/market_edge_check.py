@@ -146,7 +146,9 @@ with sync_playwright() as p:
     pg.evaluate(f"() => document.querySelector('#rank-body [data-player=\"{SPLIT}\"]').click()"); pg.wait_for_timeout(1200)
     pg.click("[data-pp-tab=value]"); pg.wait_for_timeout(400)
     d = pg.inner_text(".pm-mkt") if pg.locator(".pm-mkt").count() else ""
-    ok("mixed" in d.lower(), f"Split player: external opinion is mixed {d[-160:]!r}")
+    # PR 3 (Oct 14): a split market reads as a range with "Market split" / "Sources disagree" (was "mixed"), never a buy / sell
+    ok(("market split" in d.lower() or "sources disagree" in d.lower()) and " BUY" not in d.upper() and " SELL" not in d.upper(),
+       f"Split player: the market reads as split, with no buy / sell label {d[-160:]!r}")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
     # 4. AM board untouched
     snap1 = pg.evaluate("() => SPM.rankingSnapshot()")
