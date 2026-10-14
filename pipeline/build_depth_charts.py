@@ -10,13 +10,17 @@ Writes data/depth_charts.json:
    "teams": {"KC": {"QB": [[sleeper_id, name, pos, injury_status], ...], "LWR": [...], ...}}}
 Each list is in depth order (starter first). Only players Sleeper lists on a team's depth chart.
 
-Run from the pipeline folder: python build_depth_charts.py [out_path]
+Run from the pipeline folder: python build_depth_charts.py [out_path] [--board ../index.html]
+With --board it also brings the AM Board's NFL team column in step with Sleeper (sync_teams.py: team only, by Sleeper ID).
 """
 import json, os, sys, time, urllib.request
 from datetime import datetime, timezone
 
 URL = "https://api.sleeper.app/v1/players/nfl"
-OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join("..", "data", "depth_charts.json")
+ARGS = sys.argv[1:]
+BOARD = ARGS[ARGS.index("--board") + 1] if "--board" in ARGS else None
+POS_ARGS = [a for i, a in enumerate(ARGS) if a != "--board" and (i == 0 or ARGS[i - 1] != "--board")]
+OUT = POS_ARGS[0] if POS_ARGS else os.path.join("..", "data", "depth_charts.json")
 
 
 def fetch(url, tries=3):
@@ -65,6 +69,12 @@ def main():
     with open(OUT, "w") as f:
         json.dump(data, f, separators=(",", ":"))
     print(f"Wrote {OUT}: {len(teams)} teams, {sum(len(v) for t in teams.values() for v in t.values())} players")
+    if BOARD:
+        import sync_teams
+        try:
+            sync_teams.apply(BOARD, players)
+        except ValueError as e:   # never blocks the depth charts or the stats refresh
+            print("Board teams not synced:", e)
 
 
 if __name__ == "__main__":
