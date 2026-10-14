@@ -70,7 +70,7 @@ with sync_playwright() as p:
     PIX = __import__("base64").b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com)/.*"), lambda r: r.fulfill(status=200, content_type="image/png", body=PIX))
     pg.route(re.compile(r"https://(fonts\.(googleapis|gstatic)\.com|use\.typekit\.net|api\.sleeper\.com)/.*"), lambda r: r.abort())
-    pg.route("**/data/market/flock.json", lambda r: r.abort())
+    pg.route(re.compile(r".*/data/market/flock_(sf|ppr)\.json(\?.*)?$"), lambda r: r.abort())
     pg.add_init_script("try { localStorage.setItem('spm_editor_token', 'test-token'); } catch (e) {}")
     pg.goto(f"http://127.0.0.1:{port}/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(3500)
     # connect the synthetic league, then show the AM Board (editable) view

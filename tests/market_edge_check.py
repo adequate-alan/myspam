@@ -16,6 +16,7 @@ persistence and removal · approximate-format and stale labels · drawer Market 
 Market comparison (AM line separate) · editor-only market audit with ?debug · no page errors.
 """
 import os, re, sys, json, datetime
+FLOCK_FILES = re.compile(r".*/data/market/flock_(sf|ppr)\.json(\?.*)?$")   # the two built-in Flock lists (Oct 14)
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import fixture_board as FB
@@ -81,7 +82,7 @@ with sync_playwright() as p:
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
         pg.route("**/data/market/redraft.json", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(market)))
-        pg.route("**/data/market/flock.json", lambda r: r.fulfill(status=404, body=""))   # synthetic Flock only: the built-in list stays out
+        pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))   # synthetic Flock only: the built-in lists stay out
         FB.route(pg, f"http://127.0.0.1:{port}")
         pg.goto(f"http://127.0.0.1:{port}/{'?debug' if debug else ''}#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
         return pg
@@ -91,6 +92,8 @@ with sync_playwright() as p:
         pg.locator("#sd-leagues [data-league='L1']").click(); pg.wait_for_timeout(1500)
     def sort(pg, v):
         pg.evaluate(f"() => {{ const s = document.getElementById('rk-sort'); s.value = '{v}'; s.dispatchEvent(new Event('change')); }}"); pg.wait_for_timeout(700)
+    def confirm_fmt(pg, qb="sf", teams="12", tep="0", rec="1"):   # the import needs the list's format confirmed (Oct 14)
+        pg.evaluate("v => Object.entries(v).forEach(([id, x]) => { document.getElementById(id).value = x; })", {"mk-fl-qb": qb, "mk-fl-teams": teams, "mk-fl-tep": tep, "mk-fl-rec": rec})
     ROWS = "() => [...document.querySelectorAll('#rank-body tr.player')].map(tr => ({ name: tr.querySelector('.pl-name').textContent.trim(), cell: (tr.querySelector('.mk-cell') || {}).innerText || '' }))"
 
     pg = page(FRESH, debug=True)
@@ -108,15 +111,24 @@ with sync_playwright() as p:
     ok(name_of[SELL] in [x["name"] for x in r[:6]], f"Biggest sell: {name_of[SELL]} near the top")
     s_ = next(x for x in r if x["name"] == name_of[SELL])
     ok(re.search(r"Mkt \+\d", s_["cell"]) and "▼" not in s_["cell"] and "SELL" in s_["cell"].upper(), f"Sell row reads Mkt +N and Sell: {s_['cell'][:80]!r}")
-    # 2. Flock import (synthetic CSV), 1QB list in a Superflex format -> approximate
+    # 2. Flock import (synthetic CSV). Two separate lists (Oct 14): the confirmed format picks the list, and a 1QB
+    # (Regular PPR) list is never used in a Superflex format, not even at a reduced weight
     pg.click("[data-mk-flock]"); pg.wait_for_timeout(300)
-    pg.evaluate("() => { const s = document.getElementById('mk-fl-qb'); s.value = '1qb'; }")
+    pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1000)
+    ok("Confirm the list's format first" in pg.inner_text("#mk-bar") and pg.evaluate("() => localStorage.getItem('spm_flock:sf') === null && localStorage.getItem('spm_flock:ppr') === null"),
+       "An import without a confirmed format is refused: nothing assumed, nothing saved")
+    confirm_fmt(pg, qb="1qb")
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
-    bar = pg.inner_text("#mk-bar")
-    ok("Imported" in bar and "Flock" in bar and "approximate" in bar and "1QB source used in a Superflex league" in bar, "Flock CSV imports; a 1QB list in a Superflex format is labelled approximate")
-    ok(pg.evaluate("() => !!JSON.parse(localStorage.getItem('spm_flock') || 'null')"), "Flock rankings are kept in this browser (spm_flock)")
-    pg.evaluate("() => { const s = document.getElementById('mk-fl-qb'); s.value = 'sf'; }")
+    bar = pg.inner_text("#mk-bar"); mk = pg.evaluate("() => SPM.market()")
+    ok("into Flock Regular PPR" in bar and "This format uses Flock Superflex" in bar and not any(x["id"] == "fl" for x in mk["srcs"]),
+       f"A 1QB list goes into Flock Regular PPR and isn't used in a Superflex format: {[x['id'] for x in mk['srcs']]}")
+    ok(pg.evaluate("() => !!JSON.parse(localStorage.getItem('spm_flock:ppr') || 'null')"), "The Regular PPR list is kept in this browser (spm_flock:ppr)")
+    confirm_fmt(pg, qb="sf")
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
+    bar = pg.inner_text("#mk-bar"); mk = pg.evaluate("() => SPM.market()")
+    ok("into Flock Superflex" in bar and "approximate" in bar and "no-TE-premium list, league has TE premium" in bar and any(x["id"] == "fl" and x["set"] == "flock-sf" for x in mk["srcs"]),
+       "A Superflex list goes into Flock Superflex and is used here; its TE premium mismatch is labelled approximate")
+    ok(pg.evaluate("() => !!JSON.parse(localStorage.getItem('spm_flock:sf') || 'null')"), "The Superflex list is kept in this browser (spm_flock:sf)")
     sort(pg, "mkfl"); r = pg.evaluate(ROWS)
     ok(r and all("Flock" in x["cell"] for x in r[:5]), "AM vs Flock sort uses Flock")
     sort(pg, "mkcons")
@@ -150,7 +162,8 @@ with sync_playwright() as p:
     ok(pg.evaluate("() => document.querySelectorAll('#rank-body tr.mkrow').length") > 100, "After a reload the board comes back in the saved Market edge sort")
     ok("Flock" in pg.inner_text("#mk-bar"), "Flock rankings and the Market edge sort survive a reload")
     pg.click("[data-mk-flock]"); pg.wait_for_timeout(300); pg.click("[data-mk-clear]"); pg.wait_for_timeout(600)
-    ok(pg.evaluate("() => localStorage.getItem('spm_flock')") is None and "Flock imported" not in pg.inner_text("#mk-bar"), "Remove Flock rankings clears them")
+    ok(pg.evaluate("() => localStorage.getItem('spm_flock:sf')") is None and pg.evaluate("() => localStorage.getItem('spm_flock:ppr')") is not None, "Remove clears this browser's Superflex list only; the Regular PPR list stays")
+    confirm_fmt(pg)
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1000)
 
     # 6. Trade Finder with the league
@@ -232,7 +245,7 @@ with sync_playwright() as p:
     PARTIAL = json.loads(json.dumps(FRESH))
     for f in PARTIAL["formats"].values(): f.pop(no_mk, None)
     pg.route("**/data/market/redraft.json", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(PARTIAL)))
-    pg.route("**/data/market/flock.json", lambda r: r.fulfill(status=404, body=""))
+    pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))
     FB.route(pg, f"http://127.0.0.1:{port}")
     pg.goto(f"http://127.0.0.1:{port}/?fmt=t10_qb1_rec1_tep0#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
     mk_ids = [r["sleeper_id"] for r in board[:30]]
@@ -265,7 +278,7 @@ with sync_playwright() as p:
     ok("FantasyCalc" in fc_row and "Synced" in fc_row and "ago" in fc_row and fc_row.rstrip().upper().endswith("CURRENT"), f"FantasyCalc row: synced … ago · Current: {fc_row!r}")
     ok("Provider update unknown" in fc_row, "FantasyCalc exposes no update time: the row says 'Provider update unknown' instead of inventing one")
     fl_row = st(pg, "fl")
-    ok("Flock" in fl_row and "NOT LOADED" in fl_row.upper() and "No list loaded" in fl_row, f"Flock row before any import reads Not loaded: {fl_row!r}")
+    ok("Flock Superflex" in fl_row and "NOT LOADED" in fl_row.upper() and "No list yet" in fl_row and "FantasyCalc alone" in fl_row, f"Flock row before any import reads Not loaded, FantasyCalc alone: {fl_row!r}")
     pg.click("[data-mk-details]"); pg.wait_for_timeout(300)
     fc_card = card(pg, "fc")
     lc = fc_card.lower()
@@ -277,14 +290,14 @@ with sync_playwright() as p:
     ok(pg.locator("#mk-st-detail").count() == 0, "Source details collapse again")
     # Flock import: synced = the import, provider update unknown
     pg.click("[data-mk-flock]"); pg.wait_for_timeout(300)
-    pg.select_option("#mk-fl-qb", "sf")
+    confirm_fmt(pg)
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
     fl_row = st(pg, "fl")
     ok("Imported" in fl_row and ("ago" in fl_row or "just now" in fl_row) and "Provider update unknown" in fl_row and fl_row.rstrip().upper().endswith("CURRENT"), f"Flock row after an import: imported … ago · Provider update unknown · Current: {fl_row!r}")
     pg.reload(wait_until="domcontentloaded"); pg.wait_for_timeout(4000)
     fl_row2 = st(pg, "fl")
     ok("Imported" in fl_row2 and "CURRENT" in fl_row2.upper(), f"The Flock import time survives a reload: {fl_row2!r}")
-    pg.evaluate("() => localStorage.removeItem('spm_flock')")
+    pg.evaluate("() => { localStorage.removeItem('spm_flock:sf'); localStorage.removeItem('spm_flock:ppr'); }")
     pg.close()
     # a failed scheduled sync, values unchanged for two days, a provider timestamp
     FAILED = dict(FRESH); FAILED["updated"] = (now - datetime.timedelta(hours=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -312,7 +325,7 @@ with sync_playwright() as p:
     pg.route("https://api.sleeper.app/**", sleeper)
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
     pg.route("**/data/market/redraft.json", lambda r: r.fulfill(status=500, body="down"))
-    pg.route("**/data/market/flock.json", lambda r: r.fulfill(status=404, body=""))
+    pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))
     FB.route(pg, f"http://127.0.0.1:{port}")
     pg.goto(f"http://127.0.0.1:{port}/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
     sort(pg, "mkbuy")
