@@ -10,7 +10,7 @@ Checks:
    and pricing a league never changes a board.
 2. A 1QB league (10-team, Half PPR) is valued on AM PPR; a Superflex league (12-team, TE premium) on AM SF PPR TE+.
 3. The Rankings tab's board picker is separate: showing the other board on the AM Board view never changes the league's
-   values, the read-only board hides the editor, the choice persists across a reload.
+   values, a board that isn't the edited one hides the editor and offers "Edit <board>", the choice persists across a reload.
 4. The calculator names the board; a 1QB trade from before AM PPR existed reads "No AM PPR value available then";
    the drawer opened from the AM PPR view names AM PPR; nothing is written to AM PPR storage keys; no page errors.
 """
@@ -71,12 +71,13 @@ with sync_playwright() as p:
     ok(pg.evaluate("() => document.getElementById('rk-board').value") == "ppr", "It starts on the league's board (AM PPR)")
     fr = first_row(pg)
     ok(fr and fr["rows"] == 260, f"AM PPR lists 260 players: {fr}")
-    ok(pg.locator(".editor-bar").is_hidden() or pg.locator(".editor-bar").count() == 0, "AM PPR is read-only: no editor bar")
+    ok(pg.locator("#editor-bar").is_hidden(), "AM PPR isn't the edited board: no editor bar")
+    ok(pg.locator("#ed-switch").is_visible() and "Edit AM PPR" in pg.inner_text("#ed-switch"), "It offers Edit AM PPR instead")
     ok(pg.locator("#rank-body .prov").count() > 0, f"Provisional players are tagged on the board ({pg.locator('#rank-body .prov').count()} visible)")
     pick_board(pg, "sf-tep")
     ok(pg.evaluate("() => SPM.leagueValues().adj") == lv2 and pg.evaluate("() => SPM.leagueValues().board") == "ppr",
        "Showing AM SF PPR TE+ on the Rankings tab leaves the league's AM PPR values unchanged")
-    ok(pg.locator(".editor-bar").is_visible(), "The editable board shows the editor bar again")
+    ok(pg.locator("#editor-bar").is_visible() and pg.locator("#ed-switch-wrap").is_hidden(), "The edited board shows the editor bar again")
     sf_first = first_row(pg)
     ok(sf_first and sf_first["rows"] != 0, f"AM SF PPR TE+ board renders: {sf_first}")
     pick_board(pg, "ppr")

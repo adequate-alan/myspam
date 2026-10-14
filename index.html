@@ -630,8 +630,13 @@ Jaxson Dart,QB,NYG,260,45,99,0,12508,auto,Out for season
      keySuffix  appended to this board's browser storage keys ("" = the original
                 spm_* keys, which are never renamed)
      history / snaps   this board's ranking history file and snapshot folder (null: none yet)
-     readOnly   shown and used for valuations, but not editable or publishable yet
+     readOnly   shown and used for valuations, but not editable or publishable yet (no board is, since Oct 14)
      provisionalAuto   its Auto players are provisional (not on Alan's list): marked wherever they're valued
+     model      the board's native value-by-position-rank table (points over replacement in its own format, the
+                curve its editor reads ratios from); boards without one use VALUE_MODEL. Built from
+                data/curve_components.json (modelTable); SPM.boardCheck() fails if it drifts from that file
+   Editing (Oct 14): one board is edited per page load (ACTIVE_BOARD: the one picked on the Rankings tab, else the
+   first); the picker shows any other board as it is published, with "Edit this board" (a reload) to switch.
    Two boards: AM SF PPR TE+ (the original board) and AM PPR (1QB). A league is valued on the board matching its QB
    format (1QB → a 1QB board, Superflex / 2QB → a Superflex board), then adjusted from that
    board's native scoring and lineup to the league's own (Alan, Oct 14). More boards (and later ones a visitor
@@ -641,11 +646,17 @@ const BOARDS = [
   { id: "sf-tep", label: "AM SF PPR TE+", short: "SF PPR TE+", block: "RANKINGS_CSV",
     fmt: { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 },
     tierScope: "position", keySuffix: "", history: "data/rank_history.json", snaps: "data/rank_snapshots/", componentsBase: true },
-  // AM PPR (Alan, Oct 14): read-only for now (editing and publishing come next), no history yet, so trades before it
-  // existed read "No AM PPR value available then". Its Auto players are provisional (not on Alan's list).
+  // AM PPR (Alan, Oct 14): its history starts with the board as it went live (a baseline snapshot), so trades before
+  // that read "No AM PPR value available then". Its Auto players are provisional (not on Alan's list).
   { id: "ppr", label: "AM PPR", short: "PPR", block: "RANKINGS_CSV_PPR",
     fmt: { teams: 12, qb: "1", sx: 0, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 },
-    tierScope: "overall", keySuffix: ":ppr", history: null, snaps: null, readOnly: true, provisionalAuto: true }
+    tierScope: "overall", keySuffix: ":ppr", history: "data/boards/ppr/rank_history.json", snaps: "data/boards/ppr/rank_snapshots/", provisionalAuto: true,
+    model: {
+      QB: [5499.51, 4661.57, 3966.63, 3436.92, 3072.42, 2733.56, 2397.99, 2052.21, 1773.63, 1546.77, 1300.95, 1035.59, 821.13, 615.67, 464.62, 258.55, 141.17, 99.55, 53.47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      RB: [10000, 8438.86, 7427.04, 6902.15, 6461.68, 5874.73, 5382.47, 5025.26, 4810.98, 4620.58, 4483.33, 4348.48, 4149.73, 3983.41, 3831.83, 3706.28, 3553.78, 3330.1, 3141.06, 2893.88, 2695.41, 2451.77, 2254.99, 2088.19, 1934.53, 1776.89, 1610.16, 1459.78, 1342.65, 1122.86, 875.94, 802.19, 760.3, 725.71, 691.82, 663.14, 613.75, 568.41, 528.73, 511.78, 490.76, 462.02, 401.27, 343.88, 295.27, 268.86, 241.47, 213.63, 194.48, 173.56, 151.2, 122.03, 99.08, 71.74, 46.72, 22.79, 3.75, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      WR: [8650.41, 8003.17, 7039.95, 6434.73, 6010.93, 5589.3, 5260.28, 4994.42, 4813.81, 4600.21, 4362.67, 4018.94, 3755.6, 3542.89, 3481.81, 3387.74, 3259.05, 3111.99, 2968.52, 2814.36, 2697.85, 2627.38, 2563.83, 2469.49, 2350.58, 2222.06, 2114.72, 2029.81, 1942.61, 1846.62, 1731.06, 1662.37, 1573.02, 1483.21, 1391.54, 1303.07, 1203.22, 1077.72, 920.5, 745.83, 587.68, 510.3, 495.36, 483.97, 469.29, 454.16, 427.7, 396.51, 364.08, 341.71, 324.33, 301.95, 271.17, 241.93, 210.63, 180.86, 155.46, 138.55, 130.82, 123.22, 115.27, 107.82, 94.64, 78.3, 55.08, 36.6, 12.53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      TE: [5150.62, 4314.42, 3630.66, 3078.74, 2618.23, 2318.41, 1994.8, 1590.25, 1259.81, 1144.8, 1037.66, 824.54, 567.5, 454.75, 361.28, 331.9, 280.4, 239.94, 200.96, 163.5, 154.23, 127.6, 112.02, 80.69, 60.13, 28.61, 7.81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    } }
 ];
 const BOARD_BLOCKS = { RANKINGS_CSV, RANKINGS_CSV_PPR };   // block name → its data
 
@@ -4443,6 +4454,8 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .editor-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px 16px; min-height: 38px;
   padding: 3px 4px 3px 14px; margin-bottom: 4px; border: 0; border-radius: var(--r-md); background: var(--eb-bg); box-shadow: none; }
 .editor-bar[hidden] { display: none; }
+.editor-bar .eb-board { font-weight: 600; color: var(--text-secondary); white-space: nowrap; }   /* the board being edited (Oct 14) */
+.ed-switch #ed-switch-text { color: var(--text-secondary); }
 .eb-left { flex: none; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .eb-left strong { font-size: 0.6rem; letter-spacing: .09em; color: var(--eb-strong); }
 .eb-left #eb-hint { color: var(--muted); font-size: 0.74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -5086,6 +5099,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     <div class="editor-bar" id="editor-bar" hidden>
       <div class="eb-left">
         <strong>Editor</strong>
+        <span class="eb-board" id="eb-board"></span>
         <span id="eb-hint"></span>
       </div>
       <div class="eb-mid">
@@ -5106,6 +5120,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         </div>
         <button class="btn link" id="eb-signout" type="button" hidden title="Remove your GitHub token from this browser">Sign out</button>
       </div>
+    </div>
+    <div class="editor-bar ed-switch" id="ed-switch-wrap" hidden>
+      <div class="eb-left"><strong>Editor</strong><span id="ed-switch-text"></span></div>
+      <div class="eb-right"><button class="btn primary" id="ed-switch" type="button"></button></div>
     </div>
     <aside class="rv-panel" id="rv-panel" role="dialog" aria-modal="false" aria-labelledby="rv-title" hidden>
       <header class="rv-head">
@@ -5557,7 +5575,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return rows;
   }
 
-  function loadPlayers(csvText) {
+  function loadPlayers(csvText, board = ACTIVE_BOARD) {
     const rows = parseCSV(csvText ?? RANKINGS_CSV);
     if (!rows.length) return [];
     const head = rows.shift().map(h => h.toLowerCase());
@@ -5586,6 +5604,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         value: isFinite(value) ? value : null
       };
     }).filter(p => p.name);
+    if (!head.includes("proj_ppg")) boardIdentity(players);   // a board without the pipeline's columns (AM PPR)
 
     const isPlayer = p => p.pos !== "PICK";
 
@@ -5613,13 +5632,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        loading the board never re-derives it (no typed values, no anchors, no projections, no calibration). The position
        curve (positionCurve) is only used for ratios when someone edits the board (see stateValues) and to value a player
        added without one. rawValue (the curve with projections, before tiers) only feeds the league layer's tier pricing. */
-    players.forEach(p => {
+    if (board && board.model) nativeRaw(players, board);   // its own format's curve (exact once the components load)
+    else players.forEach(p => {
       if (isPlayer(p) && p.posNum != null && typeof modelValue === "function") p.rawValue = modelValue(p.pos, p.posNum, p.projRank, p.games);
     });
-    const curve = positionCurve(players);   // also flags the board's tail (p.tail)
+    const curve = positionCurve(players, board);   // also flags the board's tail (p.tail)
     players.forEach(p => { p.curve = curve.has(p.id) ? curve.get(p.id) : null; });
     if (players.some(p => isPlayer(p) && p.rank != null && p.value == null)) {   // a new row without a value: fitted between his neighbours
-      const fit = stateValues(players, new Map(players.filter(p => p.value != null).map(p => [valueKey(p), p.value])), new Map());
+      const fit = stateValues(players, new Map(players.filter(p => p.value != null).map(p => [valueKey(p), p.value])), new Map(), board);
       players.forEach(p => { if (p.value == null && fit.values.has(valueKey(p))) p.value = fit.values.get(valueKey(p)); });
     }
 
@@ -5768,9 +5788,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      The position curve P: the points-by-rank curve, your tiers priced as blocks and the board's tail, per position, with
      no projections and no cross-position passes, so moving a WR never changes a QB's curve. */
   const valueKey = p => (p.name + "|" + p.pos).toLowerCase();
-  function positionCurve(list) {
+  function positionCurve(list, board = ACTIVE_BOARD) {
     const S = list.filter(p => p.pos !== "PICK" && p.posNum != null && VALUE_MODEL.curves[p.pos])
-      .map(p => ({ id: p.id, pos: p.pos, posNum: p.posNum, rank: p.rank, tier: p.tier, source: p.source, value: modelValue(p.pos, p.posNum) }));
+      .map(p => ({ id: p.id, pos: p.pos, posNum: p.posNum, rank: p.rank, tier: p.tier, source: p.source, value: boardModelValue(board, p.pos, p.posNum) }));
     if (VALUE_MODEL.keepRankOrder) keepRankOrderBySource(S);
     applyTiers(S);
     if (VALUE_MODEL.keepRankOrder) keepRankOrderBySource(S);
@@ -5794,7 +5814,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      touch: key → { v, pv, edit } (v = value at the anchor, pv = curve at the anchor; edit = a value typed at this spot).
      Players with no base value are fitted from their neighbours' level. Returns { values: key → whole-number value,
      moved: untouched keys whose value had to change (tail whole-point steps only) }. */
-  function stateValues(list, base, touch) {
+  function stateValues(list, base, touch, board = ACTIVE_BOARD) {
+    const near = board && board.tierScope === "overall" ? () => true : (q, o) => q.p.pos === o.p.pos;   // the tier gap's neighbours: overall tiers look along the whole board
     const tag = p => p.tier === "" || p.tier == null || Number(p.tier) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity), gap = Number(VALUE_MODEL.tierMinDrop) || 0;
     const L = list.filter(p => p.pos !== "PICK" && p.rank != null).sort((a, b) => a.rank - b.rank);
     const items = L.map(p => ({ k: valueKey(p), p, rank: p.rank, value: null, free: false }));
@@ -5807,12 +5828,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     });
     const view = items.map(o => ({ pos: o.p.pos, curve: o.p.curve, value: o.free ? null : o.value }));
     items.forEach((o, i) => { if (o.value == null) o.value = (o.p.curve || 0) * localLevel(view, i, q => q.value == null); });
-    // tier gap: a touched player stays a step away from the neighbouring tiers at his position
+    // tier gap: a touched player stays a step away from the neighbouring tiers at his position (overall tiers: on the board)
     items.forEach((o, i) => {
       if (!o.free || o.exact || tag(o.p)) return;
       let up = null, dn = null;
-      for (let j = i - 1; j >= 0; j--) if (items[j].p.pos === o.p.pos) { up = items[j]; break; }
-      for (let j = i + 1; j < items.length; j++) if (items[j].p.pos === o.p.pos) { dn = items[j]; break; }
+      for (let j = i - 1; j >= 0; j--) if (near(items[j], o)) { up = items[j]; break; }
+      for (let j = i + 1; j < items.length; j++) if (near(items[j], o)) { dn = items[j]; break; }
       let hi = Infinity, lo = 0;
       if (up && String(up.p.tier) !== String(o.p.tier)) hi = up.value * (1 - gap);
       if (dn && String(dn.p.tier) !== String(o.p.tier) && !tag(dn.p) && !dn.free) lo = dn.value / (1 - gap);
@@ -5905,8 +5926,56 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // boardKey() gives a board its own browser storage keys (the original board keeps the original spm_* names).
   const boardById = id => BOARDS.find(b => b.id === id) || null;
   const DEFAULT_BOARD = BOARDS[0];
+  /* The board edited on this page (Alan, Oct 14: each board is edited on its own): the one picked on the Rankings tab
+     with "Edit this board" (spm_edit_board) when this page loaded, else the first. Every other board is shown and priced as published. Switching the edited
+     board reloads the page ("Edit this board"), so the editor's state (draft, saved edits, history, the publish target)
+     always belongs to one board. */
   var ACTIVE_BOARD = DEFAULT_BOARD;
+  try { const b = boardById(localStorage.getItem("spm_edit_board") || ""); if (b && !b.readOnly) ACTIVE_BOARD = b; } catch (e) {}
+  // a board's value by position rank for its editor's curve and Auto values (its own format; VALUE_MODEL for the first)
+  function boardModelValue(b, pos, posNum, projRank = null, games = 0) {
+    if (!b || !b.model) return modelValue(pos, posNum, projRank, games);
+    const T = b.model[pos]; if (!T || !(posNum >= 1)) return null;
+    const at = r => T[Math.min(r, T.length) - 1], w = projRank >= 1 ? projectionWeight(games) : 0;
+    return Math.round((1 - w) * at(posNum) + w * (projRank >= 1 ? at(projRank) : 0));
+  }
   const boardCsv = b => BOARD_BLOCKS[b.block];
+  /* rawValue on a board's own native curve (the league layer's tier pricing reads it): the points-over-replacement
+     table of its own format from data/curve_components.json once that has loaded, its embedded model table before
+     (the same numbers rounded), with the same projection blend as the first board */
+  const NATIVE_T = new Map();
+  function nativeRaw(list, b) {
+    let T = b.model, c = null;
+    try { c = comps; } catch (e) {}   // comps is declared further down (the first board load runs before it exists)
+    if (c && !b.componentsBase) {
+      if (!NATIVE_T.has(b.id)) NATIVE_T.set(b.id, modelTable(curvesFor(boardScoring(b)), boardLineup(b), VALUE_MODEL.benchWeight * leagueDepth(boardLeague(b))));
+      T = NATIVE_T.get(b.id);
+    }
+    if (!T) return;
+    const at = (pos, r) => T[pos][Math.min(r, T[pos].length) - 1];
+    list.forEach(q => {
+      if (!T[q.pos] || !(q.posNum >= 1)) return;
+      const w = q.projRank >= 1 ? projectionWeight(q.games) : 0;
+      q.rawValue = (1 - w) * at(q.pos, q.posNum) + w * (q.projRank >= 1 ? at(q.pos, q.projRank) : 0);
+    });
+  }
+  /* A board block without the pipeline's columns (AM PPR: player, team, rank, tier, value, Sleeper ID, source) takes
+     each player's NFL team and projections from the first board's block by Sleeper ID: the pipeline writes one block */
+  let IDENT = null;
+  function boardIdentity(list) {
+    if (!IDENT) {
+      IDENT = new Map();
+      const rows = parseCSV(RANKINGS_CSV), h = (rows.shift() || []).map(x => x.toLowerCase()), c = n => h.indexOf(n);
+      rows.forEach(r => { const sid = r[c("sleeper_id")]; if (sid) IDENT.set(sid, r); });
+      IDENT.col = c;
+    }
+    const c = IDENT.col, num = v => (isFinite(parseFloat(v)) ? parseFloat(v) : null);
+    list.forEach(p => {
+      const r = p.sleeperId && IDENT.get(p.sleeperId); if (!r) return;
+      p.team = String(r[c("team")] || "").toUpperCase(); p.projPPG = num(r[c("proj_ppg")]); p.projScore = num(r[c("proj_score")]);
+      p.games = parseInt(r[c("games")], 10) || 0;
+    });
+  }
   const boardKey = (name, b = ACTIVE_BOARD) => name + (b.keySuffix || "");
   // Which board a league is valued on (Alan, Oct 14): QB format first (1QB → a 1QB board; Superflex / 2QB → a Superflex
   // board), then the closest TE premium, PPR and league size. A per-league override comes with the board switch.
@@ -5941,7 +6010,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function boardPlayers(b) {
     if (!b || b === ACTIVE_BOARD) return players;
     let c = BOARD_LISTS.get(b.id);
-    if (!c) { c = { list: loadPlayers(boardCsv(b)).map(q => ({ ...q, board: b.id })), at: null, raw: null }; BOARD_LISTS.set(b.id, c); }
+    if (!c) { c = { list: loadPlayers(boardCsv(b), b).map(q => ({ ...q, board: b.id })), at: null, raw: null }; BOARD_LISTS.set(b.id, c); }
     if (c.at !== players) {   // re-key after every rebuild of this page's players
       const bySid = new Map(players.map(p => [p.sleeperId, p]));
       c.list.forEach(q => {
@@ -5957,16 +6026,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       c.at = players; c.raw = null; c.byId = new Map(c.list.map(q => [q.id, q]));
     }
-    if (!c.raw && comps) {
-      const T = modelTable(curvesFor(boardScoring(b)), boardLineup(b), VALUE_MODEL.benchWeight * leagueDepth(boardLeague(b)));
-      const at = (pos, r) => T[pos][Math.min(r, T[pos].length) - 1];
-      c.list.forEach(q => {
-        if (!EDIT_POS.includes(q.pos) || !(q.posNum >= 1)) return;
-        const w = q.projRank >= 1 ? projectionWeight(q.games) : 0;
-        q.rawValue = (1 - w) * at(q.pos, q.posNum) + w * (q.projRank >= 1 ? at(q.pos, q.projRank) : 0);
-      });
-      c.raw = true;
-    }
+    if (!c.raw && comps) { nativeRaw(c.list, b); c.raw = true; }
     return c.list;
   }
   // his record on board b (the same player object on this page's own board)
@@ -6241,13 +6301,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function lastUpdated() {
     const stamp = Date.parse(SITE.updated) || 0;
     let ts = 0;
-    try { ts = rankHistory && rankHistory.players ? Math.max(0, ...Object.values(rankHistory.players).flatMap(l => l.map(e => Date.parse(e[0]) || 0))) : 0; } catch (e) {}   // history loads later in the script
+    try { const h = histFor(rankBoard()); ts = h && h.players ? Math.max(0, ...Object.values(h.players).flatMap(l => l.map(e => Date.parse(e[0]) || 0))) : 0; } catch (e) {}   // history loads later in the script; the Rankings tab's board
     const t = Math.max(stamp, ts);
     return t ? new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : SITE.updated;
   }
   const setMeta = () => { const u = lastUpdated(); $("meta").textContent = u ? "Last updated " + u : ""; };
   setMeta();
-  setTimeout(() => loadHistory().then(setMeta), 0);   // after the whole script has run
+  setTimeout(() => loadHistory(rankBoard()).then(setMeta), 0);   // after the whole script has run
   $("footer-text").textContent = SITE.name + " rankings and trade model · Base format: " + formatLabel();
   $("sample-notice").hidden = !SITE.sampleData;
   if (SITE.sampleNote) $("sample-note").textContent = SITE.sampleNote;
@@ -6396,8 +6456,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const filters = ["ALL", "QB", "RB", "WR", "TE"].concat(hasPicks ? ["PICK"] : []);
   let posFilter = "ALL", query = "";
   // tier editing state (see "Tier editing" in the editor section)
-  const TIER_EMPTY = {};          // pos -> [{ tier, name }]: tiers created while editing, still empty
+  const TIER_EMPTY = {};          // tier scope key -> [{ tier, name }]: tiers created while editing, still empty
   let TIER_DEL = null, TIER_REN = null;
+  /* Tier scope (Oct 14): a board's tiers run down each position (AM SF PPR TE+) or down the whole overall order on one
+     shared scale (AM PPR, tierScope "overall"). The editor's tier tools work on the scope's key: the position, or "ALL"
+     (edited on the All view; every position shares Tier 1, Tier 2 …). */
+  const scopeAll = (b = CALC_BOARD || ACTIVE_BOARD) => b.tierScope === "overall";
+  const inTier = (p, key) => p.pos !== "PICK" && (key === "ALL" || p.pos === key);
+  const tierKeyOf = p => (scopeAll() ? "ALL" : p.pos);
+  const tierKeyView = () => (scopeAll() ? "ALL" : posFilter);   // the key of the tier tools on screen
 
   $("pos-chips").innerHTML = filters.map(f =>
     `<button class="chip-btn" type="button" data-pos="${f}" aria-pressed="${f === posFilter}">${f === "ALL" ? "All" : f === "PICK" ? "Picks" : f}</button>`
@@ -6523,13 +6590,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return (own && own[tier]) || (pos !== "OVERALL" && names.ALL && names.ALL[tier]) || "";
   }
   function tierNameOf(pos, tier) {
-    const t = String(tier);
-    const hit = players.find(p => p.pos === pos && String(p.tier) === t && p.tierName);
+    const t = String(tier), key = pos === "ALL" || scopeAll() ? "ALL" : pos;
+    const hit = players.find(p => inTier(p, key) && String(p.tier) === t && p.tierName);
     if (hit) return hit.tierName;
     let empty = null;
-    try { empty = (TIER_EMPTY[pos] || []).find(e => String(e.tier) === t); } catch (e) {}
+    try { empty = (TIER_EMPTY[key] || []).find(e => String(e.tier) === t); } catch (e) {}
     if (empty && empty.name) return empty.name;
-    return presetTierName(pos, tier);
+    return presetTierName(key, tier);
   }
   const isTagTier = t => Number(t) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
   const OUT_TIER = 99;   // Out for season: a tag tier every position has (see sendOut)
@@ -6581,11 +6648,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   let movesMemo = null;
   function boardMoves() {
     const out = new Map(); let h;
-    if (CALC_BOARD && CALC_BOARD !== ACTIVE_BOARD) return out;   // another board (no history of its own yet)
-    try { h = rankHistory; } catch (e) { return out; }   // first render runs before the history state exists
+    try { h = histFor(); } catch (e) { return out; }   // first render runs before the history state exists
+    if (h === undefined) { loadHistory().then(d => { if (d) renderRankings(); }); return out; }   // another board's, on first view
     if (!h || !h.players) return out;
     const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-    let pend = ""; try { pend = localStorage.getItem(PENDING_KEY) || ""; } catch (e) {}
+    let pend = ""; try { if (histBoard() === ACTIVE_BOARD) pend = localStorage.getItem(PENDING_KEY) || ""; } catch (e) {}
     if (movesMemo && movesMemo.players === players && movesMemo.h === h && movesMemo.pend === pend && movesMemo.today === today) return movesMemo.out;
     const all = historyWithPending();
     players.forEach(p => {
@@ -6724,8 +6791,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const out = [];
     let lastGroup = null;
     // tier editing: position tabs on the AM Board, no search/filter
-    const tierEdit = editing && canReorder && EDIT_POS.includes(posFilter) && !query && !filtered;
-    const empties = tierEdit ? (TIER_EMPTY[posFilter] || []).slice().sort((a, b) => a.tier - b.tier) : [];
+    const tkey = tierKeyView(), tierView = scopeAll() ? posFilter === "ALL" && hasOverall() : EDIT_POS.includes(posFilter);   // where the tiers are edited: the board's tier scope
+    const tierEdit = editing && canReorder && tierView && !query && !filtered;
+    const empties = tierEdit ? (TIER_EMPTY[tkey] || []).slice().sort((a, b) => a.tier - b.tier) : [];
     // Small secondary note on each tier band, from the players currently in that tier only
     const tierStats = new Map();
     list.forEach(p => { const g = group(p); if (!g) return; const v = dv(p), x = tierStats.get(g) || { n: 0, lo: Infinity, hi: -Infinity };
@@ -6747,19 +6815,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     };
     const tierHead = (t, label, empty, up, down) => {
       if (!tierEdit) return tierBand(label);
-      const del = TIER_DEL && TIER_DEL.pos === posFilter && String(TIER_DEL.tier) === String(t);
-      const tag = isTagTier(t), nums = tierNums(posFilter), i = nums.indexOf(Number(t));
+      const del = TIER_DEL && TIER_DEL.pos === tkey && String(TIER_DEL.tier) === String(t);
+      const tag = isTagTier(t), nums = tierNums(tkey), i = nums.indexOf(Number(t));
       const hasAbove = i > 0, hasBelow = i >= 0 && i < nums.length - 1;
       return `<tr class="tier tier-edit${del ? " deleting" : ""}" data-tier="${esc(String(t))}"><td colspan="${cols}"><div class="tier-row">
-        ${TIER_REN && TIER_REN.pos === posFilter && String(TIER_REN.tier) === String(t)
-          ? `<input class="tier-input" type="text" value="${esc(tierNameOf(posFilter, t))}" placeholder="Name this tier" aria-label="Tier name" maxlength="60">`
+        ${TIER_REN && TIER_REN.pos === tkey && String(TIER_REN.tier) === String(t)
+          ? `<input class="tier-input" type="text" value="${esc(tierNameOf(tkey, t))}" placeholder="Name this tier" aria-label="Tier name" maxlength="60">`
           : `<button class="tier-name" type="button" data-tier-act="rename" title="Rename tier">${esc(label)}<span class="tier-pen" aria-hidden="true">✎</span></button>`}${empty ? "" : tierMeta(label)}
         ${del ? `<span class="tier-del-ask">Move its players to: ${hasAbove ? `<button class="btn" type="button" data-tier-act="del-up">Tier above</button>` : ""}${hasBelow ? `<button class="btn" type="button" data-tier-act="del-down">Tier below</button>` : ""}<button class="btn link" type="button" data-tier-act="del-cancel">Cancel</button></span>`
           : `<span class="tier-tools">${tag ? "" : `${empty ? "" : edgeTools(t, up, down)}<button type="button" data-tier-act="above">+ Tier above</button><button type="button" data-tier-act="below">+ Tier below</button><button type="button" class="danger" data-tier-act="delete">Delete</button>`}</span>`}
       </div></td></tr>${empty ? `<tr class="tier-drop" data-tier="${esc(String(t))}"><td colspan="${cols}">Empty tier: drag players here</td></tr>` : ""}`;
     };
     let edgeAbove = null;   // the player right above the next tier header (none across an empty tier)
-    const flushEmpties = upTo => { while (empties.length && empties[0].tier < upTo) { const e = empties.shift(); out.push(tierHead(e.tier, tierLabel(posFilter, e.tier), true)); edgeAbove = null; } };
+    const flushEmpties = upTo => { while (empties.length && empties[0].tier < upTo) { const e = empties.shift(); out.push(tierHead(e.tier, tierLabel(tkey, e.tier), true)); edgeAbove = null; } };
     list.forEach(p => {
       const g = group(p);
       if (tierEdit && !isTagTier(p.tier)) flushEmpties(Number(p.tier));
@@ -6782,9 +6850,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       </tr>`);
     });
     if (tierEdit) flushEmpties(Infinity);
-    // every position tab ends with the Out for season tier, even when nobody is in it
-    if (EDIT_POS.includes(posFilter) && !leagueView() && !query && !filtered && !list.some(p => String(p.tier) === String(OUT_TIER))) {
-      const label = tierLabel(posFilter, OUT_TIER);
+    // every position tab (overall tiers: the All view) ends with the Out for season tier, even when nobody is in it
+    if (tierView && !leagueView() && !query && !filtered && !list.some(p => String(p.tier) === String(OUT_TIER))) {
+      const label = tierLabel(tkey, OUT_TIER);
       out.push(tierEdit ? tierHead(OUT_TIER, label, true) : tierBand(label) + `<tr class="tier-none"><td colspan="${cols}">No players out for the season</td></tr>`);
     }
     patchRows($("rank-body"), out.length ? out.join("") :
@@ -7273,7 +7341,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function renderRail() { const rb = rankBoard(); return rb === ACTIVE_BOARD ? renderRailIn() : withBoard(rb, renderRailIn); }
   function renderRailIn() {
     const el = $("rk-rail"); if (!el) return;
-    if (rankHistory === undefined) { loadHistory().then(() => { if (rankHistory !== undefined) renderRankings(); }); }
+    if (histFor() === undefined) { const b = histBoard(); loadHistory(b).then(() => { if (histFor(b) !== undefined) renderRankings(); }); }
     const parts = [], vl = valueLeague();
     // board context: last update, the format the values follow, your power rank
     const ctx = [CALC_BOARD !== ACTIVE_BOARD ? `<div class="rr-row"><dt>Board</dt><dd>${esc(CALC_BOARD.label)}${CALC_BOARD.readOnly ? " · view only" : ""}</dd></div>`
@@ -8670,7 +8738,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     drop: { QB: 0.25, RB: 0.25, WR: 0.20, TE: 0.30 },   // adjacent drop that needs a reason
     spread: { QB: 0.45, RB: 0.45, WR: 0.45, TE: 0.45 }, // (top - bottom) / top inside a tier, tiers whose top is 1,000+
     big: { QB: 12, RB: 14, WR: 16, TE: 12 },             // players in one tier
-    minGap: 0.03, floor: 300
+    minGap: 0.03, floor: 300,
+    bigAll: 30, spreadAll: 0.45   // a board whose tiers are overall (AM PPR): players in one tier, spread inside it
   };
   function valueCheck() {
     const out = [], tag = p => p.tier === "" || p.tier == null || isTagTier(p.tier);
@@ -8693,17 +8762,22 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           out.push({ kind: rankGap ? "rank" : "cliff", text: `${pos}${a.posNum} → ${pos}${b.posNum} value drop = ${(100 * d).toFixed(1)}% over ${gap} overall spot${gap === 1 ? "" : "s"} (${a.name} ${fmt(a.value)} → ${b.name} ${fmt(b.value)}${String(a.tier) !== String(b.tier) ? ", tier boundary" : ", same tier"})${rankGap ? ": your overall order puts them far apart" : ""}` });
         }
       }
-      const tiers = [];
+      if (!scopeAll(ACTIVE_BOARD)) tierWarn(L, pos);
+    }
+    if (scopeAll(ACTIVE_BOARD)) tierWarn(ranked, "");   // overall tiers (AM PPR): one shared scale down the board
+    return out;
+    // tier sizes, spreads and boundary gaps down a position (pos), or down the whole board ("")
+    function tierWarn(L, pos) {
+      const tiers = [], at = q => (pos ? `${pos}${q.posNum}` : `#${q.rank}`), big = pos ? VCHECK.big[pos] : VCHECK.bigAll, spread = pos ? VCHECK.spread[pos] : VCHECK.spreadAll;
       L.filter(p => !tag(p)).forEach(p => { const t = tiers[tiers.length - 1]; if (t && String(t.tier) === String(p.tier)) t.ps.push(p); else tiers.push({ tier: p.tier, ps: [p] }); });
       tiers.forEach((t, i) => {
-        const hi = t.ps[0].value, lo = t.ps[t.ps.length - 1].value, nx = tiers[i + 1], lbl = `${pos} Tier ${t.tier}`;
-        if (t.ps.length === 1 && i > 0) out.push({ kind: "tier", text: `${lbl} has one player (${t.ps[0].name}, ${pos}${t.ps[0].posNum})` });
-        if (t.ps.length >= VCHECK.big[pos]) out.push({ kind: "tier", text: `${lbl} has ${t.ps.length} players (${pos}${t.ps[0].posNum}–${pos}${t.ps[t.ps.length - 1].posNum})` });
-        if (hi >= 1000 && (hi - lo) / hi > VCHECK.spread[pos]) out.push({ kind: "tier", text: `${lbl} value spread = ${(100 * (hi - lo) / hi).toFixed(1)}% (${fmt(hi)} → ${fmt(lo)})` });
+        const hi = t.ps[0].value, lo = t.ps[t.ps.length - 1].value, nx = tiers[i + 1], lbl = `${pos ? pos + " " : ""}Tier ${t.tier}`;
+        if (t.ps.length === 1 && i > 0) out.push({ kind: "tier", text: `${lbl} has one player (${t.ps[0].name}, ${at(t.ps[0])})` });
+        if (t.ps.length >= big) out.push({ kind: "tier", text: `${lbl} has ${t.ps.length} players (${at(t.ps[0])}–${at(t.ps[t.ps.length - 1])})` });
+        if (hi >= 1000 && (hi - lo) / hi > spread) out.push({ kind: "tier", text: `${lbl} value spread = ${(100 * (hi - lo) / hi).toFixed(1)}% (${fmt(hi)} → ${fmt(lo)})` });
         if (nx && lo > 500 && (lo - nx.ps[0].value) / lo < VCHECK.minGap) out.push({ kind: "tier", text: `${lbl} → Tier ${nx.tier} boundary gap = ${(100 * (lo - nx.ps[0].value) / lo).toFixed(2)}% (${t.ps[t.ps.length - 1].name} ${fmt(lo)} → ${nx.ps[0].name} ${fmt(nx.ps[0].value)})` });
       });
     }
-    return out;
   }
   /* Review tools (Alan, Oct 8: "secondary review tools, not primary actions"): the editor bar shows two quiet status
      items (value warnings with a severity dot, Market audit); both open one right-side Review panel. Read-only. */
@@ -8820,7 +8894,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   function updateEditorBar() {
     if (CALC_BOARD && CALC_BOARD !== ACTIVE_BOARD) return;   // the wrapper redraws it once the board is put back
-    if (rankBoard() !== ACTIVE_BOARD) { $("editor-bar").hidden = true; $("ed-reveal-wrap").hidden = true; return; }   // a read-only board is showing
+    renderBoardSwitch();
+    if (rankBoard() !== ACTIVE_BOARD) { $("editor-bar").hidden = true; $("ed-reveal-wrap").hidden = true; return; }   // another board is showing, as published
     renderValueCheck();
     renderMarketAudit();
     if (RV && RV.open) renderReview();
@@ -8829,6 +8904,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!editor.on || savedCsv == null) return;
     const n = changedRows().length, local = Object.keys(localEdits).length;
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
+    $("eb-board").textContent = BOARDS.length > 1 ? ACTIVE_BOARD.label : "";
     $("eb-count").textContent = n ? `${n} unsaved` : "All saved";
     $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
     $("editor-bar").classList.toggle("dirty", n > 0);   // Save turns red only while there are unsaved changes
@@ -8850,6 +8926,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // published (no browser edits left): the editor bookkeeping saved with them goes too
     if (local === 0 && !editor.saving && SESSION_AT_SAVE) { SESSION_AT_SAVE = null; try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
   }
+
+  /* Editing one board at a time (Oct 14): the AM Board view of another board shows it as published, with "Edit <board>",
+     which makes it the edited board and reloads the page, so the draft, the browser edits, the history and the publish
+     target always belong to one board. Not while this board has unsaved changes (they'd be lost). */
+  function boardLocalCount(b) { try { return Object.keys(JSON.parse(localStorage.getItem(boardKey("spm_local_edits", b)) || "{}") || {}).length; } catch (e) { return 0; } }
+  function renderBoardSwitch() {
+    const w = $("ed-switch-wrap"); if (!w) return;
+    const rb = rankBoard(), show = editor.on && rb !== ACTIVE_BOARD && !leagueView() && !prodOn() && !mkOn() && !wkOn()
+      && (!EDIT_PHONE.matches || !!editor.token || editReveal || DIAG_DEBUG);
+    w.hidden = !show; if (!show) return;
+    const n = savedCsv == null ? 0 : changedRows().length, saved = boardLocalCount(rb), b = $("ed-switch");
+    $("ed-switch-text").textContent = `${rb.label} as published.` + (saved ? ` ${saved} player${saved > 1 ? "s" : ""} edited in this browser, not published yet.` : "");
+    b.textContent = `Edit ${rb.label}`; b.dataset.board = rb.id;
+    b.disabled = n > 0 || editor.saving;
+    b.title = n > 0 ? `Save or cancel your ${ACTIVE_BOARD.label} changes first` : `Edit ${rb.label} (reloads the page; your ${ACTIVE_BOARD.label} edits stay saved in this browser)`;
+  }
+  $("ed-switch").addEventListener("click", e => {
+    const b = boardById(e.currentTarget.dataset.board || ""); if (!b || e.currentTarget.disabled) return;
+    try { localStorage.setItem("spm_edit_board", b.id); localStorage.setItem("spm_rk_board", b.id); } catch (err) { toast("Couldn't switch boards: this browser is blocking site storage.", 8000); return; }
+    location.reload();
+  });
 
   /* Moving players. The overall order (rank) is the source of truth and every position rank is derived from it.
      Reversible editor (Alan, Oct 12, on values as state): the same order, tiers and value edits always give the same
@@ -8945,7 +9042,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // published tier (so an undone move restores the row exactly)
   function tierNameAfter(id, pos, t, stale) {   // stale: players whose tier changed and whose name isn't set yet
     const S = editSession(), iT = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
-    const mates = players.filter(q => q.pos === pos && q.id !== id && String(draft.rows[q.id][iT]) === t);
+    const mates = players.filter(q => inTier(q, pos) && q.id !== id && String(draft.rows[q.id][iT]) === t);
     const named = q => draft.rows[q.id][iN];
     const carrier = mates.find(q => !stale.has(q.id) && named(q));
     const empty = (TIER_EMPTY[pos] || []).find(x => String(x.tier) === t);
@@ -8995,7 +9092,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // touched while his move stands: his value follows his new spot (stateValues); everyone who only shifted keeps his value.
   function writeOrder(order, me, forceTier, opts) {
     const iRank = colOf(draft, "rank"), iPos = colOf(draft, "pos_rank"), iTier = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
-    const S = editSession(), newPos = order.filter(p => p.pos === me.pos);
+    const S = editSession(), key = tierKeyOf(me), newPos = order.filter(p => inTier(p, key));   // his tier scope in the new order
     /* A tier he was dropped into is deliberate only when his new spot wouldn't give it to him anyway; dropped back where
        he came from (between the same two players at his position), he gets exactly the tier state he had there. A
        deliberate tier that would split another tier isn't applied: tiers stay in one piece (Oct 12), he takes the tier
@@ -9009,7 +9106,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         S.base.set(me.id, b1); if (p1) S.pinned.add(me.id); else S.pinned.delete(me.id);
         return d;
       };
-      const oldPos = players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
+      const oldPos = key === "ALL" ? overallOrder().filter(p => inTier(p, key)) : players.filter(p => p.pos === me.pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
       const nb = (L, i) => [L[i - 1] ? L[i - 1].id : null, L[i + 1] ? L[i + 1].id : null];
       const stack = S.drops.get(me.id) || [], top = stack[stack.length - 1], [na, nz] = nb(newPos, newPos.indexOf(me));
       if (top && top.above === na && top.below === nz) {
@@ -9039,8 +9136,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     changed.forEach((t, id) => { draft.rows[id][iTier] = t; });
     // names: players back in their published tier first (their published name is exact), then the rest from their tiermates
     const stale = new Set(changed.keys()), back = id => { const r = S.refRow.get(id); return r && String(r[colOf(S.refTable, "tier")] ?? "") === changed.get(id); };
-    [...changed.keys()].sort((a, b) => back(b) - back(a)).forEach(id => { draft.rows[id][iN] = tierNameAfter(id, me.pos, changed.get(id), stale); stale.delete(id); });
-    if (tierChanged && TIER_EMPTY[me.pos]) TIER_EMPTY[me.pos] = TIER_EMPTY[me.pos].filter(e => String(e.tier) !== newTier);
+    [...changed.keys()].sort((a, b) => back(b) - back(a)).forEach(id => { draft.rows[id][iN] = tierNameAfter(id, key, changed.get(id), stale); stale.delete(id); });
+    if (tierChanged && TIER_EMPTY[key]) TIER_EMPTY[key] = TIER_EMPTY[key].filter(e => String(e.tier) !== newTier);
     // his own moves: the overall slot (the players either side) he left each time; moving back to one of them undoes the
     // moves made since
     const was = overallOrder(), wi = was.indexOf(me), ni = order.indexOf(me), side = (L, i) => (L[i - 1] ? L[i - 1].id : -1) + ":" + (L[i + 1] ? L[i + 1].id : -1);
@@ -9087,15 +9184,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const overallOrder = () => players.filter(p => isPlayerRow(p) && p.rank != null).sort((a, b) => a.rank - b.rank);
 
   // All view: move a player to overall rank targetRank
-  function moveOverall(id, targetRank, opts) {
+  // forceTier (overall tiers, Oct 14): dropped next to a player or on a tier header on the All view, he goes into that tier
+  function moveOverall(id, targetRank, opts, forceTier) {
     editSession();
     const me = byId.get(id);
     if (!me || me.rank == null) return;
+    if (forceTier != null && String(forceTier) === String(OUT_TIER)) { if (String(me.tier) !== String(OUT_TIER)) sendOut(me); return; }
     const order = overallOrder();
     const from = order.indexOf(me), to = Math.max(0, Math.min(order.length - 1, targetRank - 1));
-    if (from === to) return;
+    if (from === to) {
+      if (forceTier != null && String(forceTier) !== String(me.tier)) writeOrder(order, me, String(forceTier), { ...opts, sameRankTier: true });   // a new tier, same spot: rank kept
+      return;
+    }
     order.splice(from, 1); order.splice(to, 0, me);
-    writeOrder(order, me, null, opts);
+    writeOrder(order, me, forceTier != null ? String(forceTier) : null, opts);
   }
 
   /* Position tab: tier first, then your order inside the tier, then value, then the overall board (Alan, Oct 5).
@@ -9134,13 +9236,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const from = group.indexOf(me), to = Math.max(0, Math.min(group.length - 1, targetNum - 1));
     if (from === to && (forceTier == null || String(forceTier) === String(me.tier))) return;
     const newGroup = group.filter(p => p !== me); newGroup.splice(to, 0, me);
-    const tier = forceTier != null ? String(forceTier)
-      : isTagTier(me.tier) ? String(me.tier) : (deriveTiers(newGroup, me, false).get(me.id) ?? String(me.tier));
-    const F = forceTier != null ? tier : null;   // a dropped-into tier is deliberate; an arrow move's tier is derived
     // the position keeps its overall spots (tag tiers, and the first estimate of his new value)
     const order = overallOrder(), slots = order.map((p, k) => p.pos === me.pos ? k : -1).filter(k => k >= 0);
     if (slots.length !== newGroup.length) return;
     slots.forEach((k, n) => { order[k] = newGroup[n]; });
+    const tier = forceTier != null ? String(forceTier)
+      : isTagTier(me.tier) ? String(me.tier) : (deriveTiers(scopeAll() ? order.filter(p => inTier(p, "ALL")) : newGroup, me, false).get(me.id) ?? String(me.tier));
+    const F = forceTier != null ? tier : null;   // a dropped-into tier is deliberate; an arrow move's tier is derived
     if (from === to) { writeOrder(overallOrder(), me, F, { sameRankTier: true }); return; }   // a new tier, same spot: rank kept
     if (isTagTier(tier) || me.rank == null) { writeOrder(order, me, F); return; }
     const others = overallOrder().filter(p => p !== me), above = newGroup[to - 1], below = newGroup[to + 1];
@@ -9220,7 +9322,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const floor = above.length ? Math.min(...above) * 0.98 : 0, k = {}, prevAt = {};
     order.forEach((p, i) => {
       if (p.source !== "auto") { prevAt[p.pos] = p.value; return; }
-      let v = Math.max(0, modelValue(p.pos, p.posNum, p.projRank, p.games) || 0);
+      let v = Math.max(0, boardModelValue(ACTIVE_BOARD, p.pos, p.posNum, p.projRank, p.games) || 0);
       const f = floor * Math.pow(d, k[p.pos] || 0);
       if (v < f) { v = f; k[p.pos] = (k[p.pos] || 0) + 1; }
       if (prevAt[p.pos] != null) v = Math.min(v, prevAt[p.pos] * 0.995);
@@ -9270,7 +9372,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
 
   function splitNotice(me, sp) {
-    edWarn(me.id, `<p>Moving <b>${esc(me.name)}</b> to Tier ${esc(sp.want)} here would split Tier ${esc(String(sp.broken))} (tiers stay in one piece down a position), so he joined Tier ${esc(sp.fix)} at #${me.rank}. To put him in Tier ${esc(sp.want)}, move him to that tier's edge or move the tier boundary.</p>
+    edWarn(me.id, `<p>Moving <b>${esc(me.name)}</b> to Tier ${esc(sp.want)} here would split Tier ${esc(String(sp.broken))} (tiers stay in one piece down ${scopeAll() ? "the board" : "a position"}), so he joined Tier ${esc(sp.fix)} at #${me.rank}. To put him in Tier ${esc(sp.want)}, move him to that tier's edge or move the tier boundary.</p>
       <div class="eb-group"><button class="btn link" type="button" data-ed="close">OK</button></div>`);
   }
   function zeroNotice(me) {
@@ -9297,19 +9399,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* ---------- Tier editing (position tabs) ----------
      Tiers are data: each player's tier number plus tier_name, saved and published like ranks.
      Empty tiers exist only while editing (TIER_EMPTY) until a player is dragged in. */
-  function tierNums(pos) {
-    const set = new Set(players.filter(p => p.pos === pos && p.tier !== "" && !isTagTier(p.tier)).map(p => Number(p.tier)));
+  function tierNums(pos) {   // pos: the tier scope key (a position, or "ALL")
+    const set = new Set(players.filter(p => inTier(p, pos) && p.tier !== "" && !isTagTier(p.tier)).map(p => Number(p.tier)));
     (TIER_EMPTY[pos] || []).forEach(e => set.add(Number(e.tier)));
     return [...set].sort((a, b) => a - b);
   }
   // write every tier's current name onto its players, so names survive renumbering
   function materializeTierNames(pos) {
     const iN = colOf(draft, "tier_name");
-    players.filter(p => p.pos === pos && p.tier !== "").forEach(p => { if (!draft.rows[p.id][iN]) draft.rows[p.id][iN] = tierNameOf(pos, p.tier) || ""; });
+    players.filter(p => inTier(p, pos) && p.tier !== "").forEach(p => { if (!draft.rows[p.id][iN]) draft.rows[p.id][iN] = tierNameOf(pos, p.tier) || ""; });
   }
   function shiftTiers(pos, from, delta) {   // every (non-tag) tier >= from moves by delta (reads the draft, so earlier edits count)
     const iT = colOf(draft, "tier"), base = editSession().base;
-    players.filter(p => p.pos === pos).forEach(p => {
+    players.filter(p => inTier(p, pos)).forEach(p => {
       const cur = draft.rows[p.id][iT], b = base.get(p.id);
       if (cur !== "" && cur != null && !isTagTier(cur) && Number(cur) >= from) draft.rows[p.id][iT] = String(Number(cur) + delta);
       if (b !== "" && b != null && !isTagTier(b) && Number(b) >= from) base.set(p.id, String(Number(b) + delta));
@@ -9319,7 +9421,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function tierAction(act, pos, tier, value) {
     editSession();
     const t = Number(tier), iT = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
-    const members = players.filter(p => p.pos === pos && String(p.tier) === String(tier));
+    const members = players.filter(p => inTier(p, pos) && String(p.tier) === String(tier));
     if (act === "rename") {
       const name = String(value || "").trim().replace(/\s+/g, " ");
       members.forEach(p => { draft.rows[p.id][iN] = name; });
@@ -9359,7 +9461,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const row = b.closest("tr[data-tier]"); if (!row) return;
     e.stopPropagation();
     if (b.dataset.tierAct === "rename") {
-      TIER_REN = { pos: posFilter, tier: row.dataset.tier }; renderRankings();
+      TIER_REN = { pos: tierKeyView(), tier: row.dataset.tier }; renderRankings();
       const inp = $("rank-body").querySelector(".tier-input"); if (inp) { inp.focus(); inp.select(); }
       return;
     }
@@ -9367,17 +9469,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const p = byId.get(Number(b.dataset.id)); if (p && p.posNum != null) movePlayer(p.id, p.posNum, b.dataset.to);
       return;
     }
-    tierAction(b.dataset.tierAct, posFilter, row.dataset.tier);
+    tierAction(b.dataset.tierAct, tierKeyView(), row.dataset.tier);
   });
   $("rank-body").addEventListener("keydown", e => {
     const inp = e.target.closest(".tier-input"); if (!inp) return;
-    if (e.key === "Enter") { e.preventDefault(); tierAction("rename", posFilter, inp.closest("tr[data-tier]").dataset.tier, inp.value); }
+    if (e.key === "Enter") { e.preventDefault(); tierAction("rename", tierKeyView(), inp.closest("tr[data-tier]").dataset.tier, inp.value); }
     else if (e.key === "Escape") { e.preventDefault(); TIER_REN = null; renderRankings(); }
   });
   $("rank-body").addEventListener("focusout", e => {
     const inp = e.target.closest && e.target.closest(".tier-input"); if (!inp || !TIER_REN) return;
     const tier = inp.closest("tr[data-tier]").dataset.tier, v = inp.value;
-    setTimeout(() => { if (TIER_REN && String(TIER_REN.tier) === tier) tierAction("rename", posFilter, tier, v); }, 0);
+    setTimeout(() => { if (TIER_REN && String(TIER_REN.tier) === tier) tierAction("rename", tierKeyView(), tier, v); }, 0);
   });
 
   function toast(msg, ms = 4000) {   // errors pass a longer time, so a failure message can be read in full
@@ -9595,11 +9697,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        header the pointer is on decides his tier, so a drop just across a boundary is a tier move at the same rank
        (Burrow, last of QB Tier 3, dropped below the Tier 4 header stays QB6 and leads Tier 4; Goff, first of Tier 4,
        dropped above it stays QB7 and closes Tier 3). Dropping where he started changes nothing. */
-    drag.heads = all ? null : Array.from({ length: rows.length + 1 }, (_, k) => {
+    const tv = scopeAll() ? all : !all;   // the view where tiers are edited (overall tiers: All)
+    drag.heads = !tv ? null : Array.from({ length: rows.length + 1 }, (_, k) => {
       const a = rows[k - 1], z = rows[k];
       return tiers.filter(g => g.tr.classList.contains("tier-edit") && (!a || g.top >= a.mid) && (!z || g.bot <= z.mid)).sort((x, y) => x.top - y.top);
     });
-    drag.zone = all ? null : dragZone(r.top + r.height / 2 + sy);   // where he starts: his own tier
+    drag.zone = !tv ? null : dragZone(r.top + r.height / 2 + sy);   // where he starts: his own tier
     drag.pill = drag.float.querySelector(".drag-rk");
     tr.classList.add("drag-origin");
     drag.shield = document.createElement("div"); drag.shield.className = "drag-shield"; document.body.append(drag.shield);
@@ -9744,12 +9847,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const me = byId.get(id);
     if (!me) return;
     if (target.dataset.tier != null && !target.classList.contains("player")) {   // a tier header or an empty tier
-      const t = Number(target.dataset.tier);
-      const rest = players.filter(p => p.pos === me.pos && p.posNum != null && p !== me).sort((a, b) => a.posNum - b.posNum);
+      const t = Number(target.dataset.tier), whole = scopeAll() && posFilter === "ALL";
+      const rest = whole ? overallOrder().filter(p => p !== me && inTier(p, "ALL")) : players.filter(p => p.pos === me.pos && p.posNum != null && p !== me).sort((a, b) => a.posNum - b.posNum);
       const first = rest.findIndex(p => Number(p.tier) === t && !isTagTier(p.tier));
       let idx = first;
       if (idx < 0) { idx = 0; rest.forEach((p, k) => { if (!isTagTier(p.tier) && Number(p.tier) < t) idx = k + 1; }); }
-      movePlayer(id, idx + 1, t);
+      if (whole) moveOverall(id, idx + 1, undefined, t); else movePlayer(id, idx + 1, t);
       return;
     }
     const tp = byId.get(Number(target.dataset.id));
@@ -9759,7 +9862,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (key(me) < num) num -= 1;
     // position tab: dropping next to a player puts you in his tier
     // (or, in a gap between tiers, the tier on the side of the header he was dropped: tier)
-    if (all) moveOverall(id, num); else movePlayer(id, num, tier != null ? tier : tp.tier !== "" ? tp.tier : null);
+    const into = tier != null ? tier : tp.tier !== "" ? tp.tier : null;
+    if (all) moveOverall(id, num, undefined, scopeAll() ? into : null); else movePlayer(id, num, scopeAll() ? null : into);   // tiers are dropped into where they're edited
   }
   $("rank-body").addEventListener("pointerdown", e => {
     const h = e.target.closest(".handle");
@@ -9929,7 +10033,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function extractRankings(text) {
     if (typeof text !== "string" || !text.length) throw new Error(`${FILE} came back empty from GitHub, so nothing was changed.`);
     const n = (text.match(new RegExp(CSV_RE.source, "g")) || []).length;
-    if (n !== 1) throw new Error(n ? `${FILE} has ${n} rankings blocks (expected exactly one), so nothing was changed.` : `Couldn't find the rankings block (const RANKINGS_CSV = \`…\`;) in ${FILE}, so nothing was changed.`);
+    if (n !== 1) throw new Error(n ? `${FILE} has ${n} rankings blocks (expected exactly one), so nothing was changed.` : `Couldn't find the rankings block (const ${ACTIVE_BOARD.block} = \`…\`;) in ${FILE}, so nothing was changed.`);
     const m = text.match(CSV_RE), start = m.index + m[1].length;
     return { csv: m[2], start, end: start + m[2].length };
   }
@@ -9984,6 +10088,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     // values follow the overall rank: each lower than the one ahead (only 0s may tie)
     const byRank = t.rows.slice().sort((a, b) => Number(a[col("rank")]) - Number(b[col("rank")]));
+    if (ACTIVE_BOARD.tierScope === "overall") {   // overall tiers (AM PPR) stay in one piece down the whole board
+      let last = -Infinity;
+      for (const r of byRank) {
+        const tr = Number(r[col("tier")]);
+        if (!Number.isFinite(tr) || isTagTier(tr)) continue;
+        if (tr < last) { errs.push(`Tier ${last} is split: ${r[col("player")]} (#${r[col("rank")]}) is in Tier ${tr} below it`); break; }
+        last = tr;
+      }
+    }
     for (let i = 1; i < byRank.length; i++) {
       const a = Number(byRank[i - 1][col("value")]), b = Number(byRank[i][col("value")]);
       if (b > 0 && b >= a) { errs.push(`${byRank[i][col("player")]} (#${i + 1}, ${b}) is worth ${b === a ? "the same as" : "more than"} ${byRank[i - 1][col("player")]} (#${i}, ${a})`); break; }
@@ -10404,7 +10517,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (h.histNew != null) changes.push({ path: HISTORY_FILE, text: h.histNew });
         if (h.snapNew != null) changes.push({ path: h.path, text: h.snapNew });
         const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36), hl = h.r.changed ? historyMessage(h.r.ev) : "";
-        const msg = same ? hl : `Rankings edit${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})` + (hl ? "\n\n" + hl : "");
+        const msg = same ? hl : `${ACTIVE_BOARD === DEFAULT_BOARD ? "Rankings edit" : ACTIVE_BOARD.label + " rankings edit"}${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})` + (hl ? "\n\n" + hl : "");
         diag("publish", `attempt ${attempt + 1} on ${base.head.slice(0, 7)}: ${changes.map(c => c.path).join(" + ")}`);
         const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts, start: startCsv }));
         if (res) done = { csv, same, h };   // null: the branch moved underneath us, so read and merge again
@@ -10535,7 +10648,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   async function loadStatic() {
     const get = async url => { try { const r = await fetch(url); return r.ok ? r.json() : null; } catch (e) { return null; } };
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
-    if (!comps) comps = await get("data/curve_components.json");
+    if (!comps) { comps = await get("data/curve_components.json"); if (comps && ACTIVE_BOARD.model) nativeRaw(players, ACTIVE_BOARD); }
     if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; PROJ_AT = pj.updated || ""; }
     if (!ROLES) { const rj = await get("data/roles.json"); setRoles(rj ? rj.players : {}, rj ? rj.updated || "" : ""); if (rolesNote()) console.warn("Adequate: " + rolesNote()); }
   }
@@ -12803,40 +12916,45 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      Trades before AM rankings existed say so and only show today. Both use base AM Board values (a league's past
      settings can't be rebuilt). Draft picks and FAAB are listed but not valued. */
   // when AM values were first published: the earliest ranking-history entry
-  function spamStart() {
-    const h = histNow();
+  function spamStart(b = histBoard()) {
+    const h = histNow(b);
     let first = Infinity;
     Object.values((h && h.players) || {}).forEach(list => list.forEach(e => { const t = whenDate(e[0]).getTime(); if (t < first) first = t; }));
     return first;
   }
-  let histNorm = { src: undefined, h: null };
-  const histNow = () => { if (histNorm.src !== rankHistory) histNorm = { src: rankHistory, h: normalizeHistory(rankHistory || null) }; return histNorm.h; };
+  const histNorm = new Map();   // board id → { src, h }: the normalized history, rebuilt when the file changes
+  const histNow = (b = histBoard()) => { const src = histFor(b), m = histNorm.get(b.id); if (m && m.src === src) return m.h;
+    const h = normalizeHistory(src || null); histNorm.set(b.id, { src, h }); return h; };
   /* Exact board snapshots (Alan, Oct 11; data/rank_snapshots/<YYYY-MM>.json): the canonical "AM value at the time".
      A trade uses the latest snapshot published at or before it; trades before the first snapshot fall back to the
      player's latest history entry at or before the trade (as before Oct 11). Months load on demand (needSnaps). */
-  const SNAPS = {}, snapLoading = {};
-  function loadSnapMonth(m) {
-    if (SNAPS[m]) return Promise.resolve(SNAPS[m]);
-    if (!snapLoading[m]) snapLoading[m] = fetch(snapPath(m), { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
-      .then(d => { SNAPS[m] = d && Array.isArray(d.snapshots) ? d : { snapshots: [] }; delete snapLoading[m]; return SNAPS[m]; });
-    return snapLoading[m];
+  const SNAPS = {}, snapLoading = {};   // the edited board's snapshot months (publishing adds to them)
+  const SNAPS_OTHER = new Map();         // another board's: id → { files, loading }
+  const snapsOf = b => { if (b === ACTIVE_BOARD) return { files: SNAPS, loading: snapLoading };
+    let o = SNAPS_OTHER.get(b.id); if (!o) { o = { files: {}, loading: {} }; SNAPS_OTHER.set(b.id, o); } return o; };
+  function loadSnapMonth(m, b = histBoard()) {
+    const S = snapsOf(b);
+    if (S.files[m]) return Promise.resolve(S.files[m]);
+    if (!S.loading[m]) S.loading[m] = fetch(snapPath(m, b), { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
+      .then(d => { S.files[m] = d && Array.isArray(d.snapshots) ? d : { snapshots: [] }; delete S.loading[m]; return S.files[m]; });
+    return S.loading[m];
   }
-  function snapEventAt(ms) {   // the latest publish with an exact snapshot at or before ms
+  function snapEventAt(ms, b = histBoard()) {   // the latest publish with an exact snapshot at or before ms
     let best = null;
-    (histNow().events || []).forEach(e => { if (!e.snap) return; const t = Date.parse(e.ts); if (t <= ms && (!best || t >= best.t)) best = { t, e }; });
+    (histNow(b).events || []).forEach(e => { if (!e.snap) return; const t = Date.parse(e.ts); if (t <= ms && (!best || t >= best.t)) best = { t, e }; });
     return best;
   }
-  // load the snapshot months the league's trades need, then redraw
-  function needSnaps() {
-    const d = activeData();
-    const months = new Set(((d && d.tx) || []).filter(t => t.type === "trade").map(t => { const se = snapEventAt(t.at); return se && se.e.snap; }).filter(m => m && !SNAPS[m]));
-    if (months.size) Promise.all([...months].map(loadSnapMonth)).then(() => { if (txOn()) renderLeague(); if (currentTab === "trade") renderTrade(); });
+  // load the snapshot months the league's trades need (on the league's board), then redraw
+  function needSnaps(b = LG.board || leagueBoard()) {
+    const d = activeData(), S = snapsOf(b);
+    const months = new Set(((d && d.tx) || []).filter(t => t.type === "trade").map(t => { const se = snapEventAt(t.at, b); return se && se.e.snap; }).filter(m => m && !S.files[m]));
+    if (months.size) Promise.all([...months].map(m => loadSnapMonth(m, b))).then(() => { if (txOn()) renderLeague(); if (currentTab === "trade") renderTrade(); });
   }
-  function valueAt(sid, ms) {
-    const se = snapEventAt(ms), f = se && SNAPS[se.e.snap], s = f && f.snapshots.find(x => x.ts === se.e.ts);
+  function valueAt(sid, ms, b = histBoard()) {
+    const se = snapEventAt(ms, b), f = se && snapsOf(b).files[se.e.snap], s = f && f.snapshots.find(x => x.ts === se.e.ts);
     if (s) { const a = s.players[sid]; return a ? { t: se.t, ts: s.ts, rank: a[0], pr: a[1], tier: a[2], v: a[3], exact: true } : null; }
-    if (se && !f) loadSnapMonth(se.e.snap).then(() => { if (txOn()) renderLeague(); if (currentTab === "trade") renderTrade(); });
-    const list = histNow().players[sid];
+    if (se && !f) loadSnapMonth(se.e.snap, b).then(() => { if (txOn()) renderLeague(); if (currentTab === "trade") renderTrade(); });
+    const list = histNow(b).players[sid];
     if (!list || !list.length) return null;
     let best = null;
     list.forEach(e => { const t = whenDate(e[0]).getTime(); if (t <= ms && (!best || t >= best.t)) best = { t, ts: e[0], rank: e[1], pr: e[2], tier: e[3], v: e[4] }; });
@@ -12905,16 +13023,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   function ensureTrades() {
     const d = activeData();
-    if (rankHistory === undefined) loadHistory().then(() => { needSnaps(); if (txOn()) renderLeague(); });
-    else needSnaps();
+    const bd = LG.board || leagueBoard();   // the league's board's history (its Trade History values)
+    if (histFor(bd) === undefined) loadHistory(bd).then(() => { needSnaps(bd); if (txOn()) renderLeague(); });
+    else needSnaps(bd);
     if (!d || slSource() !== "sleeper") return;
     const id = d.league.league_id;
     if (LT.loading !== id && !LT.error[id] && (!d.tx || d.txV !== TX_VERSION || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
   }
   const SIDE_LABELS = [[3, "Fair", "Fair"], [7, "Slight win", "Slight loss"], [12, "Win", "Loss"], [20, "Clear win", "Clear loss"], [30, "Steal", "Lopsided loss"], [Infinity, "Robbery", "Robbed"]];
   function evalTrade(t) {
-    // the league's board (Alan, Oct 14): a 1QB league reads AM PPR values; a board with no history of its own has no
-    // value from before it existed ("No AM PPR value available then"), never another board's value converted
+    // the league's board (Alan, Oct 14): a 1QB league reads AM PPR values, "then" from AM PPR's own history and snapshots;
+    // a trade from before that board's first publish has no value from it ("No AM PPR value available then"), never
+    // another board's value converted
     const bd = LG.board || leagueBoard(), noHist = !bd.history;
     const map = bd === ACTIVE_BOARD ? bySleeper() : withBoard(bd, bySleeper);
     const parts = t.rosters.map(rid => ({ rid, team: LG.teams.find(x => x.rosterId === rid) || { name: `Team ${rid}`, rosterId: rid, avatar: "" }, get: [], give: [], picks: [], faab: 0 }));
@@ -12926,12 +13046,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // two snapshots, never mixed: "then" = the AM values published at or before the trade, "now" = today's AM values.
     // Both are base AM Board values so they compare like for like (a league's past settings can't be rebuilt).
     const all = [...new Set(parts.flatMap(s => s.get))];
-    const then = new Map(all.map(sid => [sid, noHist ? null : valueAt(sid, t.at)]));
+    const then = new Map(all.map(sid => [sid, noHist ? null : valueAt(sid, t.at, bd)]));
     const valued = all.filter(sid => map.get(sid) || then.get(sid));   // K, DEF and other unranked players are never valued
     const thenAll = valued.length > 0 && valued.every(sid => then.get(sid));
     const thenNone = valued.every(sid => !then.get(sid));
     const basisTs = thenAll ? valued.map(sid => then.get(sid)).sort((a, b) => a.t - b.t).pop().ts : null;
-    const preSpam = !thenAll && (noHist || t.at < spamStart());
+    const preSpam = !thenAll && (noHist || t.at < spamStart(bd));
     parts.forEach(s => {
       s.items = s.get.map(sid => {
         const e = rosterEntry(sid, map), p = map.get(sid), h = then.get(sid) || null;
@@ -12972,7 +13092,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const fair = nets.every(n => n.vr ? n.vr.kind !== "split" && n.vr.kind !== "sensitive" && n.vr.gap < VALUE_FAIR : Math.abs(n.net) < 1);
       return { nets, totals: nets.map(n => n.got), ahead: lead, fair, diff: nets[lead].net };
     };
-    const res = { t, parts, thenAll, thenNone, basisTs, preSpam, noBoard: noHist ? bd.label : null, nowLabel: bd === DEFAULT_BOARD ? "AM" : bd.label, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
+    const res = { t, parts, thenAll, thenNone, basisTs, preSpam, noBoard: noHist || (preSpam && bd !== DEFAULT_BOARD) ? bd.label : null, nowLabel: bd === DEFAULT_BOARD ? "AM" : bd.label, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
     // what the rest of the site reads (Analyze trade): today's snapshot for two-team trades
     res.historical = thenAll;
     if (parts.length === 2) { const n = res.now; res.model = n.model; res.a = n.a; res.b = n.b; res.ahead = n.ahead; res.more = n.more; res.tier = n.tier; res.fair = n.fair; }
@@ -14314,7 +14434,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      Photos come from Sleeper's CDN by Sleeper ID (face()). */
   const statsCache = {}, statsLoading = {};
   const sumV = list => list.reduce((a, p) => a + dv(p), 0);
+  /* Ranking history per board (Oct 14): each board has its own history file and snapshot folder (BOARDS: history,
+     snaps). rankHistory is the edited board's (ACTIVE_BOARD: what Save queues against and Publish commits to); another
+     board's is loaded when a screen shows it (the Rankings tab's board, a league's Trade History, a drawer opened from
+     it). Readers ask for the board on screen: histBoard() = the board withBoard put in place, else the edited one. */
   let rankHistory, historyLoading = null;
+  const HIST_OTHER = new Map();   // another board's history: id → { h, loading }
+  const histBoard = () => CALC_BOARD || ACTIVE_BOARD;
+  function histFor(b = histBoard()) {   // undefined = not loaded yet, null = none
+    if (!b || !b.history) return null;
+    if (b === ACTIVE_BOARD) return rankHistory;
+    const o = HIST_OTHER.get(b.id); return o ? o.h : undefined;
+  }
   function loadSeason(season) {
     if (statsCache[season] !== undefined) return Promise.resolve(statsCache[season]);
     if (!statsLoading[season]) {
@@ -14323,7 +14454,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     return statsLoading[season];
   }
-  function loadHistory() {
+  function loadHistory(b = histBoard()) {
+    if (!b || !b.history) return Promise.resolve(null);
+    if (b !== ACTIVE_BOARD) {
+      let o = HIST_OTHER.get(b.id); if (!o) { o = { h: undefined, loading: null }; HIST_OTHER.set(b.id, o); }
+      if (o.h !== undefined) return Promise.resolve(o.h);
+      if (!o.loading) o.loading = fetch(b.history, { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null).then(d => { o.h = d; return d; });
+      return o.loading;
+    }
     if (rankHistory !== undefined) return Promise.resolve(rankHistory);
     if (!historyLoading) {
       historyLoading = fetch(ACTIVE_BOARD.history, { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
@@ -14775,7 +14913,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (CMP.on && PP.sid !== sid) setCompareMode(false);
     PP.sid = sid; PP.picking = false;
     renderPlayer(); markCurrent();
-    await Promise.all([loadStatic(), ...STATS_SEASONS.map(loadSeason), loadHistory()]);
+    await Promise.all([loadStatic(), ...STATS_SEASONS.map(loadSeason), loadHistory(ACTIVE_BOARD), loadHistory(ctxBoard())]);
     if (PP.sid === sid && modalOpen()) renderPlayer();
   }
   function closePlayer() { if (modalOpen()) modal.close(); }
@@ -16964,7 +17102,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // sid → market record for every AM-ranked QB/RB/WR/TE with at least one source
   function mkAll() {
     if (!MKT.p) loadMarket().then(mkRefresh);
-    if (rankHistory === undefined) loadHistory().then(mkRefresh);
+    if (histFor() === undefined) loadHistory().then(mkRefresh);
     const F = mkFmt(), srcs = mkSources(F);
     const amV = p => Math.max(0, adjOf(p)), amPos = p => (LG.fmtOn && LG.adjPos.has(p.id) ? LG.adjPos.get(p.id) : p.posNum);
     const pool = players.filter(p => p.sleeperId && EDIT_POS.includes(p.pos) && p.posNum != null && Number(p.tier) !== OUT_TIER);
@@ -16984,7 +17122,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const tierAt = (pos, k) => { const g = posList[pos], p = g[Math.min(g.length, Math.max(1, Math.round(k))) - 1]; return p && Number(p.tier) < 90 ? Number(p.tier) : null; };
     const posRankOfValue = (pos, v) => 1 + posCurve[pos].filter(x => x > v + 1e-9).length;
     // a real AM call: a manual history entry in the last 21 days that moved his rank, position rank or tier (not a value-only shift)
-    const recent = sid => { const h = rankHistory && rankHistory.players && rankHistory.players[sid]; if (!h) return false;
+    const recent = sid => { const H = histFor(), h = H && H.players && H.players[sid]; if (!h) return false;
       return h.some((e, k) => e[5] === "M" && daysOld(e[0]) <= 21 && (k === 0 || e[1] !== h[k - 1][1] || e[2] !== h[k - 1][2] || e[3] !== h[k - 1][3])); };
     const ovRk = v => 1 + ovCurve.filter(x => x > v + 1e-9).length;
     // How big a gap is: position-rank distance on a log scale (WR8 vs WR15 matters, WR58 vs WR62 doesn't) AND a real value gap in
@@ -17749,7 +17887,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const HISTORY_VALUE_MIN = { abs: 10, pct: 0.005 };   // smaller automatic value moves aren't a visible entry yet
   const HISTORY_SOURCE = { M: "Manual edit", S: "Scheduled update", P: "Published update", B: "Baseline snapshot" };
   const snapMonth = ts => String(ts).slice(0, 7);
-  const snapPath = month => `${SNAP_DIR}${month}.json`;
+  const snapPath = (month, b = ACTIVE_BOARD) => `${b.snaps}${month}.json`;
   function rankingSnapshot(list = players) {
     const out = {};
     list.filter(p => EDIT_POS.includes(p.pos) && p.sleeperId && p.rank != null)
@@ -17823,12 +17961,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const readPending = () => { try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]") || []; } catch (e) { return []; } };
   const writePending = list => { try { if (list.length) localStorage.setItem(PENDING_KEY, JSON.stringify(list)); else localStorage.removeItem(PENDING_KEY); } catch (e) {} };
   // history as this browser sees it: the shared file plus saves that aren't published yet
-  function historyWithPending() {
+  function historyWithPending(b = histBoard()) {   // another board: its published history (this page saves only to the edited one)
     const h = { version: 2, players: {}, events: [] };
-    const base = normalizeHistory(rankHistory || null);
+    const base = normalizeHistory(histFor(b) || null);
     Object.entries(base.players).forEach(([sid, list]) => { h.players[sid] = list.slice(); });
     h.events = base.events;
-    readPending().forEach(c => Object.entries(c.entries).forEach(([sid, e]) => { const copy = e.slice(0, 7); if (addEntry(h, sid, copy)) copy.local = true; }));
+    if (b === ACTIVE_BOARD) readPending().forEach(c => Object.entries(c.entries).forEach(([sid, e]) => { const copy = e.slice(0, 7); if (addEntry(h, sid, copy)) copy.local = true; }));
     return h;
   }
   // values edited by hand (a value typed, a recalculation, Out for season) among the touched players: sid → [from, to]
@@ -17851,7 +17989,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (Object.keys(entries).length) writePending(readPending().concat([{ ts, entries }]));
     return Object.keys(entries).length;
   }
-  const historyText = h => `{"note":"AM ranking history: visible changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source M=publish S=scheduled update P=older published update, kind R=ranking change V=manual value change A=automatic repricing (none = legacy, unclassified)], ...]} and one event per publish. The exact board at every publish is in data/rank_snapshots/.","version":2,"events":[\n${(h.events || []).map(e => JSON.stringify(e)).join(",\n")}\n],"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 7)))}`).join(",\n")}\n}}\n`;
+  const historyText = h => `{"note":"AM ranking history: visible changes per player {sleeper_id: [[timestamp, overall rank, position rank, tier, base AM value, source M=publish S=scheduled update P=older published update, kind R=ranking change V=manual value change A=automatic repricing (none = legacy, unclassified)], ...]} and one event per publish. The exact board at every publish is in ${ACTIVE_BOARD.snaps}.","version":2,"events":[\n${(h.events || []).map(e => JSON.stringify(e)).join(",\n")}\n],"players":{\n${Object.keys(h.players).sort((a, b) => Number(a) - Number(b)).map(sid => `${JSON.stringify(sid)}:${JSON.stringify(h.players[sid].map(e => e.slice(0, 7)))}`).join(",\n")}\n}}\n`;
   /* Formula changes are previews (Alan, Oct 12): values are stored, so changing VALUE_MODEL never reprices the board by
      itself. formulaPreview(overrides) shows what a formula change would do if applied: each player's value × the new
      position curve at his spot ÷ today's, kept in rank order. It reads only; nothing on the board changes. */
@@ -17871,7 +18009,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // editor operations for the tests (the same functions the board's drag, arrows and value box call)
   const EDIT_API = { moveOverall, movePlayer, setValue, applyValue: (id, v) => applyValue(byId.get(id), v), sendOut: id => sendOut(byId.get(id)), recalcPlayer, recalcAuto, tierAction,
-    touched: () => [...touchDraft.keys()], board: () => players.filter(p => p.pos !== "PICK" && p.rank != null).map(p => ({ id: p.id, name: p.name, pos: p.pos, rank: p.rank, posNum: p.posNum, tier: String(p.tier), value: p.value, source: p.source, curve: p.curve, tail: p.tail })),
+    touched: () => [...touchDraft.keys()], board: () => players.filter(p => p.pos !== "PICK" && p.rank != null).map(p => ({ id: p.id, sid: p.sleeperId, name: p.name, pos: p.pos, rank: p.rank, posNum: p.posNum, tier: String(p.tier), value: p.value, source: p.source, curve: p.curve, tail: p.tail })),
     save: () => saveLocal(), tierNotice: (id, oldTier, oldVal) => tierMoveNotice(byId.get(id), String(oldTier), oldVal, true), cancel: () => $("eb-cancel").click(), lastFit: () => LAST_FIT && { moved: LAST_FIT.moved } };
   window.SPM = { formulaPreview, stateValues, scarcityIndex, rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, snapshotOf: csv => rankingSnapshot(loadPlayers(csv)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
   // Ranking sets, read only (tests and the console): the registry, the board loaded, the league's board, the Rankings board,
@@ -18160,7 +18298,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      view and every league screen), Ranking History (published entries) and the Market edge engine (mkOf / mkAll), so the
      card always matches the row it explains. */
   function hcHist(sid) {
-    let h; try { h = rankHistory; } catch (e) { h = undefined; }
+    let h; try { h = histFor(); } catch (e) { h = undefined; }
     if (h === undefined) { loadHistory().then(hcRefresh); return null; }
     return h && h.players ? historyOf(sid, h) : [];
   }
