@@ -67,7 +67,8 @@
       "ros_prior_check",
       "theme_transition_check",
       "board_check",
-      "board_edit_check"
+      "board_edit_check",
+      "board_pipeline_check"
     ],
     "weights": {
       "inflight_check": 384,
@@ -96,6 +97,7 @@
       "trade_history_check": 24,
       "board_check": 30,
       "board_edit_check": 45,
+      "board_pipeline_check": 40,
       "injury_check": 23,
       "editor_check": 23,
       "trade_target_check": 22,
