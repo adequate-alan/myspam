@@ -660,6 +660,12 @@ const BOARDS = [
 ];
 const BOARD_BLOCKS = { RANKINGS_CSV, RANKINGS_CSV_PPR };   // block name → its data
 
+/* Market consensus weights (Alan, Oct 14, Flock market lists PR 3): how much each outside source counts in the market
+   consensus, before freshness and format penalties. FantasyCalc is completed trades (closest to what another manager
+   accepts), Flock is expert opinion (a second read on order). A visitor can override the split in Source details
+   (spm_mk_weights, this browser only). Market data, never an AM board: nothing here reaches BOARDS. */
+const MARKET_WEIGHTS = { fc: 60, fl: 40 };
+
 /* =====================================================================
    SLOT 3 — VALUE MODEL (redraft, 12-team, full PPR, TE premium, superflex)
    Any player without a number in the CSV "value" column gets a value
@@ -5044,6 +5050,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .pm-head .pm-sec .pd-item b { font: 600 0.82rem/1.2 var(--font-display) !important; color: var(--text-secondary) !important; }
 .pm-head .pm-sec .pr-note { flex-basis: 100%; }
 @media (max-width: 359px) { .pm-head .pm-key { grid-template-columns: 1fr; } .pm-head .pk + .pk { padding-left: 0; border-left: 0; border-top: 1px solid var(--line-soft); } }
+/* Market agreement tag (Oct 14): Agree · Split · Strong split · single source; neutral, amber only for a strong split */
+.mk-agree { display: inline-block; font-size: var(--micro-fs, 0.66rem); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); padding: 1px 6px; border-radius: 4px; background: var(--fill-1, rgba(127,127,127,.08)); white-space: nowrap; }
+.mk-agree.split { color: var(--text-primary, inherit); }
+.mk-agree.strong { color: var(--warn-text, var(--warn)); }
+.mk-w-tg { margin: 6px 0 8px; flex-wrap: wrap; }
+.mk-weff { color: var(--text-muted); }
+
 /* ===== Shared components (Alan, Oct 12: consistency first). One primitive per pattern, the existing look kept:
    the class names stay (JS and tests use them); these rules settle the accidental differences (radius 3/4/5px,
    seven caps sizes, 650/750/800 weights the Proxima kit doesn't cut, five letter-spacings).
@@ -7303,17 +7316,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const amRk = p => (leagueView() ? LG.adjRank.get(p.id) : p.rank) ?? "—";
     const out = list.map((r, i) => {
       const p = r.p, own = LG.active && LG.ownerOf.get(p.id), x = src ? r.per[src] : null;
-      const cR = x ? x.cRank : r.cRank, edge = cR - r.ap, lvlCls = x ? (Math.abs(x.e) >= 0.25 ? "big" : Math.abs(x.e) >= 0.12 ? "mid" : "") : `l${r.lvl}`;
+      const cR = x ? x.cRank : r.mRank, edge = cR - r.ap, lvlCls = x ? (Math.abs(x.e) >= 0.25 ? "big" : Math.abs(x.e) >= 0.12 ? "mid" : "") : `l${r.lvl}`;
       const srcLine = Object.values(r.per).map(s => `${s.id === "fc" ? "FC" : "Flock"} ${p.pos}${s.pr}`).join(" · ");
       return `<tr class="player prod mkrow${own && own.mine ? " mine" : ""}" data-id="${p.id}">
         <td class="rk">${i + 1}</td>
         <td><div class="pl-cell">${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(p.pos)}${r.ap}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}<span class="spam-rk">AM #${amRk(p)}</span></td>
         <td class="mk-col" data-hc="am:${p.id}" data-hc-side="left"><div class="mk-cell">
-          <span class="mk-ranks"><b>AM ${p.pos}${r.ap}</b><span>${x ? x.name : "Market"} ${p.pos}${cR}</span></span>
+          <span class="mk-ranks"><b>AM ${p.pos}${r.ap}</b><span>${x ? `${x.name} ${p.pos}${cR}` : `Market ${mkRankTxt(r)}`}</span></span>
           <span class="mk-edge ${edge > 0 ? "up" : edge < 0 ? "down" : ""} ${lvlCls}">${mkEdgeTxt(edge)}</span>
           ${x ? "" : mkPill(r)}${!x && r.lvl ? `<span class="mk-conf ${r.conf.toLowerCase()}">${r.conf}</span>` : ""}
-          <span class="mk-src">${esc(srcLine)}${r.review ? ` · <b class="mk-rev">${esc(r.review)}</b>` : ""}</span></div></td>
+          <span class="mk-src">${x ? "" : mkAgreeTag(r) + " "}${esc(srcLine)}${r.review ? ` · <b class="mk-rev">${esc(r.review)}</b>` : ""}</span></div></td>
         <td class="val val-2" data-hc="am:${p.id}" data-hc-side="left"><span class="num-2">${p.hasValue === false ? "—" : fmt(adjOf(p))}</span></td>
       </tr>`;
     });
@@ -7329,7 +7342,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const F = all.F || mkFmt(), srcs = all.srcs || [];
     const fl = srcs.find(s => s.id === "fl"), set = flockSetFor(F);
     $("mk-bar").innerHTML = `<div class="mk-bar-row">
-        <p class="mk-fmt"><b>AM ROS</b> vs <b>${srcs.length ? srcs.map(s => esc(s.id === "fl" ? s.list : s.name)).join(" + ") : "no market source"}</b> · ${esc(formatLabel(F.vl))}</p>
+        <p class="mk-fmt"><b>AM ROS</b> vs <b>${srcs.length ? srcs.map(s => esc(s.id === "fl" ? s.list : s.name)).join(" + ") : "no market source"}</b> · ${esc(formatLabel(F.vl))}${srcs.length ? ` · <span class="mk-weff" title="Consensus weights after freshness and format penalties (Source details to change them)">${esc(mkWeightText(srcs))}</span>` : ""}</p>
         <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}" aria-controls="fm">${MK_UI.open ? "Close Flock lists" : fl ? `Flock lists · ${esc(set.label)}${fl.site ? "" : " (draft)"}` : `Flock lists · import ${esc(set.label)}`}</button>
       </div>
       ${mkStatusHtml(srcs)}
@@ -7337,6 +7350,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   $("mk-bar").addEventListener("click", e => {
     if (e.target.closest("[data-mk-flock]")) { MK_UI.open = !MK_UI.open; FM.msg = ""; renderMkBar(mkAll()); return; }
+    const w = e.target.closest("[data-mk-w]");
+    if (w) { mkSetW(w.dataset.mkW === "reset" ? null : Number(w.dataset.mkW)); mkRefresh(); renderMkBar(mkAll()); return; }
     if (e.target.closest("[data-mk-details]")) { MK_UI.details = !MK_UI.details; renderMkBar(mkAll()); if (MK_UI.details) { const d = $("mk-st-detail"); if (d) d.scrollIntoView({ block: "nearest" }); } return; }
     fmClick(e);
   });
@@ -7414,7 +7429,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (all.srcs.length) {
         const gaps = [...all.map.values()].filter(r => r.lvl >= 1 && r.p.rank != null);
         const hi = gaps.filter(r => r.dir > 0).sort((a, b) => b.e - a.e).slice(0, 3), lo = gaps.filter(r => r.dir < 0).sort((a, b) => a.e - b.e).slice(0, 3);
-        const gRow = r => `<li><span class="rr-mv ${r.dir > 0 ? "up" : "down"}" title="Consensus position rank minus AM position rank">${r.dir > 0 ? "+" : "−"}${Math.abs(r.cRank - r.ap)}</span><button class="rr-name rr-jump" type="button" data-jump="${r.p.id}" title="Show ${esc(r.p.name)} in the rankings">${esc(r.p.name)}</button><span class="rr-sub" data-hc="am:${r.p.id}" data-hc-side="left"><span class="rr-pos ${esc(r.p.pos)}">${esc(r.p.pos + r.ap)}</span><span>Mkt ${esc(r.p.pos + r.cRank)}</span></span></li>`;
+        const gRow = r => `<li><span class="rr-mv ${r.dir > 0 ? "up" : "down"}" title="${r.split ? "Nearer end of the market range" : "Consensus position rank"} minus AM position rank">${r.dir > 0 ? "+" : "−"}${Math.abs(r.mRank - r.ap)}</span><button class="rr-name rr-jump" type="button" data-jump="${r.p.id}" title="Show ${esc(r.p.name)} in the rankings">${esc(r.p.name)}</button><span class="rr-sub" data-hc="am:${r.p.id}" data-hc-side="left"><span class="rr-pos ${esc(r.p.pos)}">${esc(r.p.pos + r.ap)}</span><span>Mkt ${esc(mkRankTxt(r))}</span></span></li>`;
         if (hi.length || lo.length) parts.push(`<section class="rr-sec rr-moves rr-ins"><h3 class="rr-label">Ranking insights <span class="rr-when">AM vs market</span></h3>
           ${hi.length ? `<p class="rr-sublabel">AM higher than the market</p><ul class="rr-list">${hi.map(gRow).join("")}</ul>` : ""}
           ${lo.length ? `<p class="rr-sublabel">Market higher than AM</p><ul class="rr-list">${lo.map(gRow).join("")}</ul>` : ""}
@@ -8274,7 +8289,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : amP ? `AM and ${M} both favor ${sideOf(amP)}.` : `AM and ${M} agree this trade is about even.`;
     el.innerHTML = `<details class="tc-mkt-d"${amP && mkP && amP !== mkP ? " open" : ""}><summary>Market comparison <span class="sum-hint">${esc(say)}</span></summary>
       <div class="tc-more-body"><table class="tc-mkt-t"><thead><tr><th></th><th>${esc(getsLabel("A"))}</th><th>${esc(getsLabel("B"))}</th><th>Prefers</th></tr></thead><tbody>${lines.map(row).join("")}</tbody></table>
-      <p class="pp-note">AM is the verdict above. Market lines put FantasyCalc and Flock on AM's value scale (each source's position rank priced on AM's curve, FantasyCalc also by its own value gaps; the consensus weights them by source type, format match and freshness), with the same package adjustment; they are never mixed into AM's number. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
+      <p class="pp-note">AM is the verdict above. Market lines put FantasyCalc and Flock on AM's value scale (one scale factor for both, so the market's own price ratios are kept: FantasyCalc's trade values, and Flock's rank priced on FantasyCalc's curve as a Flock-implied market value; the consensus weights them FantasyCalc 60 / Flock 40 by default, then by format match and freshness), with the same package adjustment; they are never mixed into AM's number. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
     el.hidden = false;
   }
   function renderTrade() {
@@ -8904,7 +8919,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const tierC = recs.filter(r => Math.abs(r.tierGap) >= 2 && Math.max(r.am, r.cv) >= 400).sort((a, b) => Math.abs(b.tierGap) - Math.abs(a.tierGap) || Math.abs(b.e) - Math.abs(a.e));
     const misT = recs.filter(r => Math.abs(r.tierGap) === 1 && r.lvl >= 1).sort((a, b) => Math.abs(b.e) - Math.abs(a.e));
     const review = recs.filter(r => r.review === "Ranking deserves review").sort((a, b) => Math.abs(b.e) - Math.abs(a.e));
-    const split = recs.filter(r => r.per.fc && r.per.fl && r.per.fc.lvl && r.per.fl.lvl && r.per.fc.dir !== r.per.fl.dir).sort((a, b) => Math.abs(b.per.fc.e - b.per.fl.e) - Math.abs(a.per.fc.e - a.per.fl.e));
+    const split = recs.filter(r => r.split).sort((a, b) => b.spread - a.spread);
     // suggestions: the few things most worth doing, one per player
     const sug = [], seen = new Set(), add = (r, text) => { if (!seen.has(r.p.id) && sug.length < 5) { seen.add(r.p.id); sug.push({ r, text }); } };
     review.forEach(r => add(r, `Review ${r.p.name} (${r.p.pos}${r.ap}): ${r.srcN > 1 ? "FantasyCalc and Flock both" : Object.values(r.per)[0].name} put him around ${r.p.pos}${r.cRank}, and his spot hasn't moved in 3 weeks.`));
@@ -16557,7 +16572,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const A = acceptFor({ imp: fT, val: -more, mkt: them }), acc = A.score;
     // Market Confidence for the deal: each player's, weighted by his market value (no market data counts as Low)
     let cw = 0, cs = 0;
-    give.concat(get).forEach(p => { const r = mkOf(p), w = Math.max(1, mkVal(p)); cw += w; cs += w * (r ? { High: 2, Moderate: 1, Low: 0 }[r.mconf] : 0); });
+    give.concat(get).forEach(p => { const r = mkOf(p), w = Math.max(1, mkVal(p)); cw += w; cs += w * (r ? { High: 2, Moderate: 1, "Single source": 1, Low: 0 }[r.mconf] : 0); });
     const cAvg = cw ? cs / cw : 0, mconf = cAvg >= 1.5 ? "High" : cAvg >= 0.8 ? "Moderate" : "Low";
     let lvl = more < 5 ? 0 : more < 10 ? 1 : more < 20 ? 2 : 3;
     if (them >= 8) lvl++;
@@ -17005,8 +17020,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* ---------- Target a player / Find targets (Alan, Oct 8) ----------
      Market values: FantasyCalc (data/market/redraft.json, pipeline/build_market.py), a secondary reference only,
      never changing AM ranks, tiers or values; shown with a FantasyCalc link. The league's nearest format is used
-     (1QB / Superflex × 10 / 12 teams) and put on the AM scale by the median AM ÷ market ratio of the players
-     both value, so "AM likes him more than the market" is a like-for-like comparison. */
+     (1QB / Superflex × 10 / 12 teams); its raw value is shown as is. Market prices on AM's scale come from the Market
+     edge engine (mkAll: one scale factor for every market price, never AM's curve). */
   // at: when this browser last loaded the market files; err / flErr: that load failed (a missing flock.json is "no list", not a failure)
   const MKT = { d: null, p: null, cur: null, at: 0, err: "" };
   const MK_RELOAD_MS = 15 * 60000;   // the files are re-read while the Market edge view is open, so a scheduled sync shows up without a reload
@@ -17034,11 +17049,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const d = activeData(); if (!MKT.d || !d || !MKT.d.formats) return null;
     const lu = lineupOf(d.league), sf = lu.SUPER_FLEX > 0 || lu.QB >= 2, n = LG.teams.length || lu.teams;
     const key = `q${sf ? 2 : 1}_t${n <= 11 ? 10 : 12}`, f = MKT.d.formats[key]; if (!f) return null;
-    const map = bySleeper(), ratios = [];
-    for (const [sid, r] of Object.entries(f)) { const p = map.get(sid); if (p && r[0] > 0 && dv(p) >= 800) ratios.push(dv(p) / r[0]); }
-    if (ratios.length < 20) return null;
-    ratios.sort((a, b) => a - b);
-    return { f, key, scale: ratios[Math.floor(ratios.length / 2)], updated: MKT.d.updated, url: /^https:\/\//.test(MKT.d.url || "") ? MKT.d.url : "https://www.fantasycalc.com/" };
+    const scale = mkAll().scale; if (!scale) return null;   // the Market edge engine's single scale factor (Oct 14)
+    return { f, key, scale, updated: MKT.d.updated, url: /^https:\/\//.test(MKT.d.url || "") ? MKT.d.url : "https://www.fantasycalc.com/" };
   }
   const mkt = p => { const c = MKT.cur, r = c && p && p.sleeperId ? c.f[p.sleeperId] : null; return r ? { raw: r[0], rank: r[1], prank: r[3], trend: r[4], v: r[0] * c.scale } : null; };
   const mktSum = list => { let t = 0; for (const p of list) { const m = mkt(p); if (!m) return null; t += m.v; } return t; };
@@ -17051,9 +17063,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      market / consensus layer. They are never blended into AM: this module only measures where they disagree.
      - Format: AM's values in the active format (league, your settings, else the AM default format) against the closest
        external format; anything not an exact match is labelled approximate.
-     - Normalization: each source's order is re-ranked over the players AM ranks too, then mapped onto AM's own value
-       curve in this format (source #18 → what AM pays for #18), so curve shape and scale never read as disagreement.
-     - Consensus = geometric mean of the sources' implied values (AM never in it). Edge = ln(AM ÷ consensus).
+     - Pricing (Alan, Oct 14, Flock market lists PR 3): market prices never use AM's valuation curve. FantasyCalc's own
+       value is its price; Flock's position rank is priced on FantasyCalc's own curve for that position in the matching
+       format ("Flock-implied market value": Flock WR11 → what the trade market pays for WR11); a Flock rank past the end
+       of that curve is below market depth and gets no price. Both are put on AM's scale with ONE number, s = AM's total
+       value of the league's starter-level pool ÷ the market's total for the same slots (curve against curve, no player
+       matching), so every market price ratio stays the market's own.
+     - Consensus = weighted geometric mean of the two prices and position ranks (AM never in it; MARKET_WEIGHTS, then
+       freshness and format penalties). The two sources' position ranks give Agree / Split / Strong split; on a split
+       the market is a range and the AM edge is measured to its nearer end (AM inside it: no buy / sell label).
      - Buckets from the edge plus the tier gap (where the consensus spot sits in AM's tiers); confidence from size,
        agreement between sources, freshness, format match and whether AM's spot is manual. Missing sources lower
        confidence; nothing here ever changes AM ranks, tiers, values or history. */
@@ -17112,21 +17130,36 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const recName = r => (r === 1 ? "Full PPR" : r === 0.5 ? "Half PPR" : r === 0 ? "Standard" : `${r} PPR`);
   const daysOld = ts => (ts ? (Date.now() - Date.parse(ts)) / 864e5 : Infinity);
+  /* The FantasyCalc file for a format: the nearest of q1/q2 × t10/t12, Full PPR with or without TE premium, or Half PPR
+     without (the "_half" keys, Oct 14). The candidate with the smallest format penalty wins (MK_MIS_W), so a Half PPR
+     league reads the Half PPR market once the pipeline has fetched it and Full PPR at a reduced weight until then, and a
+     Half PPR league with TE premium reads Full PPR TE+ (a PPR mismatch costs less than a TE-premium one). */
+  function mkFcFile(F) {
+    if (!(MKT.d && MKT.d.formats && daysOld(MKT.d.updated) < MK_DEAD.fc)) return null;
+    const q = F.sf ? 2 : 1, t = F.teams <= 11 ? 10 : 12, base = `q${q}_t${t}`, cands = [];
+    const add = (key, rec, tep) => {
+      if (!MKT.d.formats[key]) return;
+      const mis = { qb: false, tep: (tep > 0) !== (F.tep > 0), rec: rec !== F.rec, teams: F.teams !== t }, notes = [];
+      if (mis.teams) notes.push(`${t}-team market for a ${F.teams}-team league`);
+      if (mis.rec) notes.push(`${recName(rec)} market for ${recName(F.rec)}`);
+      if (mis.tep) notes.push(F.tep > 0 ? (rec === 0.5 ? "no TE-premium Half PPR market values" : "no TE-premium market values yet") : "TE-premium market for a league without it");
+      if (!mis.tep && F.tep > 0 && F.tep !== 0.5) notes.push("TE Premium + market for a bigger TE premium");
+      const w = Object.entries(mis).reduce((a, [k, on]) => a * (on ? MK_MIS_W[k] : 1), 1);
+      cands.push({ key, f: MKT.d.formats[key], mis, notes, w, half: rec === 0.5 });
+    };
+    if (F.rec < 1) add(base + "_half", 0.5, 0);
+    add(base + (F.tep > 0 ? "_tep" : ""), 1, F.tep > 0 ? 0.5 : 0);
+    if (F.tep > 0) add(base, 1, 0);
+    cands.sort((a, b) => b.w - a.w);
+    return cands[0] || null;
+  }
   // the external sources available for this format: { id, name, kind, rows: sid → { ov, pr }, at, notes, stale }
   function mkSources(F) {
     const out = [];
-    if (MKT.d && MKT.d.formats && daysOld(MKT.d.updated) < MK_DEAD.fc) {
-      const q = F.sf ? 2 : 1, t = F.teams <= 11 ? 10 : 12, notes = [];
-      let key = `q${q}_t${t}${F.tep > 0 ? "_tep" : ""}`, f = MKT.d.formats[key];
-      if (!f && F.tep > 0) { key = `q${q}_t${t}`; f = MKT.d.formats[key]; notes.push("no TE-premium market values yet"); }
-      if (f) {
-        if (F.teams !== t) notes.push(`${t}-team market for a ${F.teams}-team league`);
-        if (F.rec !== 1) notes.push(`Full PPR market for ${recName(F.rec)}`);
-        if (F.tep > 0 && key.endsWith("_tep") && F.tep !== 0.5) notes.push("TE Premium + market for a bigger TE premium");
-        const rows = new Map(Object.entries(f).map(([sid, r]) => [sid, { ov: Number(r[1]) || 9999, pr: Number(r[3]) || 999, raw: r[0], trend: r[4] }]));
-        const mis = { qb: false, tep: !key.endsWith("_tep") && F.tep > 0, rec: F.rec !== 1, teams: F.teams !== t };
-        out.push(mkWeigh({ id: "fc", name: "FantasyCalc", kind: "trade market", rows, at: MKT.d.updated, notes, mis, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: /^https:\/\//.test(MKT.d.url || "") ? MKT.d.url : "https://www.fantasycalc.com/" }));
-      }
+    const fc = mkFcFile(F);
+    if (fc) {
+      const rows = new Map(Object.entries(fc.f).map(([sid, r]) => [sid, { ov: Number(r[1]) || 9999, pr: Number(r[3]) || 999, raw: r[0], pos: r[2], trend: r[4] }]));
+      out.push(mkWeigh({ id: "fc", name: "FantasyCalc", kind: "trade market", key: fc.key, rows, at: MKT.d.updated, notes: fc.notes, mis: fc.mis, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: /^https:\/\//.test(MKT.d.url || "") ? MKT.d.url : "https://www.fantasycalc.com/" }));
     }
     const set = flockSetFor(F), FL = flockNow(set);
     if (FL && FL.rows && daysOld(FL.at) < MK_DEAD.fl && !!FL.sf === !!F.sf) {   // strict: never a Superflex list in a 1QB league
@@ -17139,18 +17172,43 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     return out;
   }
-  /* Source weights (Alan, Oct 8): FantasyCalc is a trade-market signal, Flock an expert-ranking signal, so they're never
-     blindly averaged. Each gets a weight from its kind, how well its format matches the league (a Superflex list in a 1QB
-     league counts a quarter), and freshness; `fmt` says it in words ("exact format" / "…, reduced weight"). */
-  const MK_BASE_W = { fc: 1, fl: 0.85 }, MK_MIS_W = { qb: 0.25, tep: 0.75, rec: 0.85, teams: 0.95 };
+  /* Source weights (Alan, Oct 8; Oct 14 defaults): FantasyCalc is a trade-market signal, Flock an expert-ranking signal,
+     so they're never blindly averaged. Base split MARKET_WEIGHTS (FantasyCalc 60 / Flock 40) or this browser's override
+     (spm_mk_weights, Source details), then × the format match (MK_MIS_W) and × 0.6 when stale; `fmt` says it in words
+     ("exact format" / "…, reduced weight"). The effective split is shown wherever a consensus is (mkWeightText). */
+  const MK_MIS_W = { qb: 0.25, tep: 0.75, rec: 0.85, teams: 0.95 }, MK_W_KEY = "spm_mk_weights";
+  function mkBaseW() {   // { fc, fl } as shares (sum 1), from the settings or this browser's override
+    let fc = MARKET_WEIGHTS.fc, fl = MARKET_WEIGHTS.fl, own = false;
+    try { const o = JSON.parse(localStorage.getItem(MK_W_KEY) || "null"); if (o && isFinite(o.fc) && o.fc >= 0 && o.fc <= 100) { fc = Number(o.fc); fl = 100 - fc; own = true; } } catch (e) {}
+    const t = fc + fl || 1;
+    return { fc: fc / t, fl: fl / t, own };
+  }
+  function mkSetW(fc) {   // null resets to the default
+    try { if (fc == null) localStorage.removeItem(MK_W_KEY); else localStorage.setItem(MK_W_KEY, JSON.stringify({ fc: Math.max(0, Math.min(100, Math.round(fc))) })); } catch (e) {}
+    MK_CACHE.key = "";
+  }
   function mkWeigh(s) {
-    let w = MK_BASE_W[s.id] || 1;
-    Object.entries(s.mis || {}).forEach(([k, on]) => { if (on) w *= MK_MIS_W[k]; });
-    if (s.stale) w *= 0.6;
-    s.w = w;
-    s.fmt = (s.notes.length ? s.notes.join(", ") : "exact format") + (w < 0.5 ? ", reduced weight" : "") + (s.stale ? " (stale)" : "");
+    let mult = 1;
+    Object.entries(s.mis || {}).forEach(([k, on]) => { if (on) mult *= MK_MIS_W[k]; });
+    if (s.stale) mult *= 0.6;
+    s.mult = mult;
+    s.w = (mkBaseW()[s.id] ?? 0.5) * mult;
+    s.fmt = (s.notes.length ? s.notes.join(", ") : "exact format") + (mult < 0.5 ? ", reduced weight" : "") + (s.stale ? " (stale)" : "");
     return s;
   }
+  // "FantasyCalc 63% · Flock 37% (Flock stale)": the split that actually counts, after freshness and format penalties;
+  // ids = the sources one player has (a player one source misses is read on the other alone)
+  function mkWeightText(srcs, ids) {
+    const on = srcs.filter(s => !ids || ids.includes(s.id));
+    if (!on.length) return "";
+    if (on.length === 1) return `${on[0].name} only`;
+    const t = on.reduce((a, s) => a + s.w, 0), why = on.filter(s => s.mult < 1).map(s => `${s.name} ${s.stale ? "stale" : "approximate format"}`);
+    let first = 0;
+    return on.map((s, i) => { const v = i === on.length - 1 ? 100 - first : Math.round(100 * s.w / t); first += v; return `${s.name} ${v}%`; }).join(" · ") + (why.length ? ` (${why.join(", ")})` : "");
+  }
+  const MK_SPLIT = { split: 0.15, strong: 0.4 };   // |ln((FC pos rank + 3) ÷ (Flock pos rank + 3))|: Agree · Split · Strong split
+  const mkSpread = (a, b) => Math.abs(Math.log((a + 3) / (b + 3)));
+  const mkAgreeOf = (a, b) => { const sp = mkSpread(a, b); return sp >= MK_SPLIT.strong ? "Strong split" : sp >= MK_SPLIT.split ? "Split" : "Agree"; };
   let MK_CACHE = { key: "", map: null, srcs: [] };
   // sid → market record for every AM-ranked QB/RB/WR/TE with at least one source
   function mkAll() {
@@ -17159,12 +17217,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const F = mkFmt(), srcs = mkSources(F);
     const amV = p => Math.max(0, adjOf(p)), amPos = p => (LG.fmtOn && LG.adjPos.has(p.id) ? LG.adjPos.get(p.id) : p.posNum);
     const pool = players.filter(p => p.sleeperId && EDIT_POS.includes(p.pos) && p.posNum != null && Number(p.tier) !== OUT_TIER);
-    const key = JSON.stringify([(CALC_BOARD || ACTIVE_BOARD).id, F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + (s.set || "") + s.at + s.notes.join()), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
+    const key = JSON.stringify([(CALC_BOARD || ACTIVE_BOARD).id, F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + (s.key || s.set || "") + s.at + s.notes.join() + s.w), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
     if (MK_CACHE.key === key) return MK_CACHE;
     const desc = arr => arr.slice().sort((a, b) => b - a);
     const ovCurve = desc(pool.map(amV)), posCurve = {}, posList = {};
     EDIT_POS.forEach(pos => { const g = pool.filter(p => p.pos === pos).sort((a, b) => amPos(a) - amPos(b)); posList[pos] = g; posCurve[pos] = desc(g.map(amV)); });
-    const at = (c, k) => { if (!c.length) return 0; if (k <= c.length) return c[Math.max(0, Math.round(k) - 1)]; return c[c.length - 1] * Math.pow(0.97, k - c.length); };
     // each source re-ranked over the players AM ranks (like with like), overall and per position
     const srcRank = srcs.map(s => {
       const inPool = pool.filter(p => s.rows.has(p.sleeperId)).sort((a, b) => s.rows.get(a.sleeperId).ov - s.rows.get(b.sleeperId).ov);
@@ -17185,66 +17242,89 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const lr = r >= 0.6 ? 3 : r >= 0.35 ? 2 : r >= 0.18 ? 1 : 0, lv = dv >= 1200 ? 3 : dv >= 600 ? 2 : dv >= 250 ? 1 : 0;
       return { lvl: Math.min(lr, lv), dir: Math.sign(oO - amO), score: Math.sign(oO - amO) * (Math.min(lr, lv) * 10 + Math.min(r, 2) + dv / 4000) };
     };
-    // FantasyCalc has real trade values, not just ranks: fit AM ≈ a·raw^b over the two value curves (k-th best FC value vs
-    // k-th best AM value, same players), so a big market gap between neighbours stays a big gap on AM's scale
-    const fit = {};
-    srcRank.forEach(x => {
-      if (x.s.id !== "fc") return;
-      const ps = pool.filter(p => x.s.rows.has(p.sleeperId) && Number(x.s.rows.get(p.sleeperId).raw) > 0);
-      const raws = desc(ps.map(p => Number(x.s.rows.get(p.sleeperId).raw))), ams = desc(ps.map(amV)), n = Math.min(150, raws.length);
-      let sx = 0, sy = 0, sxx = 0, sxy = 0, k = 0;
-      for (let i = 0; i < n; i++) { if (!(ams[i] > 0)) continue; const lx = Math.log(raws[i]), ly = Math.log(ams[i]); sx += lx; sy += ly; sxx += lx * lx; sxy += lx * ly; k++; }
-      if (k >= 20) { const b = (k * sxy - sx * sy) / (k * sxx - sx * sx), a = (sy - b * sx) / k; if (isFinite(a) && isFinite(b) && b > 0) fit[x.s.id] = raw => Math.exp(a + b * Math.log(raw)); }
+    /* Market prices, independent of AM's curve (Oct 14). FantasyCalc's price curve per position = its values high to low in
+       this format's file (every player it lists, not only AM's), ranks 1–12 as they are (real cliffs stay), deeper ranks
+       smoothed over 3 spots in log space. One scale factor s puts market prices on AM's scale: AM's total value of the
+       league's starter-level pool ÷ the market's total for the same number of slots, curve against curve. */
+    const fcS = srcs.find(x => x.id === "fc"), curve = {}, curveRaw = {}, lu = lineupOf(F.vl), slots = {};
+    if (fcS) EDIT_POS.forEach(pos => {
+      const c = desc([...fcS.rows.values()].filter(r => r.pos === pos && Number(r.raw) > 0).map(r => Number(r.raw)));
+      curveRaw[pos] = c;
+      curve[pos] = c.map((v, i) => (i < 12 ? v : Math.exp([c[i - 1], v, c[i + 1]].filter(x => x > 0).reduce((a, x, _, l) => a + Math.log(x) / l.length, 0))));
     });
+    let amTot = 0, mkTot = 0;
+    if (fcS) EDIT_POS.forEach(pos => {
+      const n = Math.min(posStartable(pos, lu), posCurve[pos].length, curveRaw[pos].length); slots[pos] = n;
+      for (let i = 0; i < n; i++) { amTot += posCurve[pos][i]; mkTot += curveRaw[pos][i]; }
+    });
+    const scale = amTot > 0 && mkTot > 0 ? amTot / mkTot : null;
+    // a source's market price (market units, before s): FantasyCalc's own value; Flock's own position rank on FantasyCalc's
+    // curve, null past its end (below market depth: never extrapolated)
+    const mPrice = (x, row, pos) => {
+      if (x.s.id === "fc") return Number(row.raw) > 0 ? Number(row.raw) : null;
+      const c = curve[pos], k = Math.round(Number(row.pr));
+      return c && k >= 1 && k <= c.length ? c[k - 1] : null;
+    };
     const map = new Map();
     pool.forEach(p => {
-      const sv = srcRank.filter(x => x.ov.has(p.sleeperId)).map(x => {
-        const pr = x.pr.get(p.sleeperId), row = x.s.rows.get(p.sleeperId) || {}, vr = Math.max(1, at(posCurve[p.pos], pr));
-        // a source's value on AM's scale: what AM pays for its position rank, blended (FantasyCalc) with its own value gaps
-        const vf = fit[x.s.id] && Number(row.raw) > 0 ? fit[x.s.id](Number(row.raw)) : null, v = vf ? Math.sqrt(vr * Math.max(1, vf)) : vr;
-        return { id: x.s.id, name: x.s.name, ov: x.ov.get(p.sleeperId), pr, v, w: x.s.w, fmt: x.s.fmt, approx: x.s.notes.length > 0, stale: x.s.stale, tier: row.tier };
-      });
-      if (!sv.length) return;
+      const below = {};
+      const sv = scale ? srcRank.filter(x => x.ov.has(p.sleeperId)).map(x => {
+        const pr = x.pr.get(p.sleeperId), row = x.s.rows.get(p.sleeperId) || {}, mv = mPrice(x, row, p.pos);
+        if (mv == null) { below[x.s.id] = Number(row.pr); return null; }
+        return { id: x.s.id, name: x.s.name, ov: x.ov.get(p.sleeperId), pr, own: Number(row.pr), mv, v: mv * scale, implied: x.s.id === "fl", w: x.s.w, mult: x.s.mult, fmt: x.s.fmt, approx: x.s.notes.length > 0, stale: x.s.stale, tier: row.tier };
+      }).filter(Boolean) : [];
+      if (!sv.length) return;   // no market price from any source: no market read (AM's value never stands in)
       const am = amV(p), W = sv.reduce((a, x) => a + x.w, 0);
-      // consensus = weighted geometric mean of the sources (position rank and value), weighted by kind, format and freshness
+      // consensus = weighted geometric mean of the sources (position rank and price), weighted by kind, format and freshness
       const ap = amPos(p), cPos = Math.exp(sv.reduce((a, x) => a + x.w * Math.log(x.pr), 0) / W), cRank = Math.max(1, Math.round(cPos));
       const cv = Math.max(1, Math.exp(sv.reduce((a, x) => a + x.w * Math.log(x.v), 0) / W)), amOv = ovRk(am), cOv = ovRk(cv);
+      const fcX = sv.find(x => x.id === "fc"), flX = sv.find(x => x.id === "fl");
+      // agreement between the two sources (Oct 14): Agree · Split · Strong split, or "FantasyCalc only" / "Flock only"
+      const spread = fcX && flX ? mkSpread(fcX.pr, flX.pr) : null, agreeLbl = spread == null ? `${sv[0].name} only` : mkAgreeOf(fcX.pr, flX.pr);
+      const split = agreeLbl === "Split" || agreeLbl === "Strong split";
+      const lo = split ? (fcX.pr <= flX.pr ? fcX : flX) : null, hi = split ? (lo === fcX ? flX : fcX) : null;
+      const range = split ? { lo: { id: lo.id, name: lo.name, pr: lo.pr, v: lo.v }, hi: { id: hi.id, name: hi.name, pr: hi.pr, v: hi.v } } : null;
       // Market Confidence: how sure the outside world is about him (agreement, freshness, format match, completeness)
-      // (both full-weight sources: WR13 vs WR14 = High, WR12 vs WR29 = Low; a down-weighted second source caps it at Moderate
-      // and only a wide split counts against it; one source = Moderate; stale or no near-format source = one step down)
+      // (both near-format sources: Agree = High, Split = Moderate, Strong split = Low; a down-weighted second source caps it
+      // at Moderate and only a wide split counts against it; one source = "Single source" (Alan, Oct 14); stale or no
+      // near-format source = one step down)
       let mc;
-      if (sv.length >= 2) {
-        const sp = Math.abs(Math.log((sv[0].pr + 3) / (sv[1].pr + 3)));
-        mc = sv.filter(x => x.w >= 0.5).length >= 2 ? (sp >= 0.4 ? 0 : sp >= 0.15 ? 1 : 2) : (sp >= 0.6 ? 0 : 1);
-      } else mc = 1;
+      if (sv.length >= 2) mc = sv.filter(x => x.mult >= 0.5).length >= 2 ? (spread >= MK_SPLIT.strong ? 0 : spread >= MK_SPLIT.split ? 1 : 2) : (spread >= 0.6 ? 0 : 1);
+      else mc = 1;
       if (sv.some(x => x.stale)) mc -= 1;
-      if (Math.max(...sv.map(x => x.w)) < 0.7) mc -= 1;
-      const mconf = mc >= 2 ? "High" : mc === 1 ? "Moderate" : "Low";
-      const amTier = Number(p.tier) < 90 ? Number(p.tier) : null, mTier = tierAt(p.pos, cRank);
-      const tierGap = amTier != null && mTier != null ? mTier - amTier : 0;   // > 0: the market puts him in a lower AM tier
-      const g = grade(ap, cPos, am, cv);
+      if (Math.max(...sv.map(x => x.mult)) < 0.7) mc -= 1;
+      const mconf = mc >= 2 ? "High" : mc === 1 ? (sv.length === 1 ? "Single source" : "Moderate") : "Low";
+      // where the edge is measured: the consensus when the sources agree (or only one has him); on a split the nearer end
+      // of the range, and no edge at all when AM sits inside it ("Market split; AM sits between FantasyCalc and Flock")
+      const inside = split && ap >= lo.pr && ap <= hi.pr;
+      const near = split && !inside ? (ap < lo.pr ? lo : hi) : null;
+      const mPos = inside ? ap : near ? near.pr : cPos, mRank = inside ? ap : near ? near.pr : cRank, mVal = inside ? am : near ? near.v : cv;
+      const amTier = Number(p.tier) < 90 ? Number(p.tier) : null, mTier = tierAt(p.pos, mRank);
+      const tierGap = inside ? 0 : amTier != null && mTier != null ? mTier - amTier : 0;   // > 0: the market puts him in a lower AM tier
+      const g = inside ? { lvl: 0, dir: 0, score: 0 } : grade(ap, mPos, am, mVal);
       let lvl = g.lvl;
-      if (lvl >= 1 && Math.abs(tierGap) >= 2 && Math.sign(tierGap) === g.dir && Math.abs(am - cv) >= 400) lvl = Math.min(3, lvl + 1);   // a tier break counts when the value gap is real
+      if (lvl >= 1 && Math.abs(tierGap) >= 2 && Math.sign(tierGap) === g.dir && Math.abs(am - mVal) >= 400) lvl = Math.min(3, lvl + 1);   // a tier break counts when the value gap is real
       if (lvl === 3 && (tierGap === 0 || sv.length < 2)) lvl = 2;   // strong needs a tier break and both sources
       const dir = lvl === 0 ? 0 : g.dir;
       const per = Object.fromEntries(sv.map(x => { const gx = grade(ap, x.pr, am, x.v); return [x.id, { ...x, ...gx, e: gx.score, cRank: x.pr }]; }));
       // confidence: size, FantasyCalc/Flock agreement, freshness, format match, manual AM spot
-      let c = lvl >= 2 ? 2 : lvl === 1 ? 1 : 0, agree = null;
+      let c = lvl >= 2 ? 2 : lvl === 1 ? 1 : 0;
+      const agree = sv.length >= 2 ? !split : null;
       if (sv.length >= 2) {
-        const a = per[sv[0].id], b = per[sv[1].id], spread = Math.abs(Math.log((sv[0].pr + 3) / (sv[1].pr + 3)));
-        agree = (a.dir === b.dir || a.lvl === 0 || b.lvl === 0) && spread < 0.6;
-        c += a.dir === b.dir && a.lvl && b.lvl && spread < 0.3 ? 1 : agree ? 0 : -1;
+        const a = per.fc, b = per.fl;
+        c += !split && a.dir === b.dir && a.lvl && b.lvl ? 1 : !split ? 0 : -1;
       } else c -= 1;
       if (sv.some(x => x.stale)) c -= 1;
       if (sv.some(x => x.approx)) c -= 1;
       if (p.source !== "manual" || p.tail) c -= 1;
+      if (agreeLbl === "Split") c = Math.min(c, 1); else if (agreeLbl === "Strong split") c = Math.min(c, 0);   // a split market is never a confident read
       const conf = c >= 2 ? "High" : c === 1 ? "Moderate" : "Low";
-      const bucket = lvl === 0 ? "Market aligned" : `${lvl === 1 ? "Slight " : lvl === 3 ? "Strong " : ""}${dir > 0 ? "buy" : "sell"}`.replace(/^./, ch => ch.toUpperCase());
+      const bucket = inside ? "Market split" : lvl === 0 ? "Market aligned" : `${lvl === 1 ? "Slight " : lvl === 3 ? "Strong " : ""}${dir > 0 ? "buy" : "sell"}`.replace(/^./, ch => ch.toUpperCase());
       const review = lvl >= 2 && p.source === "manual" && !p.tail && agree !== false ? (recent(p.sleeperId) ? "Strong AM conviction" : "Ranking deserves review") : "";
       const e = dir === 0 ? g.score / 10 : Math.sign(g.score) * (lvl * 10 + (Math.abs(g.score) % 10));
-      map.set(p.sleeperId, { p, am, ap, cv, cRank, e, amOv, cOv, edge: cRank - ap, lvl, dir, bucket, conf, mconf, tierGap, amTier, mTier, agree, review, per, srcN: sv.length });
+      map.set(p.sleeperId, { p, am, ap, cv, cRank, mRank, mVal, e, amOv, cOv, edge: mRank - ap, lvl, dir, bucket, conf, mconf, tierGap, amTier, mTier, agree, agreeLbl, spread, split, range, inside, review, per, below, srcN: sv.length, wText: mkWeightText(srcs, sv.map(x => x.id)) });
     });
-    MK_CACHE = { key, map, srcs, F };
+    MK_CACHE = { key, map, srcs, F, scale, curve, curveRaw, slots, amTot, mkTot };
     return MK_CACHE;
   }
   // Player drawer: AM vs FantasyCalc / Flock / consensus, one verdict and one sentence (never changes AM)
@@ -17254,10 +17334,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!r) return all.srcs.length ? "" : "";
     const it = (k, v, tip, cls = "") => `<span class="pd-item ${cls}" title="${esc(tip)}"><span class="pr-k">${k}</span><b>${v}</b></span>`;
     const parts = [it("AM", `${p.pos}${r.ap}`, `AM rest-of-season rank in this format: ${p.pos}${r.ap}, #${r.amOv} overall`, "am")];
-    Object.values(r.per).forEach(x => parts.push(it(x.id === "fc" ? "FantasyCalc" : "Flock", `${p.pos}${x.pr}`, `${x.name}: ${p.pos}${x.pr}, #${x.ov} overall${x.tier ? ` · Flock tier ${x.tier}` : ""} (ranked over the players AM ranks)${x.approx ? " · approximate format" : ""}`)));
-    if (r.srcN > 1) parts.push(it("Consensus", `${p.pos}${r.cRank}`, `FantasyCalc + Flock combined (geometric mean of their position ranks); AM never counts in it`));
-    const d = r.cRank - r.ap;
-    parts.push(`<span class="mk-edge ${d > 0 ? "up" : d < 0 ? "down" : ""} l${r.lvl}" title="Consensus position rank minus AM position rank: + means AM is higher on him">AM edge ${d > 0 ? "+" + d : d < 0 ? "−" + (-d) : "0"}</span>`, mkPill(r));
+    Object.values(r.per).forEach(x => parts.push(it(x.id === "fc" ? "FantasyCalc" : "Flock", `${p.pos}${x.pr}`, `${x.name}: ${p.pos}${x.pr}, #${x.ov} overall${x.tier ? ` · Flock tier ${x.tier}` : ""} (ranked over the players AM ranks) · ${x.implied ? `Flock-implied market value ${fmt(x.v)} (FantasyCalc's price for ${p.pos}${x.own} in this format)` : `market value ${fmt(x.v)}`}${x.approx ? " · approximate format" : ""}`)));
+    if (r.below && r.below.fl) parts.push(it("Flock", `${p.pos}${r.below.fl}`, `Flock ranks him ${p.pos}${r.below.fl}, below the market's depth at ${p.pos}: no Flock-implied price`, "muted"));
+    if (r.split) parts.push(it("Market", mkRankTxt(r), `Sources disagree: the market is a range, ${fmt(Math.min(r.range.lo.v, r.range.hi.v))}–${fmt(Math.max(r.range.lo.v, r.range.hi.v))} on AM's scale; the AM edge is measured to its nearer end`));
+    else if (r.srcN > 1) parts.push(it("Consensus", `${p.pos}${r.cRank}`, `FantasyCalc + Flock combined (weighted geometric mean of their position ranks and prices; ${r.wText}); AM never counts in it`));
+    const d = r.mRank - r.ap;
+    parts.push(mkAgreeTag(r));
+    parts.push(`<span class="mk-edge ${d > 0 ? "up" : d < 0 ? "down" : ""} l${r.lvl}" title="${r.split ? "Nearer end of the market range" : "Consensus position rank"} minus AM position rank: + means AM is higher on him">AM edge ${d > 0 ? "+" + d : d < 0 ? "−" + (-d) : "0"}</span>`, mkPill(r));
     if (r.lvl) parts.push(`<span class="mk-conf ${r.conf.toLowerCase()}" title="From the size of the gap, FantasyCalc/Flock agreement, freshness, format match and whether AM's spot is manual">${r.conf} confidence</span>`);
     return `<div class="pm-mkt" aria-label="AM vs market"><div class="pm-prodrk"><span class="pr-k mk-lead">Market</span>${parts.join("")}</div>
       <p class="mk-say">${esc(mkSentence(r))}${r.review ? ` <b class="mk-rev">${esc(r.review)}.</b>` : ""} <span class="mk-fresh-s">${esc(all.srcs.map(s => `${s.name} ${s.id === "fl" ? (s.site ? "exported" : "imported") : "synced"} ${ago(Date.parse(s.at))}${s.notes.length ? " (approx.)" : ""}`).join(" · "))}</span></p></div>`;
@@ -17274,6 +17357,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // one sentence: what the disagreement is
   function mkSentence(r) {
     const fc = r.per.fc, fl = r.per.fl;
+    if (r.inside) return "Market split; AM sits between FantasyCalc and Flock.";
+    if (r.split) {   // the market is a range: the edge is to its nearer end, so it's a statement about both sources
+      const rg = `${r.range.lo.name} ${r.p.pos}${r.range.lo.pr} · ${r.range.hi.name} ${r.p.pos}${r.range.hi.pr}`;
+      if (!r.lvl) return `Sources disagree (${rg}); AM sits just outside the range.`;
+      return `Sources disagree (${rg}); AM values him ${r.lvl === 3 ? "far" : r.lvl === 2 ? "substantially" : "a little"} ${r.dir > 0 ? "higher" : "lower"} than both.`;
+    }
     if (fc && fl && fc.lvl && fl.lvl && fc.dir !== fl.dir) {   // the outside sources pull opposite ways: say so before anything else
       const hiSrc = fc.dir > 0 ? fl : fc, loSrc = hiSrc === fc ? fl : fc;
       return `External opinion is mixed: ${loSrc.name} is lower on him than AM while ${hiSrc.name} is higher${r.lvl ? "" : ", so the consensus lands near AM"}.`;
@@ -17290,6 +17379,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const mkEdgeTxt = n => (n > 0 ? `AM +${n}` : n < 0 ? `Mkt +${-n}` : "=");   // ▲/▼ only mean movement over time (Oct 13 audit)
   const mkPill = r => `<span class="mk-pill ${r.dir > 0 ? "buy" : r.dir < 0 ? "sell" : "even"} l${r.lvl}" title="${esc(mkSentence(r))}">${esc(r.bucket)}</span>`;
+  // the market's position rank as shown: one rank, or the range on a split ("WR11–18")
+  const mkRankTxt = r => (r.split ? `${r.p.pos}${r.range.lo.pr}–${r.range.hi.pr}` : `${r.p.pos}${r.cRank}`);
+  // agreement tag: Agree / Split / Strong split / FantasyCalc only, with both ranks and the weights in its tooltip
+  const mkAgreeTag = r => `<span class="mk-agree ${r.split ? (r.agreeLbl === "Strong split" ? "strong" : "split") : r.srcN > 1 ? "agree" : "one"}" title="${esc(r.srcN > 1 ? `FantasyCalc ${r.p.pos}${r.per.fc.pr} · Flock ${r.p.pos}${r.per.fl.pr}${r.split ? " · Sources disagree" : ""} · consensus weights ${r.wText}` : `${r.wText}${r.below && r.below.fl ? ` · Flock ${r.p.pos}${r.below.fl} is below market depth (no price)` : ""}`)}">${esc(r.agreeLbl)}</span>`;
   function mkFresh(srcs) {
     return srcs.map(s => `${s.id === "fl" ? s.list : s.name} ${s.id === "fl" && s.site ? `list exported ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "synced"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
   }
@@ -17379,7 +17472,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return `<div class="mk-status" id="mk-status">${rows.map(row).join("")}
       <div class="mk-st-foot"><button class="btn link inline" type="button" data-mk-details aria-expanded="${MK_UI.details}" aria-controls="mk-st-detail">${MK_UI.details ? "Hide source details" : "Source details"}</button>
         <span class="mk-st-sub">Times in Eastern Time${rows.some(s => s.id === "fc" && s.synced) ? " · stale after 3 days (FantasyCalc) / 14 days (Flock)" : ""}</span> ${mkCredit(srcs)}</div>
-      ${MK_UI.details ? `<div class="mk-st-detail" id="mk-st-detail">${rows.map(dl).join("")}</div>` : ""}</div>`;
+      ${MK_UI.details ? `<div class="mk-st-detail" id="mk-st-detail">${rows.map(dl).join("")}${mkWeightsHtml(srcs)}</div>` : ""}</div>`;
+  }
+  /* Consensus weights in Source details (Alan, Oct 14): the default split (MARKET_WEIGHTS) or this browser's override
+     (spm_mk_weights), the split that actually counts after freshness and format penalties, and the scale factor that
+     puts market prices on AM's scale. Changing it re-reads the market; it never touches AM ranks, tiers or values. */
+  const MK_W_STEPS = [30, 40, 50, 60, 70, 80];
+  function mkWeightsHtml(srcs) {
+    const b = mkBaseW(), fc = Math.round(b.fc * 100), all = MK_CACHE.map ? MK_CACHE : mkAll();
+    const btn = v => `<button class="vt-btn${v === fc ? " on" : ""}" type="button" data-mk-w="${v}" aria-pressed="${v === fc}" title="FantasyCalc ${v}% · Flock ${100 - v}%${v === MARKET_WEIGHTS.fc ? " (default)" : ""}">${v} / ${100 - v}</button>`;
+    return `<div class="mk-st-card mk-w" data-src="weights"><h4>Consensus weights <span>FantasyCalc / Flock</span></h4>
+      <div class="view-toggle mk-w-tg" role="group" aria-label="FantasyCalc / Flock weights">${MK_W_STEPS.map(btn).join("")}</div>
+      <dl><dt>Base</dt><dd>FantasyCalc ${fc}% · Flock ${100 - fc}% ${b.own ? `<span class="mk-st-sub">your setting in this browser</span> <button class="btn link inline" type="button" data-mk-w="reset">Reset to default (${MARKET_WEIGHTS.fc} / ${MARKET_WEIGHTS.fl})</button>` : `<span class="mk-st-sub">default</span>`}</dd>
+        <dt>Effective</dt><dd data-mk-weff>${esc(srcs.length ? mkWeightText(srcs) : "No market source loaded")} <span class="mk-st-sub">after freshness (× 0.6 when stale) and format match</span></dd>
+        <dt>Scale</dt><dd>${all.scale ? `× ${all.scale.toFixed(3)}` : "–"} <span class="mk-st-sub">one factor puts every market price on AM's scale (AM's starter-level total ÷ the market's), so the market's own price ratios are kept; Flock's ranks are priced on FantasyCalc's curve (Flock-implied market value)</span></dd></dl></div>`;
   }
   // keep the relative times honest while the view stays open: redraw the status block each minute, re-read the files every 15
   setInterval(() => {
@@ -17933,7 +18039,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const detail = full ? `<div class="tf-full"><ul>${fw.map(l => `<li>${esc(l)}</li>`).join("")}</ul>
         <table class="ml-tbl"><thead><tr><th>Player</th><th>Goes to</th><th>AM</th><th>Market</th><th>FantasyCalc</th><th>Flock</th><th>Market confidence</th></tr></thead><tbody>${it.give.map(p => [p, it.team.name]).concat(it.get.map(p => [p, you ? "You" : it.S.name])).map(([p, to]) => { const r = mkOf(p);
           return `<tr><td>${esc(p.name)}</td><td>${esc(to)}</td><td>${esc(posLabel(p))} · ${fmt(dv(p))}</td><td>${r ? `${p.pos}${r.cRank} · ${fmt(r.cv)}` : "—"}</td><td>${r && r.per.fc ? p.pos + r.per.fc.pr : "—"}</td><td>${r && r.per.fl ? p.pos + r.per.fl.pr : "—"}</td><td>${r ? r.mconf : "No data"}</td></tr>`; }).join("")}</tbody></table>
-        <p class="pp-note">Their lineup score with bench: ${fmtNet(mk.theirU)}. Market values are FantasyCalc and Flock on AM's scale (each source's position rank priced on AM's curve, FantasyCalc also by its own value gaps), weighted by source type, format match and freshness: ${esc(mkAll().srcs.map(s => `${s.name} — ${s.fmt}`).join(" · "))}.</p>
+        <p class="pp-note">Their lineup score with bench: ${fmtNet(mk.theirU)}. Market values are FantasyCalc and Flock on AM's scale (one scale factor, so the market's own price ratios are kept: FantasyCalc's trade values, and Flock's rank priced on FantasyCalc's curve as a Flock-implied market value), weighted FantasyCalc 60 / Flock 40 by default, then by format match and freshness: ${esc(mkAll().srcs.map(s => `${s.name} — ${s.fmt}`).join(" · "))}.</p>
         <dl class="tf-nums"><div><dt>AM raw · send vs receive</dt><dd>${fmt(it.m.rawB ?? sumV(it.give))} <span>vs</span> ${fmt(it.m.rawA ?? sumV(it.get))}</dd></div>
         <div><dt>Market raw · they receive vs send</dt><dd>${fmt(mk.mm.rawB ?? 0)} <span>vs</span> ${fmt(mk.mm.rawA ?? 0)}</dd></div></dl></div>` : "";
     return `<article class="tf-card tf-tcard ml-card${mk.accLabel === "High" ? " good-fit" : ""}">
@@ -18523,6 +18629,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return { set: set.id, list: set.label, sf: !!F.sf, teams: F.teams, rec: F.rec, tep: F.tep, players: all.map.size,
       srcs: all.srcs.map(x => ({ id: x.id, name: x.name, list: x.list || null, set: x.set || null, w: Math.round(x.w * 1000) / 1000, fmt: x.fmt, notes: x.notes.slice(), rows: x.rows.size })),
       lists: MARKET_SETS.map(m => { const L = flockNow(m); return { id: m.id, label: m.label, qb: m.qb, loaded: !!L, rows: L ? L.rows.length : 0, site: !!(L && L.site), draft: !!(L && L.draft), exported: L ? L.at : null }; }) }; };
+  // market pricing in tests (Oct 14, Flock market lists PR 3): each source's price in market units (mv) and on AM's scale
+  // (v), the scale factor and its two totals, FantasyCalc's curve per position, the agreement label and the edge read
+  if (window.__SPM_TEST_HOOKS === true) SPM.marketPricing = () => {
+    const all = mkAll(), recs = {};
+    for (const [sid, r] of all.map) recs[sid] = { pos: r.p.pos, ap: r.ap, am: r.am, cv: r.cv, cRank: r.cRank, mRank: r.mRank, lvl: r.lvl, dir: r.dir, bucket: r.bucket,
+      conf: r.conf, mconf: r.mconf, agree: r.agreeLbl, spread: r.spread, split: r.split, inside: r.inside, range: r.range, below: r.below, srcN: r.srcN, wText: r.wText,
+      say: mkSentence(r), per: Object.fromEntries(Object.entries(r.per).map(([k, x]) => [k, { pr: x.pr, own: x.own, mv: x.mv, v: x.v, implied: x.implied, lvl: x.lvl, dir: x.dir }])) };
+    return { scale: all.scale, slots: all.slots, curve: all.curve, curveRaw: all.curveRaw, amTot: all.amTot, mkTot: all.mkTot, recs, wText: mkWeightText(all.srcs), base: mkBaseW(),
+      srcs: all.srcs.map(x => ({ id: x.id, key: x.key || null, w: x.w, mult: x.mult, fmt: x.fmt, notes: x.notes.slice() })) };
+  };
   SPM.rolesNote = () => rolesNote();   // "" when the depth-chart roles are current and complete
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
   // one team's 3-team read (what it receives vs what it sends, values as numbers) next to the 2-team read of the same
@@ -18739,20 +18855,23 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const when = `${got} · ${prov}${chg}${st.status === "Sync failed" ? ` · <b class="hc-stale">last sync failed</b>` : ""}`;
       const raw = s.id === "fc" && s.rows.get(p.sleeperId) ? `raw ${fmt(Number(s.rows.get(p.sleeperId).raw))} · ` : "";
       const note = `${raw}${when}${s.stale ? ` · <b class="hc-stale">stale</b>` : ""}${s.notes.length ? ` · ${esc(s.notes.join(", "))}` : ""}`;
-      rows += x ? line(esc(s.name), `${esc(p.pos)}${x.pr}`, fmt(x.v), hcPct(pctOf(am, x.v)), note) : line(esc(s.name), "–", "–", "", `doesn't rank him · ${when}`);
+      const implied = x && x.implied ? `Flock-implied market value: FantasyCalc's price for ${esc(p.pos)}${x.own} · ` : "";
+      rows += x ? line(esc(s.name), `${esc(p.pos)}${x.pr}`, fmt(x.v), hcPct(pctOf(am, x.v)), implied + note) : r.below && r.below[s.id] ? line(esc(s.name), `${esc(p.pos)}${r.below[s.id]}`, "–", "", `below the market's depth at ${esc(p.pos)}: no price · ${when}`) : line(esc(s.name), "–", "–", "", `doesn't rank him · ${when}`);
     });
-    if (r.srcN > 1) rows += line("Consensus", `${esc(p.pos)}${r.cRank}`, fmt(r.cv), hcPct(pctOf(am, r.cv)), "", "cons");
+    if (r.split) rows += line("Market range", esc(mkRankTxt(r)), `${fmt(Math.min(r.range.lo.v, r.range.hi.v))}–${fmt(Math.max(r.range.lo.v, r.range.hi.v))}`, r.inside ? "inside" : hcPct(pctOf(am, r.mVal)), `${esc(r.agreeLbl)}: sources disagree · AM edge to the nearer end`, "cons");
+    else if (r.srcN > 1) rows += line("Consensus", `${esc(p.pos)}${r.cRank}`, fmt(r.cv), hcPct(pctOf(am, r.cv)), `Agree · ${esc(r.wText)}`, "cons");
     const verdict = mkSentence(r);
-    return hcSec("Market comparison", `<p class="hc-fmt">${esc(formatLabel(all.F.vl))}</p><table class="hc-t"><thead><tr><th scope="col">Source</th><th scope="col">Rank</th><th scope="col">Value</th><th scope="col">AM vs</th></tr></thead><tbody>${rows}</tbody></table>
+    return hcSec("Market comparison", `<p class="hc-fmt">${esc(formatLabel(all.F.vl))} · ${esc(r.agreeLbl)}</p><table class="hc-t"><thead><tr><th scope="col">Source</th><th scope="col">Rank</th><th scope="col">Value</th><th scope="col">AM vs</th></tr></thead><tbody>${rows}</tbody></table>
        <p class="hc-say">${esc(verdict)}</p>`) +
-      hcFoot(`Values on AM's scale in this format: FantasyCalc's trade values fitted to it, Flock's rank priced on AM's curve. A secondary reference: never changes AM.`);
+      hcFoot(`Market values on AM's scale with one scale factor (×${all.scale ? all.scale.toFixed(3) : "–"}), so the market's own price ratios stay as they are: FantasyCalc's trade values, and Flock's rank priced on FantasyCalc's curve (Flock-implied market value). AM's curve is never used. A secondary reference: never changes AM.`);
   }
   // the brief view's one market line: consensus (or the only source) vs AM, from the same engine as the full table
   function hcMarketLine(p) {
     if (!EDIT_POS.includes(p.pos) || !p.sleeperId || !MKT.p) return "";
     const all = mkAll(), r = all.srcs.length ? all.map.get(p.sleeperId) : null; if (!r) return "";
     const one = r.srcN > 1 ? null : all.srcs.find(s => r.per[s.id]);
-    const name = one ? one.name : "Market consensus", x = one ? r.per[one.id] : { pr: r.cRank, v: r.cv };
+    if (r.split) return hcRow("Market range", `${esc(mkRankTxt(r))} · ${fmt(Math.min(r.range.lo.v, r.range.hi.v))}–${fmt(Math.max(r.range.lo.v, r.range.hi.v))}`, r.inside ? "AM inside" : `AM ${hcPct(pctOf(r.am, r.mVal))}`);
+    const name = one ? `${one.name} only` : "Market consensus", x = one ? r.per[one.id] : { pr: r.cRank, v: r.cv };
     return hcRow(esc(name), `${esc(p.pos)}${x.pr} · ${fmt(x.v)}`, `AM ${hcPct(pctOf(r.am, x.v))}`);
   }
   function hcAm(p, opt = {}) {
