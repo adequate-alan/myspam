@@ -7923,8 +7923,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     for (const s of SIDES3) {
       const recv = sides[s], sent = sentBy(s);
       const m = runModel(recv, sent);
-      const more = recv.length && sent.length ? pctMore(m.a, m.b) : null;
-      out[s] = { s, recv, sent, m, more, outcome: more == null ? null : teamOutcome(more, m.a >= m.b) };
+      const vr = recv.length && sent.length ? valueRead(m, valueFloor()) : null;
+      const more = vr ? Math.round(10 * vr.gap) / 10 : null;
+      out[s] = { s, recv, sent, m, vr, more, outcome: vr ? teamOutcomeRead(vr) : null };
     }
     return out;
   }
@@ -7986,12 +7987,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (wrong) return "Fix the sides above";
       if (!r.recv.length) return "Receives nothing yet";
       if (!r.sent.length) return "Sends nothing yet";
-      return `Receives ${fmt(r.m.a)} · sends ${fmt(r.m.b)} · ${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}%`;
+      const pc = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`, vr = r.vr;
+      if (vr.kind === "split") return `Receives ${fmt(r.m.rawA)} · sends ${fmt(r.m.rawB)} · raw ${pc(vr.raw)}, package-adjusted ${pc(vr.adj)}`;
+      if (vr.kind === "sensitive") return `Receives ${fmt(r.m.rawA)} · sends ${fmt(r.m.rawB)} · raw ${pc(vr.raw)}, package-adjusted ${pc(vr.adj)}`;
+      return `Receives ${fmt(r.m.rawA)} · sends ${fmt(r.m.rawB)} · ${vr.side === "A" ? "+" : "−"}${r.more.toFixed(1)}%${vr.small ? " (small values)" : ""}`;
     };
     box.innerHTML = SIDES3.map(s => {
       const o = wrong ? null : res[s].outcome;
       return `<div class="tv3-row"><span class="tv3-name side-${s}">${esc(names[s])}</span>
-        <span class="tv3-verdict${o ? (o.fair ? " fair" : o.ahead ? " up" : " down") : ""}">${esc(o ? o.label : "–")}</span>
+        <span class="tv3-verdict${o ? (o.fair || o.ahead == null ? " fair" : o.ahead ? " up" : " down") : ""}">${esc(o ? o.label : "–")}</span>
         <span class="tv3-nums">${esc(short(s))}</span></div>`;
     }).join("");
     if (wrong) {
@@ -8011,7 +8015,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         line += up ? `: ${up.pos} room ${ordinal(up.b)} → ${ordinal(up.a)}${down ? `, ${down.pos} room ${ordinal(down.b)} → ${ordinal(down.a)}` : ""}` : "";
         if (st) line += `; ${st.name} starts at ${X.after.labels.get(st.id)}`;
         line += ` (${X.impact >= 0 ? "+" : "−"}${Math.abs(X.impact).toFixed(1)}% roster impact).`;
-      } else line += r.outcome ? ` (${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}% in value).` : ".";
+      } else line += r.outcome ? (r.outcome.ahead == null ? ` (${r.outcome.label.toLowerCase()}).` : ` (${r.vr.side === "A" ? "+" : "−"}${r.more.toFixed(1)}% in value).`) : ".";
       return `<li>${esc(line)}</li>`;
     }).join("");
     $("tc-why-body").innerHTML = `<ul class="why3">${why}</ul><p class="pp-note">Each team is judged on its own: what it receives against what it sends.</p>`;
@@ -8044,7 +8048,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <tr class="bd-total"><th scope="row">Net</th>${SIDES3.map(s => cell(s, r => (r.recv.length && r.sent.length ? sign(r.m.a - r.m.b) : "–"))).join("")}</tr>
       </tbody></table>`;
     // Balance: help the team that's losing the most, with players from the other two teams
-    const losers = SIDES3.filter(s => res[s].outcome && !res[s].outcome.ahead && !res[s].outcome.fair).sort((a, b) => res[b].more - res[a].more);
+    const losers = SIDES3.filter(s => res[s].outcome && res[s].outcome.ahead === false && !res[s].outcome.fair).sort((a, b) => res[b].more - res[a].more);
     $("balance-btn").hidden = true; $("balance").hidden = true;
     if (!losers.length) return;
     // objective: the sum of squared gaps across the three teams (helping the loser without hurting the others)
@@ -8067,7 +8071,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("balance-sub").textContent = `${names[W]} ${isYouThey(names[W]) ? "give" : "gives"} up the most. Redirect one of these to ${isYouThey(names[W]) ? "you" : names[W]}:`;
     $("balance-list").innerHTML = picks.map(c => `<button class="suggest bal" type="button" data-ids="${c.p.id}" data-side="${W}" data-origin="${c.o}">
       <span class="bal-players"><span class="bal-p">${face(c.p.sleeperId, c.p.name, "xs")}<span class="pos ${esc(c.p.pos)}">${esc(posLabel(c.p))}</span><span class="bal-n">${esc(c.p.name)}<small>from ${esc(isYouThey(names[c.o]) ? names[c.o].toLowerCase() : names[c.o])}</small></span><span class="r-val">+${fmt(tv(c.p))}</span></span></span>
-      <span class="bal-result">→ ${esc(names[W])} ${c.st[W].m.a >= c.st[W].m.b ? "+" : "−"}${c.st[W].more.toFixed(1)}% · ${esc(c.st[W].outcome.label)}</span></button>`).join("");
+      <span class="bal-result">→ ${esc(names[W])} ${c.st[W].outcome.ahead == null ? "" : `${c.st[W].vr.side === "A" ? "+" : "−"}${c.st[W].more.toFixed(1)}% · `}${esc(c.st[W].outcome.label)}</span></button>`).join("");
     $("balance-btn").hidden = false;
     $("balance").hidden = !TC_UI.balance;
     $("balance-btn").setAttribute("aria-expanded", TC_UI.balance);
@@ -12371,10 +12375,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         return { model: m, totals: [got(parts[0]), got(parts[1])], a: m.scoreA, b: m.scoreB, ahead: vr.side === "A" ? 0 : 1, more, tier, fair: tier.upTo <= 3, vr,
           diff: rawDecides ? Math.abs(m.rawA - m.rawB) : Math.abs(m.scoreA - m.scoreB) };
       }
-      const nets = parts.map(s => ({ got: got(s), sent: sent(s) }));
-      nets.forEach(n => { n.net = n.got - n.sent; n.more = pctMore(n.got, n.sent); });
+      // three teams: each team's own read of what it got against what it sent, with the 2-team rules (package
+      // adjustment, raw vs adjusted, the small-value floor; Alan, Oct 14 valuation audit)
+      const vals = key2 => s => s.items.map(x => ({ value: x[key2] || 0 }));
+      const sentItems = s => s.give.map(sid => { const o = parts.flatMap(q => q.items).find(x => x.sid === sid); return { value: (o && o[key]) || 0 }; });
+      const nets = parts.map(s => ({ got: got(s), sent: sent(s), recvI: vals(key)(s), sentI: sentItems(s) }));
+      const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 1;
+      nets.forEach(n => {
+        n.net = n.got - n.sent;
+        n.vr = n.got > 0 && n.sent > 0 ? valueRead(tradeModel(n.recvI, n.sentI), valueFloor(null, true)) : null;
+        n.more = n.vr ? n.vr.gap : pctMore(n.got, n.sent);
+        delete n.recvI; delete n.sentI;
+      });
+      LEAGUE_DEPTH = keep;
       const lead = nets.reduce((bi, n, i) => (n.net > nets[bi].net ? i : bi), 0);
-      const fair = nets.every(n => !isFinite(n.more) ? Math.abs(n.net) < 1 : n.more < 3);
+      const fair = nets.every(n => n.vr ? n.vr.kind !== "split" && n.vr.kind !== "sensitive" && n.vr.gap < VALUE_FAIR : Math.abs(n.net) < 1);
       return { nets, totals: nets.map(n => n.got), ahead: lead, fair, diff: nets[lead].net };
     };
     const res = { t, parts, thenAll, thenNone, basisTs, preSpam, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
@@ -15685,6 +15700,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const down = ["Basically even", "Fair", "Slight loss", "Loses", "Clear loss", "Overpaying", "Getting robbed"];
     return { label: (ahead ? up : down)[Math.min(i, 6)], fair: i <= 1, ahead };
   }
+  // The same, from a value read of what the team receives (A) against what it sends (B): the 2-team calculator's rules
+  // (Alan, Oct 14 valuation audit: raw and package-adjusted readings, the small-value floor, split and package-sensitive),
+  // so the package adjustment never creates or reverses a team's win on its own in a 3-team deal either
+  function teamOutcomeRead(vr) {
+    if (vr.kind === "split") return { label: "Split verdict", fair: false, ahead: null, split: true };
+    if (vr.kind === "sensitive") return { label: "Package-sensitive", fair: false, ahead: null, sensitive: true };
+    return teamOutcome(vr.gap, vr.side === "A");
+  }
 
   // Shared league math for the finder: best lineups, position-room places, roster limits
   function leagueKit() {
@@ -16924,7 +16947,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return `<article class="tf-card tf3">
         <header class="tf-head"><div class="tf-team"><span class="tf-with">3-team trade</span><b>${esc([f.S, f.B, f.C].map(t => t.mine ? "You" : t.name).join(" · "))}</b></div><span class="tf-size">1-for-1-for-1</span></header>
         <div class="tf3-grid">${rows.map(([t, inc, fromT, out]) => {
-          const g = Math.round(1000 * Math.abs(dv(inc) - dv(out)) / Math.min(dv(inc), dv(out))) / 10, o = teamOutcome(g, dv(inc) >= dv(out));
+          const o = teamOutcomeRead(valueRead({ a: dv(inc), b: dv(out) }, valueFloor(dv)));
           return `<div class="tf3-team"><div class="tf3-name">${teamFace(t, "xs")}<b>${esc(t.mine ? "You" : t.name)}</b></div>
             <span class="tf-verdict-big sm${o.fair ? " fair" : o.ahead ? " you" : " them"}">${esc(o.label)}</span>
             <div class="tf3-line"><span class="ctl-label">Receives</span><ul class="tf3-ul">${prow(inc, fromT, "")}</ul></div>
@@ -17192,6 +17215,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   };
   SPM.rolesNote = () => rolesNote();   // "" when the depth-chart roles are current and complete
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
+  // one team's 3-team read (what it receives vs what it sends, values as numbers) next to the 2-team read of the same
+  // packages, with the floor of the board (tests of the Oct 14 3-team alignment)
+  if (window.__SPM_TEST_HOOKS === true) SPM.threeRead = (recv, sent, floor) => {
+    const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 1;
+    try {
+      const m = tradeModel(recv.map(v => ({ value: v })), sent.map(v => ({ value: v })));
+      const F = floor == null ? valueFloor(null, true) : floor, vr = valueRead(m, F), o = teamOutcomeRead(vr);
+      return { kind: vr.kind, side: vr.side, gap: vr.gap, raw: vr.raw, adj: vr.adj, small: vr.small, label: o.label, fair: o.fair, ahead: o.ahead, floor: F };
+    } finally { LEAGUE_DEPTH = keep; }
+  };
   if (window.__SPM_TEST_HOOKS === true) SPM.edit = Object.assign(EDIT_API, { draft: () => tableToCsv(draft), unsaved: () => changedRows().length,
     reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn(); draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); } });
 
