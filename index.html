@@ -7285,28 +7285,29 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   function renderMkBar(all) {
     const F = all.F || mkFmt(), srcs = all.srcs || [];
-    const fl = srcs.find(s => s.id === "fl");
+    const fl = srcs.find(s => s.id === "fl"), set = flockSetFor(F), mine = !!FLOCK[set.id];
     $("mk-bar").innerHTML = `<div class="mk-bar-row">
-        <p class="mk-fmt"><b>AM ROS</b> vs <b>${srcs.length ? srcs.map(s => esc(s.name)).join(" + ") : "no market source"}</b> · ${esc(formatLabel(F.vl))}</p>
-        <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}">${fl ? (fl.site ? "Flock rankings (built in)" : "Flock rankings") : "Import Flock rankings"}</button>
+        <p class="mk-fmt"><b>AM ROS</b> vs <b>${srcs.length ? srcs.map(s => esc(s.id === "fl" ? s.list : s.name)).join(" + ") : "no market source"}</b> · ${esc(formatLabel(F.vl))}</p>
+        <button class="btn" type="button" data-mk-flock aria-expanded="${MK_UI.open}">${fl ? `${esc(set.label)}${fl.site ? " (built in)" : ""}` : `Import ${esc(set.label)}`}</button>
       </div>
       ${mkStatusHtml(srcs)}
       ${MK_UI.open ? `<div class="mk-import">
-        <p class="pp-note">${fl && fl.site ? "Using the Flock list built into the site (data/market/flock.json). An import here replaces it in this browser only. " : "An import stays in this browser only. "}Use a Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or paste a ranked list.</p>
+        <p class="pp-note">Adequate keeps two separate Flock lists: <b>Flock Superflex</b> (Superflex and 2QB leagues) and <b>Flock Regular PPR</b> (1QB leagues). This format uses ${esc(set.label)}${fl && fl.site ? `, built into the site (${esc(set.file)})` : ""}. An import here goes into the list its format belongs to and stays in this browser only. Use a Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or paste a ranked list, then confirm the list's format: nothing is assumed.</p>
         <div class="mk-imp-row">
           <label class="btn" for="mk-file">Choose CSV file</label><input type="file" id="mk-file" accept=".csv,text/csv,text/plain" hidden>
-          <select class="select" id="mk-fl-qb" aria-label="Flock list format"><option value="sf">Superflex</option><option value="1qb">1QB</option></select>
-          <select class="select" id="mk-fl-tep" aria-label="Flock TE premium"><option value="0">No TE premium</option><option value="0.5">TE Premium +</option><option value="1">TE Premium ++</option></select>
-          <select class="select" id="mk-fl-rec" aria-label="Flock scoring"><option value="1">Full PPR</option><option value="0.5">Half PPR</option><option value="0">Standard</option></select>
+          <select class="select" id="mk-fl-qb" aria-label="Flock list: QB format"><option value="">QB format…</option><option value="sf">Superflex</option><option value="1qb">1QB (Regular PPR list)</option></select>
+          <select class="select" id="mk-fl-teams" aria-label="Flock list: league size"><option value="">League size…</option><option value="8">8 teams</option><option value="10">10 teams</option><option value="12">12 teams</option><option value="14">14 teams</option></select>
+          <select class="select" id="mk-fl-tep" aria-label="Flock list: TE premium"><option value="">TE premium…</option><option value="0">No TE premium</option><option value="0.5">TE Premium +</option><option value="1">TE Premium ++</option></select>
+          <select class="select" id="mk-fl-rec" aria-label="Flock list: scoring"><option value="">Scoring…</option><option value="1">Full PPR</option><option value="0.5">Half PPR</option><option value="0">Standard</option></select>
         </div>
         <textarea id="mk-paste" class="mk-paste" rows="4" placeholder="…or paste the rankings here"></textarea>
-        <div class="mk-imp-row"><button class="btn primary" type="button" data-mk-import>Import</button>${fl ? `<button class="btn" type="button" data-mk-clear>Remove Flock rankings</button>` : ""}<span class="mk-msg" role="status">${esc(MK_UI.msg)}</span></div>
+        <div class="mk-imp-row"><button class="btn primary" type="button" data-mk-import>Import</button>${mine ? `<button class="btn" type="button" data-mk-clear>Remove this browser's ${esc(set.label)} list</button>` : ""}<span class="mk-msg" role="status">${esc(MK_UI.msg)}</span></div>
       </div>` : ""}`;
   }
   $("mk-bar").addEventListener("click", e => {
     if (e.target.closest("[data-mk-flock]")) { MK_UI.open = !MK_UI.open; MK_UI.msg = ""; renderMkBar(mkAll()); return; }
     if (e.target.closest("[data-mk-details]")) { MK_UI.details = !MK_UI.details; renderMkBar(mkAll()); if (MK_UI.details) { const d = $("mk-st-detail"); if (d) d.scrollIntoView({ block: "nearest" }); } return; }
-    if (e.target.closest("[data-mk-clear]")) { flockClear(); MK_UI.msg = "Flock rankings removed from this browser."; renderRankings(); return; }
+    if (e.target.closest("[data-mk-clear]")) { const m = flockSetFor(mkFmt()); flockClear(m); MK_UI.msg = `${m.label}: this browser's list removed${FLOCK_SITE[m.id].d && FLOCK_SITE[m.id].d.rows && FLOCK_SITE[m.id].d.rows.length ? "; the list built into the site is back" : ""}.`; renderRankings(); return; }
     if (e.target.closest("[data-mk-import]")) {
       const text = $("mk-paste").value;
       if (!text.trim()) { MK_UI.msg = "Choose a CSV file or paste a list first."; renderMkBar(mkAll()); return; }
@@ -7319,12 +7320,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     rd.onload = () => mkImport(String(rd.result || ""), f.name);
     rd.readAsText(f);
   });
-  function mkImport(text, file) {
-    const res = flockParse(text);
-    if (!res.rows.length) { MK_UI.msg = "No players from AM's board were found in that list."; renderMkBar(mkAll()); return; }
-    const fmt = { sf: $("mk-fl-qb").value === "sf", tep: Number($("mk-fl-tep").value) || 0, rec: Number($("mk-fl-rec").value) };
-    flockSave(res, fmt, file);
-    MK_UI.msg = `Imported ${res.rows.length} players${res.missed.length ? ` · ${res.missed.length} not on AM's board` : ""}.`;
+  async function mkImport(text, file) {
+    const v = id => $(id).value, need = ["mk-fl-qb", "mk-fl-teams", "mk-fl-tep", "mk-fl-rec"].filter(id => v(id) === "");
+    if (need.length) { MK_UI.msg = "Confirm the list's format first (QB format, league size, TE premium, scoring): Adequate doesn't assume it."; renderMkBar(mkAll()); return; }
+    const fmt = { sf: v("mk-fl-qb") === "sf", teams: Number(v("mk-fl-teams")), tep: Number(v("mk-fl-tep")), rec: Number(v("mk-fl-rec")) };
+    if (!slPlayers) { try { const r = await fetch("data/sleeper_players.json"); if (r.ok) slPlayers = await r.json(); } catch (e) {} }
+    const known = new Map(Object.entries(slPlayers || {}).map(([sid, x]) => [sid, [x[0], x[1], x[2] || ""]]));
+    players.forEach(p => { if (p.sleeperId) known.set(p.sleeperId, [p.name, p.pos, p.team || ""]); });
+    const res = flockParse(text, known);
+    if (!res.rows.length) { MK_UI.msg = "No players could be matched in that list."; renderMkBar(mkAll()); return; }
+    const m = flockSave(res, fmt, file), here = flockSetFor(mkFmt());
+    MK_UI.msg = `Imported ${res.rows.length} of ${res.total} players into ${m.label}${res.missed.length ? ` · ${res.missed.length} unmatched (${res.missed.slice(0, 3).join(", ")}${res.missed.length > 3 ? "…" : ""})` : ""}${res.renamed ? ` · ${res.renamed} matched by name because Flock's ID didn't belong to that player` : ""}${res.unknownIds ? ` · ${res.unknownIds} of them with a Flock ID no player in our files has (kept unmatched, not priced, until verified)` : ""}${m !== here ? `. This format uses ${here.label}, so the import shows in ${m.qb === "sf" ? "Superflex" : "1QB"} formats` : ""}.`;
     renderRankings();
     if ($("player-modal").open && PP.sid) renderPlayer();
   }
@@ -16959,18 +16965,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      (1QB / Superflex × 10 / 12 teams) and put on the AM scale by the median AM ÷ market ratio of the players
      both value, so "AM likes him more than the market" is a like-for-like comparison. */
   // at: when this browser last loaded the market files; err / flErr: that load failed (a missing flock.json is "no list", not a failure)
-  const MKT = { d: null, p: null, cur: null, at: 0, err: "", flErr: "" };
+  const MKT = { d: null, p: null, cur: null, at: 0, err: "" };
   const MK_RELOAD_MS = 15 * 60000;   // the files are re-read while the Market edge view is open, so a scheduled sync shows up without a reload
   function loadMarket(again) {
     if (MKT.p && !(again && MKT.at && Date.now() - MKT.at > MK_RELOAD_MS && !MKT.loading)) return MKT.p;
     MKT.loading = true;
     const get = (url, missOk) => fetch(url, { cache: "no-cache" }).then(r => (r.ok ? r.json().then(j => ({ j })) : { err: missOk && r.status === 404 ? "" : `HTTP ${r.status}` })).catch(e => ({ err: "no connection" }));
-    const p = Promise.all([get("data/market/redraft.json", false), get("data/market/flock.json", true)])
-      .then(([d, fl]) => {
+    const p = Promise.all([get("data/market/redraft.json", false)].concat(MARKET_SETS.map(m => get(m.file, true))))
+      .then(([d, ...fls]) => {
         MKT.loading = false; MKT.at = Date.now();
-        MKT.err = d.err || (d.j && d.j.formats ? "" : "unreadable file"); MKT.flErr = fl.err || "";
+        MKT.err = d.err || (d.j && d.j.formats ? "" : "unreadable file");
         if (d.j && d.j.formats) MKT.d = d.j; else if (!MKT.d) MKT.d = null;   // a failed re-read keeps the values already loaded
-        if (fl.j) { FLOCK_SITE.d = fl.j; FLOCK_SITE.v = null; } else if (!fl.err) { FLOCK_SITE.d = null; FLOCK_SITE.v = null; }
+        MARKET_SETS.forEach((m, i) => {   // each Flock list on its own: a failed re-read of one keeps what was loaded
+          const fl = fls[i], S = FLOCK_SITE[m.id]; S.err = fl.err || "";
+          if (fl.j) { S.d = fl.j; S.v = null; } else if (!fl.err) { S.d = null; S.v = null; }
+        });
         MK_CACHE.key = "";
         if (MKT.d && !$("panel-finder").hidden) renderFinder();
         return MKT.d;
@@ -17006,16 +17015,43 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        agreement between sources, freshness, format match and whether AM's spot is manual. Missing sources lower
        confidence; nothing here ever changes AM ranks, tiers, values or history. */
   const MK_STALE = { fc: 3, fl: 14 }, MK_DEAD = { fc: 21, fl: 45 };   // days: stale lowers confidence; dead drops the source
-  const FLOCK_KEY = "spm_flock";
-  let FLOCK = (() => { try { return JSON.parse(localStorage.getItem(FLOCK_KEY) || "null"); } catch (e) { return null; } })();
-  // Alan's own Flock list, committed in data/market/flock.json (Oct 8: the site is for his use only); a browser import wins
-  var FLOCK_SITE = { d: null, v: null };
-  function flockNow() {
-    if (FLOCK) return FLOCK;
-    const d = FLOCK_SITE.d;
-    if (!d || !d.csv || !players.length) return null;
-    if (!FLOCK_SITE.v) { const parsed = flockParse(d.csv); FLOCK_SITE.v = { at: d.updated, sf: !!d.sf, tep: Number(d.tep) || 0, rec: Number(d.rec ?? 1), file: d.file || "", rows: parsed.rows, site: true }; }
-    return FLOCK_SITE.v;
+  /* Flock market lists (Alan, Oct 14): two independently maintained Flock rankings, Superflex and Regular PPR. They are
+     MARKET data, never AM boards: nothing here reaches BOARDS, RANKINGS_CSV, a board's history or snapshots, or the AM
+     editor. The league's QB format picks the list (flockSetFor), like it picks the AM board; a Superflex list is never
+     used for a 1QB league or the other way round (a 1QB league without a Flock PPR list uses FantasyCalc alone).
+     Files: data/market/flock_<sf|ppr>.json (version 2: fmt, exported, published, rows [sleeper_id, rank, pos, pos_rank,
+     tier, …]); every published version is kept in data/market/flock_snapshots/<set>/<YYYY-MM>.json. A browser import of a
+     list (spm_flock + keySuffix) overrides that list in this browser only. */
+  var MARKET_SETS = [
+    { id: "flock-sf", provider: "flock", label: "Flock Superflex", file: "data/market/flock_sf.json", keySuffix: ":sf", qb: "sf" },
+    { id: "flock-ppr", provider: "flock", label: "Flock Regular PPR", file: "data/market/flock_ppr.json", keySuffix: ":ppr", qb: "1" }
+  ];
+  var FLOCK_KEY = "spm_flock";   // the pre-Oct 14 single browser list; read once into the matching list's key, never deleted
+  function flockSetFor(F) { return MARKET_SETS.find(m => (m.qb === "sf") === !!F.sf); }
+  function flockKey(m) { return FLOCK_KEY + m.keySuffix; }
+  var FLOCK = {};
+  MARKET_SETS.forEach(m => { try { FLOCK[m.id] = JSON.parse(localStorage.getItem(flockKey(m)) || "null"); } catch (e) { FLOCK[m.id] = null; } });
+  try {   // one-time move of an old browser import into the list its own format belongs to (by its sf flag)
+    const old = JSON.parse(localStorage.getItem(FLOCK_KEY) || "null");
+    if (old && old.rows && !localStorage.getItem(FLOCK_KEY + ":moved")) {
+      const m = MARKET_SETS.find(x => (x.qb === "sf") === !!old.sf);
+      if (!FLOCK[m.id]) { FLOCK[m.id] = old; localStorage.setItem(flockKey(m), JSON.stringify(old)); }
+      localStorage.setItem(FLOCK_KEY + ":moved", "1");
+    }
+  } catch (e) {}
+  // the lists built into the site (Alan's own, for his use only); a browser import of the same list wins
+  var FLOCK_SITE = Object.fromEntries(MARKET_SETS.map(m => [m.id, { d: null, v: null, err: "" }]));
+  function flockNow(m) {
+    if (!m) return null;
+    if (FLOCK[m.id]) return FLOCK[m.id];
+    const S = FLOCK_SITE[m.id], d = S.d;
+    if (!d || !Array.isArray(d.rows) || !d.rows.length || !d.fmt) return null;
+    if (!S.v) {   // every row of the list, matched or not to an AM board: market coverage never depends on AM's rankings
+      const c = (d.cols || []).reduce((o, k, i) => (o[k] = i, o), {}), at = k => (c[k] != null ? c[k] : -1);
+      const rows = d.rows.filter(r => r[at("sleeper_id")]).map(r => [String(r[at("sleeper_id")]), Number(r[at("rank")]), Number(r[at("pos_rank")]), at("tier") >= 0 ? r[at("tier")] || "" : ""]);
+      S.v = { at: d.exported, published: d.published, sf: d.fmt.qb === "sf", teams: Number(d.fmt.teams) || 12, tep: Number(d.fmt.tep) || 0, rec: Number(d.fmt.rec ?? 1), file: d.file || "", rows, site: true, set: m.id };
+    }
+    return S.v;
   }
   function mkFmt() {
     const vl = valueLeague() || boardLeague(), lu = lineupOf(vl), sc = vl.scoring_settings || {};
@@ -17039,15 +17075,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         out.push(mkWeigh({ id: "fc", name: "FantasyCalc", kind: "trade market", rows, at: MKT.d.updated, notes, mis, stale: daysOld(MKT.d.updated) > MK_STALE.fc, url: /^https:\/\//.test(MKT.d.url || "") ? MKT.d.url : "https://www.fantasycalc.com/" }));
       }
     }
-    const FL = flockNow();
-    if (FL && FL.rows && daysOld(FL.at) < MK_DEAD.fl) {
+    const set = flockSetFor(F), FL = flockNow(set);
+    if (FL && FL.rows && daysOld(FL.at) < MK_DEAD.fl && !!FL.sf === !!F.sf) {   // strict: never a Superflex list in a 1QB league
       const notes = [];
-      const mis = { qb: !!FL.sf !== F.sf, tep: (Number(FL.tep) > 0) !== (F.tep > 0), rec: Number(FL.rec ?? 1) !== F.rec, teams: false };
-      if (mis.qb) notes.push(`${FL.sf ? "Superflex" : "1QB"} source used in ${F.sf ? "a Superflex" : "a 1QB"} league`);
+      const mis = { qb: false, tep: (Number(FL.tep) > 0) !== (F.tep > 0), rec: Number(FL.rec ?? 1) !== F.rec, teams: false };
       if (mis.tep) notes.push(FL.tep > 0 ? "TE-premium list, league has none" : "no-TE-premium list, league has TE premium");
       if (mis.rec) notes.push(`${recName(Number(FL.rec ?? 1))} list for ${recName(F.rec)}`);
       const rows = new Map(FL.rows.map(r => [String(r[0]), { ov: r[1], pr: r[2], tier: r[3] || "" }]));
-      out.push(mkWeigh({ id: "fl", name: "Flock", kind: "expert rankings", rows, at: FL.at, notes, mis, stale: daysOld(FL.at) > MK_STALE.fl, file: FL.file || "", site: !!FL.site }));
+      out.push(mkWeigh({ id: "fl", name: "Flock", list: set.label, set: set.id, kind: "expert rankings", rows, at: FL.at, notes, mis, stale: daysOld(FL.at) > MK_STALE.fl, file: FL.file || "", site: !!FL.site }));
     }
     return out;
   }
@@ -17071,7 +17106,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const F = mkFmt(), srcs = mkSources(F);
     const amV = p => Math.max(0, adjOf(p)), amPos = p => (LG.fmtOn && LG.adjPos.has(p.id) ? LG.adjPos.get(p.id) : p.posNum);
     const pool = players.filter(p => p.sleeperId && EDIT_POS.includes(p.pos) && p.posNum != null && Number(p.tier) !== OUT_TIER);
-    const key = JSON.stringify([(CALC_BOARD || ACTIVE_BOARD).id, F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + s.at + s.notes.join()), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
+    const key = JSON.stringify([(CALC_BOARD || ACTIVE_BOARD).id, F.sf, F.teams, F.rec, F.tep, srcs.map(s => s.id + (s.set || "") + s.at + s.notes.join()), pool.length, Math.round(pool.reduce((a, p) => a + amV(p), 0))]);
     if (MK_CACHE.key === key) return MK_CACHE;
     const desc = arr => arr.slice().sort((a, b) => b - a);
     const ovCurve = desc(pool.map(amV)), posCurve = {}, posList = {};
@@ -17203,7 +17238,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const mkEdgeTxt = n => (n > 0 ? `AM +${n}` : n < 0 ? `Mkt +${-n}` : "=");   // ▲/▼ only mean movement over time (Oct 13 audit)
   const mkPill = r => `<span class="mk-pill ${r.dir > 0 ? "buy" : r.dir < 0 ? "sell" : "even"} l${r.lvl}" title="${esc(mkSentence(r))}">${esc(r.bucket)}</span>`;
   function mkFresh(srcs) {
-    return srcs.map(s => `${s.name} ${s.id === "fl" && s.site ? `list exported ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "synced"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
+    return srcs.map(s => `${s.id === "fl" ? s.list : s.name} ${s.id === "fl" && s.site ? `list exported ${new Date(s.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : `${s.id === "fl" ? "imported" : "synced"} ${ago(Date.parse(s.at))}`} — ${s.notes.length ? "approximate: " : ""}${s.fmt}`).join(" · ");
   }
   const mkCredit = srcs => srcs.some(s => s.id === "fc") ? `<a class="tf-credit" href="https://www.fantasycalc.com/" target="_blank" rel="noopener">Market values: FantasyCalc</a>` : "";
 
@@ -17253,14 +17288,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     } else if (MKT.p && MKT.at) { fc.status = "Sync failed"; fc.error = `Market values couldn't be loaded in this browser (${MKT.err || "no data"}).`; }
     else fc.status = "Loading";
     out.push(fc);
-    const FL = flockNow(), fl = { id: "fl", name: "Flock", kind: "Expert rankings", provider: null, changed: null, fmt: fmtOf("fl") };
+    const set = flockSetFor(mkFmt()), FL = flockNow(set), FS = FLOCK_SITE[set.id];
+    const fl = { id: "fl", name: set.label, set: set.id, kind: "Expert rankings", provider: null, changed: null, fmt: fmtOf("fl") };
     if (FL && FL.at) {
       fl.synced = Date.parse(FL.at); fl.site = !!FL.site; fl.file = FL.file || "";
-      fl.how = FL.site ? `Exported from Flock${FL.file ? ` (${FL.file})` : ""} and built into the site${FLOCK_SITE.d && FLOCK_SITE.d.synced ? `; added ${etStamp(FLOCK_SITE.d.synced)}` : ""}` : `Imported in this browser${FL.file ? ` (${FL.file})` : " (pasted list)"}; the export time isn't in the file`;
+      fl.how = FL.site ? `Exported from Flock${FL.file ? ` (${FL.file})` : ""} and built into the site${FL.published ? `; published ${etStamp(FL.published)}` : ""}` : `Imported in this browser${FL.file ? ` (${FL.file})` : " (pasted list)"}; the export time isn't in the file`;
       fl.status = daysOld(FL.at) > MK_STALE.fl ? "Stale" : "Current";
       if (daysOld(FL.at) >= MK_DEAD.fl) fl.note = `Older than ${MK_DEAD.fl} days, so it's left out of the market comparison.`;
-    } else if (MKT.flErr) { fl.status = "Sync failed"; fl.error = `The built-in Flock list couldn't be loaded (${MKT.flErr}).`; }
-    else if (MKT.p && MKT.at) { fl.status = "Not loaded"; fl.note = "No Flock list: import one above. Flock has no feed, so it never syncs by itself."; }
+    } else if (FS.err) { fl.status = "Sync failed"; fl.error = `The built-in ${set.label} list couldn't be loaded (${FS.err}).`; }
+    else if (MKT.p && MKT.at) { fl.status = "Not loaded"; fl.note = `No ${set.label} list yet, so this format's market reads use FantasyCalc alone${set.qb === "1" ? " (a Superflex list is never used for a 1QB league)" : ""}. Flock has no feed: a list comes from an import.`; }
     else fl.status = "Loading";
     out.push(fl);
     return out;
@@ -17268,7 +17304,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const mkStCls = st => st === "Current" ? "ok" : st === "Stale" ? "stale" : st === "Sync failed" ? "fail" : "none";
   // the compact line per source: "Synced 3 hours ago · Provider update unknown · values unchanged since Oct 9"
   function mkStLine(s) {
-    if (!s.synced) return s.status === "Not loaded" ? "No list loaded · Flock has no feed, so a list comes from an import" : s.status === "Loading" ? "Loading…" : "Never synced in this browser";
+    if (!s.synced) return s.status === "Not loaded" ? "No list yet · market reads use FantasyCalc alone · Flock has no feed, so a list comes from an import" : s.status === "Loading" ? "Loading…" : "Never synced in this browser";
     const bits = [];
     if (s.synced) bits.push(`${s.id === "fl" ? (s.site ? "Exported" : "Imported") : "Synced"} ${agoLong(s.synced)}`);
     bits.push(s.provider ? `provider updated ${agoLong(s.provider)}` : "Provider update unknown");
@@ -17302,48 +17338,93 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }, 60000);
 
   /* Flock import (browser only): a Flock rankings CSV (player_id = Sleeper ID, Rank, Name, Team, Position, Tier) or
-     pasted text. Kept in this browser (spm_flock), never committed or published: it's Flock's content. */
-  function flockParse(text) {
+     pasted text, into ONE of the Flock lists (the format you confirm picks which). Kept in this browser (spm_flock:sf /
+     spm_flock:ppr), never committed or published from here. Every row is kept and matched against the full Sleeper player
+     file, not against an AM board, so a player AM doesn't rank still counts for the market (Alan, Oct 14). A name only
+     becomes a match when exactly one player has it at that position; otherwise the row stays unmatched (named in the
+     message), never guessed. `known` = Sleeper ID → [name, pos] (data/sleeper_players.json plus the AM board). */
+  // Is the player our files know under a Flock row's ID the same player? Same position and the same normalized full name
+  // (case, periods, apostrophes and Jr./III ignored), or a pair in FLOCK_ALIASES checked by hand; a matching surname is
+  // never enough (Alan, Oct 14). Flock's player_id is a Sleeper ID for established players but not for many rookies
+  // (Flock's Chris Bell 13269 is Sleeper's Fernando Mendoza), so an ID is never trusted on its own. Same rule as
+  // pipeline/flock_v2_migrate.py (ALIASES there must stay identical; tests/flock_lists_check.py checks).
+  const flNorm = s => String(s || "").toLowerCase().replace(/[.'’`]/g, "").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  // Verified aliases: Flock's name and position → the Sleeper ID of the same player under another name in our files
+  const FLOCK_ALIASES = {
+    "bhayshul tuten|RB": "12490", "travis etienne|RB": "7543", "jacory croskey merritt|RB": "12533", "kenneth gainwell|RB": "7567",
+    "rashod bateman|WR": "7571", "joshua palmer|WR": "7670", "hollywood brown|WR": "5848", "zonovan knight|RB": "8122",
+  };
+  function flSame(n1, p1, n2, p2, sid) {
+    if (p1 !== p2 || !flNorm(n1) || !flNorm(n2)) return false;
+    return flNorm(n1) === flNorm(n2) || (sid != null && FLOCK_ALIASES[flNorm(n1) + "|" + p1] === sid);
+  }
+  // rows in rank order [{ id, name, pos, team }] → each gets sid + how ("id" / "name"), or sid "" and a reason (kept, never priced)
+  function flockMatch(rows, known) {
+    const by = new Map();
+    known.forEach(([nm, pos], sid) => { const k = flNorm(nm) + "|" + pos; by.set(k, (by.get(k) || []).concat([sid])); });
+    const seen = new Set();
+    rows.forEach(r => {
+      const kn = r.id ? known.get(r.id) : null;
+      let sid = "", how = "";
+      if (kn && flSame(r.name, r.pos, kn[0], kn[1], r.id)) { sid = r.id; how = "id"; }
+      else {
+        const al = FLOCK_ALIASES[flNorm(r.name) + "|" + r.pos];
+        let c = al && known.has(al) ? [al] : by.get(flNorm(r.name) + "|" + r.pos) || [];
+        if (c.length > 1) c = c.filter(k => known.get(k)[2] && known.get(k)[2] === r.team);
+        if (c.length === 1) { sid = c[0]; how = "name"; }
+        // an ID nobody in our files has stays unresolved (kept, never priced): it may later be another player's Sleeper ID
+        else if (r.id && !kn) how = "unresolved Flock ID: no player in our files has this ID or this name and position";
+        else how = kn ? `its ID belongs to ${kn[0]} (${kn[1]})` : "no player with this name and position";
+      }
+      if (sid && seen.has(sid)) { sid = ""; how = "a second row for a player already listed higher"; }
+      if (sid) seen.add(sid);
+      r.sid = sid; r.how = how;
+    });
+    return rows;
+  }
+  /* Flock import (browser only): a Flock rankings CSV (player_id, Rank, Name, Team, Position, Tier) or pasted text, into
+     ONE of the Flock lists (the format you confirm picks which). Kept in this browser (spm_flock:sf / spm_flock:ppr), never
+     committed or published from here. Every row is kept and matched against the full Sleeper player file plus the AM board
+     (flockMatch), not against the AM board alone, so a player AM doesn't rank still counts for the market. A row that can't
+     be matched safely is left unmatched (named in the message), never guessed. known = Sleeper ID → [name, pos, team]. */
+  function flockParse(text, known) {
     const lines = String(text || "").split(/\r?\n/).filter(l => l.trim());
-    if (!lines.length) return { rows: [], missed: [] };
+    if (!lines.length) return { rows: [], missed: [], total: 0, unknownIds: 0, renamed: 0 };
+    known = known || new Map(players.filter(p => p.sleeperId).map(p => [p.sleeperId, [p.name, p.pos, p.team || ""]]));
     const split = l => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if ((ch === "," || ch === "\t") && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(x => x.trim()); };
     const head = split(lines[0]).map(h => h.toLowerCase());
     const col = (...names) => head.findIndex(h => names.includes(h));
-    const iId = col("player_id", "sleeper_id", "id"), iRank = col("rank", "overall", "ovr"), iName = col("name", "player"), iPos = col("position", "pos"), iTier = col("tier");
-    const norm = s => String(s || "").toLowerCase().replace(/[.'’`]/g, "").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-    const byName = new Map();
-    players.forEach(p => { if (p.sleeperId && EDIT_POS.includes(p.pos)) { const k = norm(p.name); byName.set(k, (byName.get(k) || []).concat([p])); } });
-    const known = new Set(players.map(p => p.sleeperId).filter(Boolean));
-    const rows = [], missed = [], hasHead = iRank >= 0 || iName >= 0 || iId >= 0;
+    const iId = col("player_id", "sleeper_id", "id"), iRank = col("rank", "overall", "ovr"), iName = col("name", "player"), iPos = col("position", "pos"), iTier = col("tier"), iTeam = col("team");
+    const raw = [], hasHead = iRank >= 0 || iName >= 0 || iId >= 0;
     (hasHead ? lines.slice(1) : lines).forEach((l, n) => {
       const c = split(l);
-      let sid = iId >= 0 ? c[iId] : "", pos = iPos >= 0 ? String(c[iPos] || "").toUpperCase() : "", name = iName >= 0 ? c[iName] : "";
+      let id = iId >= 0 ? String(c[iId] || "").trim() : "", pos = iPos >= 0 ? String(c[iPos] || "").toUpperCase() : "", name = iName >= 0 ? c[iName] : "", team = iTeam >= 0 ? String(c[iTeam] || "").toUpperCase() : "";
       if (!hasHead) {   // free text: "12. Ja'Marr Chase CIN WR3"
         const pm = l.match(/\b(QB|RB|WR|TE)\s?\d*\b/i); pos = pm ? pm[1].toUpperCase() : "";
+        const tm = l.replace(/\b(QB|RB|WR|TE)\s?\d*\b/gi, " ").match(/\b([A-Z]{2,3})\b/); team = tm ? tm[1] : "";
         name = l.replace(/^\s*\d+[.)]?\s*/, "").replace(/\b(QB|RB|WR|TE)\s?\d*\b/gi, " ").replace(/\b[A-Z]{2,3}\b/g, " ");
       }
-      if (!sid || !known.has(sid)) {
-        const cand = (byName.get(norm(name)) || []).filter(p => !pos || p.pos === pos);
-        sid = cand.length === 1 ? cand[0].sleeperId : sid;
-      }
-      if (!EDIT_POS.includes(pos)) { const p = players.find(x => x.sleeperId === sid); pos = p ? p.pos : pos; }
+      if (!EDIT_POS.includes(pos) && known.has(id)) pos = known.get(id)[1];
       if (!EDIT_POS.includes(pos)) return;
       const rk = Number(iRank >= 0 ? c[iRank] : (l.match(/^\s*(\d+)/) || [])[1]) || n + 1;
-      rows.push({ sid: String(sid || ""), pos, rank: rk, tier: iTier >= 0 ? c[iTier] : "", name: name || l.slice(0, 40), ok: !!sid });
+      raw.push({ id, pos, team, rank: rk, tier: iTier >= 0 ? c[iTier] : "", name: String(name || l.slice(0, 40)).replace(/\s+/g, " ").trim() });
     });
-    rows.sort((a, b) => a.rank - b.rank);
-    const pc = {};
-    const out = rows.map(r => { pc[r.pos] = (pc[r.pos] || 0) + 1; return [r.sid, r.rank, pc[r.pos], r.tier]; }).filter((r, i) => rows[i].ok);
-    rows.forEach(r => { if (!r.ok) missed.push(r.name.trim()); });
-    return { rows: out, missed, total: rows.length };
+    raw.sort((a, b) => a.rank - b.rank);
+    flockMatch(raw, known);
+    const pc = {}, rows = [], missed = [];
+    raw.forEach(r => { pc[r.pos] = (pc[r.pos] || 0) + 1; if (r.sid) rows.push([r.sid, r.rank, pc[r.pos], r.tier]); else missed.push(`${r.name}${r.id ? ` · Flock ID ${r.id}` : ""} (${r.how})`); });
+    return { rows, missed, total: raw.length, unknownIds: raw.filter(r => !r.sid && /^unresolved/.test(r.how)).length, renamed: raw.filter(r => r.how === "name" && r.id).length };
   }
+  // fmt = the format confirmed on import: { sf, teams, tep, rec }; saved into the list that format belongs to
   function flockSave(parsed, fmt, file) {
-    FLOCK = { at: new Date().toISOString(), sf: fmt.sf, tep: fmt.tep, rec: fmt.rec, file: file || "", rows: parsed.rows };
-    try { localStorage.setItem(FLOCK_KEY, JSON.stringify(FLOCK)); } catch (e) {}
+    const m = flockSetFor(fmt);
+    FLOCK[m.id] = { at: new Date().toISOString(), sf: !!fmt.sf, teams: fmt.teams, tep: fmt.tep, rec: fmt.rec, file: file || "", rows: parsed.rows, missed: parsed.missed || [], set: m.id };
+    try { localStorage.setItem(flockKey(m), JSON.stringify(FLOCK[m.id])); } catch (e) {}
     MK_CACHE.key = "";
+    return m;
   }
   var MK_READY = true;
-  function flockClear() { FLOCK = null; try { localStorage.removeItem(FLOCK_KEY); } catch (e) {} MK_CACHE.key = ""; }
+  function flockClear(m) { FLOCK[m.id] = null; try { localStorage.removeItem(flockKey(m)); localStorage.setItem(FLOCK_KEY + ":moved", "1"); } catch (e) {} MK_CACHE.key = ""; }
   // A team's strong rooms (top third of the league) and needs (bottom third)
   function roomSummary(K, t) {
     const n = LG.teams.length, third = Math.max(1, Math.ceil(n / 3)), r = {};
@@ -18018,6 +18099,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const o = weekOutlook(e, week ?? currentWeek());
     return { kind: o.kind, proj: o.proj ?? null, est: o.est ?? null, cond: o.cond ?? null, m: o.role ? o.role.m : null, start: o.role ? o.role.start ?? null : null, inputs: o.inputs || [], text: o.text, ros: p ? rosPPG(p) : null, rosRank: p ? rosRank(p) : null, backup: p ? rosBackup(p) : false, fallback: !!(o.role && o.role.fallback) };
   };
+  // the market sources a format uses (read only; tests and the console): which Flock list, each source's weight and notes,
+  // and how many AM-ranked players have a market record. f = Custom format fields to test another format without a league
+  SPM.market = () => { const all = mkAll(), F = all.F || mkFmt(), set = flockSetFor(F);
+    return { set: set.id, list: set.label, sf: !!F.sf, teams: F.teams, rec: F.rec, tep: F.tep, players: all.map.size,
+      srcs: all.srcs.map(x => ({ id: x.id, name: x.name, list: x.list || null, set: x.set || null, w: Math.round(x.w * 1000) / 1000, fmt: x.fmt, notes: x.notes.slice(), rows: x.rows.size })),
+      lists: MARKET_SETS.map(m => { const L = flockNow(m); return { id: m.id, label: m.label, qb: m.qb, loaded: !!L, rows: L ? L.rows.length : 0, site: !!(L && L.site), exported: L ? L.at : null }; }) }; };
   SPM.rolesNote = () => rolesNote();   // "" when the depth-chart roles are current and complete
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
   // one team's 3-team read (what it receives vs what it sends, values as numbers) next to the 2-team read of the same
@@ -18031,6 +18118,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     } finally { LEAGUE_DEPTH = keep; }
   };
   // market reads in tests (Oct 14 audit, D6 / D7): the package depth each read uses, and what happens without a market value
+  // the import's parser and ID matching on a text, with this page's player files (tests: the page and
+  // pipeline/flock_v2_migrate.py must match rows the same way)
+  // `known` (optional, [[sid, [name, pos, team]], …]) replaces the player files for a synthetic test
+  if (window.__SPM_TEST_HOOKS === true) SPM.flockParse = async (text, known) => {
+    if (known) return flockParse(text, new Map(known));
+    if (!slPlayers) { try { const r = await fetch("data/sleeper_players.json"); if (r.ok) slPlayers = await r.json(); } catch (e) {} }
+    const files = new Map(Object.entries(slPlayers || {}).map(([sid, x]) => [sid, [x[0], x[1], x[2] || ""]]));
+    players.forEach(p => { if (p.sleeperId) files.set(p.sleeperId, [p.name, p.pos, p.team || ""]); });
+    return flockParse(text, files);
+  };
   if (window.__SPM_TEST_HOOKS === true) SPM.marketReads = (aSids, bSids) => {
     const ids = l => l.map(s => players.find(p => String(p.sleeperId) === String(s)).id), A = ids(aSids), B = ids(bSids);
     const ps = A.concat(B).map(id => byId.get(id)), all = ps.every(p => mkOf(p)), d = r => (r && r.adj ? r.adj.depth : null);
@@ -18207,7 +18304,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   function hcMarket(p) {
     if (!EDIT_POS.includes(p.pos) || !p.sleeperId) return "";
-    if (!MKT.p || (!MKT.d && !FLOCK_SITE.d && !FLOCK)) { loadMarket().then(mkRefresh); return hcSec("Market comparison", `<p class="hc-muted">Loading market values…</p>`); }
+    if (!MKT.p || (!MKT.d && !MARKET_SETS.some(m => FLOCK_SITE[m.id].d || FLOCK[m.id]))) { loadMarket().then(mkRefresh); return hcSec("Market comparison", `<p class="hc-muted">Loading market values…</p>`); }
     const all = mkAll(), r = all.map.get(p.sleeperId);
     if (!all.srcs.length) return hcSec("Market comparison", `<p class="hc-muted">No market source is loaded for this format.</p>`);
     if (!r) return hcSec("Market comparison", `<p class="hc-muted">Neither FantasyCalc nor Flock ranks ${esc(p.name)}.</p>`);

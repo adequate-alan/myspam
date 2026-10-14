@@ -123,7 +123,7 @@ with sync_playwright() as p:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
-        pg.route("**/data/market/flock.json", lambda r: r.abort())
+        pg.route(re.compile(r".*/data/market/flock_(sf|ppr)\.json(\?.*)?$"), lambda r: r.abort())
         pg.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); localStorage.clear(); localStorage.setItem('spm_sleeper', {json.dumps(json.dumps(SL))}); localStorage.setItem('spm_tc_mode', 'league'); {NEEDS_JS if needs else ''} }}")
         pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/{hash}"); pg.wait_for_timeout(3000)
         if history: return pg

@@ -62,6 +62,7 @@
       "inflight_check",
       "form_trend_check",
       "market_sync_check",
+      "flock_lists_check",
       "qb_role_check",
       "ros_prior_check",
       "theme_transition_check",
@@ -71,6 +72,7 @@
     "weights": {
       "inflight_check": 384,
       "market_edge_check": 185,
+      "flock_lists_check": 15,
       "move_to_rank_check": 131,
       "league_hub_check": 129,
       "roster_fit_check": 100,

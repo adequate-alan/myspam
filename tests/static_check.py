@@ -102,6 +102,31 @@ def history_errors(h):   # the Oct 11 model: entries [ts, rank, posRank, tier, v
     if not isinstance(ev, list) or any(not isinstance(e, dict) or not isinstance(e.get("ts"), str) for e in ev): errs.append("publish events are malformed")
     return errs
 
+FLOCK_SETS = {"flock-sf": "sf", "flock-ppr": "1"}
+def flock_errors(label, d):   # data/market/flock_<sf|ppr>.json and each snapshot entry (Oct 14)
+    errs = []
+    if d.get("version") != 2 or d.get("set") not in FLOCK_SETS: return [f"{label}: not a version 2 Flock list of a known set"]
+    cols, rows = d.get("cols") or [], d.get("rows")
+    need = ["sleeper_id", "rank", "pos", "pos_rank"]
+    if not isinstance(rows, list) or any(c not in cols for c in need): return [f"{label}: rows or columns {need} missing"]
+    if rows and not (isinstance(d.get("fmt"), dict) and d["fmt"].get("qb") == FLOCK_SETS[d["set"]] and all(k in d["fmt"] for k in ("teams", "rec", "tep"))):
+        errs.append(f"{label}: a list needs its format (qb {FLOCK_SETS[d['set']]}, teams, rec, tep)")
+    if rows and not d.get("exported"): errs.append(f"{label}: a list needs its export time")
+    I = {c: cols.index(c) for c in need}
+    sids = [str(r[I["sleeper_id"]]) for r in rows]; ranks = [r[I["rank"]] for r in rows]
+    if any(not re.fullmatch(r"\d+", x) for x in sids): errs.append(f"{label}: a row without a numeric Sleeper ID")
+    if len(set(sids)) != len(sids): errs.append(f"{label}: a Sleeper ID listed twice")
+    if len(set(ranks)) != len(ranks) or any(not isinstance(x, int) or x < 1 for x in ranks): errs.append(f"{label}: ranks must be unique whole numbers")
+    if any(r[I["pos"]] not in ("QB", "RB", "WR", "TE") for r in rows): errs.append(f"{label}: a position other than QB/RB/WR/TE")
+    if "match" in cols and any(r[cols.index("match")] not in ("id", "name") for r in rows):   # only verified players are priced (Alan, Oct 14)
+        errs.append(f"{label}: a priced row whose player identity isn't verified (match must be id or name; unresolved rows go in unmatched)")
+    if any(not isinstance(u, dict) or not u.get("reason") for u in d.get("unmatched") or []): errs.append(f"{label}: an unmatched row without its reason")
+    last = {}
+    for r in sorted(rows, key=lambda r: r[I["rank"]]):   # position ranks follow the list's order (unmatched rows may leave gaps)
+        if r[I["pos_rank"]] <= last.get(r[I["pos"]], 0): errs.append(f"{label}: position ranks out of order at {r[I['pos']]}{r[I['pos_rank']]}"); break
+        last[r[I["pos"]]] = r[I["pos_rank"]]
+    return errs
+
 def snapshot_errors(path, f):   # data/rank_snapshots/<YYYY-MM>.json: {version: 1, snapshots: [{ts, src, by, valueModelVersion?, players}]}
     """Two snapshot formats, each checked against its own schema (Oct 13): a snapshot that names its value model
     (`valueModelVersion`, values as state since Oct 12) holds [rank, posRank, tier, value] per player; an older one
@@ -198,6 +223,22 @@ def main():
             missing = sorted(m for m in months if not os.path.exists(os.path.join(ROOT, sdir, m + ".json")))
             ok(not missing, f"Every publish event's snapshot month file exists{tag} {missing}")
 
+    # 3b. Flock market lists (Oct 14): market data, kept apart from the AM boards; snapshots only ever grow (below)
+    errs = []
+    for f in sorted(glob.glob(os.path.join(ROOT, "data", "market", "flock_*.json"))):
+        rel = os.path.relpath(f, ROOT)
+        try: errs += flock_errors(rel, json.load(open(f, encoding="utf-8")))
+        except Exception as e: errs.append(f"{rel}: {e}")
+    for f in sorted(glob.glob(os.path.join(ROOT, "data", "market", "flock_snapshots", "*", "*.json"))):
+        rel = os.path.relpath(f, ROOT)
+        try:
+            d = json.load(open(f, encoding="utf-8"))
+            if d.get("version") != 1 or not isinstance(d.get("snapshots"), list) or not d["snapshots"]: errs.append(f"{rel}: not {{version: 1, snapshots: [...]}}")
+            for k, sn in enumerate(d.get("snapshots") or []):
+                errs += flock_errors(f"{rel} #{k + 1}", {"version": 2, "set": d.get("set"), **sn})
+        except Exception as e: errs.append(f"{rel}: {e}")
+    ok(not errs, f"Flock market lists and their snapshots are well formed {errs[:3]}")
+
     # 4. data files
     bad = []
     for f in glob.glob(os.path.join(ROOT, "data", "**", "*.json"), recursive=True):
@@ -261,6 +302,8 @@ def main():
                 oe, ne = oh.get("events", []), hist.get("events", [])
                 ok(ne[:len(oe)] == oe, f"Every publish event in {hpath} from {a.base[:10]} is unchanged ({len(oe)} → {len(ne)})")
           old_snaps = subprocess.run(["git", "ls-tree", "--name-only", a.base, sdir + "/"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+          if sdir == "data/rank_snapshots":
+              old_snaps += subprocess.run(["git", "ls-tree", "-r", "--name-only", a.base, "data/market/flock_snapshots/"], cwd=ROOT, capture_output=True, text=True).stdout.split()
           for path in old_snaps:
             o = git_show(a.base, path)
             try: o = json.loads(o) if o else None; n = json.load(open(os.path.join(ROOT, path), encoding="utf-8"))
