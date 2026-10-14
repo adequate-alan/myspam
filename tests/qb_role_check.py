@@ -220,6 +220,21 @@ with sync_playwright() as p:
     ok(any("QB3 on the depth chart" in s and "if he starts" in s for s in k["inputs"]), "Page: Keenum's projection inputs say QB3 on the depth chart and what he'd score if he started")
     ok(c["rosRank"] is not None and k["rosRank"] is None and k["backup"] and b["backup"], "Page: backups' ROS PPG has no QB rank (\"If he starts\"); the starter keeps his")
     ok(k["ros"] is not None and k["ros"] > 0, "Page: Keenum's ROS PPG itself is unchanged (conditional per start)")
+    # The board's team column can lag a move (J.J. McCarthy: MIN on the board, NYG's QB3 on Sleeper): the role from the
+    # roles file still applies when Sleeper's player file puts him on the roles' team (Oct 14 valuation audit)
+    MCC = "11565"
+    sp_team = json.load(open(os.path.join(ROOT, "data", "sleeper_players.json"))).get(MCC, [None, None, None])[2]
+    brd_team = next((l.split(",")[2] for l in open(os.path.join(ROOT, "tests", "fixtures", "board", "rankings.csv")) if f",{MCC}," in l), None)
+    if sp_team and brd_team and sp_team != brd_team:
+        setr({**HEALTHY, MCC: [0.0, 0.0, 0.0, 0.0, 3, None, sp_team, FIX_WEEK, 1]})
+        m = get(MCC)
+        ok(m["est"] == 0 and m["cond"] > 0, f"Page, board team {brd_team} vs Sleeper {sp_team}: McCarthy (QB3 on {sp_team}'s chart) is projected 0.0, not his conditional {m['cond']:.1f}")
+        ok(m["backup"] and m["rosRank"] is None, "Page: and his ROS PPG reads \"If he starts\" with no QB rank")
+        setr({**HEALTHY, MCC: [0.0, 0.0, 0.0, 0.0, 3, None, "ZZZ", FIX_WEEK, 1]})
+        ok(get(MCC)["est"] > 0, "Page: a roles entry for a team neither the board nor Sleeper names him on still isn't applied")
+        setr(HEALTHY)
+    else:
+        ok(True, f"Page: McCarthy's board and Sleeper teams agree ({brd_team}), team-mismatch case not testable on this data")
     # starter ruled Out this week (Sleeper lists him 3rd)
     setr(roles_file([(BAGENT, ""), (KEENUM, ""), (CALEB, "Out")], report=[inj(CALEB, "Out", "DNP")]))
     c, b, k = get(CALEB), get(BAGENT), get(KEENUM)

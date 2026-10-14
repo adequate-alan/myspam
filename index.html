@@ -5699,7 +5699,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function roleFor(e, week) {
     if (!ROLES || !e || !e.sid || !EDIT_POS.includes(e.pos)) return null;
     const r = ROLES[e.sid];
-    if (r && (!e.team || r[6] === e.team)) {
+    // The roles file describes the team on Sleeper's current depth chart. The board's team column can lag a move
+    // (J.J. McCarthy MIN → NYG): the role still applies when Sleeper's player file puts him on the roles' team.
+    const slTeam = slPlayers && slPlayers[e.sid] ? slPlayers[e.sid][2] : null;
+    if (r && (!e.team || r[6] === e.team || (slTeam && r[6] === slTeam))) {
       if (week == null || r[7] == null) return null;
       if (week < r[7]) return null;
       const later = week > r[7];
