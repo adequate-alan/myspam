@@ -7698,7 +7698,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const cons = price(p => { const r = mkOf(p); return r ? r.cv : null; });
     if (cons && all.srcs.length > 1) lines.push({ k: "Market consensus", a: cons.a, b: cons.b });
     all.srcs.forEach(src => { const m = price(p => { const r = mkOf(p), x = r && r.per[src.id]; return x ? x.v : null; }); if (m) lines.push({ k: src.name, a: m.a, b: m.b }); });
-    if (lines.length < 2) { el.hidden = true; return; }
+    if (lines.length < 2) {
+      // a player without a market value: say so, never price him at his AM value (Alan, Oct 14)
+      const miss = [...ps("A"), ...ps("B")].filter(p => !mkOf(p)).map(p => p.name);
+      if (!miss.length) { el.hidden = true; return; }
+      el.innerHTML = `<details class="tc-mkt-d"><summary>Market comparison <span class="sum-hint">${esc(`No market value for ${miss.join(", ")}, so there's no market read for this trade.`)}</span></summary>
+        <div class="tc-more-body"><p class="pp-note">A market line needs a FantasyCalc or Flock value for every player in the trade; AM's value never stands in for a missing one. ${esc(mkFresh(all.srcs))} ${mkCredit(all.srcs)}</p></div></details>`;
+      el.hidden = false; return;
+    }
     const nA = sideName("A"), nB = sideName("B"), pref = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b); return Math.abs(d) < 3 ? 0 : Math.sign(d); };
     const row = l => { const d = 100 * (l.a - l.b) / Math.min(l.a, l.b), w = pref(l);
       return `<tr${l.am ? ' class="am"' : ""}><th scope="row">${esc(l.k)}</th><td>${fmt(l.a)}</td><td>${fmt(l.b)}</td><td class="${w > 0 ? "up" : w < 0 ? "down" : ""}">${w === 0 ? "About even" : `${esc(w > 0 ? nA : nB)} +${Math.abs(d).toFixed(1)}%`}</td></tr>`; };
@@ -16720,6 +16727,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // market numbers only when every player has a market value (never AM's value standing in; Oct 14 audit, D7)
     const hasMk = mkAll().srcs.length > 0 && it.get.concat(it.give).every(p => mkOf(p)), mg = hasMk ? sum(it.get, mkVal) : null, mo = hasMk ? sum(it.give, mkVal) : null;
     it.mktDiff = mg != null && mo != null ? pctOf(mg, mo) : null;
+    // the players with no market value, named on the card instead of a market number (Alan, Oct 14)
+    it.mkMissing = mkAll().srcs.length > 0 ? it.get.concat(it.give).filter(p => !mkOf(p)).map(p => p.name) : [];
     // market leverage: you sell what the market likes more than AM, and buy what AM likes more than the market
     const amG = sum(it.get, dv), amO = sum(it.give, dv);
     it.leverage = mg != null && mo != null && amG / mg - 1 >= 0.08 && mo / amO - 1 >= 0.08;
@@ -16781,7 +16790,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const meW = shortWhy(it, v.cls === "fair") || (() => { const fe = it.fS.inc.find(e => e.p === X); return fe && fe.starts ? `${X.name} would start at ${fe.role} for you.` : `You add ${X.name} without weakening your starters.`; })();
     const row = (p, note) => `<li class="tf-pl tf-cpl">${face(p.sleeperId, p.name, "sm")}<span class="tf-n"><span class="pl-head">${nameLink(p.sleeperId, p.name, "tf-name")}${nflTag(p.team)}</span><span class="tf-tag"><b class="tf-pr" style="--c: var(--${p.pos.toLowerCase()})">${esc(posLabel(p))}</b>${note ? " · " + esc(note) : ""}</span></span><span class="tf-v">${fmt(dv(p))}</span></li>`;
     const nums = [`<span title="Raw totals of base AM Board values, no package adjustment">AM raw ${signPct(it.amDiff)}</span>`, `<b title="League-adjusted values with the package adjustment: an extra piece counts less next to the best player in the deal. It can narrow the verdict, never create or reverse a winner on its own.">Package-adjusted ${signPct(it.adjDiff)}</b>`]
-      .concat(it.mktDiff == null ? [] : [`<span title="Raw totals of the market / expert consensus (FantasyCalc + Flock) on AM's scale, no package adjustment">Market raw ${signPct(it.mktDiff)}</span>`]);
+      .concat(it.mktDiff == null ? [] : [`<span title="Raw totals of the market / expert consensus (FantasyCalc + Flock) on AM's scale, no package adjustment">Market raw ${signPct(it.mktDiff)}</span>`])
+      .concat(it.mktDiff == null && it.mkMissing.length ? [`<span class="muted" title="A market read needs a FantasyCalc or Flock value for every player in the trade; AM's value never stands in for a missing one">Market: no value for ${esc(it.mkMissing.join(", "))}</span>`] : []);
     return `<article class="tf-card tf-tcard${v.cls === "them" ? " bad-fit" : it.conf === "Likely" ? " good-fit" : ""}">
       <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div>
         <span class="tf-pills">${it.leverage ? `<span class="tf-pill lev" title="The market values what you send more than AM does, and AM values what you get more than the market">Market leverage</span>` : ""}<span class="tf-pill conf ${it.conf === "Likely" ? "hi" : it.conf === "Plausible" ? "mid" : "lo"}" title="Acceptance Plausibility: value they receive vs give, the market's view, their lineup before → after, positional needs and roster construction (starters vs filler, losing their best player, opening a hole)">${esc(it.conf)}</span><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></span></header>

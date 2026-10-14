@@ -243,6 +243,14 @@ with sync_playwright() as p:
     ok(x["finderMk"] == x["finderAm"], f"Trade Finder: market reads use the same depth as the AM read ({x['finderMk']} vs {x['finderAm']})")
     y = pg.evaluate("([a, b]) => SPM.marketReads(a, b)", [a1, [mk_ids[6], no_mk]])
     ok(not y["all"] and y["mktFor"] is None, f"A player with no market value leaves the market read empty, never his AM value standing in ({y})")
+    # …and the calculator says so instead of hiding the comparison (Alan, Oct 14)
+    nm = {r["sleeper_id"]: r["player"] for r in board}
+    pg.click("#tab-trade"); pg.wait_for_timeout(500)
+    for side, sid in (("A", mk_ids[2]), ("B", no_mk)):
+        pg.fill(f"#search-{side}", nm[sid]); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
+    mk = pg.inner_text("#tc-mkt") if not pg.locator("#tc-mkt").is_hidden() else ""
+    ok("No market value for" in mk and nm[no_mk] in mk and "FantasyCalc" not in mk.split("No market value")[0],
+       f"Calculator names the player with no market value instead of a market line: {mk[:140]!r}")
     pg.close()
 
     # 9. Market rankings freshness indicator (Alan, Oct 11): last synced (Adequate) vs last updated (the provider), per source
