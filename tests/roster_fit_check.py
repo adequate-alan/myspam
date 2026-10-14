@@ -33,7 +33,13 @@ ALPHA = ["Dak Prescott", "Daniel Jones", "Fernando Mendoza", "Chase Brown", "Chu
          "Tetairoa McMillan", "Malik Nabers", "Chris Bell", "Dalton Kincaid", "Tyler Higbee"]
 BETA = ["Josh Allen", "Jared Goff", "Jalon Daniels", "Ashton Jeanty", "Kyren Williams", "Will Shipley", "Zay Flowers", "Garrett Wilson",
         "Dontayvion Wicks", "Ja'Kobi Lane", "George Kittle", "Travis Kelce"]
-HUB, KIN, WIL, KEL = "Chuba Hubbard", "Dalton Kincaid", "Garrett Wilson", "Travis Kelce"
+HUB, KIN, WIL = "Chuba Hubbard", "Dalton Kincaid", "Garrett Wilson"
+# Beta's TE in the hole-filling trade: the TE that makes Hubbard + Kincaid for Wilson + him closest to even on the live board
+# (Oct 14: the QB/TE recalibration moved Kincaid 8% below Kelce, and the fixed Kelce made the "fair" trade a 4% edge)
+VAL = {r["player"]: float(r["value"] or 0) for r in rows}
+KEL = min((r["player"] for r in rows if r["pos"] == "TE" and r["player"] not in ALPHA + BETA[:-1] and r["sleeper_id"]),
+          key=lambda n: abs(VAL[HUB] + VAL[KIN] - VAL[WIL] - VAL[n]))
+BETA[-1] = KEL
 
 T_TRADE = 1790000000000   # synthetic timestamps (ms)
 def league_data(holes, history=False):
@@ -43,7 +49,11 @@ def league_data(holes, history=False):
     used = set(a + b)
     deep = [r["player"] for r in rows if r["sleeper_id"] and r["player"] not in used][-40:]
     a += deep[:3]; b += deep[3:6]; used |= set(deep[:6])
-    rest = [r["player"] for r in rows if r["sleeper_id"] and r["player"] not in used][:150]
+    # the other ten rosters take fixed counts per position by position rank, so they don't depend on how the overall
+    # board interleaves positions (Oct 14: the QB/TE recalibration re-sorted it and Alpha's RB room stopped reading weak)
+    left = [r for r in rows if r["sleeper_id"] and r["player"] not in used]
+    rest = [n for pos, k in (("QB", 30), ("RB", 40), ("WR", 55), ("TE", 25))
+            for n in [r["player"] for r in sorted(left, key=lambda r: int(r["pos_rank"])) if r["pos"] == pos][:k]]
     teams = [a, b] + [rest[i::10] for i in range(10)]
     tx = {}
     if history:
@@ -235,7 +245,7 @@ with sync_playwright() as p:
        f"Roster Impact panel: strength before → after, slot table, starters in, rooms addressed ({imp[:200]})")
     why = pg.evaluate("() => document.getElementById('tc-why-body').textContent.replace(/\\s+/g, ' ')")
     ok("Addresses a weak RB room" in why and "Chuba Hubbard starts at RB2" in why and why.count("Acceptance:") == 2 and "What Team Alpha gives up" in why and "Why Team Beta might accept" in why,
-       f"Trade rationale: benefits and sacrifices for both teams, Acceptance for both ({why[:220]})")
+       f"Trade rationale: benefits and sacrifices for both teams, Acceptance for both ({why[:1500]})")
     ok("Roster-adjusted" not in s["page"] and "Roster needs" not in pg.evaluate("() => document.getElementById('tc-breakdown-body').textContent"),
        "No roster-adjusted net or roster-needs row anywhere")
     pg.click("#tc-lens [data-lens=am]"); pg.wait_for_timeout(300)
