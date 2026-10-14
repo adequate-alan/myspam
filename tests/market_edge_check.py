@@ -117,14 +117,18 @@ with sync_playwright() as p:
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1000)
     ok("Confirm the list's format first" in pg.inner_text("#mk-bar") and pg.evaluate("() => localStorage.getItem('spm_flock:sf') === null && localStorage.getItem('spm_flock:ppr') === null"),
        "An import without a confirmed format is refused: nothing assumed, nothing saved")
+    pg.click("[data-fm-set='flock-ppr']"); pg.wait_for_timeout(200)   # the list you edit is picked first; its QB format must match
     confirm_fmt(pg, qb="1qb")
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
+    pg.click("[data-fm-save]"); pg.wait_for_timeout(900)   # the list manager previews first; Save draft keeps it (Oct 14)
     bar = pg.inner_text("#mk-bar"); mk = pg.evaluate("() => SPM.market()")
     ok("into Flock Regular PPR" in bar and "This format uses Flock Superflex" in bar and not any(x["id"] == "fl" for x in mk["srcs"]),
        f"A 1QB list goes into Flock Regular PPR and isn't used in a Superflex format: {[x['id'] for x in mk['srcs']]}")
     ok(pg.evaluate("() => !!JSON.parse(localStorage.getItem('spm_flock:ppr') || 'null')"), "The Regular PPR list is kept in this browser (spm_flock:ppr)")
+    pg.click("[data-fm-set='flock-sf']"); pg.wait_for_timeout(200)
     confirm_fmt(pg, qb="sf")
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
+    pg.click("[data-fm-save]"); pg.wait_for_timeout(900)   # the list manager previews first; Save draft keeps it (Oct 14)
     bar = pg.inner_text("#mk-bar"); mk = pg.evaluate("() => SPM.market()")
     ok("into Flock Superflex" in bar and "approximate" in bar and "no-TE-premium list, league has TE premium" in bar and any(x["id"] == "fl" and x["set"] == "flock-sf" for x in mk["srcs"]),
        "A Superflex list goes into Flock Superflex and is used here; its TE premium mismatch is labelled approximate")
@@ -165,6 +169,7 @@ with sync_playwright() as p:
     ok(pg.evaluate("() => localStorage.getItem('spm_flock:sf')") is None and pg.evaluate("() => localStorage.getItem('spm_flock:ppr')") is not None, "Remove clears this browser's Superflex list only; the Regular PPR list stays")
     confirm_fmt(pg)
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1000)
+    pg.click("[data-fm-save]"); pg.wait_for_timeout(900)   # the list manager previews first; Save draft keeps it (Oct 14)
 
     # 6. Trade Finder with the league
     connect(pg)
@@ -292,6 +297,7 @@ with sync_playwright() as p:
     pg.click("[data-mk-flock]"); pg.wait_for_timeout(300)
     confirm_fmt(pg)
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1200)
+    pg.click("[data-fm-save]"); pg.wait_for_timeout(900)   # the list manager previews first; Save draft keeps it (Oct 14)
     fl_row = st(pg, "fl")
     ok("Imported" in fl_row and ("ago" in fl_row or "just now" in fl_row) and "Provider update unknown" in fl_row and fl_row.rstrip().upper().endswith("CURRENT"), f"Flock row after an import: imported … ago · Provider update unknown · Current: {fl_row!r}")
     pg.reload(wait_until="domcontentloaded"); pg.wait_for_timeout(4000)
