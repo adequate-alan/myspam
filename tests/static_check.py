@@ -4,7 +4,8 @@ data jobs run it before they commit.
 Run from the repo root:  python3 tests/static_check.py [--base REF] [--frozen-rankings]
   --base REF           also compare with that commit: earlier ranking-history entries must be unchanged (history only
                        grows), and the same players must be on the board
-  --frozen-rankings    with --base: no ranking field (rank, position rank, tier, value, source, tier name) may change.
+  --frozen-rankings    with --base: no ranking field (rank, position rank, tier, value, source, tier name) may change;
+                       other boards' blocks (AM PPR) keep the same players and every column but the team (sync_teams.py).
                        For automated jobs: nothing scheduled ever changes rankings (CLAUDE.md §2, §8).
 
 Checks:
@@ -287,9 +288,19 @@ def main():
                             ov = o[oh.index(col)] if col in oh else ""; nv = r[nh.index(col)] if col in nh else ""
                             if ov != nv: changed.append(f"{r[nh.index('player')]} {col} {ov!r} → {nv!r}")
                     ok(not changed, f"No ranking field changed since {a.base[:10]} (automated job) {changed[:5]}")
-                    for name, rx in BOARD_RES.items():
-                        ob, nb = rx.findall(old_html), rx.findall(html)
-                        if ob: ok(nb[:1] == ob[:1], f"{name} unchanged since {a.base[:10]} (automated job)")
+                    for name, rx in BOARD_RES.items():   # every other board: same players, no ranking field changed
+                        ob, nb = rx.findall(old_html), rx.findall(html)   # (team may follow Sleeper, sync_teams.py)
+                        if not ob: continue
+                        if not nb: ok(False, f"{name} still present since {a.base[:10]} (automated job)"); continue
+                        (bh, brs), (ch, crs) = table(ob[0]), table(nb[0])
+                        key = lambda h, rs: {r[h.index("sleeper_id")]: r for r in rs if len(r) == len(h)}
+                        bo, bn = key(bh, brs), key(ch, crs)
+                        ok(bh == ch and set(bo) == set(bn) and len(brs) == len(crs),
+                           f"{name}: same columns and players as {a.base[:10]} (automated job)")
+                        cols = [c for c in bh if c not in ("team",)]
+                        diff = [f"{bn[k][ch.index('player')]} {c} {bo[k][bh.index(c)]!r} → {bn[k][ch.index(c)]!r}"
+                                for k in bo if k in bn for c in cols if c in ch and bo[k][bh.index(c)] != bn[k][ch.index(c)]]
+                        ok(not diff, f"{name}: nothing but the team column changed since {a.base[:10]} (automated job) {diff[:5]}")
         for hpath, sdir in HIST_SETS:
           hist = hists.get(hpath)
           old_hist = git_show(a.base, hpath)

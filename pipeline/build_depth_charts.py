@@ -11,7 +11,8 @@ Writes data/depth_charts.json:
 Each list is in depth order (starter first). Only players Sleeper lists on a team's depth chart.
 
 Run from the pipeline folder: python build_depth_charts.py [out_path] [--board ../index.html]
-With --board it also brings the AM Board's NFL team column in step with Sleeper (sync_teams.py: team only, by Sleeper ID).
+With --board it also brings every ranking set's NFL team column (RANKINGS_CSV, RANKINGS_CSV_PPR) in step with Sleeper
+(sync_teams.py: team only, by Sleeper ID).
 """
 import json, os, sys, time, urllib.request
 from datetime import datetime, timezone
