@@ -257,7 +257,7 @@ Kendrick Bourne,WR,ARI,170,60,11,237,8.47,4,9.31,4454,manual,Shaky Flex
 Will Shipley,RB,PHI,177,55,11,222,4.18,5,6.13,11577,manual,Deep bench
 Malik Washington,WR,MIA,172,61,12,235,8.70,5,9.36,11610,manual,Deep bench
 Courtland Sutton,WR,DEN,173,62,12,234,10.58,5,10.70,5045,manual,Deep bench
-Mike Washington Jr.,RB,MIN,174,52,11,233,4.31,5,6.23,13305,manual,Deep bench
+Mike Washington Jr.,RB,LV,174,52,11,233,4.31,5,6.23,13305,manual,Deep bench
 Jaylen Wright,RB,MIA,176,54,11,231,3.54,4,6.03,11643,manual,Deep bench
 Chris Rodriguez,RB,JAX,178,56,11,221,4.74,5,6.53,10219,manual,Deep bench
 Tre Tucker,WR,LV,179,63,12,184,9.55,5,9.96,10213,manual,Deep bench
@@ -293,7 +293,7 @@ Xavier Hutchinson,WR,HOU,206,83,12,113,6.96,5,8.12,10218,auto,Deep bench
 Kaleb Johnson,RB,GB,207,59,11,112,3.16,5,5.40,12504,manual,Deep bench
 Cade Otton,TE,TB,208,29,9,111,10.13,5,10.29,8111,auto,Low TE2
 Kimani Vidal,RB,LAC,209,60,11,109,7.19,4,8.46,11647,manual,Deep bench
-J.J. McCarthy,QB,MIN,210,38,8,106,12.34,1,12.95,11565,manual,Dead
+J.J. McCarthy,QB,NYG,210,38,8,106,12.34,1,12.95,11565,manual,Dead
 Isiah Pacheco,RB,DET,211,61,11,104,,,,8205,auto,Deep bench
 AJ Barner,TE,SEA,212,30,9,103,9.42,5,9.78,11603,auto,Low TE2
 Michael Mayer,TE,LV,213,31,9,89,9.40,5,9.77,9482,manual,Low TE2
@@ -7925,8 +7925,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     for (const s of SIDES3) {
       const recv = sides[s], sent = sentBy(s);
       const m = runModel(recv, sent);
-      const more = recv.length && sent.length ? pctMore(m.a, m.b) : null;
-      out[s] = { s, recv, sent, m, more, outcome: more == null ? null : teamOutcome(more, m.a >= m.b) };
+      const vr = recv.length && sent.length ? valueRead(m, valueFloor()) : null;
+      const more = vr ? Math.round(10 * vr.gap) / 10 : null;
+      out[s] = { s, recv, sent, m, vr, more, outcome: vr ? teamOutcomeRead(vr) : null };
     }
     return out;
   }
@@ -7988,12 +7989,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (wrong) return "Fix the sides above";
       if (!r.recv.length) return "Receives nothing yet";
       if (!r.sent.length) return "Sends nothing yet";
-      return `Receives ${fmt(r.m.a)} · sends ${fmt(r.m.b)} · ${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}%`;
+      const pc = v => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`, vr = r.vr;
+      if (vr.kind === "split") return `Receives ${fmt(r.m.rawA)} · sends ${fmt(r.m.rawB)} · raw ${pc(vr.raw)}, package-adjusted ${pc(vr.adj)}`;
+      if (vr.kind === "sensitive") return `Receives ${fmt(r.m.rawA)} · sends ${fmt(r.m.rawB)} · raw ${pc(vr.raw)}, package-adjusted ${pc(vr.adj)}`;
+      return `Receives ${fmt(r.m.rawA)} · sends ${fmt(r.m.rawB)} · ${vr.side === "A" ? "+" : "−"}${r.more.toFixed(1)}%${vr.small ? " (small values)" : ""}`;
     };
     box.innerHTML = SIDES3.map(s => {
       const o = wrong ? null : res[s].outcome;
       return `<div class="tv3-row"><span class="tv3-name side-${s}">${esc(names[s])}</span>
-        <span class="tv3-verdict${o ? (o.fair ? " fair" : o.ahead ? " up" : " down") : ""}">${esc(o ? o.label : "–")}</span>
+        <span class="tv3-verdict${o ? (o.fair || o.ahead == null ? " fair" : o.ahead ? " up" : " down") : ""}">${esc(o ? o.label : "–")}</span>
         <span class="tv3-nums">${esc(short(s))}</span></div>`;
     }).join("");
     if (wrong) {
@@ -8013,7 +8017,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         line += up ? `: ${up.pos} room ${ordinal(up.b)} → ${ordinal(up.a)}${down ? `, ${down.pos} room ${ordinal(down.b)} → ${ordinal(down.a)}` : ""}` : "";
         if (st) line += `; ${st.name} starts at ${X.after.labels.get(st.id)}`;
         line += ` (${X.impact >= 0 ? "+" : "−"}${Math.abs(X.impact).toFixed(1)}% roster impact).`;
-      } else line += r.outcome ? ` (${r.m.a >= r.m.b ? "+" : "−"}${r.more.toFixed(1)}% in value).` : ".";
+      } else line += r.outcome ? (r.outcome.ahead == null ? ` (${r.outcome.label.toLowerCase()}).` : ` (${r.vr.side === "A" ? "+" : "−"}${r.more.toFixed(1)}% in value).`) : ".";
       return `<li>${esc(line)}</li>`;
     }).join("");
     $("tc-why-body").innerHTML = `<ul class="why3">${why}</ul><p class="pp-note">Each team is judged on its own: what it receives against what it sends.</p>`;
@@ -8046,7 +8050,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <tr class="bd-total"><th scope="row">Net</th>${SIDES3.map(s => cell(s, r => (r.recv.length && r.sent.length ? sign(r.m.a - r.m.b) : "–"))).join("")}</tr>
       </tbody></table>`;
     // Balance: help the team that's losing the most, with players from the other two teams
-    const losers = SIDES3.filter(s => res[s].outcome && !res[s].outcome.ahead && !res[s].outcome.fair).sort((a, b) => res[b].more - res[a].more);
+    const losers = SIDES3.filter(s => res[s].outcome && res[s].outcome.ahead === false && !res[s].outcome.fair).sort((a, b) => res[b].more - res[a].more);
     $("balance-btn").hidden = true; $("balance").hidden = true;
     if (!losers.length) return;
     // objective: the sum of squared gaps across the three teams (helping the loser without hurting the others)
@@ -8069,7 +8073,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("balance-sub").textContent = `${names[W]} ${isYouThey(names[W]) ? "give" : "gives"} up the most. Redirect one of these to ${isYouThey(names[W]) ? "you" : names[W]}:`;
     $("balance-list").innerHTML = picks.map(c => `<button class="suggest bal" type="button" data-ids="${c.p.id}" data-side="${W}" data-origin="${c.o}">
       <span class="bal-players"><span class="bal-p">${face(c.p.sleeperId, c.p.name, "xs")}<span class="pos ${esc(c.p.pos)}">${esc(posLabel(c.p))}</span><span class="bal-n">${esc(c.p.name)}<small>from ${esc(isYouThey(names[c.o]) ? names[c.o].toLowerCase() : names[c.o])}</small></span><span class="r-val">+${fmt(tv(c.p))}</span></span></span>
-      <span class="bal-result">→ ${esc(names[W])} ${c.st[W].m.a >= c.st[W].m.b ? "+" : "−"}${c.st[W].more.toFixed(1)}% · ${esc(c.st[W].outcome.label)}</span></button>`).join("");
+      <span class="bal-result">→ ${esc(names[W])} ${c.st[W].outcome.ahead == null ? "" : `${c.st[W].vr.side === "A" ? "+" : "−"}${c.st[W].more.toFixed(1)}% · `}${esc(c.st[W].outcome.label)}</span></button>`).join("");
     $("balance-btn").hidden = false;
     $("balance").hidden = !TC_UI.balance;
     $("balance-btn").setAttribute("aria-expanded", TC_UI.balance);
@@ -10291,7 +10295,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       // what its rank spots are worth here vs on the base board), and every player in the tier moves by
       // that same factor. Your tiers decide where the value drops are and how close tiermates stay; the
       // format only decides how much each tier is worth. A league in the base format gets exactly the base values.
-      const mv = players.filter(p => !p.tail && p.rawValue != null && p.posNum != null && EDIT_POS.includes(p.pos));
+      // Only automatically valued players (source auto) are priced as the tail here; your own players below the first
+      // Auto player keep normal tier pricing (Alan, Oct 14 valuation audit)
+      const isAutoP = p => p.source === "auto";
+      const mv = players.filter(p => !isAutoP(p) && p.rawValue != null && p.posNum != null && EDIT_POS.includes(p.pos));
       const rawF = p => {
         const i = Math.min(p.posNum, base[p.pos].length) - 1, b0 = base[p.pos][i], l0 = lg[p.pos][i];
         return l0 >= b0 ? p.rawValue + (l0 - b0) : b0 > 0 ? p.rawValue * l0 / b0 : 0;
@@ -10319,13 +10326,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const f = (fac && fac.get(p.id)) || 1;
         if (f !== 1) { LG.factor.set(p.id, f); raw.set(p.id, raw.get(p.id) * f); }
       });
-      // …and the board's tail (auto-added players, see autoValues) moves by the same share as the
-      // last player above the tail at that position, and stays under him
+      // …and Auto players (see autoValues) move by the same share as the nearest of your players ranked above them at
+      // their position, and stay under everyone ranked above them there
       for (const pos of EDIT_POS) {
         const g = players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
-        const head = g.filter(p => !p.tail), last = head[head.length - 1];
-        const r = last && last.value > 0 ? raw.get(last.id) / last.value : 1, cap = last ? raw.get(last.id) * 0.99 : Infinity;
-        g.forEach(p => { if (p.tail) raw.set(p.id, Math.min(p.value * r * (LG.factor.get(p.id) || 1), cap)); });
+        let r = 1, cap = Infinity;
+        g.forEach(p => {
+          if (!isAutoP(p)) { r = p.value > 0 ? raw.get(p.id) / p.value : r; cap = Math.min(cap, raw.get(p.id) * 0.99); return; }
+          const v = Math.min(p.value * r * (LG.factor.get(p.id) || 1), cap);
+          raw.set(p.id, v); cap = Math.min(cap, v * 0.99);
+        });
+        // one of your players ranked below an Auto player at his position stays below him, as on the board
+        let prev = Infinity;
+        g.forEach(p => { const v = Math.min(raw.get(p.id), prev); raw.set(p.id, v); prev = v; });
       }
       smoothTiers(raw);
       // Superflex / 2QB, leagues over sfStarterTeams (Alan, Oct 6): pricing a tier as a block can push the last weekly
@@ -10339,7 +10352,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if ((lu.SUPER_FLEX > 0 || lu.QB >= 2) && lu.teams > (Number(FA.sfStarterTeams) || 0)) {
           const S = Math.round(lu.teams * ((lu.QB || 0) + (lu.SUPER_FLEX || 0)));
           let prev = Infinity;
-          players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum).forEach(p => {
+          players.filter(p => p.pos === "QB" && p.posNum != null && !isAutoP(p)).sort((a, b) => a.posNum - b.posNum).forEach(p => {
             if (p.posNum <= S && raw.has(p.id)) {
               const i = Math.min(p.posNum, base.QB.length) - 1, b0 = base.QB[i], l0 = lg.QB[i];
               const own = l0 >= b0 ? p.value : b0 > 0 ? p.value * l0 / b0 : 0;
@@ -10370,7 +10383,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           const from = S - (Number(FA.sfBoundaryBefore) || 0), to = S + (Number(FA.sfBoundaryAfter) || 0);
           const guard = SF_SMOOTH !== "noguard" && lu.teams <= (Number(FA.sfStarterTeams) || 0);
           const scarce = i => { const k = Math.min(i, base.QB.length) - 1, b0 = base.QB[k], l0 = lg.QB[k]; return b0 > 0 ? l0 / b0 : 0; };
-          const qbs = players.filter(p => p.pos === "QB" && p.posNum != null && !p.tail).sort((a, b) => a.posNum - b.posNum);
+          const qbs = players.filter(p => p.pos === "QB" && p.posNum != null && !isAutoP(p)).sort((a, b) => a.posNum - b.posNum);
           for (let i = 1; i < qbs.length; i++) {
             const a = qbs[i - 1], p = qbs[i];
             if (!(a.value > 0) || !raw.has(a.id)) continue;
@@ -10409,9 +10422,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // Across positions the overall order follows the adjusted value (Alan, Oct 4: a lower value is never ranked
     // ahead of a higher one, as on the AM Board): each position keeps its own order (above), and the position
     // queues are merged by value, ties going to the earlier board slot. In the base format the values already
-    // follow the board, so the order is unchanged. The tail (auto-added players) is merged the same way after
-    // every player above it.
-    const all = seq.concat(rest), isAuto = p => !!p.tail;
+    // follow the board, so the order is unchanged. Auto players are merged the same way: each stays under everyone
+    // ranked above him at his position (above), but a format that makes a position cheap (backup QBs in 1QB) no longer
+    // drags every Auto player at the other positions down with it (Alan, Oct 14 valuation audit: the old board-wide cap
+    // put Kaleb Johnson at 11 behind Spears' 382 in 12-team 1QB).
+    const all = seq.concat(rest);
     const mergeByValue = list => {
       const q = new Map(), out = [];
       list.forEach((p, i) => { const k = p.pos; if (!q.has(k)) q.set(k, []); q.get(k).push({ p, i }); });
@@ -10425,15 +10440,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       return out;
     };
-    // the tail never shows more value than anyone ranked above it (rule 3), in league views too
-    let floorV = Infinity;
-    mergeByValue(all.filter(p => !isAuto(p))).concat(mergeByValue(all.filter(isAuto)))
-      .forEach((p, k) => {
-        LG.adjRank.set(p.id, k + 1);
-        const v = LG.adj.get(p.id);
-        if (isAuto(p) && v >= floorV && v > 0) LG.adj.set(p.id, Math.max(0, Math.min(v, Math.round(floorV * (1 - VALUE_MODEL.minRankStep)) - (floorV < 400 ? 1 : 0))));
-        floorV = Math.min(floorV, LG.adj.get(p.id));
-      });
+    mergeByValue(all).forEach((p, k) => LG.adjRank.set(p.id, k + 1));
   }
   // Adjusted values for any league object, without touching the active league layer (LG): runs the same
   // adjustValues and puts LG back. Used to split a value into its format steps and by SPM.formatCheck.
@@ -10498,6 +10505,33 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const one1 = qbs.map(q => val({ teams: t, qb: "1", tep: 0 }, q)), sf = qbs.map(q => val({ teams: t, qb: "sf", tep: 0 }, q));
       check(`${t}-team 1QB → Superflex: ${qbs.map(q => q.name).join(", ")}`, qbs.map((q, i) => `${one1[i]} → ${sf[i]}`),
         sf.every((v, i) => v > one1[i] * 1.4) && sf[qbs.length - 1] > 3 * Math.max(1, one1[qbs.length - 1]));
+    }
+    // Auto players (Alan, Oct 14 valuation audit): priced per position from your players ranked above them, never
+    // capped by a cheap position elsewhere (12-team 1QB used to put Kaleb Johnson at 11 behind Spears' 382). In each
+    // format: an Auto player stays under everyone ranked ahead of him at his position, and the first player at or after
+    // the first Auto player at a position keeps at least half the format's share of the player ahead of him.
+    {
+      const fmts = [["12-team 1QB", { qb: "1", tep: 0 }], ["14-team 1QB", { teams: 14, qb: "1", tep: 0 }], ["10-team 1QB Half PPR", { teams: 10, qb: "1", rec: 0.5, tep: 0 }],
+        ["12-team SF", { qb: "sf", tep: 0 }], ["14-team SF TE+1.0", { teams: 14, qb: "sf", tep: 1 }], ["12-team SF Standard", { qb: "sf", rec: 0, tep: 0 }]];
+      const isTag = p => Number(p.tier) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
+      for (const [label, f] of fmts) {
+        const m = adjMapFor(fmtLeague({ ...FMT_DEFAULT, ...f })), bad = [];
+        for (const pos of EDIT_POS) {
+          const g = players.filter(p => p.pos === pos && p.posNum != null && !isTag(p)).sort((x, y) => x.posNum - y.posNum);
+          let hi = Infinity;
+          g.forEach((p, i) => {
+            const v = m.get(p.id);
+            if (p.source === "auto" && v > hi) bad.push(`${p.name} ${v} above ${pos}${i}`);
+            hi = Math.min(hi, v);
+          });
+          const i = g.findIndex(p => p.source === "auto");
+          if (i > 0) {
+            const x = g[i - 1], y = g[i], rx = x.value > 0 ? m.get(x.id) / x.value : 0, ry = y.value > 0 ? m.get(y.id) / y.value : 0;
+            if (rx > 0 && m.get(x.id) >= 20 && ry < 0.5 * rx) bad.push(`${x.name} ${m.get(x.id)} → ${y.name} ${m.get(y.id)}`);
+          }
+        }
+        check(`${label}: Auto players stay under the players ahead at their position, with no format cliff into them`, bad.length ? bad.slice(0, 4) : ["ok"], !bad.length);
+      }
     }
     const two = [val({ qb: "1", tep: 0 }, at("QB", 12)), val({ qb: "2", tep: 0 }, at("QB", 12))];
     check(`${at("QB", 12).name} (QB12): 1QB vs 2QB`, two, two[1] > two[0] * 1.4);
@@ -12373,10 +12407,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         return { model: m, totals: [got(parts[0]), got(parts[1])], a: m.scoreA, b: m.scoreB, ahead: vr.side === "A" ? 0 : 1, more, tier, fair: tier.upTo <= 3, vr,
           diff: rawDecides ? Math.abs(m.rawA - m.rawB) : Math.abs(m.scoreA - m.scoreB) };
       }
-      const nets = parts.map(s => ({ got: got(s), sent: sent(s) }));
-      nets.forEach(n => { n.net = n.got - n.sent; n.more = pctMore(n.got, n.sent); });
+      // three teams: each team's own read of what it got against what it sent, with the 2-team rules (package
+      // adjustment, raw vs adjusted, the small-value floor; Alan, Oct 14 valuation audit)
+      const vals = key2 => s => s.items.map(x => ({ value: x[key2] || 0 }));
+      const sentItems = s => s.give.map(sid => { const o = parts.flatMap(q => q.items).find(x => x.sid === sid); return { value: (o && o[key]) || 0 }; });
+      const nets = parts.map(s => ({ got: got(s), sent: sent(s), recvI: vals(key)(s), sentI: sentItems(s) }));
+      const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 1;
+      nets.forEach(n => {
+        n.net = n.got - n.sent;
+        n.vr = n.got > 0 && n.sent > 0 ? valueRead(tradeModel(n.recvI, n.sentI), valueFloor(null, true)) : null;
+        n.more = n.vr ? n.vr.gap : pctMore(n.got, n.sent);
+        delete n.recvI; delete n.sentI;
+      });
+      LEAGUE_DEPTH = keep;
       const lead = nets.reduce((bi, n, i) => (n.net > nets[bi].net ? i : bi), 0);
-      const fair = nets.every(n => !isFinite(n.more) ? Math.abs(n.net) < 1 : n.more < 3);
+      const fair = nets.every(n => n.vr ? n.vr.kind !== "split" && n.vr.kind !== "sensitive" && n.vr.gap < VALUE_FAIR : Math.abs(n.net) < 1);
       return { nets, totals: nets.map(n => n.got), ahead: lead, fair, diff: nets[lead].net };
     };
     const res = { t, parts, thenAll, thenNone, basisTs, preSpam, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
@@ -15687,6 +15732,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const down = ["Basically even", "Fair", "Slight loss", "Loses", "Clear loss", "Overpaying", "Getting robbed"];
     return { label: (ahead ? up : down)[Math.min(i, 6)], fair: i <= 1, ahead };
   }
+  // The same, from a value read of what the team receives (A) against what it sends (B): the 2-team calculator's rules
+  // (Alan, Oct 14 valuation audit: raw and package-adjusted readings, the small-value floor, split and package-sensitive),
+  // so the package adjustment never creates or reverses a team's win on its own in a 3-team deal either
+  function teamOutcomeRead(vr) {
+    if (vr.kind === "split") return { label: "Split verdict", fair: false, ahead: null, split: true };
+    if (vr.kind === "sensitive") return { label: "Package-sensitive", fair: false, ahead: null, sensitive: true };
+    return teamOutcome(vr.gap, vr.side === "A");
+  }
 
   // Shared league math for the finder: best lineups, position-room places, roster limits
   function leagueKit() {
@@ -16930,7 +16983,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return `<article class="tf-card tf3">
         <header class="tf-head"><div class="tf-team"><span class="tf-with">3-team trade</span><b>${esc([f.S, f.B, f.C].map(t => t.mine ? "You" : t.name).join(" · "))}</b></div><span class="tf-size">1-for-1-for-1</span></header>
         <div class="tf3-grid">${rows.map(([t, inc, fromT, out]) => {
-          const g = Math.round(1000 * Math.abs(dv(inc) - dv(out)) / Math.min(dv(inc), dv(out))) / 10, o = teamOutcome(g, dv(inc) >= dv(out));
+          const o = teamOutcomeRead(valueRead({ a: dv(inc), b: dv(out) }, valueFloor(dv)));
           return `<div class="tf3-team"><div class="tf3-name">${teamFace(t, "xs")}<b>${esc(t.mine ? "You" : t.name)}</b></div>
             <span class="tf-verdict-big sm${o.fair ? " fair" : o.ahead ? " you" : " them"}">${esc(o.label)}</span>
             <div class="tf3-line"><span class="ctl-label">Receives</span><ul class="tf3-ul">${prow(inc, fromT, "")}</ul></div>
@@ -17198,6 +17251,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   };
   SPM.rolesNote = () => rolesNote();   // "" when the depth-chart roles are current and complete
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
+  // one team's 3-team read (what it receives vs what it sends, values as numbers) next to the 2-team read of the same
+  // packages, with the floor of the board (tests of the Oct 14 3-team alignment)
+  if (window.__SPM_TEST_HOOKS === true) SPM.threeRead = (recv, sent, floor) => {
+    const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 1;
+    try {
+      const m = tradeModel(recv.map(v => ({ value: v })), sent.map(v => ({ value: v })));
+      const F = floor == null ? valueFloor(null, true) : floor, vr = valueRead(m, F), o = teamOutcomeRead(vr);
+      return { kind: vr.kind, side: vr.side, gap: vr.gap, raw: vr.raw, adj: vr.adj, small: vr.small, label: o.label, fair: o.fair, ahead: o.ahead, floor: F };
+    } finally { LEAGUE_DEPTH = keep; }
+  };
   // market reads in tests (Oct 14 audit, D6 / D7): the package depth each read uses, and what happens without a market value
   if (window.__SPM_TEST_HOOKS === true) SPM.marketReads = (aSids, bSids) => {
     const ids = l => l.map(s => players.find(p => String(p.sleeperId) === String(s)).id), A = ids(aSids), B = ids(bSids);

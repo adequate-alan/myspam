@@ -184,6 +184,34 @@ with sync_playwright() as p:
     ok(not s["warn"] and t["from"] == {"A": "B", "B": "C", "C": "A"}, f"3-team entered the right way: no warning, each player from his owner ({s['warn'][:100]} | {t['from']})")
     ok(len(t["rows"]) == 3 and not any("Fix the sides" in r for r in t["rows"]), f"3-team entered the right way: verdicts for all three teams ({t['rows']})")
     pg.close()
+    # 3c. 3-team verdicts follow the 2-team rules (Oct 14 valuation audit): each team's read of what it receives against
+    # what it sends uses the raw and the package-adjusted totals, the small-value floor, split and package-sensitive,
+    # so the package adjustment never creates or reverses a team's win on its own
+    pg = br.new_page(); pg.add_init_script("window.__SPM_TEST_HOOKS = true;")
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
+    pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/#trade"); pg.wait_for_timeout(2500)
+    R = lambda recv, sent, floor=None: pg.evaluate("([r, s, f]) => SPM.threeRead(r, s, f)", [recv, sent, floor])
+    x = R([6000], [5950])
+    ok(x["kind"] == "plain" and x["fair"] and x["label"] == "Basically even", f"3-team read, balanced 1-for-1: Basically even ({x})")
+    x = R([8000], [6000, 2500])
+    ok(x["kind"] == "split" and x["ahead"] is None and x["label"] == "Split verdict",
+       f"3-team read, consolidation (8,000 for 6,000 + 2,500): raw −5.9% but package +18% is a Split verdict, never a 'Clear win' ({x['label']}, raw {x['raw']:.1f}%, adjusted {x['adj']:.1f}%)")
+    x = R([6000, 2500], [8000])
+    ok(x["kind"] == "split" and x["label"] == "Split verdict", f"3-team read, the other side of that deal: Split verdict too ({x['label']})")
+    x = R([8000], [7000, 900])
+    ok(x["kind"] in ("sensitive", "evened") and x["label"] != "Clear win", f"3-team read, a near-even raw total with a lopsided package: not a win from the package alone ({x['kind']}: {x['label']})")
+    x = R([9000], [7000, 1500])
+    ok(x["kind"] == "widened" or x["kind"] == "tempered", f"3-team read, uneven package where both readings agree: one side ahead ({x['kind']}: {x['label']})")
+    x = R([300], [150])
+    ok(x["small"] and x["gap"] < 7 and x["label"] in ("Fair", "Slight win"),
+       f"3-team read, two marginal players (300 for 150): measured against an average starter ({round(x['floor'])}), {x['label']}, never 'Robbing the others' ({x['gap']:.1f}%)")
+    x = R([200], [150])
+    ok(x["small"] and x["fair"], f"3-team read, a 50-point bench swap: fair ({x['label']}, {x['gap']:.1f}%)")
+    x = R([4000], [3000])
+    ok(x["ahead"] and not x["fair"] and x["kind"] == "plain" and x["gap"] > 20, f"3-team read, a real 1,000-point win at 3-4k: {x['label']} ({x['gap']:.1f}%)")
+    two = pg.evaluate("() => { const out = []; for (const [r, s] of [[[8000], [6000, 2500]], [[9000], [7000, 1500]], [[300], [150]], [[4000], [3000]]]) { const a = SPM.threeRead(r, s); out.push([a.kind, a.side, Math.round(a.gap * 10)]); } return out; }")
+    ok(all(k for k, _, _ in two), f"3-team reads computed for every case ({two})")
+    pg.close()
     # 4. real lineup holes: Alpha (weak RB2 + TE) receives Hubbard + Kincaid for Wilson + Kelce. An old saved roster-needs
     # setting ("desperately need RB", "set at WR") is in this browser and must change nothing.
     pg = page(True, needs=True)
