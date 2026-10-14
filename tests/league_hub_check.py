@@ -239,7 +239,8 @@ with sync_playwright() as p:
     pg.click("[data-pb-dir=asc]"); pg.wait_for_timeout(300)
     ok([int(x) for x in pg.locator(".pr-item .pr-rank").all_inner_texts()] == list(range(12, 0, -1)), "Worst -> Best flips to 12 ... 1")
     pg.click("[data-pb-pos=QB]"); pg.wait_for_timeout(300)
-    ok(len(pg.locator(".pr-item").first.locator(".pr-star-names").inner_text().split(" · ")) == 2, "Superflex: the QB lens shows the top 2 QBs")
+    qn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]   # a team may roster fewer than 2 QBs
+    ok(max(qn) == 2, f"Superflex: the QB lens shows the top 2 QBs ({qn})")
     pg.click("[data-pb-pos=TE]"); pg.wait_for_timeout(300)
     ok(all(len(t.split(" · ")) == 1 for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()), "1-TE league: one TE shown")
     pg.click("[data-pb-pos=DEPTH]"); pg.wait_for_timeout(300)
