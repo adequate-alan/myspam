@@ -133,7 +133,7 @@ jobs:
           pip install pandas numpy
           python build_stats.py 2026
           python build_opportunity.py 2026 || echo "Expected points not refreshed (kept the last file)"
-          python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
+          python build_depth_charts.py --board ../index.html || echo "Depth charts not refreshed (kept the last file)"
           python build_roles.py 2026 || echo "Roles not refreshed (kept the last file)"
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
@@ -152,7 +152,7 @@ jobs:
           python project_players.py
           python merge_projections.py ../index.html --json ../data/projections.json
           python merge_projections.py ../index.html
-          python build_depth_charts.py || echo "Depth charts not refreshed (kept the last file)"
+          python build_depth_charts.py --board ../index.html || echo "Depth charts not refreshed (kept the last file)"
           python build_roles.py 2026 || echo "Roles not refreshed (kept the last file)"
           python snapshot_projections.py
           python build_opportunity.py 2026 || echo "Expected points not refreshed (kept the last file)"
