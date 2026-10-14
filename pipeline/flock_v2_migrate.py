@@ -7,14 +7,15 @@
 Every one of the 362 rows is kept. Flock's `player_id` is a Sleeper ID for established players but NOT for many 2025-26
 rookies: some are Flock's own IDs (2025013 = Tyler Shough), some are another player's Sleeper ID (Flock's Chris Bell
 13269 is Sleeper's Fernando Mendoza; Caleb Douglas 13299 is Nate Boerkircher). The matching rule, the same one the
-page's import uses (flockMatch in index.html):
-  1. the ID is accepted when the player our files know under it has the row's position and the same name: equal last
-     name, or equal first name with a last name within two letters (Etienne / Ettienne, Bateman / Batemen);
-  2. otherwise the one player in our files with the row's name and position (team breaks a tie) gets the row, and
-     Flock's own ID is kept in `flock_id`;
-  3. otherwise an ID none of our files knows is kept as it is (our player file lags new players), flagged `unknown`;
-  4. anything else (an ID that belongs to someone else and no name match, or a second row for a player already
-     listed) is left unmatched: kept in `unmatched` with the reason, never priced.
+page's import uses (flockMatch in index.html; Alan, Oct 14: a matching surname is never enough):
+  1. the ID is accepted when the player our files know under it has the row's position and the same normalized full
+     name (case, periods, apostrophes and Jr./III suffixes ignored), or the pair is one of the explicitly verified
+     aliases in ALIASES (a nickname or a misspelling in one of the files: Hollywood / Marquise Brown, Etienne / Ettienne);
+  2. otherwise the one player in our files with the row's full name and position (team breaks a tie), or the verified
+     alias's player, gets the row, and Flock's own ID is kept in `flock_id`;
+  3. anything else (an ID none of our files knows, an ID that belongs to someone else, a second row for a player
+     already listed) is left unmatched: kept in `unmatched` with Flock's ID and the reason, never priced. An unknown ID
+     stays unresolved until its player is verified: it may later turn out to be a different player's Sleeper ID.
 "Our files" = data/sleeper_players.json plus the AM board's own Sleeper IDs.
 
 Run from the repo root:  python3 pipeline/flock_v2_migrate.py   (needs git history with data/market/flock.json)
@@ -29,19 +30,23 @@ def norm(s):
     s = re.sub(r"[.'’`]", "", str(s or "").lower()); s = re.sub(r"\b(jr|sr|ii|iii|iv|v)\b", "", s)
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
 
-def lev(a, b):
-    prev = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        cur = [i]
-        for j, cb in enumerate(b, 1): cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
-        prev = cur
-    return prev[-1]
+# Verified aliases: Flock's name and position -> the Sleeper ID of the same player under another name in our files.
+# Each was checked by hand (Oct 14). Keep in step with FLOCK_ALIASES in index.html (tests/flock_lists_check.py checks).
+ALIASES = {
+    "bhayshul tuten|RB": "12490",          # our file: Bhaysul Tuten
+    "travis etienne|RB": "7543",           # our file: Travis Ettienne Jr.
+    "jacory croskey merritt|RB": "12533",  # our file: Jacorey Croskey-Merritt
+    "kenneth gainwell|RB": "7567",         # our file: Kenny Gainwell
+    "rashod bateman|WR": "7571",           # our file: Rashod Batemen
+    "joshua palmer|WR": "7670",            # our file: Josh Palmer
+    "hollywood brown|WR": "5848",          # our file: Marquise Brown
+    "zonovan knight|RB": "8122",           # our file: Bam Knight
+}
 
-def same_player(n1, p1, n2, p2):
-    if p1 != p2: return False
-    a, b = norm(n1).split(), norm(n2).split()
-    if not a or not b: return False
-    return a[-1] == b[-1] or (a[0] == b[0] and lev(a[-1], b[-1]) <= 2)
+def same_player(n1, p1, n2, p2, sid=None):
+    """the same player: same position and the same normalized full name, or a verified alias for that Sleeper ID"""
+    if p1 != p2 or not norm(n1) or not norm(n2): return False
+    return norm(n1) == norm(n2) or (sid is not None and ALIASES.get(norm(n1) + "|" + p1) == sid)
 
 def known_players():
     sp = json.load(open(os.path.join(ROOT, "data", "sleeper_players.json"), encoding="utf-8"))
@@ -58,12 +63,13 @@ def match(rows, known):
     seen = set()
     for r in rows:
         fid, kn = r["id"], known.get(r["id"])
-        if fid and kn and same_player(r["name"], r["pos"], kn[0], kn[1]): sid, how = fid, "id"
+        if fid and kn and same_player(r["name"], r["pos"], kn[0], kn[1], fid): sid, how = fid, "id"
         else:
-            c = by.get((norm(r["name"]), r["pos"]), [])
+            al = ALIASES.get(norm(r["name"]) + "|" + r["pos"])
+            c = [al] if al in known else by.get((norm(r["name"]), r["pos"]), [])
             if len(c) > 1: c = [k for k in c if known[k][2] and known[k][2] == r["team"]]
             if len(c) == 1: sid, how = c[0], "name"
-            elif fid and not kn and re.fullmatch(r"\d+", fid): sid, how = fid, "unknown"
+            elif fid and not kn: sid, how = None, "unresolved Flock ID: no player in our files has this ID or this name and position"
             else: sid, how = None, ("this ID belongs to " + kn[0] + " (" + kn[1] + ")" if kn else "no player with this name and position")
         if sid and sid in seen: sid, how = None, "a second row for a player already listed higher"
         r["sid"], r["match"] = sid, how
@@ -85,7 +91,7 @@ def main():
     note = ("Flock redraft rankings, added by Alan for his own non-commercial use. Market data, never an AM board: nothing here changes AM "
             "ranks, tiers or values. `exported` = when the list was exported from Flock (Flock publishes no time for its own ranking changes); "
             "`published` = when it went live on Adequate. `flock_id` = Flock's own player_id; `match` = how the row was matched to a Sleeper ID "
-            "(id / name / unknown: see pipeline/flock_v2_migrate.py). Every published version is kept in data/market/flock_snapshots/flock-sf/.")
+            "(id / name: see pipeline/flock_v2_migrate.py; rows that can't be verified are in `unmatched` with Flock's ID). Every published version is kept in data/market/flock_snapshots/flock-sf/.")
     live = {"version": 2, "set": "flock-sf", "label": "Flock Superflex", "note": note, "fmt": FMT,
             "fmt_source": "recorded with the Oct 8 import: Superflex, Full PPR, no TE premium; 12 teams (Alan, Oct 14)",
             "exported": old["updated"], "published": old["synced"], "by": "adequate-alan", "file": old["file"], "cols": COLS, "rows": out, "unmatched": unmatched}

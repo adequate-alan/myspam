@@ -7262,7 +7262,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const res = flockParse(text, known);
     if (!res.rows.length) { MK_UI.msg = "No players could be matched in that list."; renderMkBar(mkAll()); return; }
     const m = flockSave(res, fmt, file), here = flockSetFor(mkFmt());
-    MK_UI.msg = `Imported ${res.rows.length} of ${res.total} players into ${m.label}${res.missed.length ? ` · ${res.missed.length} unmatched (${res.missed.slice(0, 3).join(", ")}${res.missed.length > 3 ? "…" : ""})` : ""}${res.renamed ? ` · ${res.renamed} matched by name because Flock's ID didn't belong to that player` : ""}${res.unknownIds ? ` · ${res.unknownIds} with an ID our player file doesn't list yet (kept)` : ""}${m !== here ? `. This format uses ${here.label}, so the import shows in ${m.qb === "sf" ? "Superflex" : "1QB"} formats` : ""}.`;
+    MK_UI.msg = `Imported ${res.rows.length} of ${res.total} players into ${m.label}${res.missed.length ? ` · ${res.missed.length} unmatched (${res.missed.slice(0, 3).join(", ")}${res.missed.length > 3 ? "…" : ""})` : ""}${res.renamed ? ` · ${res.renamed} matched by name because Flock's ID didn't belong to that player` : ""}${res.unknownIds ? ` · ${res.unknownIds} of them with a Flock ID no player in our files has (kept unmatched, not priced, until verified)` : ""}${m !== here ? `. This format uses ${here.label}, so the import shows in ${m.qb === "sf" ? "Superflex" : "1QB"} formats` : ""}.`;
     renderRankings();
     if ($("player-modal").open && PP.sid) renderPlayer();
   }
@@ -17205,19 +17205,22 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      file, not against an AM board, so a player AM doesn't rank still counts for the market (Alan, Oct 14). A name only
      becomes a match when exactly one player has it at that position; otherwise the row stays unmatched (named in the
      message), never guessed. `known` = Sleeper ID → [name, pos] (data/sleeper_players.json plus the AM board). */
-  // Is the player our files know under a Flock row's ID the same player? Same position and the same name: equal last
-  // name, or equal first name with a last name within two letters (Etienne / Ettienne). Flock's player_id is a Sleeper ID
-  // for established players but not for many rookies (Flock's Chris Bell 13269 is Sleeper's Fernando Mendoza), so an ID is
-  // never trusted on its own (Alan, Oct 14). Same rule as pipeline/flock_v2_migrate.py.
+  // Is the player our files know under a Flock row's ID the same player? Same position and the same normalized full name
+  // (case, periods, apostrophes and Jr./III ignored), or a pair in FLOCK_ALIASES checked by hand; a matching surname is
+  // never enough (Alan, Oct 14). Flock's player_id is a Sleeper ID for established players but not for many rookies
+  // (Flock's Chris Bell 13269 is Sleeper's Fernando Mendoza), so an ID is never trusted on its own. Same rule as
+  // pipeline/flock_v2_migrate.py (ALIASES there must stay identical; tests/flock_lists_check.py checks).
   const flNorm = s => String(s || "").toLowerCase().replace(/[.'’`]/g, "").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-  function flLev(a, b) { let prev = Array.from({ length: b.length + 1 }, (_, j) => j); for (let i = 1; i <= a.length; i++) { const cur = [i]; for (let j = 1; j <= b.length; j++) cur.push(Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] !== b[j - 1]))); prev = cur; } return prev[b.length]; }
-  function flSame(n1, p1, n2, p2) {
-    if (p1 !== p2) return false;
-    const a = flNorm(n1).split(" "), b = flNorm(n2).split(" ");
-    if (!a[0] || !b[0]) return false;
-    return a[a.length - 1] === b[b.length - 1] || (a[0] === b[0] && flLev(a[a.length - 1], b[b.length - 1]) <= 2);
+  // Verified aliases: Flock's name and position → the Sleeper ID of the same player under another name in our files
+  const FLOCK_ALIASES = {
+    "bhayshul tuten|RB": "12490", "travis etienne|RB": "7543", "jacory croskey merritt|RB": "12533", "kenneth gainwell|RB": "7567",
+    "rashod bateman|WR": "7571", "joshua palmer|WR": "7670", "hollywood brown|WR": "5848", "zonovan knight|RB": "8122",
+  };
+  function flSame(n1, p1, n2, p2, sid) {
+    if (p1 !== p2 || !flNorm(n1) || !flNorm(n2)) return false;
+    return flNorm(n1) === flNorm(n2) || (sid != null && FLOCK_ALIASES[flNorm(n1) + "|" + p1] === sid);
   }
-  // rows in rank order [{ id, name, pos, team }] → each gets sid + how ("id" / "name" / "unknown"), or sid "" and a reason
+  // rows in rank order [{ id, name, pos, team }] → each gets sid + how ("id" / "name"), or sid "" and a reason (kept, never priced)
   function flockMatch(rows, known) {
     const by = new Map();
     known.forEach(([nm, pos], sid) => { const k = flNorm(nm) + "|" + pos; by.set(k, (by.get(k) || []).concat([sid])); });
@@ -17225,12 +17228,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     rows.forEach(r => {
       const kn = r.id ? known.get(r.id) : null;
       let sid = "", how = "";
-      if (kn && flSame(r.name, r.pos, kn[0], kn[1])) { sid = r.id; how = "id"; }
+      if (kn && flSame(r.name, r.pos, kn[0], kn[1], r.id)) { sid = r.id; how = "id"; }
       else {
-        let c = by.get(flNorm(r.name) + "|" + r.pos) || [];
+        const al = FLOCK_ALIASES[flNorm(r.name) + "|" + r.pos];
+        let c = al && known.has(al) ? [al] : by.get(flNorm(r.name) + "|" + r.pos) || [];
         if (c.length > 1) c = c.filter(k => known.get(k)[2] && known.get(k)[2] === r.team);
         if (c.length === 1) { sid = c[0]; how = "name"; }
-        else if (r.id && !kn && /^\d+$/.test(r.id)) { sid = r.id; how = "unknown"; }
+        // an ID nobody in our files has stays unresolved (kept, never priced): it may later be another player's Sleeper ID
+        else if (r.id && !kn) how = "unresolved Flock ID: no player in our files has this ID or this name and position";
         else how = kn ? `its ID belongs to ${kn[0]} (${kn[1]})` : "no player with this name and position";
       }
       if (sid && seen.has(sid)) { sid = ""; how = "a second row for a player already listed higher"; }
@@ -17269,8 +17274,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     raw.sort((a, b) => a.rank - b.rank);
     flockMatch(raw, known);
     const pc = {}, rows = [], missed = [];
-    raw.forEach(r => { pc[r.pos] = (pc[r.pos] || 0) + 1; if (r.sid) rows.push([r.sid, r.rank, pc[r.pos], r.tier]); else missed.push(`${r.name} (${r.how})`); });
-    return { rows, missed, total: raw.length, unknownIds: raw.filter(r => r.how === "unknown").length, renamed: raw.filter(r => r.how === "name" && r.id).length };
+    raw.forEach(r => { pc[r.pos] = (pc[r.pos] || 0) + 1; if (r.sid) rows.push([r.sid, r.rank, pc[r.pos], r.tier]); else missed.push(`${r.name}${r.id ? ` · Flock ID ${r.id}` : ""} (${r.how})`); });
+    return { rows, missed, total: raw.length, unknownIds: raw.filter(r => !r.sid && /^unresolved/.test(r.how)).length, renamed: raw.filter(r => r.how === "name" && r.id).length };
   }
   // fmt = the format confirmed on import: { sf, teams, tep, rec }; saved into the list that format belongs to
   function flockSave(parsed, fmt, file) {
@@ -17977,11 +17982,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // market reads in tests (Oct 14 audit, D6 / D7): the package depth each read uses, and what happens without a market value
   // the import's parser and ID matching on a text, with this page's player files (tests: the page and
   // pipeline/flock_v2_migrate.py must match rows the same way)
-  if (window.__SPM_TEST_HOOKS === true) SPM.flockParse = async text => {
+  // `known` (optional, [[sid, [name, pos, team]], …]) replaces the player files for a synthetic test
+  if (window.__SPM_TEST_HOOKS === true) SPM.flockParse = async (text, known) => {
+    if (known) return flockParse(text, new Map(known));
     if (!slPlayers) { try { const r = await fetch("data/sleeper_players.json"); if (r.ok) slPlayers = await r.json(); } catch (e) {} }
-    const known = new Map(Object.entries(slPlayers || {}).map(([sid, x]) => [sid, [x[0], x[1], x[2] || ""]]));
-    players.forEach(p => { if (p.sleeperId) known.set(p.sleeperId, [p.name, p.pos, p.team || ""]); });
-    return flockParse(text, known);
+    const files = new Map(Object.entries(slPlayers || {}).map(([sid, x]) => [sid, [x[0], x[1], x[2] || ""]]));
+    players.forEach(p => { if (p.sleeperId) files.set(p.sleeperId, [p.name, p.pos, p.team || ""]); });
+    return flockParse(text, files);
   };
   if (window.__SPM_TEST_HOOKS === true) SPM.marketReads = (aSids, bSids) => {
     const ids = l => l.map(s => players.find(p => String(p.sleeperId) === String(s)).id), A = ids(aSids), B = ids(bSids);

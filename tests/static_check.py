@@ -115,6 +115,9 @@ def flock_errors(label, d):   # data/market/flock_<sf|ppr>.json and each snapsho
     if len(set(sids)) != len(sids): errs.append(f"{label}: a Sleeper ID listed twice")
     if len(set(ranks)) != len(ranks) or any(not isinstance(x, int) or x < 1 for x in ranks): errs.append(f"{label}: ranks must be unique whole numbers")
     if any(r[I["pos"]] not in ("QB", "RB", "WR", "TE") for r in rows): errs.append(f"{label}: a position other than QB/RB/WR/TE")
+    if "match" in cols and any(r[cols.index("match")] not in ("id", "name") for r in rows):   # only verified players are priced (Alan, Oct 14)
+        errs.append(f"{label}: a priced row whose player identity isn't verified (match must be id or name; unresolved rows go in unmatched)")
+    if any(not isinstance(u, dict) or not u.get("reason") for u in d.get("unmatched") or []): errs.append(f"{label}: an unmatched row without its reason")
     last = {}
     for r in sorted(rows, key=lambda r: r[I["rank"]]):   # position ranks follow the list's order (unmatched rows may leave gaps)
         if r[I["pos_rank"]] <= last.get(r[I["pos"]], 0): errs.append(f"{label}: position ranks out of order at {r[I['pos']]}{r[I['pos_rank']]}"); break

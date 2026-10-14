@@ -5,7 +5,10 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/flock_lists_ch
 Checks, on the real files (data/market/flock_sf.json, flock_ppr.json and the snapshot of the migrated list):
   · every row of the migrated export is accounted for: matched rows + unmatched rows = the export's rows, ranks 1..N
   · the page's import parser matches the snapshot's original CSV exactly like pipeline/flock_v2_migrate.py did
-  · Flock IDs that belong to another player are never trusted (Flock's Chris Bell 13269 is Sleeper's Mendoza)
+  · Flock IDs that belong to another player are never trusted (Flock's Chris Bell 13269 is Sleeper's Mendoza); a matching
+    surname and position is never enough (normalized full names, or an alias verified by hand, identical in the page and
+    the migration); a Flock ID no player has stays unmatched with its ID kept, and is still unmatched once that ID turns
+    out to be someone else's Sleeper ID
   · a Superflex format reads Flock Superflex; a 1QB format never reads the Superflex list (FantasyCalc alone while
     there is no Regular PPR list), and the page names the missing list
   · a list saved by an older page (spm_flock) moves into the list its format belongs to, the old key kept
@@ -39,6 +42,19 @@ ok(bell and bell[C["name"]] == "Chris Bell" and bell[C["sleeper_id"]] != "13269"
    f"Flock's Chris Bell (13269, Sleeper's Mendoza) is matched by name, not by that ID: {bell and bell[C['sleeper_id']]}")
 mendoza = next((r for r in SF["rows"] if r[C["name"]] == "Fernando Mendoza"), None)
 ok(mendoza and mendoza[C["sleeper_id"]] == "13269", "Fernando Mendoza gets his own Flock rank")
+ok(all(r[C["match"]] in ("id", "name") for r in SF["rows"]), "Every priced row has a verified identity (matched by ID + full name, or by full name)")
+unres = {u["flock_id"]: u for u in SF["unmatched"] if u["reason"].startswith("unresolved")}
+sids = {r[C["sleeper_id"]] for r in SF["rows"]}
+ok(set(unres) == {"13253", "7437"} and all(u["name"] and u["rank"] for u in unres.values()) and not (set(unres) & sids),
+   f"Unresolved Flock IDs stay in the list with their ID, unpriced: {[(u['name'], k) for k, u in unres.items()]}")
+sys.path.insert(0, os.path.join(ROOT, "pipeline"))
+import flock_v2_migrate as MIG
+page_src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+page_alias = dict(re.findall(r'"([a-z0-9 ]+\|(?:QB|RB|WR|TE))": "(\d+)"', re.search(r"const FLOCK_ALIASES = \{(.*?)\};", page_src, re.S).group(1)))
+ok(page_alias == MIG.ALIASES and len(page_alias) == 8, f"The page and the migration share the same {len(page_alias)} verified aliases")
+ok(not MIG.same_player("Kyle Allen", "QB", "Josh Allen", "QB", "4984") and not MIG.same_player("Joshua Palmer", "WR", "Josh Palmer", "WR", "1")
+   and MIG.same_player("Joshua Palmer", "WR", "Josh Palmer", "WR", "7670") and MIG.same_player("Marvin Harrison Jr.", "WR", "Marvin Harrison", "WR"),
+   "Migration: a shared surname is not the same player; an alias counts only for its own Sleeper ID; suffixes are ignored")
 
 def serve():
     class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -77,6 +93,19 @@ with sync_playwright() as p:
     ok(got == want, f"The page's import matches the snapshot CSV exactly as the migration did ({len(got)} vs {len(want)} rows)")
     ok(parsed["total"] == len(src_rows) and len(parsed["missed"]) == len(SF["unmatched"]),
        f"The page lists the same unmatched rows: {parsed['missed']}")
+    syn = pg.evaluate("""async () => {
+      const csv = "player_id,Rank,Name,Team,Position,Tier\\n9001,1,Kyle Allen,BUF,QB,A\\n99999,2,Kyle Williams,,WR,B\\n5848,3,Hollywood Brown,PHI,WR,B\\n9002,4,Jaylen Wright,MIA,RB,C";
+      const known = new Map([["9001", ["Josh Allen", "QB", "BUF"]], ["5848", ["Marquise Brown", "WR", "PHI"]], ["9002", ["Jaylen Wright", "RB", "MIA"]]]);
+      const a = await SPM.flockParse(csv, [...known]);
+      known.set("99999", ["Kyle Pitts", "WR", "ATL"]);   // the unresolved ID later turns out to be another player's Sleeper ID
+      const b = await SPM.flockParse(csv, [...known]);
+      return { a: a.rows.map(r => String(r[0])), am: a.missed, b: b.rows.map(r => String(r[0])), bm: b.missed, unk: a.unknownIds };
+    }""")
+    ok(syn["a"] == ["5848", "9002"] and syn["b"] == ["5848", "9002"],
+       f"Import: Kyle Allen is never priced as Josh Allen (same surname and position), the unresolved ID stays unpriced, the verified alias and an exact name match count: {syn['a']} / {syn['b']}")
+    ok(any("Kyle Allen" in x and "9001" in x for x in syn["am"]) and any("Kyle Williams" in x and "Flock ID 99999" in x and "unresolved" in x for x in syn["am"]) and syn["unk"] == 1,
+       f"Import: the unmatched rows keep their Flock IDs and reasons: {syn['am']}")
+    ok(any("Kyle Williams" in x and "belongs to Kyle Pitts" in x for x in syn["bm"]), f"Import: once the ID belongs to someone else it is still not his: {syn['bm']}")
     snap0 = pg.evaluate("() => SPM.rankingSnapshot()")
     pg.close()
 

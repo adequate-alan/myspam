@@ -1,4 +1,4 @@
-{"version":2,"set":"flock-sf","label":"Flock Superflex","note":"Flock redraft rankings, added by Alan for his own non-commercial use. Market data, never an AM board: nothing here changes AM ranks, tiers or values. `exported` = when the list was exported from Flock (Flock publishes no time for its own ranking changes); `published` = when it went live on Adequate. `flock_id` = Flock's own player_id; `match` = how the row was matched to a Sleeper ID (id / name / unknown: see pipeline/flock_v2_migrate.py). Every published version is kept in data/market/flock_snapshots/flock-sf/.","fmt":{"qb":"sf","teams":12,"rec":1,"tep":0},"fmt_source":"recorded with the Oct 8 import: Superflex, Full PPR, no TE premium; 12 teams (Alan, Oct 14)","exported":"2026-10-07T02:49:08Z","published":"2026-10-08T18:47:27Z","by":"adequate-alan","file":"REDRAFT_SF-rankings.csv","cols":["sleeper_id","rank","pos","pos_rank","tier","name","team","expert_rank","flock_id","match"],"rows":[["4984",1,"QB",1,"S","Josh Allen","BUF",1.88,"4984","id"],
+{"version":2,"set":"flock-sf","label":"Flock Superflex","note":"Flock redraft rankings, added by Alan for his own non-commercial use. Market data, never an AM board: nothing here changes AM ranks, tiers or values. `exported` = when the list was exported from Flock (Flock publishes no time for its own ranking changes); `published` = when it went live on Adequate. `flock_id` = Flock's own player_id; `match` = how the row was matched to a Sleeper ID (id / name: see pipeline/flock_v2_migrate.py; rows that can't be verified are in `unmatched` with Flock's ID). Every published version is kept in data/market/flock_snapshots/flock-sf/.","fmt":{"qb":"sf","teams":12,"rec":1,"tep":0},"fmt_source":"recorded with the Oct 8 import: Superflex, Full PPR, no TE premium; 12 teams (Alan, Oct 14)","exported":"2026-10-07T02:49:08Z","published":"2026-10-08T18:47:27Z","by":"adequate-alan","file":"REDRAFT_SF-rankings.csv","cols":["sleeper_id","rank","pos","pos_rank","tier","name","team","expert_rank","flock_id","match"],"rows":[["4984",1,"QB",1,"S","Josh Allen","BUF",1.88,"4984","id"],
 ["9221",2,"RB",1,"S","Jahmyr Gibbs","DET",2.25,"9221","id"],
 ["9488",3,"WR",1,"S","Jaxon Smith-Njigba","SEA",5.63,"9488","id"],
 ["9509",4,"RB",2,"S","Bijan Robinson","ATL",6.13,"9509","id"],
@@ -161,7 +161,6 @@
 ["10219",161,"RB",48,"S","Chris Rodriguez","JAX",155.86,"10219","id"],
 ["12474",162,"RB",49,"S","Woody Marks","HOU",156.43,"12474","id"],
 ["11628",163,"WR",59,"S","Marvin Harrison","ARI",157.0,"11628","id"],
-["13253",164,"RB",50,"S","Emmett Johnson","KC",158.0,"13253","unknown"],
 ["11610",165,"WR",60,"S","Malik Washington","MIA",158.83,"11610","id"],
 ["7553",166,"TE",20,"S","Kyle Pitts","ATL",160.5,"7553","id"],
 ["13311",167,"WR",61,"S","Chris Bell","MIA",161.0,"13269","name"],
@@ -248,7 +247,6 @@
 ["8698",248,"TE",38,"G","Jake Tonges","SF",223.0,"8698","id"],
 ["11597",249,"TE",39,"G","Theo Johnson","NYG",223.5,"11597","id"],
 ["11627",250,"WR",91,"G","Troy Franklin","DEN",224.25,"11627","id"],
-["7437",251,"WR",92,"G","Kyle Williams","",225.0,"7437","unknown"],
 ["13274",252,"WR",93,"G","Germie Bernard","PIT",226.17,"13271","name"],
 ["7049",253,"WR",94,"G","Jauan Jennings","MIN",226.33,"7049","id"],
 ["13424",254,"RB",76,"G","Seth McGowan","IND",226.4,"13370","name"],
@@ -358,4 +356,4 @@
 ["4040",359,"WR",145,"K","JuJu Smith-Schuster","",343.0,"4040","id"],
 ["4381",360,"TE",57,"K","Taysom Hill","",343.0,"4381","id"],
 ["8122",361,"RB",106,"K","Zonovan Knight","ARI",344.0,"8122","id"],
-["827",362,"QB",54,"K","Tyrod Taylor","GB",346.5,"827","id"]],"unmatched":[{"rank":317,"pos":"QB","pos_rank":50,"name":"Cade Klubnik","team":"NYJ","flock_id":"13233","reason":"a second row for a player already listed higher"}]}
+["827",362,"QB",54,"K","Tyrod Taylor","GB",346.5,"827","id"]],"unmatched":[{"rank":164,"pos":"RB","pos_rank":50,"name":"Emmett Johnson","team":"KC","flock_id":"13253","reason":"unresolved Flock ID: no player in our files has this ID or this name and position"},{"rank":251,"pos":"WR","pos_rank":92,"name":"Kyle Williams","team":"","flock_id":"7437","reason":"unresolved Flock ID: no player in our files has this ID or this name and position"},{"rank":317,"pos":"QB","pos_rank":50,"name":"Cade Klubnik","team":"NYJ","flock_id":"13233","reason":"a second row for a player already listed higher"}]}
