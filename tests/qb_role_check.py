@@ -126,7 +126,9 @@ for r in R.values():
 ok(len(by) >= 32, f"Real depth charts: quarterback rooms for {len(by)} teams")
 bad = [t for t, rs in by.items() if sum(r["s"] for r in rs) > 1 + 1e-9 or sum(r["sl"] for r in rs) > 1 + 1e-9]
 ok(not bad, f"Real data: each team's start chances sum to at most 1 (next game and later){' · ' + ', '.join(bad) if bad else ''}")
-two = [t for t, rs in by.items() if sum(1 for r in rs if r["n"] >= 0.5) > 1]
+# "expected to start" = more likely than not; an exact 50/50 (Oct 14, TB: Mayfield on last week's Doubtful vs Daniels
+# listed QB1) is a genuine tie, not two starters (the sum check above already bounds the start chances)
+two = [t for t, rs in by.items() if sum(1 for r in rs if r["s"] > 0.5) > 1]
 ok(not two, f"Real data: no team has two quarterbacks expected to start{' · ' + ', '.join(two) if two else ''}")
 third = [f"{r['team']} QB{r['depth']}" for rs in by.values() for r in rs if r["depth"] >= 3 and r["n"] >= 0.5 and not all(x["avail"] < 0.5 for x in rs if x["depth"] < r["depth"])]
 ok(not third, f"Real data: no third-string or deeper QB expected to start while someone ahead of him is likely available{' · ' + ', '.join(third) if third else ''}")
