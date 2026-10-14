@@ -2252,18 +2252,10 @@ th.mt-wk { text-align: right; }
 .st-table td.st-mgr { color: var(--muted); font-size: 0.84rem; white-space: nowrap; }
 .st-table .bm small { font-size: 0.66rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
 .mv-tags { display: inline-flex; gap: 6px; }
-/* Transaction kind tags (Alan, Oct 13): soft filled tags in sentence case, quieter than the names, players and FAAB in
-   the row. Their hues are their own (slate leaning indigo, gray-sage, brick, gray), never a position color: a Waiver claim
-   must not read as WR (hue ~230° vs WR ~215°, about a third of its saturation, a 6px corner vs the badges' 4px). */
-:root, :root[data-theme="dark"] { --tx-slate: #8A92B7; --tx-slate-text: #C5CAE2; --tx-sage: #7E9A8A; --tx-sage-text: #B7CDC0;
-  --tx-brick: #C47369; --tx-brick-text: #E4A199; --tx-gray: #8A8F98; --tx-gray-text: var(--text-secondary); }
-:root[data-theme="light"] { --tx-slate: #5A628C; --tx-slate-text: #363E68; --tx-sage: #5E7869; --tx-sage-text: #345542;
-  --tx-brick: #A54A40; --tx-brick-text: #8C3A31; --tx-gray: #7A7F88; --tx-gray-text: var(--text-secondary); }
-.mv-tag { --tx: var(--tx-gray); display: inline-block; padding: var(--tag-pad); border-radius: 6px; font-size: var(--tag-fs); font-weight: 600; letter-spacing: 0.01em; line-height: 1.4; text-transform: none; white-space: nowrap;
-  color: var(--tx-gray-text); background: color-mix(in srgb, var(--tx) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tx) 22%, transparent); }
-.mv-tag.waiver { --tx: var(--tx-slate); color: var(--tx-slate-text); }
-.mv-tag.free_agent { --tx: var(--tx-sage); color: var(--tx-sage-text); }
-.mv-tag.drop { --tx: var(--tx-brick); color: var(--tx-brick-text); }
+.mv-tag { padding: 3px 8px; border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-2); }
+.mv-tag.waiver { color: var(--wr); border-color: color-mix(in srgb, var(--wr) 45%, transparent); background: color-mix(in srgb, var(--wr) 8%, transparent); }
+.mv-tag.free_agent { color: var(--rb-text); border-color: color-mix(in srgb, var(--rb) 45%, transparent); background: color-mix(in srgb, var(--rb) 8%, transparent); }
+.mv-tag.drop { color: var(--st-dnp-text); border-color: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 45%, transparent); background: color-mix(in srgb, var(--st-dnp, var(--accent-primary)) 7%, transparent); }
 .tx-feed, .tx-older, .tx-feed ~ .count { max-width: 960px; }
 .tx-feed { display: flex; flex-direction: column; gap: 22px; }
 .tx-week { display: flex; flex-direction: column; gap: 10px; }
@@ -2290,7 +2282,7 @@ th.mt-wk { text-align: right; }
 .mv-faab-amt.zero { color: var(--muted); font-weight: 600; }
 .mv-faab-amt.big { color: var(--heading); font-size: 0.98rem; }
 .mv-when { text-align: right; font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
-.mv-tag.trade { margin-right: 8px; }
+.mv-tag.trade { margin-right: 8px; color: var(--text-secondary); border-color: color-mix(in srgb, var(--border-strong) 55%, transparent); background: color-mix(in srgb, var(--border-strong) 10%, transparent); }
 .th-card.tx-trade-card { border-color: color-mix(in srgb, var(--border-strong) 40%, var(--line)); box-shadow: inset 3px 0 0 var(--border-strong), 0 8px 22px -16px var(--shadow-color); }
 @media (max-width: 760px) {
   .mv-row { grid-template-columns: 1fr auto; grid-template-areas: "kind when" "team team" "acts acts"; }
@@ -2321,9 +2313,8 @@ th.mt-wk { text-align: right; }
 .rail-pl { font-weight: 600; }
 .rail-bids { all: unset; cursor: pointer; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 .rail-empty { margin: 0 0 4px; font-size: 0.76rem; color: var(--muted); }
-.mv-bidders { all: unset; cursor: pointer; padding: 2px 6px 2px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--text-muted); font-size: var(--tag-fs); font-weight: 500; letter-spacing: 0.01em; line-height: 1.4; white-space: nowrap; }
-.mv-bidders::after { content: "\203A"; margin-left: 4px; }  /* a chevron: it opens the bids panel, not a second tag */
-.mv-bidders:hover { background: var(--fill-1, var(--surface-2)); color: var(--heading); }
+.mv-bidders { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.mv-bidders:hover { background: var(--surface-2); color: var(--heading); }
 .mv-bidders:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 dialog.bids-dialog { padding: 0; border: 0; background: transparent; color: var(--ink); max-width: none; }
 dialog.bids-dialog::backdrop { background: var(--backdrop); }
@@ -4700,8 +4691,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 .fit-tag { font-weight: 600; }
 /* filled pills: status, leverage / confidence, grades, ranking-history change chips */
 .st-badge, .tf-pill, .tw-grade, .rh-chip, .tf-dtags span { border-radius: 999px; padding: var(--tag-pad); font-size: var(--tag-fs); font-weight: 600; letter-spacing: 0.02em; line-height: 1.35; }
-/* outline caps pills: trade-history tags, market pills and freshness tags, owner status */
-.th-tag, .mk-pill, .mk-st-tag, .owner.status { border-radius: 999px; padding: var(--tag-pad); font-size: var(--tag-fs-caps); font-weight: 600; letter-spacing: var(--tag-ls-caps); line-height: 1.35; }
+/* outline caps pills: transaction kinds, bidders, trade-history tags, market pills and freshness tags, owner status */
+.mv-tag, .mv-bidders, .th-tag, .mk-pill, .mk-st-tag, .owner.status { border-radius: 999px; padding: var(--tag-pad); font-size: var(--tag-fs-caps); font-weight: 600; letter-spacing: var(--tag-ls-caps); line-height: 1.35; }
 /* caps micro-labels (no box) */
 .mt-tag, .mx-livetag, .sc-now, .ro-res.now, .wk-status, .rf-tag { font-size: var(--micro-fs); font-weight: 600; letter-spacing: var(--tag-ls-caps); }
 /* eyebrows and section labels above a title or a block */

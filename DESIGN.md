@@ -200,8 +200,7 @@ These are the shared primitives (the "Shared components" block at the end of the
   - Tiers beside it are plain muted text ("Tier 1"); a tag tier like "Out for season" is muted red.
 - **Box tag:** a 4px-radius tinted rectangle, weight 700 (or 600 for fit tags). Used for verdicts, roles, injuries and status blocks.
 - **Filled pill:** a round tinted pill (`--tag-pad`, `--tag-fs`, weight 600). Used for status, leverage, confidence, grades and history chips.
-- **Outline caps pill:** a round pill with a 1px border in uppercase (`--tag-fs-caps`, `--tag-ls-caps`). Used for trade-history tags, market tags and freshness.
-- **Transaction kind tag:** a soft filled tag in sentence case (`.mv-tag`: `--tag-fs`, 6px corner, the kind's `--tx-*` hue at 14% fill and 22% border, its text shade ≥ 6:1). Its hues (slate, gray-sage, brick, gray) are never position colors. The bidders count beside it is an outline control with a ›.
+- **Outline caps pill:** a round pill with a 1px border in uppercase (`--tag-fs-caps`, `--tag-ls-caps`). Used for transaction kinds, bidders, trade-history tags, market tags and freshness.
 - **Caps micro-label and eyebrow:** text only, weight 600. Micro-labels are 0.58rem / 0.07em; eyebrows are 0.62rem / 0.09em.
 - **Underline tab (`.tab`, `.chip-btn`):** transparent; the selected state is strong text plus a 2px red bar. Used for the main nav, position chips, League sub-tabs, drawer tabs and filter rows. Tablists use `aria-selected`; filter groups use `aria-pressed`.
 - **Segmented switch (`.view-toggle` + `.vt-btn`):**
