@@ -43,7 +43,7 @@ with sync_playwright() as p:
     pg = br.new_page(viewport={"width": 1440, "height": 900})
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
-    pg.route("**/data/market/flock.json", lambda r: r.abort())
+    pg.route(re.compile(r".*/data/market/flock_(sf|ppr)\.json(\?.*)?$"), lambda r: r.abort())
     pg.goto(URL); pg.wait_for_selector("#rank-body tr.player .handle"); pg.wait_for_timeout(2500)
     cdp = pg.context.new_cdp_session(pg); cdp.send("Performance.enable")
     pg.evaluate(INSTR)

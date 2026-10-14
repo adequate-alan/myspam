@@ -44,7 +44,7 @@ with sync_playwright() as p:
     pg = br.new_page(viewport={"width": 1440, "height": H})
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
-    pg.route("**/data/market/flock.json", lambda r: r.abort())
+    pg.route(re.compile(r".*/data/market/flock_(sf|ppr)\.json(\?.*)?$"), lambda r: r.abort())
     pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/#rankings"); pg.wait_for_selector("#rank-body tr.player .handle"); pg.wait_for_timeout(3000)
     pg.click("#pos-chips button:has-text('All')"); pg.wait_for_timeout(400)
 
