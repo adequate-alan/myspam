@@ -28,6 +28,9 @@ CSV_RE = re.compile(r"(const RANKINGS_CSV = `\n)([\s\S]*?)(\n`;)")
 COLS = ["player", "pos", "team", "rank", "pos_rank", "tier", "value", "sleeper_id", "source"]
 EDIT_COLS = ["rank", "pos_rank", "tier", "value", "source", "tier_name"]
 OPTIONAL = {"data/projections.json"}
+# other ranking sets (BOARDS in index.html, Alan, Oct 14): each block passes the same rules, values strictly down the
+# board (only 0s tie), and the same players as the original board (matched by Sleeper ID)
+BOARD_RES = {"RANKINGS_CSV_PPR": re.compile(r"const RANKINGS_CSV_PPR = `\n([\s\S]*?)\n`;")}
 
 failures = []
 def ok(cond, msg):
@@ -151,6 +154,21 @@ def main():
         errs = validate(text)
         ok(not errs, f"Rankings pass the publish rules ({len(table(text)[1])} players) {errs[:5]}")
 
+    for name, rx in BOARD_RES.items():
+        found = rx.findall(html)
+        ok(len(found) == 1, f"Exactly one {name} block ({len(found)})")
+        if len(found) != 1 or text is None: continue
+        btext = found[0]; errs = validate(btext)
+        bh, brows = table(btext); mh, mrows = table(text)
+        bid = lambda h, r: r[h.index("sleeper_id")]
+        vals = sorted(((int(r[bh.index("rank")]), int(r[bh.index("value")] or -1)) for r in brows if len(r) == len(bh)), key=lambda x: x[0])
+        down = [f"#{a[0]} {a[1]} → #{b[0]} {b[1]}" for a, b in zip(vals, vals[1:]) if not (b[1] < a[1] or b[1] == a[1] == 0)]
+        if down: errs.append(f"values not strictly down the board {down[:3]}")
+        if any(v < 0 for _, v in vals): errs.append("a missing value")
+        ids, mids = {bid(bh, r) for r in brows if len(r) == len(bh)}, {bid(mh, r) for r in mrows if len(r) == len(mh)}
+        if ids != mids: errs.append(f"players differ from RANKINGS_CSV (only here {sorted(ids - mids)[:3]}, missing {sorted(mids - ids)[:3]})")
+        ok(not errs, f"{name} passes the publish rules ({len(brows)} players) {errs[:5]}")
+
     # 3. ranking history
     try: hist = json.load(open(os.path.join(ROOT, "data/rank_history.json"), encoding="utf-8"))
     except Exception as e: hist = None; ok(False, f"data/rank_history.json parses ({e})")
@@ -217,6 +235,9 @@ def main():
                             ov = o[oh.index(col)] if col in oh else ""; nv = r[nh.index(col)] if col in nh else ""
                             if ov != nv: changed.append(f"{r[nh.index('player')]} {col} {ov!r} → {nv!r}")
                     ok(not changed, f"No ranking field changed since {a.base[:10]} (automated job) {changed[:5]}")
+                    for name, rx in BOARD_RES.items():
+                        ob, nb = rx.findall(old_html), rx.findall(html)
+                        if ob: ok(nb[:1] == ob[:1], f"{name} unchanged since {a.base[:10]} (automated job)")
         old_hist = git_show(a.base, "data/rank_history.json")
         if old_hist and hist is not None:
             try: oh = json.loads(old_hist)

@@ -99,8 +99,7 @@ def regions(text):
         a = text.count("\n", 0, m.start()) + 1; b = text.count("\n", 0, m.end()) + 1
         kind = "css" if m.group(1) == "style" else ("settings-js" if re.search(r"^const VALUE_MODEL = \{", m.group(2), re.M) else "js")
         for i in range(a, b + 1): reg[i] = kind
-    m = re.search(r"const RANKINGS_CSV = `\n[\s\S]*?\n`;", text)
-    if m:
+    for m in re.finditer(r"const RANKINGS_CSV(?:_[A-Z]+)? = `\n[\s\S]*?\n`;", text):   # every board's block (BOARDS)
         a = text.count("\n", 0, m.start()) + 1; b = text.count("\n", 0, m.end()) + 1
         for i in range(a + 1, b): reg[i] = "rankings"   # the data lines only
     decl = re.compile(r"^  (?:async\s+)?(?:function\s*\*?\s*([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=)")
