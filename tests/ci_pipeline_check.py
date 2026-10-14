@@ -457,10 +457,12 @@ try:
     open(os.path.join(d, "index.html"), "w").write(with_csv(nosid))
     rc, o = static(d); ok(rc == 1 and "no Sleeper ID" in o, "static_check: a missing Sleeper ID fails")
     swap = lines[:]; ri = cols.index("rank"); pi = cols.index("pos_rank")
-    a, b = swap[1].split(","), swap[2].split(",")   # swap #1 and #2 (still a valid board)
+    # swap #1 and #2 (still a valid board); rows aren't always stored in rank order, so find them by rank
+    i1, i2 = (next(j for j in range(1, len(swap)) if swap[j].split(",")[ri] == str(n)) for n in (1, 2))
+    a, b = swap[i1].split(","), swap[i2].split(",")
     a[ri], b[ri] = b[ri], a[ri]
     if a[cols.index("pos")] == b[cols.index("pos")]: a[pi], b[pi] = b[pi], a[pi]
-    swap[1], swap[2] = ",".join(a), ",".join(b)
+    swap[i1], swap[i2] = ",".join(a), ",".join(b)
     open(os.path.join(d, "index.html"), "w").write(with_csv(swap))
     rc, o = static(d); ok(rc == 0, "static_check: a valid rankings edit passes without --frozen-rankings")
     rc, o = static(d, "--base", "HEAD", "--frozen-rankings"); ok(rc == 1 and "No ranking field changed" in o, "static_check: the same edit fails for an automated job (--frozen-rankings)")
