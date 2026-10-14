@@ -299,7 +299,7 @@ with sync_playwright() as p:
     # Market comparison wording (Alan, Oct 12): the summary names the sides in plain English ("your side" / "the other
     # side" without a league, the team's name with one; never "You's side" or "You gets") and says what the table shows
     SAY = re.compile(r"^(AM and (?P<m1>[A-Z][A-Za-z]+) (both favor (?P<both>.+)|agree this trade is about even)"
-                     r"|AM favors (?P<am>.+); (?P<m2>[A-Z][A-Za-z]+) (favors (?P<mk>.+)|calls it about even)(: the kind of gap worth exploiting)?"
+                     r"|AM favors (?P<am>.+); (?P<m2>[A-Z][A-Za-z]+) (favors (?P<mk>.+?)|calls it about even)(: the kind of gap worth exploiting)?"
                      r"|AM calls it about even; (?P<m3>[A-Z][A-Za-z]+) favors (?P<mk2>.+))\.$")
     def mkt(pg):
         return pg.evaluate("""() => { const el = document.getElementById('tc-mkt'); if (el.hidden) return null;

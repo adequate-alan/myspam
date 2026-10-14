@@ -26,8 +26,18 @@ def vs_ok(pg, sel, what):
     bad = [r for r in rows if r["n"] != 2 or r["ha"] not in ("vs", "@") or not r["opp"] or r["first"] != r["own"] or r["opp"] == r["own"]]
     ok(len(rows) >= 5 and not bad, f"{what}: the logo of the team beside his name, vs/@, then the opponent's logo and abbreviation ({len(rows)} rows, {len(bad)} wrong{': ' + str(bad[:2]) if bad else ''})")
 
-def make_league(lid, name, teams, positions, scoring, divisions=None):
+# a starter AM can't project (no projection, no game this season, not ruled out), so Matchups shows a partial total;
+# picked from the data instead of relying on where the board happens to rank such a player
+_roles = json.load(open(os.path.join(ROOT, "data", "roles.json"))).get("players", {})
+_played = json.load(open(os.path.join(ROOT, "data", "stats", "2026.json"))).get("players", {})
+UNPROJ = next((r["sleeper_id"] for r in rows if r["sleeper_id"] and r["sleeper_id"] != "7600" and not r["proj_ppg"] and r["pos"] != "QB"
+               and r["sleeper_id"] not in _played and (_roles.get(r["sleeper_id"]) or [1, 1, 0, 0, 0, None])[5] is None), None)
+
+def make_league(lid, name, teams, positions, scoring, divisions=None, unprojected=False):
     pool = [x for x in sids if x != "7600"][:teams * 12]   # Pat Freiermuth (PIT, played Thursday of week 4) stays available
+    if unprojected and UNPROJ:   # team 2's sixth player (a starter) is one AM can't project
+        if UNPROJ in pool: pool.remove(UNPROJ)
+        pool.insert(1 + teams * 5, UNPROJ); pool = pool[:teams * 12]
     rosters = [{"roster_id": i + 1, "owner_id": f"{lid}u{i+1}", "co_owners": [], "players": pool[i::teams], "starters": [], "reserve": [], "taxi": [],
                 "settings": {"wins": (i * 7) % 4, "losses": 3 - (i * 7) % 4, "ties": 0, "fpts": 380 + 9 * i, "fpts_against": 400 - 5 * i}, "metadata": {"streak": "2W" if i % 2 else "1L"}} for i in range(teams)]
     users = [{"user_id": f"{lid}u{i+1}", "display_name": f"manager{i+1}", "metadata": {"team_name": f"{name} Team {i+1}"}} for i in range(teams)]
@@ -66,7 +76,7 @@ def make_league(lid, name, teams, positions, scoring, divisions=None):
     return {"league": league, "users": users, "rosters": rosters, "tx": tx, "mx": mx, "free": free}
 
 SF = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SUPER_FLEX"] + ["BN"] * 6
-L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5}, divisions=["North Shore", "South Side"])
+L1 = make_league("L1", "Alpha League", 12, SF, {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5}, divisions=["North Shore", "South Side"], unprojected=True)
 L2 = make_league("L2", "Beta League", 10, ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6, {"rec": 0.5, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2})
 LEAGUES = {"L1": L1, "L2": L2}
 TRENDING = sids[200]   # on no roster in either league: Sleeper-wide trending adds
