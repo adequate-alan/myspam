@@ -127,7 +127,9 @@ try:
         b = srt(t); b[1][c("value")] = str(int(b[0][c("value")]) + 1)
     smoke("values out of order", value_up, "worth")
     def split_tier(t):
-        wr = [r for r in srt(t) if r[c("pos")] == "WR"]; wr[1][c("tier")] = str(int(wr[1][c("tier")]) + 1)
+        wr = [r for r in srt(t) if r[c("pos")] == "WR"]   # a player inside a tier (same tier either side) leaves it: a split
+        i = next(k for k in range(1, len(wr) - 1) if wr[k - 1][c("tier")] == wr[k][c("tier")] == wr[k + 1][c("tier")])
+        wr[i][c("tier")] = str(int(wr[i][c("tier")]) + 1)
     smoke("a split tier", split_tier, "split")
     smoke("a missing value", lambda t: t[5].__setitem__(c("value"), ""), "no value")
     write(rows)   # back to the real block

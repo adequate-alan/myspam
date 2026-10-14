@@ -34,12 +34,13 @@ def line(w, tm, opp, rec, yd, td=0):
     return r
 info = {r["sleeper_id"]: r for r in rows}
 mine = L1["rosters"][0]["players"]
-# five of my players (RB/WR/TE/QB are all fine: the lines are receiving lines, Full PPR → rec + 0.1 yd + 6 td) and one free agent
+# ten of my players and one free agent: RB/WR/QB, not TE (the lines are receiving lines, Full PPR → rec + 0.1 yd + 6 td;
+# L1 has TE premium, so a TE would score more than the numbers below assume)
 CASES = {}
 def case(key, sid, games, report=None, short=None):
     CASES[key] = {"sid": sid, "name": info[sid]["player"], "team": info[sid]["team"], "games": games, "report": report, "short": short}
-P = [s for s in mine if info[s]["pos"] in ("RB", "WR", "TE", "QB")][:10]
-FA = next(s for s in L1["free"][2:] if info[s]["pos"] in ("RB", "WR", "TE"))   # free[0] was claimed, free[1] added
+P = [s for s in mine if info[s]["pos"] in ("RB", "WR", "QB")][:10]
+FA = next(s for s in L1["free"][2:] if info[s]["pos"] in ("RB", "WR"))   # free[0] was claimed, free[1] added
 # A: the Rashee Rice case: 2.9 → 12.3 → 15.8, then ruled out (missed week 4, Out on the week 5 report)
 case("rice", P[0], {1: (2, 9), 2: (4, 83), 3: (7, 88)}, report=("Out", "DNP", "Hamstring"))
 # B: a healthy player whose games run down: 24 → 18 → 12 → 6

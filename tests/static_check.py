@@ -197,7 +197,17 @@ def main():
                 oh, orows = table(old); nh, nrows = table(text)
                 ok_keys = lambda h, rs: {(r[h.index("player")] + "|" + r[h.index("pos")]).lower(): r for r in rs if len(r) == len(h)}
                 ok_old, ok_new = ok_keys(oh, orows), ok_keys(nh, nrows)
-                ok(set(ok_old) == set(ok_new), f"Same players as {a.base[:10]} (added {sorted(set(ok_new) - set(ok_old))[:3]}, lost {sorted(set(ok_old) - set(ok_new))[:3]})")
+                added, lost = sorted(set(ok_new) - set(ok_old)), sorted(set(ok_old) - set(ok_new))
+                if a.frozen_rankings:   # a scheduled refresh never adds or drops a player
+                    ok(not added and not lost, f"Same players as {a.base[:10]} (added {added[:3]}, lost {lost[:3]})")
+                else:
+                    # a pushed rankings change may add a player (Oct 14: Josh Cameron from Alan's WR list), never lose one;
+                    # each added player needs a Sleeper ID the player file knows, at his position
+                    ok(not lost, f"No player lost since {a.base[:10]} (lost {lost[:3]})")
+                    try: sp = json.load(open(os.path.join(ROOT, "data", "sleeper_players.json")))
+                    except Exception: sp = {}
+                    bad = [k for k in added if (lambda r: (sp.get(r[nh.index("sleeper_id")]) or [None, None])[1] != r[nh.index("pos")])(ok_new[k])]
+                    ok(not bad, f"Every player added since {a.base[:10]} has a known Sleeper ID at his position (added {added[:5]}, unknown {bad[:3]})")
                 if a.frozen_rankings:
                     changed = []
                     for k, r in ok_new.items():
