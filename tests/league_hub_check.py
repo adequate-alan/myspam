@@ -246,7 +246,7 @@ with sync_playwright() as p:
     tn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]
     ok(min(tn) >= 1 and max(tn) <= 3, f"1-TE league: the TE starter shown, plus any TE who wins FLEX / SF ({tn})")
     # Lineup-aware rooms (Alan, Oct 15): a player who starts in the team's best lineup counts in full in his room, whatever
-    # slot he fills; before, a TE in FLEX counted only as bench depth (MONEY LEAGUE: LaPorta, TE4, about 23% of his value)
+    # slot he fills; before, a TE in FLEX counted only as bench depth (in a real league: a TE4 at FLEX, about 23% of his value)
     was_open = pg.evaluate("() => [...document.querySelectorAll('.pr-item.open')].map(e => e.dataset.rid)")
     pg.click("#lg-keep"); pg.wait_for_timeout(200)
     for i in range(pg.locator(".pr-item").count()):
