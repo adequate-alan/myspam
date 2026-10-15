@@ -12740,13 +12740,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const grade = pos => (x.place[pos] <= third ? "strong" : x.place[pos] > n - third ? "weak" : "mid");
     const summary = EDIT_POS.map(pos => {
       const diff = x.room[pos] - ev.avg[pos];
-      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--${pos.toLowerCase()})" role="button" tabindex="0" data-pos-board="${pos}" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's ${pos} room">
+      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--${pos.toLowerCase()})" role="button" tabindex="0" data-pos-board="${pos}" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's ${pos} room" data-hc-side="bottom">
         <div class="tx-sum-top"><span class="pos ${pos}">${pos}</span><b>${ordinal(x.place[pos])}</b>${grade(pos) === "strong" ? `<span class="tx-flag">Strength</span>` : grade(pos) === "weak" ? `<span class="tx-flag">Weak spot</span>` : ""}</div>
         <span class="tx-bar"><span style="width:${Math.max(3, 100 * x.room[pos] / ev.max[pos]).toFixed(1)}%"></span></span>
         <small>${fmt(x.room[pos])} · ${diff >= 0 ? "+" : "−"}${fmt(Math.abs(diff))} vs league avg</small></div>`;
     }).join("") + (() => {
       const pos = "DEPTH", diff = x.depthVal - ev.avg.DEPTH;
-      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--cream)" role="button" tabindex="0" data-pos-board="DEPTH" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's bench depth">
+      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--cream)" role="button" tabindex="0" data-pos-board="DEPTH" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's bench depth" data-hc-side="bottom">
         <div class="tx-sum-top"><span class="pb-depth">Depth</span><b>${ordinal(x.place.DEPTH)}</b></div>
         <span class="tx-bar"><span style="width:${Math.max(3, 100 * x.depthVal / ev.max.DEPTH).toFixed(1)}%"></span></span>
         <small>${fmt(x.depthVal)} · ${diff >= 0 ? "+" : "−"}${fmt(Math.abs(diff))} vs league avg</small></div>`;
@@ -18800,7 +18800,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (html) return { html, rich: true, side: t.getAttribute("data-hc-side") || "" };
     }
     const text = t.getAttribute("data-tip") || t.getAttribute("data-info") || t.getAttribute("title") || t.dataset.hcT || "";
-    return text.trim() ? { html: esc(text), rich: false, side: "" } : null;
+    return text.trim() ? { html: esc(text), rich: false, side: t.getAttribute("data-hc-side") || "" } : null;
   }
   function hcOpen(t, opts = {}) {
     if (DRAG_STATE.on) return;
