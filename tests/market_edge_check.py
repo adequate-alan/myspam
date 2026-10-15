@@ -75,14 +75,16 @@ port = serve()
 with sync_playwright() as p:
     br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
     errs = []
-    def page(market, debug=False):
+    def page(market, debug=False, flock=None):
         pg = br.new_page(viewport={"width": 1440, "height": 1000})
+        pg.add_init_script("window.__SPM_TEST_HOOKS = true")   # read-only test hooks (SPM.marketReads …); they change nothing on the page
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("dialog", lambda d: (errs.append("dialog: " + d.message), d.dismiss()))
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
         pg.route("**/data/market/redraft.json", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(market)))
-        pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))   # synthetic Flock only: the built-in lists stay out
+        if flock is None: pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))   # synthetic Flock only: the built-in lists stay out
+        else: pg.route(FLOCK_FILES, lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(flock)) if "flock_sf" in r.request.url else r.fulfill(status=404, body=""))
         FB.route(pg, f"http://127.0.0.1:{port}")
         pg.goto(f"http://127.0.0.1:{port}/{'?debug' if debug else ''}#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
         return pg
@@ -204,6 +206,15 @@ with sync_playwright() as p:
     ok(all(re.search(r"(Small|Good|Strong|Very Strong) (Market )?Leverage", x) for x in ml), "Leverage label on every card")
     ok(all("Why you do it" in x and "Why they may do it" in x and "Receive" in x and "They receive" in x for x in ml), "Why you do it / Why they may do it and both sides' totals")
     ok(all("Values are close" not in x for x in ml), "Reasons never fall back to 'values are close'")
+    # robust market reading (Flock market lists PR 4): every Market Leverage deal is no worse than −8% for them under the
+    # consensus AND under each source alone
+    sides = [c.evaluate("e => [...e.querySelectorAll('.tf-side')].map(s => [...s.querySelectorAll('[data-player]')].map(x => x.dataset.player))") for c in pg.locator(".ml-card").all()]
+    worst = []
+    for sd in sides:
+        if len(sd) < 2: continue
+        t = pg.evaluate("([a, b]) => SPM.marketReads(a, b).trade", [sd[1], sd[0]])   # A = what they receive
+        worst.append(min([t["cons"]["gap"]] + [x["read"]["gap"] for x in t["per"].values() if x["read"]]))
+    ok(worst and min(worst) >= -8.0001, f"Market Leverage: no deal is worse than −8% for them under the consensus or either source alone (worst {min(worst) if worst else None:.1f}%)")
     ok(all(re.search(r"My starting lineup [+−][\d.]+% · PR #\d+ → #\d+", x) and re.search(r"Their starting lineup [+−][\d.]+%", x) and "asset leverage" in x for x in ml),
        "My Roster Impact (starter strength % with power rank as context) and the opponent's lineup, separate from Acceptance Plausibility")
     if pg.locator(".ml-card [data-tf-full]").count():
@@ -271,6 +282,63 @@ with sync_playwright() as p:
     mk = pg.inner_text("#tc-mkt") if not pg.locator("#tc-mkt").is_hidden() else ""
     ok("No market value for" in mk and nm[no_mk] in mk and "FantasyCalc" not in mk.split("No market value")[0],
        f"Calculator names the player with no market value instead of a market line: {mk[:140]!r}")
+    pg.close()
+
+    # 8c. Flock market lists PR 4 (Oct 14): one trade read per source, the consensus only from complete sources, split
+    # markets named instead of a consensus %, Acceptance capped at Moderate on a split, Market Confidence with its reason,
+    # and AM vs a market price several times larger as a multiple ("Market 5.1× AM"), never "−413%"
+    no_fl = next(r["sleeper_id"] for r in board[20:60] if r["sleeper_id"] not in (BUY, SELL, SPLIT))   # left out of this Flock list
+    FLV2 = {"version": 2, "set": "flock-sf", "label": "Flock Superflex", "fmt": {"qb": "sf", "teams": 12, "rec": 1, "tep": 0},
+            "exported": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "published": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "by": "test", "file": "synthetic.csv",
+            "cols": ["sleeper_id", "rank", "pos", "pos_rank", "tier", "name", "team", "expert_rank", "flock_id", "match"],
+            "rows": [[sid, o, pos_of[sid], pr, "A", name_of[sid], "", o, sid, "id"] for sid, (o, pr) in sorted(fl.items(), key=lambda x: x[1][0]) if sid != no_fl], "unmatched": []}
+    pg = page(FRESH, flock=FLV2)
+    P = pg.evaluate("() => SPM.marketPricing()")
+    ok(P["recs"][SPLIT]["split"] and "fl" in P["recs"][BUY]["per"] and "fl" not in P["recs"].get(no_fl, {"per": {}})["per"],
+       f"PR 4 setup: {name_of[SPLIT]} is split, {name_of[no_fl]} has no Flock rank")
+    partner = next(r["sleeper_id"] for r in board[:40] if r["sleeper_id"] not in (BUY, SELL, SPLIT, no_fl) and pos_of[r["sleeper_id"]] == pos_of[SPLIT])
+    t = pg.evaluate("([a, b]) => SPM.marketReads(a, b).trade", [[partner], [no_fl]])
+    ok(t["per"]["fl"]["read"] is None and name_of[no_fl] in t["per"]["fl"]["miss"] and t["per"]["fc"]["read"] and t["cons"]["k"] == "FantasyCalc only"
+       and abs(t["cons"]["gap"] - t["per"]["fc"]["read"]["gap"]) < 1e-9,
+       f"A player Flock doesn't rank: no Flock read, and the market line is FantasyCalc alone ({t['cons']['k'] if t['cons'] else None})")
+    # a split trade: FantasyCalc favors one side, Flock the other (searched over the board, so the planted SPLIT decides it)
+    pair = pg.evaluate("""s => { for (const r of Object.entries(SPM.marketPricing().recs)) { const [sid, x] = r; if (sid === s || !x.per.fl || !x.per.fc) continue;
+        const t = SPM.marketReads([s], [sid]); if (t.trade && t.trade.split) return [sid, t]; } return null; }""", SPLIT)
+    ok(pair is not None, "A trade of the split player exists where FantasyCalc and Flock favor different sides")
+    if pair:
+        q, sp = pair
+        fcg, flg = sp["trade"]["per"]["fc"]["read"]["gap"], sp["trade"]["per"]["fl"]["read"]["gap"]
+        ok((fcg >= 3 and flg <= -3) or (fcg <= -3 and flg >= 3), f"Split = the two sources favor different sides by the fair line (FC {fcg:+.1f}%, Flock {flg:+.1f}%)")
+        ok(sp["viewB"]["msplit"] is True, "Acceptance's market view for the other team carries the split")
+    hi = pg.evaluate("() => [SPM.acceptance({ val: 12, mkt: 30, su: 0.8, sl: 0 }), SPM.acceptance({ val: 12, mkt: 30, msplit: true, su: 0.8, sl: 0 })]")
+    ok(hi[0]["label"] == "High" and hi[1]["label"] == "Moderate" and hi[1]["capped"] and not hi[0]["capped"] and hi[0]["score"] == hi[1]["score"],
+       f"Acceptance: a split market caps High at Moderate, score unchanged ({hi[0]['label']} → {hi[1]['label']})")
+    lo = pg.evaluate("() => [SPM.acceptance({ val: -12, mkt: -10, su: -0.1, sl: 0 }), SPM.acceptance({ val: -12, mkt: -10, msplit: true, su: -0.1, sl: 0 })]")
+    ok(lo[0]["label"] == lo[1]["label"], "A split never raises or lowers an Acceptance label that isn't High")
+    why = pg.evaluate("s => SPM.mkConfWhy([s])", SPLIT)
+    rs = P["recs"][SPLIT]
+    ok(why == f"sources split on {name_of[SPLIT]} (FC {rs['pos']}{rs['per']['fc']['pr']}, Flock {rs['pos']}{rs['per']['fl']['pr']})", f"Market Confidence names its reason: {why!r}")
+    ok(pg.evaluate("s => SPM.mkConfWhy([s])", no_fl).startswith(f"FantasyCalc only for {name_of[no_fl]}"), "A single-source player's reason says which source")
+    # hover cards / drawer: a market price several times AM's reads as a multiple
+    vs = pg.evaluate("() => [SPM.hcVs(23, 118, 'Market'), SPM.hcVs(118, 23, 'FantasyCalc'), SPM.hcVs(100, 150, 'Flock', 'AM '), SPM.hcVs(100, 199, 'Flock')]")
+    txt_ = [re.sub(r"<[^>]+>", "", v) for v in vs]
+    ok(txt_[0] == "Market 5.1× AM" and txt_[1] == "AM 5.1× FantasyCalc" and txt_[2] == "AM −50.0%" and txt_[3] == "−99.0%" and "%" not in txt_[0] + txt_[1],
+       f"AM vs a market price: a multiple from 2×, a % below it {txt_}")
+    # the calculator: per-source rows, the missing source named, the split named, per-player sources
+    nm = {r["sleeper_id"]: r["player"] for r in board}
+    def calc(a, b):
+        pg.evaluate("() => { document.getElementById('tab-trade').click(); const c = document.getElementById('clear-btn') || document.querySelector('[data-tc-clear]'); if (c) c.click(); }"); pg.wait_for_timeout(500)
+        for side, sid in (("A", a), ("B", b)):
+            pg.fill(f"#search-{side}", nm[sid]); pg.wait_for_timeout(300); pg.keyboard.press("Enter"); pg.wait_for_timeout(500)
+        pg.evaluate("() => { const d = document.querySelector('#tc-mkt details'); if (d) d.open = true; }"); pg.wait_for_timeout(200)
+        return pg.inner_text("#tc-mkt") if not pg.locator("#tc-mkt").is_hidden() else ""
+    mk = calc(partner, no_fl)
+    ok(f"No Flock rank for {nm[no_fl]}, so no Flock read" in mk and "FantasyCalc" in mk and "Market consensus" not in mk,
+       f"Calculator: the source missing a player is named and the market line is FantasyCalc alone: {mk[:200]!r}")
+    ok("SOURCES" in mk.upper() and ("AGREE" in mk.upper() or "ONLY" in mk.upper()), "Calculator lists each player's sources")
+    if pair:
+        mk = calc(SPLIT, q)
+        ok("Market split: FantasyCalc favors" in mk and ", Flock favors" in mk and "Split" in mk, f"Calculator: a split market is named instead of a consensus %: {mk[:220]!r}")
     pg.close()
 
     # 9. Market rankings freshness indicator (Alan, Oct 11): last synced (Adequate) vs last updated (the provider), per source
