@@ -12524,38 +12524,36 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function leagueSlots(league) {
     return (league.roster_positions || []).filter(s => ELIG[s]).sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
   }
-  /* Position room ("QB room", "RB room"...): graded from that position's players only, so a trade
-     that moves no QBs can never change a team's QB grade. Each position's players, best first, are
-     weighted by the slots they can fill: 1 for each dedicated starting slot, a share of each flex
-     slot (FLEX ≈ 45% RB / 45% WR / 10% TE, superflex ≈ 90% QB), then bench depth at the bench weight.
-     It uses the whole healthy roster, not the lineup, so a player shuffling into FLEX/SF or getting
-     cut for roster space doesn't move another position's grade. */
-  const ROOM_SHARE = { FLEX: { RB: 0.45, WR: 0.45, TE: 0.10 }, WRRB_FLEX: { RB: 0.5, WR: 0.5 }, REC_FLEX: { WR: 0.8, TE: 0.2 },
-                       SUPER_FLEX: { QB: 0.9, RB: 0.04, WR: 0.04, TE: 0.02 } };
+  /* Position room ("QB room", "RB room"...), lineup-aware (Alan, Oct 15): every player at that position who starts
+     in the team's best lineup counts in full, whichever slot he fills (his own slot, FLEX, W/R, W/T or superflex), then
+     the rest at the position count as bench depth: the first backup at the bench weight, each next one less (Alan,
+     Oct 5). So a TE4 who starts at FLEX counts like the starter he is, not as a 10% flex share or bench depth. Each
+     starter counts in exactly one room. Before Oct 15 rooms used fixed flex shares (FLEX 45/45/10, W/T 80/20,
+     superflex 90% QB) so a room only moved with its own position's players; now a player winning or losing a flex
+     spot moves his room (trade reads still lock rooms the trade didn't touch, lockUntouched). */
   const roomCache = new Map();
-  function roomWeights(slots, benchN) {
+  function roomBench(slots, benchN) {   // bench depth weights per position: as many as the bench share, each 0.6x the one before
     const bw = benchW(), key = slots.join(",") + "|" + benchN + "|" + bw;
     if (roomCache.has(key)) return roomCache.get(key);
-    const w = { QB: [], RB: [], WR: [], TE: [] };
-    slots.forEach(s => { if (w[s]) w[s].push(1); });
-    slots.forEach(s => { const sh = ROOM_SHARE[s]; if (sh) for (const pos in sh) w[pos].push(sh[pos]); });
-    const sf = slots.includes("SUPER_FLEX") || w.QB.length >= 2;
+    const w = {};
+    const sf = slots.includes("SUPER_FLEX") || slots.filter(s => s === "QB").length >= 2;
     const share = { QB: sf ? 1 : 0.5, RB: 2, WR: 2, TE: 1 }, tot = share.QB + share.RB + share.WR + share.TE;
     for (const pos of EDIT_POS) {
       const n = Math.max(1, Math.round(benchN * share[pos] / tot));
-      for (let i = 0; i < n; i++) w[pos].push(bw * Math.pow(0.6, i));   // depth: first backup partial weight, the next ones less (Alan, Oct 5)
-      w[pos].sort((a, b) => b - a);
+      w[pos] = Array.from({ length: n }, (_, i) => bw * Math.pow(0.6, i));
     }
     roomCache.set(key, w);
     return w;
   }
-  function roomOf(players, slots, benchN) {
-    const w = roomWeights(slots, benchN), room = {};
+  function roomOf(players, starters, slots, benchN) {
+    const w = roomBench(slots, benchN), on = new Set(starters.map(p => p.id)), room = {}, nStart = {};
     for (const pos of EDIT_POS) {
-      const list = players.filter(p => p.pos === pos).map(dv).sort((a, b) => b - a);
-      room[pos] = w[pos].reduce((a, x, i) => a + x * (list[i] || 0), 0);
+      const list = players.filter(p => p.pos === pos);
+      const st = list.filter(p => on.has(p.id)), rest = list.filter(p => !on.has(p.id)).map(dv).sort((a, b) => b - a);
+      nStart[pos] = st.length;
+      room[pos] = st.reduce((a, p) => a + dv(p), 0) + w[pos].reduce((a, x, i) => a + x * (rest[i] || 0), 0);
     }
-    return room;
+    return { room, nStart };
   }
   function bestLineup(players, slots, benchN, roomPool = players) {
     const bw = benchW();   // bench depth counts less in shallow leagues
@@ -12569,8 +12567,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const depthList = bench.slice(0, Math.max(benchN, 1));
     const sum = list => list.reduce((a, p) => a + dv(p), 0);
     const startVal = sum(starters), depthVal = sum(depthList);
-    const room = roomOf(roomPool, slots, benchN);
-    return { starters, bench, depthList, role, startVal, depthVal, score: startVal + bw * depthVal, room };
+    const { room, nStart } = roomOf(roomPool, starters, slots, benchN);
+    return { starters, bench, depthList, role, startVal, depthVal, score: startVal + bw * depthVal, room, nStart };
   }
   function evaluateTeams() {
     const d = activeData();
@@ -12586,7 +12584,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const F = ir.length ? bestLineup(pool.concat(ir), slots, lu.bench + ir.length) : L;
       const roomPlayers = {};
       for (const pos of EDIT_POS) roomPlayers[pos] = F.starters.concat(F.bench).filter(p => p.pos === pos).sort((a, b) => dv(b) - dv(a));
-      return { team, starters: L.starters, bench: L.bench, depthList: F.depthList, startVal: F.startVal, depthVal: F.depthVal, score: F.score, room: F.room, roomPlayers, role: L.role, irIds: new Set(ir.map(p => p.id)), place: {} };
+      return { team, starters: L.starters, bench: L.bench, depthList: F.depthList, startVal: F.startVal, depthVal: F.depthVal, score: F.score, room: F.room, nStart: F.nStart, roomPlayers, role: L.role, irIds: new Set(ir.map(p => p.id)), place: {} };
     });
     const n = list.length;
     [...list].sort((a, b) => b.score - a.score).forEach((x, k) => { x.power = k + 1; });
@@ -12676,26 +12674,23 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   /* Power Rankings: compact rows that expand into a roster board */
   /* Power Rankings with a lens (Alan, Oct 5): Overall = strongest total roster; QB / RB / WR / TE / Depth re-sort the same
-     team list in place by that room (positionLeaderboard), showing as many players as the league starts there
-     (primaryCount: full-weight lineup spots, Superflex counting for QBs). Clicking any position rank switches the lens. */
+     team list in place by that room (positionLeaderboard), showing the players each team starts there (its own slots
+     and any flex it wins; Oct 15, lineup-aware rooms) or its top 3 bench players for Depth. Clicking any position rank
+     switches the lens. */
   const PB_KEYS = [["QB", "QB"], ["RB", "RB"], ["WR", "WR"], ["TE", "TE"], ["DEPTH", "Depth"]];
-  function primaryCount(d, key) {
-    if (key === "DEPTH") return 3;
-    const W = roomWeights(leagueSlots(d.league), lineupOf(d.league).bench);
-    return Math.max(1, (W[key] || []).filter(w => w >= 0.5).length);
-  }
+  const primaryCount = (x, key) => (key === "DEPTH" ? 3 : Math.max(1, (x.nStart && x.nStart[key]) || 0));   // players shown in a lens
   function powerHtml(ev, d) {
     const mode = LT.pb ? LT.pb.pos : null, label = mode === "DEPTH" ? "Depth" : mode;
     const lb = mode ? positionLeaderboard(ev, mode) : null;
     const order = mode ? (LT.pb.dir === "asc" ? lb.slice().reverse() : lb) : ev.list.map(x => ({ x, rank: x.power, score: x.score }));
-    const top = Math.max(1, ...order.map(r => r.score)), nPrim = mode ? primaryCount(d, mode) : 0;
-    HC_EV = { ev, mode, nPrim };   // the team hover cards read this render's numbers
+    const top = Math.max(1, ...order.map(r => r.score));
+    HC_EV = { ev, mode };   // the team hover cards read this render's numbers
     const sign = v => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v))}`;
     const posLink = (pos, place, rid, lab) => `<span class="pr-pos-item pb-link${mode === pos ? " on" : ""}" role="button" tabindex="0" data-pos-board="${pos}" data-pb-rid="${esc(rid)}" title="Rank every team by ${pos} room"><span class="pr-pos-label">${lab}</span><span class="pos ${pos}">${pos}</span><span class="pr-place">${ordinal(place)}</span></span>`;
     const rows = order.map(r => {
       const x = r.x, t = x.team, st = t.roster.settings || {}, rid = String(t.rosterId), open = LT.open.has(rid);
       const sel = mode && String(LT.pb.rid) === rid;
-      const stars = mode ? r.players.slice(0, nPrim) : x.starters.slice().sort((a, b) => dv(b) - dv(a)).slice(0, 3);
+      const stars = mode ? r.players.slice(0, primaryCount(x, mode)) : x.starters.slice().sort((a, b) => dv(b) - dv(a)).slice(0, 3);
       const names = stars.map(p => esc(compactName(p.name))).join(" · ") || (mode === "DEPTH" ? "No ranked bench" : `No ranked ${mode}s`);
       return `<div class="pr-item${open ? " open" : ""}${t.mine ? " mine" : ""}${sel ? " sel" : ""}" data-rid="${esc(rid)}">
         <div class="pr-row" role="button" tabindex="0" aria-expanded="${open}" aria-label="${esc(t.name)}: ${open ? "collapse" : "expand"} roster" data-toggle-team="${esc(rid)}">
@@ -12720,7 +12715,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       </div>${ctx}`;
     const note = mode
       ? (mode === "DEPTH" ? "Teams ranked by bench depth: the best bench players counted in team score (injured reserve counts, taxi doesn't)."
-        : `Teams ranked by ${label} room: the ${nPrim === 1 ? "starting " + label : nPrim + " " + label + "s"} this league starts count in full, flex and superflex spots in part, and depth with less weight for each extra player.`)
+        : `Teams ranked by ${label} room: every ${label} in a team's best lineup counts in full, in his own slot or a flex spot he wins, and depth counts with less weight for each extra player.`)
       : "Power rankings use each team's best starting lineup plus a share of bench depth for this league's format. Injured reserve counts as if healthy; taxi squads don't.";
     return `<div class="lg-toolbar">
         <p class="method-note">${note}</p>
@@ -18721,6 +18716,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       srcs: all.srcs.map(x => ({ id: x.id, key: x.key || null, w: x.w, mult: x.mult, fmt: x.fmt, notes: x.notes.slice() })) };
   };
   SPM.rolesNote = () => rolesNote();   // "" when the depth-chart roles are current and complete
+  if (window.__SPM_TEST_HOOKS === true) SPM.powerRooms = () => evaluateTeams().list.map(x => ({ team: x.team.name, mine: !!x.team.mine, power: x.power, score: Math.round(x.score),
+    room: Object.fromEntries(EDIT_POS.map(p => [p, Math.round(x.room[p])])), place: { ...x.place },
+    players: Object.fromEntries(EDIT_POS.map(p => [p, x.roomPlayers[p].map(q => [q.name, Math.round(dv(q)), x.role.get(q.id) || (x.irIds.has(q.id) ? "IR" : "BN")])])) }));   // Power Rankings rooms (tests)
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
   // one team's 3-team read (what it receives vs what it sends, values as numbers) next to the 2-team read of the same
   // packages, with the floor of the board (tests of the Oct 14 3-team alignment)
@@ -19089,7 +19087,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   };
   HC_KINDS.pw = rid => {
     if (!HC_EV) return null;
-    const { ev, mode, nPrim } = HC_EV, x = ev.byRoster.get(String(rid)); if (!x) return null;
+    const { ev, mode } = HC_EV, x = ev.byRoster.get(String(rid)); if (!x) return null;
     const t = x.team, n = ev.n, third = Math.max(1, Math.floor(n / 3));
     const rankOf = f => 1 + ev.list.filter(y => f(y) > f(x) + 1e-9).length;
     const head = `<div class="hc-h">${teamFace(t, "xs")}<span class="hc-id"><span class="hc-n">${esc(t.name)}</span><span class="hc-sub">${esc(t.manager || "")}${t.mine ? " · your team" : ""}</span></span></div>`;
@@ -19100,8 +19098,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return hcRow(`<span class="pos ${pos}">${pos}</span>`, `${ordinal(pl)} <span class="hc-d ${pl <= third ? "up" : pl > n - third ? "down" : ""}">${d >= 0 ? "+" : "−"}${fmt(Math.abs(d))}</span>`, "vs avg"); }).join("");
     let lens = "";
     if (mode && mode !== "DEPTH" && x.roomPlayers && x.roomPlayers[mode]) {
-      const list = x.roomPlayers[mode].slice(0, Math.max(nPrim, 1) + 2);
-      lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < nPrim ? "Starter" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
+      const ns = x.nStart ? x.nStart[mode] : 0, list = x.roomPlayers[mode].slice(0, Math.max(ns, 1) + 2);
+      lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < ns ? "Starter" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
     }
     return head + hcSec("", body) + hcSec("Position rooms", rooms) + lens +
       hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: the best starting lineup in full plus a share of bench depth; injured reserve counts, taxi doesn't. Earlier power ranks aren't stored, so changes since last week can't be shown.`);

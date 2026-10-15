@@ -235,14 +235,33 @@ with sync_playwright() as p:
     ok(scores == sorted(scores, reverse=True), "Best -> Worst order by RB room")
     pg.click("[data-pb-pos=WR]"); pg.wait_for_timeout(400)
     names = pg.locator(".pr-item").first.locator(".pr-star-names").inner_text()
-    ok("WR ROOM" in pg.inner_text(".pr-head").upper() and len(names.split(" · ")) == 3, f"3-WR league: the WR lens shows each team's top 3 WRs ({names})")
+    wn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]   # lineup-aware rooms (Oct 15): its WR starters, FLEX / SF included
+    ok("WR ROOM" in pg.inner_text(".pr-head").upper() and wn[0] >= 3 and max(wn) <= 5, f"3-WR league + FLEX + SF: the WR lens shows each team's WR starters, up to 5 ({names}; counts {wn})")
     pg.click("[data-pb-dir=asc]"); pg.wait_for_timeout(300)
     ok([int(x) for x in pg.locator(".pr-item .pr-rank").all_inner_texts()] == list(range(12, 0, -1)), "Worst -> Best flips to 12 ... 1")
     pg.click("[data-pb-pos=QB]"); pg.wait_for_timeout(300)
     qn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]   # a team may roster fewer than 2 QBs
     ok(max(qn) == 2, f"Superflex: the QB lens shows the top 2 QBs ({qn})")
     pg.click("[data-pb-pos=TE]"); pg.wait_for_timeout(300)
-    ok(all(len(t.split(" · ")) == 1 for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()), "1-TE league: one TE shown")
+    tn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]
+    ok(min(tn) >= 1 and max(tn) <= 3, f"1-TE league: the TE starter shown, plus any TE who wins FLEX / SF ({tn})")
+    # Lineup-aware rooms (Alan, Oct 15): a player who starts in the team's best lineup counts in full in his room, whatever
+    # slot he fills; before, a TE in FLEX counted only as bench depth (MONEY LEAGUE: LaPorta, TE4, about 23% of his value)
+    was_open = pg.evaluate("() => [...document.querySelectorAll('.pr-item.open')].map(e => e.dataset.rid)")
+    pg.click("#lg-keep"); pg.wait_for_timeout(200)
+    for i in range(pg.locator(".pr-item").count()):
+        it = pg.locator(".pr-item").nth(i)
+        if "open" not in (it.get_attribute("class") or ""): it.locator(".pr-row").click(); pg.wait_for_timeout(150)
+    full = pg.evaluate("""() => [...document.querySelectorAll('.pr-item.open')].filter(it => !it.querySelector('.tx-pl.ir')).flatMap(it =>
+      [...it.querySelectorAll('.tx-col')].map(c => { const pos = c.querySelector('.tx-col-head .pos').textContent, num = e => Number(e.textContent.replace(/\\D/g, ''));
+        const st = [...c.querySelectorAll('.tx-pl.start')].map(r => [r.querySelector('.tx-role').textContent.trim(), num(r.querySelector('.tx-val'))]);
+        return { pos, room: num(c.querySelector('.tx-col-room')), st: st.reduce((a, x) => a + x[1], 0), flex: st.filter(x => x[0] !== pos).length }; }))""")
+    ok(full and all(c["room"] >= c["st"] - 1 for c in full) and any(c["flex"] for c in full),
+       f"Every starter counts in full in his position's room, flex starters included ({sum(1 for c in full if c['flex'])} rooms with a flex starter, {len(full)} rooms checked)")
+    for i in range(pg.locator(".pr-item").count()):   # collapse them again, as before this check
+        it = pg.locator(".pr-item").nth(i)
+        if "open" in (it.get_attribute("class") or "") and it.get_attribute("data-rid") not in was_open: it.locator(".pr-row").click(); pg.wait_for_timeout(100)
+    pg.click("#lg-keep"); pg.wait_for_timeout(200)
     pg.click("[data-pb-pos=DEPTH]"); pg.wait_for_timeout(300)
     ok("DEPTH SCORE" in pg.inner_text(".pr-head").upper(), "Depth lens")
     pg.click("[data-pb-pos=OVERALL]"); pg.wait_for_timeout(300)
