@@ -3036,6 +3036,9 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .tx-title b { display: block; font-size: 1.02rem; font-weight: 800; color: var(--heading); }
 .tx-title span { font-size: 0.76rem; color: var(--muted); }
 .tx-title .tx-rank { font-size: 1.6rem; font-weight: 850; font-stretch: 112%; color: var(--heading); line-height: 1; font-variant-numeric: tabular-nums; }
+/* In a position lens the row number is that room's rank, so the header names its number as the overall power rank (Alan, Oct 15) */
+.tx-title .tx-rank.lens { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.tx-title .tx-rank small { font-size: 0.72rem; font-weight: 600; font-stretch: normal; letter-spacing: 0; color: var(--text-secondary); }
 .tx-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .tx-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .tx-sum { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -12779,7 +12782,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       ? `<button class="btn" type="button" data-find-with="ANY">Find trades</button>`
       : `${me ? `<button class="btn primary" type="button" data-trade-with="${t.rosterId}">Trade with ${esc(t.name)}</button><button class="btn" type="button" data-find-with="${t.rosterId}">Find trades</button>` : ""}`;
     return `<div class="tx-head">
-        <div class="tx-title"><span class="tx-rank">#${x.power}</span><div><b>${esc(t.name)}</b>
+        <div class="tx-title"><span class="tx-rank${LT.pb ? " lens" : ""}"${LT.pb ? ` title="Overall power rank (the row shows the ${LT.pb.pos === "DEPTH" ? "depth" : LT.pb.pos + " room"} rank)"` : ""}>${LT.pb ? `<small>Overall</small>` : ""}#${x.power}</span><div><b>${esc(t.name)}</b>
           <span>Power rank ${ordinal(x.power)} of ${n} · Team score ${fmt(x.score)} · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
         <div class="tx-actions">${actions}</div>
       </div>
