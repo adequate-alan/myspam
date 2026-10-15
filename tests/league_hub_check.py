@@ -235,8 +235,8 @@ with sync_playwright() as p:
     ok(scores == sorted(scores, reverse=True), "Best -> Worst order by RB room")
     pg.click("[data-pb-pos=WR]"); pg.wait_for_timeout(400)
     names = pg.locator(".pr-item").first.locator(".pr-star-names").inner_text()
-    wn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]   # lineup-aware rooms (Oct 15): its WR starters, FLEX / SF included
-    ok("WR ROOM" in pg.inner_text(".pr-head").upper() and wn[0] >= 3 and max(wn) <= 5, f"3-WR league + FLEX + SF: the WR lens shows each team's WR starters, up to 5 ({names}; counts {wn})")
+    wn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]   # rooms count as many as could start (Oct 15): 3 WR + FLEX
+    ok("WR ROOM" in pg.inner_text(".pr-head").upper() and wn[0] == 4 and max(wn) <= 4, f"3-WR league + FLEX: the WR lens shows each team's top 4 WRs ({names}; counts {wn})")
     pg.click("[data-pb-dir=asc]"); pg.wait_for_timeout(300)
     ok([int(x) for x in pg.locator(".pr-item .pr-rank").all_inner_texts()] == list(range(12, 0, -1)), "Worst -> Best flips to 12 ... 1")
     pg.click("[data-pb-pos=QB]"); pg.wait_for_timeout(300)
@@ -244,9 +244,10 @@ with sync_playwright() as p:
     ok(max(qn) == 2, f"Superflex: the QB lens shows the top 2 QBs ({qn})")
     pg.click("[data-pb-pos=TE]"); pg.wait_for_timeout(300)
     tn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]
-    ok(min(tn) >= 1 and max(tn) <= 3, f"1-TE league: the TE starter shown, plus any TE who wins FLEX / SF ({tn})")
-    # Lineup-aware rooms (Alan, Oct 15): a player who starts in the team's best lineup counts in full in his room, whatever
-    # slot he fills; before, a TE in FLEX counted only as bench depth (in a real league: a TE4 at FLEX, about 23% of his value)
+    ok(min(tn) >= 1 and max(tn) == 2, f"1 TE + FLEX: the TE lens shows each team's top 2 TEs ({tn})")
+    # Rooms count as many as could start (Alan, Oct 15, "starting positions + one FLEX option"): a position's best N
+    # players count in full, N = its own slots + each flex spot open to it (superflex only for QBs): QB 2, RB 3, WR 4, TE 2
+    # here, whether or not the flex spot is his in the best lineup; before, a TE in FLEX counted only as bench depth
     was_open = pg.evaluate("() => [...document.querySelectorAll('.pr-item.open')].map(e => e.dataset.rid)")
     pg.click("#lg-keep"); pg.wait_for_timeout(200)
     for i in range(pg.locator(".pr-item").count()):
@@ -254,10 +255,13 @@ with sync_playwright() as p:
         if "open" not in (it.get_attribute("class") or ""): it.locator(".pr-row").click(); pg.wait_for_timeout(150)
     full = pg.evaluate("""() => [...document.querySelectorAll('.pr-item.open')].filter(it => !it.querySelector('.tx-pl.ir')).flatMap(it =>
       [...it.querySelectorAll('.tx-col')].map(c => { const pos = c.querySelector('.tx-col-head .pos').textContent, num = e => Number(e.textContent.replace(/\\D/g, ''));
-        const st = [...c.querySelectorAll('.tx-pl.start')].map(r => [r.querySelector('.tx-role').textContent.trim(), num(r.querySelector('.tx-val'))]);
-        return { pos, room: num(c.querySelector('.tx-col-room')), st: st.reduce((a, x) => a + x[1], 0), flex: st.filter(x => x[0] !== pos).length }; }))""")
-    ok(full and all(c["room"] >= c["st"] - 1 for c in full) and any(c["flex"] for c in full),
-       f"Every starter counts in full in his position's room, flex starters included ({sum(1 for c in full if c['flex'])} rooms with a flex starter, {len(full)} rooms checked)")
+        const rows = [...c.querySelectorAll('.tx-pl')].filter(r => r.querySelector('.tx-val'));
+        const vals = rows.map(r => num(r.querySelector('.tx-val'))).sort((a, b) => b - a);
+        const bench = rows.filter(r => !r.classList.contains('start')).length;
+        return { pos, room: num(c.querySelector('.tx-col-room')), vals, bench }; }))""")
+    K = {"QB": 2, "RB": 3, "WR": 4, "TE": 2}
+    ok(full and all(c["room"] >= sum(c["vals"][:K[c["pos"]]]) - 1 for c in full) and any(c["bench"] and len(c["vals"]) >= K[c["pos"]] for c in full),
+       f"A room counts its best players in full, as many as could start, benched or not ({len(full)} rooms checked)")
     for i in range(pg.locator(".pr-item").count()):   # collapse them again, as before this check
         it = pg.locator(".pr-item").nth(i)
         if "open" in (it.get_attribute("class") or "") and it.get_attribute("data-rid") not in was_open: it.locator(".pr-row").click(); pg.wait_for_timeout(100)

@@ -12527,13 +12527,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function leagueSlots(league) {
     return (league.roster_positions || []).filter(s => ELIG[s]).sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
   }
-  /* Position room ("QB room", "RB room"...), lineup-aware (Alan, Oct 15): every player at that position who starts
-     in the team's best lineup counts in full, whichever slot he fills (his own slot, FLEX, W/R, W/T or superflex), then
-     the rest at the position count as bench depth: the first backup at the bench weight, each next one less (Alan,
-     Oct 5). So a TE4 who starts at FLEX counts like the starter he is, not as a 10% flex share or bench depth. Each
-     starter counts in exactly one room. Before Oct 15 rooms used fixed flex shares (FLEX 45/45/10, W/T 80/20,
-     superflex 90% QB) so a room only moved with its own position's players; now a player winning or losing a flex
-     spot moves his room (trade reads still lock rooms the trade didn't touch, lockUntouched). */
+  /* Position room ("QB room", "RB room"...): how much talent a team has at the position (Alan, Oct 15, "starting
+     positions + one FLEX option"). A position counts its best N players in full, N = every lineup slot he could fill
+     (its own slots plus each FLEX, W/R or W/T spot open to it, and superflex for QBs: 2 RB + FLEX = 3 RBs,
+     3 WR + FLEX = 4 WRs, 1 TE + FLEX = 2 TEs, 1 QB + SF = 2 QBs), then the rest as bench depth: the first backup at the bench weight, each next one less
+     (Alan, Oct 5). Rooms are separate comparisons: a flex spot is an option in every room it's open to, so one FLEX
+     counts in several rooms and rooms never add up to team strength (team score and power rank use the one best
+     lineup). A room depends only on its own position's players. Before Oct 15 rooms used fixed flex shares (FLEX
+     45/45/10, W/T 80/20, superflex 90% QB), so a TE4 starting at FLEX counted only as bench depth. */
   const roomCache = new Map();
   function roomBench(slots, benchN) {   // bench depth weights per position: as many as the bench share, each 0.6x the one before
     const bw = benchW(), key = slots.join(",") + "|" + benchN + "|" + bw;
@@ -12548,15 +12549,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     roomCache.set(key, w);
     return w;
   }
-  function roomOf(players, starters, slots, benchN) {
-    const w = roomBench(slots, benchN), on = new Set(starters.map(p => p.id)), room = {}, nStart = {};
+  // lineup spots open to a position; superflex counts as a QB option only (it goes to a QB in practice, so it isn't a
+  // fourth RB or fifth WR spot)
+  const roomSlots = (slots, pos) => slots.filter(s => ELIG[s] && ELIG[s].includes(pos) && (s !== "SUPER_FLEX" || pos === "QB")).length;
+  function roomOf(players, slots, benchN) {
+    const w = roomBench(slots, benchN), room = {}, nFull = {};
     for (const pos of EDIT_POS) {
-      const list = players.filter(p => p.pos === pos);
-      const st = list.filter(p => on.has(p.id)), rest = list.filter(p => !on.has(p.id)).map(dv).sort((a, b) => b - a);
-      nStart[pos] = st.length;
-      room[pos] = st.reduce((a, p) => a + dv(p), 0) + w[pos].reduce((a, x, i) => a + x * (rest[i] || 0), 0);
+      const vals = players.filter(p => p.pos === pos).map(dv).sort((a, b) => b - a), k = roomSlots(slots, pos);
+      nFull[pos] = Math.min(k, vals.length);
+      room[pos] = vals.slice(0, k).reduce((a, v) => a + v, 0) + w[pos].reduce((a, x, i) => a + x * (vals[k + i] || 0), 0);
     }
-    return { room, nStart };
+    return { room, nFull };
   }
   function bestLineup(players, slots, benchN, roomPool = players) {
     const bw = benchW();   // bench depth counts less in shallow leagues
@@ -12570,8 +12573,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const depthList = bench.slice(0, Math.max(benchN, 1));
     const sum = list => list.reduce((a, p) => a + dv(p), 0);
     const startVal = sum(starters), depthVal = sum(depthList);
-    const { room, nStart } = roomOf(roomPool, starters, slots, benchN);
-    return { starters, bench, depthList, role, startVal, depthVal, score: startVal + bw * depthVal, room, nStart };
+    const { room, nFull } = roomOf(roomPool, slots, benchN);
+    return { starters, bench, depthList, role, startVal, depthVal, score: startVal + bw * depthVal, room, nFull };
   }
   function evaluateTeams() {
     const d = activeData();
@@ -12587,7 +12590,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const F = ir.length ? bestLineup(pool.concat(ir), slots, lu.bench + ir.length) : L;
       const roomPlayers = {};
       for (const pos of EDIT_POS) roomPlayers[pos] = F.starters.concat(F.bench).filter(p => p.pos === pos).sort((a, b) => dv(b) - dv(a));
-      return { team, starters: L.starters, bench: L.bench, depthList: F.depthList, startVal: F.startVal, depthVal: F.depthVal, score: F.score, room: F.room, nStart: F.nStart, roomPlayers, role: L.role, irIds: new Set(ir.map(p => p.id)), place: {} };
+      return { team, starters: L.starters, bench: L.bench, depthList: F.depthList, startVal: F.startVal, depthVal: F.depthVal, score: F.score, room: F.room, nFull: F.nFull, roomPlayers, role: L.role, irIds: new Set(ir.map(p => p.id)), place: {} };
     });
     const n = list.length;
     [...list].sort((a, b) => b.score - a.score).forEach((x, k) => { x.power = k + 1; });
@@ -12677,11 +12680,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   /* Power Rankings: compact rows that expand into a roster board */
   /* Power Rankings with a lens (Alan, Oct 5): Overall = strongest total roster; QB / RB / WR / TE / Depth re-sort the same
-     team list in place by that room (positionLeaderboard), showing the players each team starts there (its own slots
-     and any flex it wins; Oct 15, lineup-aware rooms) or its top 3 bench players for Depth. Clicking any position rank
+     team list in place by that room (positionLeaderboard), showing the players its room counts in full (as many as
+     could start there, flex spots included; Oct 15) or its top 3 bench players for Depth. Clicking any position rank
      switches the lens. */
   const PB_KEYS = [["QB", "QB"], ["RB", "RB"], ["WR", "WR"], ["TE", "TE"], ["DEPTH", "Depth"]];
-  const primaryCount = (x, key) => (key === "DEPTH" ? 3 : Math.max(1, (x.nStart && x.nStart[key]) || 0));   // players shown in a lens
+  const primaryCount = (x, key) => (key === "DEPTH" ? 3 : Math.max(1, (x.nFull && x.nFull[key]) || 0));   // players shown in a lens
   function powerHtml(ev, d) {
     const mode = LT.pb ? LT.pb.pos : null, label = mode === "DEPTH" ? "Depth" : mode;
     const lb = mode ? positionLeaderboard(ev, mode) : null;
@@ -12718,7 +12721,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       </div>${ctx}`;
     const note = mode
       ? (mode === "DEPTH" ? "Teams ranked by bench depth: the best bench players counted in team score (injured reserve counts, taxi doesn't)."
-        : `Teams ranked by ${label} room: every ${label} in a team's best lineup counts in full, in his own slot or a flex spot he wins, and depth counts with less weight for each extra player.`)
+        : `Teams ranked by ${label} room: a team's best ${label}s count in full, as many as could start (his own slots plus any flex spot open to him), and depth counts with less weight for each extra player. Each room is its own comparison: a flex spot counts in every room it's open to, so rooms don't add up to team strength.`)
       : "Power rankings use each team's best starting lineup plus a share of bench depth for this league's format. Injured reserve counts as if healthy; taxi squads don't.";
     return `<div class="lg-toolbar">
         <p class="method-note">${note}</p>
@@ -19101,8 +19104,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return hcRow(`<span class="pos ${pos}">${pos}</span>`, `${ordinal(pl)} <span class="hc-d ${pl <= third ? "up" : pl > n - third ? "down" : ""}">${d >= 0 ? "+" : "−"}${fmt(Math.abs(d))}</span>`, "vs avg"); }).join("");
     let lens = "";
     if (mode && mode !== "DEPTH" && x.roomPlayers && x.roomPlayers[mode]) {
-      const ns = x.nStart ? x.nStart[mode] : 0, list = x.roomPlayers[mode].slice(0, Math.max(ns, 1) + 2);
-      lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < ns ? "Starter" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
+      const ns = x.nFull ? x.nFull[mode] : 0, list = x.roomPlayers[mode].slice(0, Math.max(ns, 1) + 2);
+      lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < ns ? "Full" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
     }
     return head + hcSec("", body) + hcSec("Position rooms", rooms) + lens +
       hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: the best starting lineup in full plus a share of bench depth; injured reserve counts, taxi doesn't. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
