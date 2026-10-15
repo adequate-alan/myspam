@@ -3036,6 +3036,9 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .tx-title b { display: block; font-size: 1.02rem; font-weight: 800; color: var(--heading); }
 .tx-title span { font-size: 0.76rem; color: var(--muted); }
 .tx-title .tx-rank { font-size: 1.6rem; font-weight: 850; font-stretch: 112%; color: var(--heading); line-height: 1; font-variant-numeric: tabular-nums; }
+/* In a position lens the row number is that room's rank, so the header names its number as the overall power rank (Alan, Oct 15) */
+.tx-title .tx-rank.lens { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.tx-title .tx-rank small { font-size: 0.72rem; font-weight: 600; font-stretch: normal; letter-spacing: 0; color: var(--text-secondary); }
 .tx-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .tx-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .tx-sum { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -12740,13 +12743,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const grade = pos => (x.place[pos] <= third ? "strong" : x.place[pos] > n - third ? "weak" : "mid");
     const summary = EDIT_POS.map(pos => {
       const diff = x.room[pos] - ev.avg[pos];
-      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--${pos.toLowerCase()})" role="button" tabindex="0" data-pos-board="${pos}" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's ${pos} room">
+      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--${pos.toLowerCase()})" role="button" tabindex="0" data-pos-board="${pos}" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's ${pos} room" data-hc-side="bottom">
         <div class="tx-sum-top"><span class="pos ${pos}">${pos}</span><b>${ordinal(x.place[pos])}</b>${grade(pos) === "strong" ? `<span class="tx-flag">Strength</span>` : grade(pos) === "weak" ? `<span class="tx-flag">Weak spot</span>` : ""}</div>
         <span class="tx-bar"><span style="width:${Math.max(3, 100 * x.room[pos] / ev.max[pos]).toFixed(1)}%"></span></span>
         <small>${fmt(x.room[pos])} · ${diff >= 0 ? "+" : "−"}${fmt(Math.abs(diff))} vs league avg</small></div>`;
     }).join("") + (() => {
       const pos = "DEPTH", diff = x.depthVal - ev.avg.DEPTH;
-      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--cream)" role="button" tabindex="0" data-pos-board="DEPTH" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's bench depth">
+      return `<div class="tx-sum pb-link ${grade(pos)}" style="--c: var(--cream)" role="button" tabindex="0" data-pos-board="DEPTH" data-pb-rid="${esc(String(t.rosterId))}" title="Compare every team's bench depth" data-hc-side="bottom">
         <div class="tx-sum-top"><span class="pb-depth">Depth</span><b>${ordinal(x.place.DEPTH)}</b></div>
         <span class="tx-bar"><span style="width:${Math.max(3, 100 * x.depthVal / ev.max.DEPTH).toFixed(1)}%"></span></span>
         <small>${fmt(x.depthVal)} · ${diff >= 0 ? "+" : "−"}${fmt(Math.abs(diff))} vs league avg</small></div>`;
@@ -12779,7 +12782,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       ? `<button class="btn" type="button" data-find-with="ANY">Find trades</button>`
       : `${me ? `<button class="btn primary" type="button" data-trade-with="${t.rosterId}">Trade with ${esc(t.name)}</button><button class="btn" type="button" data-find-with="${t.rosterId}">Find trades</button>` : ""}`;
     return `<div class="tx-head">
-        <div class="tx-title"><span class="tx-rank">#${x.power}</span><div><b>${esc(t.name)}</b>
+        <div class="tx-title"><span class="tx-rank${LT.pb ? " lens" : ""}"${LT.pb ? ` title="Overall power rank (the row shows the ${LT.pb.pos === "DEPTH" ? "depth" : LT.pb.pos + " room"} rank)"` : ""}>${LT.pb ? `<small>Overall</small>` : ""}#${x.power}</span><div><b>${esc(t.name)}</b>
           <span>Power rank ${ordinal(x.power)} of ${n} · Team score ${fmt(x.score)} · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
         <div class="tx-actions">${actions}</div>
       </div>
@@ -18800,7 +18803,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (html) return { html, rich: true, side: t.getAttribute("data-hc-side") || "" };
     }
     const text = t.getAttribute("data-tip") || t.getAttribute("data-info") || t.getAttribute("title") || t.dataset.hcT || "";
-    return text.trim() ? { html: esc(text), rich: false, side: "" } : null;
+    return text.trim() ? { html: esc(text), rich: false, side: t.getAttribute("data-hc-side") || "" } : null;
   }
   function hcOpen(t, opts = {}) {
     if (DRAG_STATE.on) return;
