@@ -235,7 +235,7 @@ with sync_playwright() as p:
     ok(scores == sorted(scores, reverse=True), "Best -> Worst order by RB room")
     pg.click("[data-pb-pos=WR]"); pg.wait_for_timeout(400)
     names = pg.locator(".pr-item").first.locator(".pr-star-names").inner_text()
-    wn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]   # rooms count as many as could start (Oct 15): 3 WR + FLEX
+    wn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]   # rooms count starting slots + one flex option (Oct 15): 3 WR + FLEX
     ok("WR ROOM" in pg.inner_text(".pr-head").upper() and wn[0] == 4 and max(wn) <= 4, f"3-WR league + FLEX: the WR lens shows each team's top 4 WRs ({names}; counts {wn})")
     pg.click("[data-pb-dir=asc]"); pg.wait_for_timeout(300)
     ok([int(x) for x in pg.locator(".pr-item .pr-rank").all_inner_texts()] == list(range(12, 0, -1)), "Worst -> Best flips to 12 ... 1")
@@ -245,8 +245,8 @@ with sync_playwright() as p:
     pg.click("[data-pb-pos=TE]"); pg.wait_for_timeout(300)
     tn = [len(t.split(" · ")) for t in pg.locator(".pr-item .pr-star-names").all_inner_texts()]
     ok(min(tn) >= 1 and max(tn) == 2, f"1 TE + FLEX: the TE lens shows each team's top 2 TEs ({tn})")
-    # Rooms count as many as could start (Alan, Oct 15, "starting positions + one FLEX option"): a position's best N
-    # players count in full, N = its own slots + each flex spot open to it (superflex only for QBs): QB 2, RB 3, WR 4, TE 2
+    # Rooms count starting slots + one flex option (Alan, Oct 15): a position's best N players count in full, N = its own
+    # slots + one when any flex spot is open to it (superflex only for QBs): QB 2, RB 3, WR 4, TE 2
     # here, whether or not the flex spot is his in the best lineup; before, a TE in FLEX counted only as bench depth
     was_open = pg.evaluate("() => [...document.querySelectorAll('.pr-item.open')].map(e => e.dataset.rid)")
     pg.click("#lg-keep"); pg.wait_for_timeout(200)
@@ -261,7 +261,7 @@ with sync_playwright() as p:
         return { pos, room: num(c.querySelector('.tx-col-room')), vals, bench }; }))""")
     K = {"QB": 2, "RB": 3, "WR": 4, "TE": 2}
     ok(full and all(c["room"] >= sum(c["vals"][:K[c["pos"]]]) - 1 for c in full) and any(c["bench"] and len(c["vals"]) >= K[c["pos"]] for c in full),
-       f"A room counts its best players in full, as many as could start, benched or not ({len(full)} rooms checked)")
+       f"A room counts its starting slots + one flex option in full, benched or not ({len(full)} rooms checked)")
     for i in range(pg.locator(".pr-item").count()):   # collapse them again, as before this check
         it = pg.locator(".pr-item").nth(i)
         if "open" in (it.get_attribute("class") or "") and it.get_attribute("data-rid") not in was_open: it.locator(".pr-row").click(); pg.wait_for_timeout(100)
@@ -636,10 +636,20 @@ with sync_playwright() as p:
     freeze(pg2, SUNDAY)
     pg2.route("https://api.sleeper.app/**", sleeper)
     pg2.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com)/.*"), lambda r: r.abort())
+    pg2.add_init_script("window.__SPM_TEST_HOOKS = true;")   # read-only hooks (SPM.roomSlots)
     pg2.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); localStorage.setItem('spm_sleeper', {json.dumps(saved)}); }}")
     pg2.goto(f"http://127.0.0.1:{port}/#league"); pg2.wait_for_timeout(2500)
     pg2.evaluate("() => { const x = document.createElement('button'); x.dataset.league = 'L1'; document.getElementById('league-menu').append(x); x.click(); }"); pg2.wait_for_timeout(2000)
     pg2.click("#tab-league"); pg2.wait_for_timeout(300); pg2.click("[data-lsub=matchups]"); pg2.wait_for_timeout(1800)
+    # full-credit room sizes (Alan, Oct 15): own slots + ONE flex option however many flex spots are open; superflex is QB capacity
+    lineups = {"2RB 3WR 1TE 1FLEX": (["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX"], {"QB": 1, "RB": 3, "WR": 4, "TE": 2}),
+               "2RB 2WR 1TE 3FLEX": (["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "FLEX"], {"QB": 1, "RB": 3, "WR": 3, "TE": 2}),
+               "SF 2RB 2WR 1TE 2FLEX": (["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "SUPER_FLEX"], {"QB": 2, "RB": 3, "WR": 3, "TE": 2}),
+               "2QB W/R W/T FLEX": (["QB", "QB", "RB", "RB", "WR", "WR", "TE", "WRRB_FLEX", "REC_FLEX", "FLEX"], {"QB": 2, "RB": 3, "WR": 3, "TE": 2}),
+               "1QB no flex": (["QB", "RB", "RB", "WR", "WR", "TE"], {"QB": 1, "RB": 2, "WR": 2, "TE": 1})}
+    for nm, (slots, want) in lineups.items():
+        got = pg2.evaluate("s => Object.fromEntries(['QB', 'RB', 'WR', 'TE'].map(p => [p, SPM.roomSlots(s, p)]))", slots)
+        ok(got == want, f"Room full-credit sizes, {nm}: {got}")
     ok(pg2.locator(".mx-card.live").count() >= 1 and pg2.locator(".mx-state.live").count() >= 1, f"Sunday afternoon: matchups are live ({pg2.locator('.mx-card.live').count()})")
     # the live-card checks only run when there is a live card, so one failed assertion can't crash the rest of the suite
     if pg2.locator(".mx-card.live").count():

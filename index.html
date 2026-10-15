@@ -12528,9 +12528,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return (league.roster_positions || []).filter(s => ELIG[s]).sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
   }
   /* Position room ("QB room", "RB room"...): how much talent a team has at the position (Alan, Oct 15, "starting
-     positions + one FLEX option"). A position counts its best N players in full, N = every lineup slot he could fill
-     (its own slots plus each FLEX, W/R or W/T spot open to it, and superflex for QBs: 2 RB + FLEX = 3 RBs,
-     3 WR + FLEX = 4 WRs, 1 TE + FLEX = 2 TEs, 1 QB + SF = 2 QBs), then the rest as bench depth: the first backup at the bench weight, each next one less
+     positions + one FLEX option"). A position counts its best N players in full, N = its own slots plus one flex option
+     (one extra player when any FLEX, W/R or W/T spot is open to it, however many there are; superflex spots for QBs:
+     2 RB + FLEX = 3 RBs, 3 WR + FLEX = 4 WRs, 1 TE + FLEX = 2 TEs, 1 QB + SF = 2 QBs, 2 RB + 2 FLEX = 3 RBs), then the rest as bench depth: the first backup at the bench weight, each next one less
      (Alan, Oct 5). Rooms are separate comparisons: a flex spot is an option in every room it's open to, so one FLEX
      counts in several rooms and rooms never add up to team strength (team score and power rank use the one best
      lineup). A room depends only on its own position's players. Before Oct 15 rooms used fixed flex shares (FLEX
@@ -12549,9 +12549,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     roomCache.set(key, w);
     return w;
   }
-  // lineup spots open to a position; superflex counts as a QB option only (it goes to a QB in practice, so it isn't a
-  // fourth RB or fifth WR spot)
-  const roomSlots = (slots, pos) => slots.filter(s => ELIG[s] && ELIG[s].includes(pos) && (s !== "SUPER_FLEX" || pos === "QB")).length;
+  // players a room counts in full: the position's own slots plus ONE flex option when any FLEX, W/R or W/T spot is open
+  // to it (Alan, Oct 15: a second or third flex spot never adds another full-credit player, so stockpiling one
+  // position isn't rewarded); QBs add every superflex spot (it goes to a QB in practice, so it's QB capacity, never a
+  // fourth RB or fifth WR)
+  const roomSlots = (slots, pos) => {
+    const own = slots.filter(s => s === pos).length;
+    if (pos === "QB") return own + slots.filter(s => s === "SUPER_FLEX").length;
+    return own + (slots.some(s => s !== pos && s !== "SUPER_FLEX" && ELIG[s] && ELIG[s].includes(pos)) ? 1 : 0);
+  };
   function roomOf(players, slots, benchN) {
     const w = roomBench(slots, benchN), room = {}, nFull = {};
     for (const pos of EDIT_POS) {
@@ -12721,7 +12727,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       </div>${ctx}`;
     const note = mode
       ? (mode === "DEPTH" ? "Teams ranked by bench depth: the best bench players counted in team score (injured reserve counts, taxi doesn't)."
-        : `Teams ranked by ${label} room: a team's best ${label}s count in full, as many as could start (his own slots plus any flex spot open to him), and depth counts with less weight for each extra player. Each room is its own comparison: a flex spot counts in every room it's open to, so rooms don't add up to team strength.`)
+        : `Teams ranked by ${label} room: a team's best ${label}s count in full (the position's starting slots plus one flex option), and depth counts with less weight for each extra player. Each room is its own comparison: the flex option counts in every room it's open to, so rooms don't add up to team strength.`)
       : "Power rankings use each team's best starting lineup plus a share of bench depth for this league's format. Injured reserve counts as if healthy; taxi squads don't.";
     return `<div class="lg-toolbar">
         <p class="method-note">${note}</p>
@@ -18725,6 +18731,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   if (window.__SPM_TEST_HOOKS === true) SPM.powerRooms = () => evaluateTeams().list.map(x => ({ team: x.team.name, mine: !!x.team.mine, power: x.power, score: Math.round(x.score),
     room: Object.fromEntries(EDIT_POS.map(p => [p, Math.round(x.room[p])])), place: { ...x.place },
     players: Object.fromEntries(EDIT_POS.map(p => [p, x.roomPlayers[p].map(q => [q.name, Math.round(dv(q)), x.role.get(q.id) || (x.irIds.has(q.id) ? "IR" : "BN")])])) }));   // Power Rankings rooms (tests)
+  if (window.__SPM_TEST_HOOKS === true) SPM.roomSlots = (slots, pos) => roomSlots(slots, pos);   // players a room counts in full for a lineup (tests)
   if (window.__SPM_TEST_HOOKS === true) SPM.setRoles = (map, at) => setRoles(map, at);   // swap the roles file in tests
   // one team's 3-team read (what it receives vs what it sends, values as numbers) next to the 2-team read of the same
   // packages, with the floor of the board (tests of the Oct 14 3-team alignment)
