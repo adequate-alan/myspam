@@ -6,7 +6,9 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/smoke_check.py
 Checks: no page errors; the board shows every player in RANKINGS_CSV; the page's own pre-publish checks pass on the
 rankings it was served; the ranking-history snapshot of the served rankings equals the board's (the publish code uses
 the first for the history it commits); every tab renders in light and dark mode; no same-origin file the page asks for
-is missing (except optional ones); league-free screens show their empty states instead of failing.
+is missing (except optional ones); league-free screens show their empty states instead of failing; and the page starts
+with every other board as the edited board (Oct 19: with AM PPR edited, the first render of its overall tier headers
+hit a constant declared later in the script, the script stopped and the board came up empty).
 """
 import csv, functools, http.server, io, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
@@ -14,6 +16,7 @@ from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
 N = len(list(csv.DictReader(io.StringIO(re.search(r"const RANKINGS_CSV = `\n([\s\S]*?)\n`;", src)[1]))))
+N_PPR = len(list(csv.DictReader(io.StringIO(re.search(r"const RANKINGS_CSV_PPR = `\n([\s\S]*?)\n`;", src)[1]))))
 OPTIONAL = re.compile(r"/data/(projections\.json|props/)")
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -54,6 +57,24 @@ with sync_playwright() as p:
         ok(pg.evaluate("() => document.getElementById('player-modal').open"), f"[{scheme}] A player page opens")
         ok(not errs, f"[{scheme}] No page errors {errs[:3]}")
         ok(not missing, f"[{scheme}] No missing same-origin files {missing[:3]}")
+        ctx.close()
+    for scheme in ("dark", "light"):   # AM PPR as the edited board (and the one shown): a fresh load, every position, the drawer
+        ctx = br.new_context(viewport={"width": 1440, "height": 1000}, color_scheme=scheme)
+        ctx.add_init_script("if (!sessionStorage.getItem('_smk')) { localStorage.setItem('spm_edit_board', 'ppr'); localStorage.setItem('spm_rk_board', 'ppr'); sessionStorage.setItem('_smk', '1'); }")
+        pg = ctx.new_page(); errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|api\.github\.com|use\.typekit\.net|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
+        pg.goto(BASE + "/#rankings")
+        try: pg.wait_for_selector("#rank-body tr.player", timeout=10000)
+        except Exception: pass
+        pg.wait_for_timeout(1000)
+        rows = pg.locator("#rank-body tr.player").count()
+        ok(rows == N_PPR, f"[{scheme}, AM PPR edited] The board shows every player ({rows} of {N_PPR})")
+        for pos in ("QB", "RB", "WR", "TE", "All"):
+            pg.click(f"#pos-chips button:has-text('{pos}')"); pg.wait_for_timeout(250)
+        if rows:
+            pg.locator("#rank-body tr.player .pl-name").first.click(); pg.wait_for_timeout(800)
+        ok(not errs, f"[{scheme}, AM PPR edited] No page errors {errs[:3]}")
         ctx.close()
     br.close()
 
