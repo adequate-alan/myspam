@@ -14859,8 +14859,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // Compact player name for tight summaries: the last name, keeping a suffix with it
   // ("Kenneth Walker III" → "Walker III", "Marvin Harrison Jr." → "Harrison Jr.", "Amon-Ra St. Brown" → "St. Brown"). Full names everywhere else.
-  const NAME_SUFFIX = /^(jr|sr|ii|iii|iv|v)\.?$/i;
-  function compactName(name) {
+  function compactName(name) {   // the suffix pattern lives inside: the first board render (overall tier headers) runs before this part of the script
+    const NAME_SUFFIX = /^(jr|sr|ii|iii|iv|v)\.?$/i;
     const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
     let k = parts.length - 1;
     if (k >= 2 && NAME_SUFFIX.test(parts[k])) k--;               // suffix stays with the last name
