@@ -2074,6 +2074,8 @@ tr.tier-edit.drop-before td, tr.tier-edit.drop-after td, tr.tier-drop.drop-befor
 .pp-updated .btn.link { font-size: 0.7rem; }
 
 .fmt-src { margin: 0 0 14px; }
+.fmt-link { margin: 14px 0 0; }
+.fmt-link .seg { flex-wrap: wrap; }
 .fmt-ctl { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: flex-end; }
 .fmt-more { height: 30px; min-width: 0; font-size: 0.78rem; }
 .fmt-more.on { border-color: var(--accent-primary); }
@@ -2348,7 +2350,7 @@ dialog.fmt-dialog { width: min(620px, calc(100vw - 32px)); max-height: calc(100v
 .fmt-preset:hover { border-color: var(--border-strong); color: var(--cream); }
 .fmt-preset[aria-pressed="true"] { border-color: var(--am-red); color: var(--am-red-text); }
 .fmt-group { margin-top: 18px; }
-.fmt-group h3 { margin: 0 0 4px; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.fmt-group h3, .fmt-link h3 { margin: 0 0 4px; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .fmt-row { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
 .fmt-row:last-child { border-bottom: 0; }
 .fmt-row > span { font-size: 0.84rem; font-weight: 550; color: var(--cream); }
@@ -5509,6 +5511,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     <p id="fmt-intro">Pick your league's format and the rankings, values and trade calculator adjust to it. At each position the AM order stays put unless a player's value changes enough to pass someone; across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value.</p>
     <div class="fmt-src" id="fmt-src" hidden></div>
     <div class="fmt-locked" id="fmt-locked" hidden></div>
+    <div class="fmt-link" id="fmt-link" hidden></div>
     <div class="fmt-presets" id="fmt-presets" role="group" aria-label="Common formats"></div>
     <div id="fmt-grid"></div>
     <p class="fmt-summary" id="fmt-summary"></p>
@@ -6136,7 +6139,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const CMP = { on: false };   // board Compare mode (Alan, Oct 5): pick Player B straight from the rankings
   const REVALUED = new Set();   // rows revalued by a move this editing session: a quiet "Revalued" tag until saved or cancelled
   // Sleeper league layer (layer 2) and league-adjusted values (layer 3); filled in by the Sleeper section
-  const LG = { active: false, fmtOn: false, mode: "league", ownerFilter: "all", adj: new Map(), adjRank: new Map(), adjPos: new Map(), factor: new Map(), ownerOf: new Map(), teams: [], myRosterId: null };
+  const LG = { active: false, fmtOn: false, mode: "league", ownerFilter: "all", adj: new Map(), adjRank: new Map(), adjPos: new Map(), factor: new Map(), ownerOf: new Map(), teams: [], myRosterId: null, link: null, linkTier: new Map() };
   let sl = null, slPlayers = null, comps = null;
   /* Weekly projections (data/projections.json, refreshed by the Tuesday job) feed weekly points only. The value model
      keeps the projection columns in RANKINGS_CSV, which change only when someone asks (Alan, Oct 5: nothing scheduled
@@ -6659,10 +6662,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const isTagTier = t => Number(t) >= (Number(VALUE_MODEL.tagTierFrom) || Infinity);
   const OUT_TIER = 99;   // Out for season: a tag tier every position has (see sendOut)
   // "All" view: his positional tier as a small tag beside the position badge (tiers are per position, so no bands here)
-  const tierTag = p => `<span class="tier-tag${isTagTier(p.tier) ? " tagged" : ""}" title="${esc(p.pos)} ${esc(tierLabel(p.pos, p.tier))}">${isTagTier(p.tier) ? esc(tierNameOf(p.pos, p.tier) || "Tagged") : "Tier " + esc(String(p.tier))}</span>`;
+  // a linked position order (posLinkBoard): in the league's views a player shows the tier of the spot he holds there
+  const lvTier = p => {
+    const t = p && leagueView() && LG.link && LG.linkTier && LG.linkTier.get(p.id);
+    return t ? { ...p, tier: t.tier, tierName: t.tierName } : p;
+  };
+  const tierTag = p0 => { const p = lvTier(p0); return `<span class="tier-tag${isTagTier(p.tier) ? " tagged" : ""}" title="${esc(p.pos)} ${esc(tierLabel(p.pos, p.tier))}">${isTagTier(p.tier) ? esc(tierNameOf(p.pos, p.tier) || "Tagged") : "Tier " + esc(String(p.tier))}</span>`; };
   // a player's tier label on his own board (another board's players carry their tier names; overall tiers have no presets)
   function tierText(p) {
     if (!p) return "";
+    p = lvTier(p);
     if (!p.board || !p.tierName) return tierLabel(p.pos, p.tier);
     return isTagTier(p.tier) || /^tier\b/i.test(p.tierName) ? p.tierName : `Tier ${p.tier} · ${p.tierName}`;
   }
@@ -10911,7 +10920,100 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     LG.mode = LG.active ? (sl.view === "base" ? "base" : "league") : fmtView;
     if (LG.active) leagueTeams(d);
     LG.board = leagueBoard();   // the board this league's values come from (its QB format picks it)
-    if (LG.fmtOn) withBoard(LG.board, () => adjustValues(vl));
+    LG.link = LG.active ? posLinkBoard() : null;   // position order linked to another board (posLinkBoard)
+    LG.linkTier = new Map();
+    if (LG.fmtOn) withBoard(LG.board, () => withLink(LG.link, () => adjustValues(vl), LG.linkTier));
+  }
+  /* Linked position order (Alan, Oct 19): a connected league can take its position order from another board's
+     PUBLISHED rankings (AM PPR), so a move published there (RB8 → RB5) makes him RB5 in that league too, without editing
+     the order twice. One way: nothing is ever written to either board. The league keeps its own board's value ladder,
+     tiers and every format adjustment: the k-th player at a position in the linked order takes the league board's k-th
+     spot at that position (its value, tier, overall slot and Auto/Manual pricing), and the league layer runs on that as
+     usual, except that a player's own scoring profile never reorders a linked position (stickyOrder is off). His overall
+     rank and value still come from the league's format, so RB5 in both doesn't mean the same value or overall rank.
+     Matched by Sleeper ID; a player the linked board doesn't rank keeps his own order below the ones it does. Saved per
+     league in this browser (spm_pos_link, a new key: { league_id: board id }); unpublished edits never reach it. */
+  const POS_LINK_KEY = "spm_pos_link";
+  let POS_LINK = {};
+  try { POS_LINK = JSON.parse(localStorage.getItem(POS_LINK_KEY) || "{}") || {}; } catch (e) { POS_LINK = {}; }
+  function posLinkBoard(d = activeData()) {
+    const id = d && d.league && POS_LINK[d.league.league_id];
+    return (id && boardById(id)) || null;
+  }
+  function setPosLink(leagueId, boardId) {
+    if (!leagueId) return;
+    if (boardId) POS_LINK[leagueId] = boardId; else delete POS_LINK[leagueId];
+    try { localStorage.setItem(POS_LINK_KEY, JSON.stringify(POS_LINK)); } catch (e) {}
+  }
+  // a board's published rankings: what the live site shows (this page's own saved or unsaved edits never count)
+  function publishedCsvOf(b) {
+    if (b === ACTIVE_BOARD) { try { return publishedCsv; } catch (e) {} }
+    return boardCsv(b);
+  }
+  // Sleeper ID → position rank on board b's published rankings (the overall rank sets the order, as in loadPlayers)
+  const LINK_ORDER = new Map();
+  function publishedPosOrder(b) {
+    const csv = publishedCsvOf(b), c = LINK_ORDER.get(b.id);
+    if (c && c.csv === csv) return c.map;
+    const rows = parseCSV(csv), head = (rows.shift() || []).map(h => h.toLowerCase());
+    const col = n => head.indexOf(n), groups = {};
+    rows.forEach(r => {
+      const sid = String(r[col("sleeper_id")] || ""), pos = String(r[col("pos")] || "").toUpperCase();
+      const rank = parseInt(r[col("rank")], 10), pr = parseInt(r[col("pos_rank")], 10);
+      if (!sid || !EDIT_POS.includes(pos)) return;
+      (groups[pos] = groups[pos] || []).push({ sid, k: isFinite(rank) ? rank : isFinite(pr) ? 1e6 + pr : 2e6 });
+    });
+    const map = new Map();
+    Object.values(groups).forEach(g => g.sort((a, b) => a.k - b.k).forEach((x, i) => map.set(x.sid, i + 1)));
+    LINK_ORDER.set(b.id, { csv, map, v: ++linkVer });
+    return map;
+  }
+  let linkVer = 0;
+  const linkKey = b => (b ? (publishedPosOrder(b), b.id + ":" + LINK_ORDER.get(b.id).v) : null);
+  // the league board's players re-slotted into the linked board's position order (see above); slotTier gets each
+  // player's tier in the league (his spot's)
+  const SLOT_KEYS = ["posNum", "posRank", "rank", "tier", "tierName", "overallTier", "value", "rawValue", "curve", "source", "tail"];
+  function linkedList(list, src, slotTier) {
+    const order = publishedPosOrder(src), out = list.slice();
+    for (const pos of EDIT_POS) {
+      const idx = [], g = [];
+      list.forEach((p, i) => { if (p.pos === pos && p.posNum != null) { idx.push(i); g.push(p); } });
+      const slots = g.slice().sort((a, b) => a.posNum - b.posNum);
+      const seq = slots.slice().sort((a, b) => (order.get(a.sleeperId) ?? Infinity) - (order.get(b.sleeperId) ?? Infinity) || a.posNum - b.posNum);
+      const at = new Map(seq.map((p, k) => [p, slots[k]]));
+      idx.forEach((i, j) => {
+        const p = g[j], s = at.get(p);
+        const q = { ...p };
+        SLOT_KEYS.forEach(k => { if (k in s) q[k] = s[k]; else delete q[k]; });
+        q.linkedFrom = p.posNum;
+        out[i] = q;
+        if (slotTier) slotTier.set(q.id, { tier: s.tier, tierName: s.tierName, posNum: s.posNum });
+      });
+    }
+    return out;
+  }
+  // a board's published players (the league prices a linked league on what's published, never on this page's edits)
+  function publishedPlayers(b) {
+    if (b !== ACTIVE_BOARD) return boardPlayers(b);
+    const csv = publishedCsvOf(b), c = LINK_ORDER.get("pub:" + b.id);
+    if (c && c.csv === csv && c.at === players) return c.list;
+    const bySid = new Map(players.map(p => [p.sleeperId, p]));
+    const list = loadPlayers(csv, b).map(q => {
+      const p = q.sleeperId && bySid.get(q.sleeperId);
+      return { ...q, id: p ? p.id : "b:" + q.sleeperId, ...(p ? { team: p.team, projPPG: p.projPPG, projScore: p.projScore, games: p.games } : {}) };
+    });
+    LINK_ORDER.set("pub:" + b.id, { csv, at: players, list });
+    return list;
+  }
+  var LINKED = null;   // the board whose order the league layer is using right now (withLink)
+  // runs fn with the current board's players (CALC_BOARD) re-slotted into board src's published position order
+  function withLink(src, fn, slotTier) {
+    if (!src) return fn();
+    const keep = { players, byId, maxValue, LINKED };
+    players = linkedList(publishedPlayers(CALC_BOARD), src, slotTier);
+    byId = new Map(players.map(p => [p.id, p])); maxValue = Math.max(1, ...players.map(p => p.value || 0));
+    LINKED = src;
+    try { return fn(); } finally { players = keep.players; byId = keep.byId; maxValue = keep.maxValue; LINKED = keep.LINKED; }
   }
   function leagueTeams(d) {
     const users = new Map(d.users.map(u => [u.user_id, u]));
@@ -11092,7 +11194,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     for (const pos of EDIT_POS) {
       const g = players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
       let prev = Infinity;
-      stickyOrder(g, p => raw.get(p.id), FA.margin, FA.maxPosMove).forEach((p, k) => {
+      (LINKED ? g : stickyOrder(g, p => raw.get(p.id), FA.margin, FA.maxPosMove)).forEach((p, k) => {   // a linked order is never reordered
         LG.adjPos.set(p.id, k + 1);
         // never above the player ahead of him at the position (published values included, Alan Oct 4)
         const r = raw.get(p.id), v = prev === Infinity || r < prev ? r : Math.max(0, prev * (1 - VALUE_MODEL.minRankStep));
@@ -11136,14 +11238,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   var TIER_EDGE = true;         // formatCheck: false = one factor per tier (the pricing before Oct 14)
   var SF_SMOOTH = true;         // formatCheck: false = no Superflex smoothing (the scarcity model alone), "noguard" = no 8-team cliff guard
   var PIN_BOARD = null;          // formatCheck: price every format on one board (null = the board each format picks)
-  function adjMapFor(vl, b) {
+  function adjMapFor(vl, b, link = null) {
     b = b || PIN_BOARD || autoBoardFor(vl);
-    const key = JSON.stringify([b.id, lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH, TIER_EDGE]);
+    const key = JSON.stringify([b.id, lineupOf(vl), vl.roster_positions, vl.scoring_settings, SF_SMOOTH, TIER_EDGE, linkKey(link)]);
     if (adjCache.has(key)) return adjCache.get(key);
     const keep = { adj: LG.adj, adjPos: LG.adjPos, adjRank: LG.adjRank, factor: LG.factor, depth: LG.depth };
     try {
       LG.adj = new Map(); LG.adjPos = new Map(); LG.adjRank = new Map(); LG.factor = new Map(); LG.depth = leagueDepth(vl);
-      withBoard(b, () => adjustValues(vl));
+      withBoard(b, () => withLink(link, () => adjustValues(vl)));
       adjCache.set(key, LG.adj);
       return LG.adj;
     } finally { Object.assign(LG, keep); }
@@ -11158,13 +11260,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const base = boardLeague(bd), bsc = base.scoring_settings, sc = vl.scoring_settings || {};
     const withSc = x => ({ ...base, scoring_settings: x });
     const lu = lineupOf(vl), b = lineupOf(base);
-    const v1 = adjMapFor(withSc({ ...sc, bonus_rec_te: bsc.bonus_rec_te || 0 }), bd).get(p.id);   // the league's scoring, base TE premium
-    const v2 = adjMapFor(withSc(sc), bd).get(p.id);                                                // + the league's TE premium
+    // a linked position order (LG.link) first: he takes the value of the spot he holds in the linked order
+    const lk = LG.link;
+    const v0 = lk ? Math.round(adjMapFor(base, bd, lk).get(p.id) ?? q.value) : q.value;
+    const v1 = adjMapFor(withSc({ ...sc, bonus_rec_te: bsc.bonus_rec_te || 0 }), bd, lk).get(p.id);   // the league's scoring, base TE premium
+    const v2 = adjMapFor(withSc(sc), bd, lk).get(p.id);                                                // + the league's TE premium
     const v3 = LG.adj.get(p.id);                                                               // + the league's lineup and size
     const tepFrom = tepShort(bsc.bonus_rec_te) || "none", tepTo = tepShort(sc.bonus_rec_te) || "none";
     const luDiff = ["teams", "QB", "RB", "WR", "TE", "FLEX", "WRRB_FLEX", "REC_FLEX", "SUPER_FLEX", "bench"].some(k => lu[k] !== b[k]);
     return { base: q.value, board: bd, adj: v3, steps: [
-      { key: "scoring", label: "Scoring", d: v1 - q.value },
+      ...(lk ? [{ key: "order", label: `${lk.label} position order`, d: v0 - q.value, on: true }] : []),
+      { key: "scoring", label: "Scoring", d: v1 - v0 },
       { key: "tep", label: `TE premium (${tepFrom} → ${tepTo})`, d: v2 - v1, on: tepFrom !== tepTo },
       { key: "lineup", label: "Lineup & league size", d: v3 - v2, on: luDiff }
     ] };
@@ -11394,7 +11500,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     const same = players.filter(p => Math.round(adjMapFor(fmtLeague(FMT_DEFAULT)).get(p.id)) !== Math.round(p.value));
     check("A league in the base format gives exactly the base values", same.map(p => p.name), same.length === 0);
-    const live = LG.fmtOn ? players.slice(0, 50).filter(p => Math.round(adjMapFor(valueLeague(), LG.board).get(p.id)) !== Math.round(LG.adj.get(p.id))) : [];
+    const live = LG.fmtOn ? players.slice(0, 50).filter(p => Math.round(adjMapFor(valueLeague(), LG.board, LG.link).get(p.id)) !== Math.round(LG.adj.get(p.id))) : [];
     check("The active league layer matches a fresh run of its settings", live.map(p => p.name), live.length === 0);
     if (out.some(c => !c.pass)) console.warn("AM format check failed", out); else console.info("AM format check passed", out);
     return out;
@@ -11754,10 +11860,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const fdialog = $("fmt-dialog");
   let fmtDraft = fmtFull(FMT);
   const showDialog = dlg => { if (dlg.open) return; if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); };
-  let fmtSrcDraft = FMT_SRC;
+  let fmtSrcDraft = FMT_SRC, linkDraft = null;
   function openFormat() {
     fmtDraft = fmtFull(FMT);
     fmtSrcDraft = FMT_SRC;
+    { const lb = posLinkBoard(); linkDraft = lb ? lb.id : null; }
     renderFormatDialog();
     showDialog(fdialog);
   }
@@ -11774,12 +11881,31 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("fmt-apply").textContent = locked ? "Use league settings" : "Apply & save";
     $("fmt-cancel").textContent = "Cancel";
     $("fmt-import").hidden = !!d;
+    renderLinkPick();
     if (locked) {
       $("fmt-locked").innerHTML = `<p>Values follow <b>${esc(d.league.name)}</b>'s own settings from ${esc(SOURCE_NAME[slSource()] === "pasted" ? "your pasted league" : SOURCE_NAME[slSource()])}:</p>
         <p class="fmt-summary">${esc(configText(d.league))}</p>
         <p class="hint">Pick <b>Custom format</b> to try other settings. Your rosters stay; only the values change. Your AM Board never changes.</p>`;
     } else renderFmtForm();
   }
+  // Position order for the connected league (see posLinkBoard): its board's own order, or follow a board's published order
+  function renderLinkPick() {
+    const d = activeData(), el = $("fmt-link");
+    el.hidden = !d;
+    if (!d) return;
+    const own = autoBoardFor(fmtSrcDraft === "custom" ? fmtLeague(fmtClean(fmtDraft)) : d.league);
+    const opt = (id, lab) => `<button type="button" role="radio" data-link="${esc(id)}" aria-checked="${(linkDraft || "") === id}">${esc(lab)}</button>`;
+    const cur = linkDraft && boardById(linkDraft);
+    el.innerHTML = `<h3>Position order</h3>
+      <div class="seg" role="radiogroup" aria-label="Position order">${opt("", "Default")}${BOARDS.map(b => opt(b.id, "Follow " + b.label)).join("")}</div>
+      <p class="hint">${cur
+        ? `QB, RB, WR and TE ranks in <b>${esc(d.league.name)}</b> follow <b>${esc(cur.label)}</b> as published (unpublished edits never count). Values, tiers and overall ranks still come from this league's format${cur !== own ? ` on ${esc(own.label)}` : ""}: an RB5 there is RB5 here, at this league's RB5 value.`
+        : `Position ranks come from ${esc(own.label)}, adjusted for this league: a player can pass the one above him (by 3%+, at most 2 spots) when this scoring suits him.`}</p>`;
+  }
+  $("fmt-link").addEventListener("click", e => {
+    const b = e.target.closest("[data-link]"); if (!b) return;
+    linkDraft = b.dataset.link || null; renderLinkPick();
+  });
   $("fmt-src").addEventListener("click", e => {
     const b = e.target.closest("[data-fmt-src]"); if (!b) return;
     fmtSrcDraft = b.dataset.fmtSrc; renderFormatDialog();
@@ -11838,6 +11964,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   $("fmt-form").addEventListener("submit", e => {
     e.preventDefault();
     if (activeData()) {
+      setPosLink(activeData().league.league_id, linkDraft);
       FMT_SRC = fmtSrcDraft;
       try { localStorage.setItem(FMT_SRC_KEY, FMT_SRC); } catch (err) {}
       if (FMT_SRC !== "custom") { renderLeagueAll(); fdialog.close(); toast(`Using ${activeData().league.name}'s own settings.`); return; }
@@ -18632,6 +18759,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   SPM.boards = f => ({ boards: BOARDS.map(b => ({ id: b.id, label: b.label, tierScope: b.tierScope, fmt: { ...b.fmt } })), active: ACTIVE_BOARD.id,
     league: leagueBoard().id, view: viewBoard().id, auto: f ? autoBoardFor(fmtLeague({ ...FMT_DEFAULT, ...f })).id : undefined });
   SPM.leagueValues = () => ({ board: LG.board ? LG.board.id : null, adj: Object.fromEntries([...LG.adj].map(([k, v]) => [String(k), v])) });
+  // the active league by Sleeper ID: value, position rank, overall rank and tier, plus the linked board (posLinkBoard)
+  SPM.leagueRanks = () => {
+    const out = {};
+    players.forEach(p => { if (!p.sleeperId || !LG.adj.has(p.id)) return;
+      const t = LG.linkTier.get(p.id), q = boardTwin(p, LG.board);
+      out[p.sleeperId] = { name: p.name, pos: p.pos, value: LG.adj.get(p.id), factor: LG.factor.get(p.id) || 1, posRank: LG.adjPos.get(p.id) ?? null, rank: LG.adjRank.get(p.id) ?? null, tier: t ? t.tier : q ? q.tier : p.tier }; });
+    return { board: LG.board ? LG.board.id : null, link: LG.link ? LG.link.id : null, players: out };
+  };
   /* Ranking sets self-test (Alan, Oct 14; tests/board_check.py): each board in its own format gives exactly its values,
      the QB format picks the board, pricing one board never touches another, adjustments start from the board's own
      format (TE premium, PPR and lineup applied once), overall tiers create no format cliffs, provisional players are marked. */
