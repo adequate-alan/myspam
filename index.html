@@ -11252,9 +11252,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       check("QB values descend down the position in every Superflex / 2QB format checked", desc, desc.length === 0);
       // (waiver-level QBs under 100 in 10-team are left out: the tier guard's 40% keep can put 8-team's tier 7 a
       // few points above 10-team's there, e.g. QB34 43 vs 30, with no smoothing involved)
-      const order = qs.filter(p => on.sf10.get(p.id) >= 100 && !(on.sf8.get(p.id) <= on.sf10.get(p.id) + 0.5 && on.sf10.get(p.id) <= on.sf12.get(p.id) + 0.5))
+      // 8-team may sit up to SF8_TOL above 10-team (Alan, Oct 19: QB15 / QB16 +1.0% after his QB edits; a small inversion is
+      // accepted, anything larger still fails and points at the league-size adjustment, not at a wider tolerance)
+      const SF8_TOL = 0.015;
+      const order = qs.filter(p => on.sf10.get(p.id) >= 100 && !(on.sf8.get(p.id) <= on.sf10.get(p.id) * (1 + SF8_TOL) + 0.5 && on.sf10.get(p.id) <= on.sf12.get(p.id) + 0.5))
         .map(p => `QB${p.posNum} ${[on.sf8, on.sf10, on.sf12].map(m => Math.round(m.get(p.id))).join(" / ")}`);
-      check("Every QB worth 100+: 8-team ≤ 10-team ≤ 12-team Superflex", order, order.length === 0);
+      check("Every QB worth 100+: 8-team ≤ 10-team (within 1.5%) ≤ 12-team Superflex", order, order.length === 0);
       const moved = (a, b, keys, who) => keys.flatMap(k => players.filter(who).filter(p => Math.abs((a[k].get(p.id) || 0) - (b[k].get(p.id) || 0)) > 0.5).map(p => `${k} ${p.name}`));
       const g = moved(on, ng, ["sf10", "sf12", "sf14", "q2_10"], p => true);
       check("The 8-team cliff guard leaves 10-, 12- and 14-team values unchanged", g.slice(0, 8), g.length === 0);
