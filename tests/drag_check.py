@@ -41,6 +41,7 @@ with sync_playwright() as p:
     kw = {"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}
     br = p.chromium.launch(**kw); errs = []
     pg = br.new_page(viewport={"width": 1440, "height": 900})
+    pg.add_init_script("window.__SPM_ORDER_SYNC_OFF = true;")   # generic editor mechanics on the live AM SF board: the AM PPR position order lock (Oct 19) is tested in board_sync_check
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
     pg.route(re.compile(r".*/data/market/flock_(sf|ppr)\.json(\?.*)?$"), lambda r: r.abort())

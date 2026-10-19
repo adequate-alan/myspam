@@ -66,7 +66,7 @@ RISK = {
  "drag-ui":       (TARGETED, ["drag_check", "drag_repeat_check", "drag_scroll_check"],
                    "dragFloat dropNum dragStart dragZone applySlot dragMove dragLoop dragScroll showDrop endDrag commitDrop clearMarks DRAG_STATE drag on:rank-body:pointerdown on:window:pointermove on:window:pointerup on:window:pointercancel on:window:blur".split()),
  # the editor's controls and notices (not the movement, value or publish functions they call: those are "editor", full)
- "editor-ui":     (TARGETED, ["editor_check", "board_edit_check", "move_to_rank_check", "tier_boundary_check", "reversal_check", "reversal_persist_check", "value_state_check",
+ "editor-ui":     (TARGETED, ["editor_check", "board_edit_check", "board_sync_check", "move_to_rank_check", "tier_boundary_check", "reversal_check", "reversal_persist_check", "value_state_check",
                               "drag_check", "drag_repeat_check", "drag_scroll_check", "publish_check"],
                    "MV mvPop mvNeighbours mvTarget mvPlace mvRender mvOpen mvOutside mvClose mvApply edWarn hideEdWarn REVALUED RECALC_TAG TIER_EMPTY TIER_DEL on:rank-body:click on:rank-body:keydown on:rank-body:focusout on:ed-warn:click on:mvPop:click on:mvPop:keydown on:mv-input:input".split()),
  "drawer-ui":     (TARGETED, ["drawer_check", "xss_check"],

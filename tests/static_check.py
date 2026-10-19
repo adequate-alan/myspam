@@ -36,6 +36,24 @@ OVERALL_TIERS = {"RANKINGS_CSV_PPR"}   # boards whose tiers are one scale down t
 # each board's ranking history and snapshot folder (Oct 14: AM PPR has its own, from its baseline)
 HIST_SETS = [("data/rank_history.json", "data/rank_snapshots"), ("data/boards/ppr/rank_history.json", "data/boards/ppr/rank_snapshots")]
 
+# AM SF PPR TE+ (RANKINGS_CSV) takes its QB / RB / WR / TE order from AM PPR's published order (Oct 19, the page's
+# syncOrder): a player in a tag tier (90+) on either board, valued 0 on SF, missing from AM PPR or at another position
+# there keeps his own spot; everyone else must stand in AM PPR's order
+def order_off(src_text, dst_text):
+    sh, srows = table(src_text); dh, drows = table(dst_text)
+    src = {r[sh.index("sleeper_id")]: r for r in srows if len(r) == len(sh)}
+    tag = lambda t: t.strip().isdigit() and int(t) >= 90
+    off = []
+    for pos in ("QB", "RB", "WR", "TE"):
+        lst = sorted((r for r in drows if len(r) == len(dh) and r[dh.index("pos")] == pos), key=lambda r: int(r[dh.index("rank")]))
+        def free(r):
+            s_ = src.get(r[dh.index("sleeper_id")])
+            return s_ is not None and s_[sh.index("pos")] == pos and not tag(r[dh.index("tier")]) and not tag(s_[sh.index("tier")]) and (r[dh.index("value")] or "0").isdigit() and int(r[dh.index("value")] or 0) > 0
+        here = [r for r in lst if free(r)]
+        want = sorted(here, key=lambda r: int(src[r[dh.index("sleeper_id")]][sh.index("rank")]))
+        off += [f"{pos}: {a[dh.index('player')]} where AM PPR has {b[dh.index('player')]}" for a, b in zip(here, want) if a is not b][:2]
+    return off
+
 failures = []
 def ok(cond, msg):
     print(("PASS " if cond else "FAIL ") + msg)
@@ -96,7 +114,7 @@ def history_errors(h):   # the Oct 11 model: entries [ts, rank, posRank, tier, v
     for sid, lst in h["players"].items():
         for e in lst:
             if not (isinstance(e, list) and len(e) in (6, 7) and isinstance(e[0], str) and re.match(r"\d{4}-\d\d-\d\d", e[0])
-                    and isinstance(e[1], int) and e[1] >= 1 and e[5] in ("M", "S", "P", "B") and (len(e) == 6 or e[6] in ("R", "V", "RV", "A"))):
+                    and isinstance(e[1], int) and e[1] >= 1 and e[5] in ("M", "S", "P", "B", "O") and (len(e) == 6 or e[6] in ("R", "V", "RV", "A"))):
                 errs.append(f"player {sid} has a malformed entry {json.dumps(e)[:80]}"); break
         if len(errs) > 5: break
     ev = h.get("events", [])
@@ -202,6 +220,11 @@ def main():
             split = [f"Tier {a} → {b}" for a, b in zip(tiers, tiers[1:]) if b < a]
             if split: errs.append(f"overall tiers split {split[:3]}")
         ok(not errs, f"{name} passes the publish rules ({len(brows)} players) {errs[:5]}")
+
+    ppr = BOARD_RES["RANKINGS_CSV_PPR"].findall(html)
+    if text is not None and len(ppr) == 1:
+        off = order_off(ppr[0], text)
+        ok(not off, f"AM SF PPR TE+ position order follows AM PPR's published order {off[:4]}")
 
     # 3. ranking history: every board's history file and snapshot folder
     hists = {}
