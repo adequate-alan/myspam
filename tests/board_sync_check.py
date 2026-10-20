@@ -136,7 +136,8 @@ with sync_playwright() as p:
     live = repo.read("index.html")
     r = sync(pg, block(live, PPR_RE), block(live, SF_RE))
     ok(not r["moved"], f"AM SF PPR TE+ follows AM PPR's published position order in this checkout ({len(r['moved'])} differences)")
-    ok(sorted(k["name"] for k in r["kept"]) == ["De'Von Achane", "Jaxson Dart"], f"…with only the Out for season players kept in place: {[k['name'] + ' (' + k['why'] + ')' for k in r['kept']]}")
+    # whoever is Out on either board today (live data: names change with Alan's publishes)
+    ok(r["kept"] and all("tag tier" in k["why"] or "valued 0" in k["why"] for k in r["kept"]), f"…with only Out for season / value 0 players kept in place: {[k['name'] + ' (' + k['why'] + ')' for k in r['kept']]}")
     pg.close()
 
     # C. an unpublished AM PPR move never reaches either block on GitHub
