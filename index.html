@@ -13215,6 +13215,44 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const id = d.league.league_id;
     if (LT.loading !== id && !LT.error[id] && (!d.tx || d.txV !== TX_VERSION || Date.now() - (d.tradesAt || 0) > 3600e3)) loadTrades();
   }
+  /* The board as published at a past moment, priced in this league's format (Alan, Oct 20: a TE premium league's trade
+     cards read base AM PPR values, so LaPorta counted as a no-TEP TE4). Every player on the league's board takes his
+     rank, position rank, tier and value from the snapshot (or his latest history entry) at or before ms, and the same
+     adjustValues the rest of the league pages use re-prices that board in the league's current settings (Sleeper keeps
+     no past settings). Players without a value then are left out. Returns Sleeper ID → adjusted value, and page id → value. */
+  const ADJ_AT = new Map();
+  function adjBoardAt(bd, ms, vl = valueLeague()) {
+    if (!vl) return null;
+    const se = snapEventAt(ms, bd), exact = se && snapsOf(bd).files[se.e.snap];
+    const key = JSON.stringify([bd.id, exact ? se.e.ts : ms, lineupOf(vl), vl.roster_positions, vl.scoring_settings, (histFor(bd) || {}).events ? histNow(bd).events.length : 0]);
+    if (ADJ_AT.has(key) && ADJ_AT.get(key).at === players) return ADJ_AT.get(key);
+    const list = [];
+    boardPlayers(bd).forEach(q => {
+      const h = q.sleeperId && valueAt(q.sleeperId, ms, bd);
+      if (!h || h.v == null) return;
+      list.push({ ...q, rank: h.rank, posNum: h.pr, posRank: q.pos + h.pr, tier: h.tier, value: h.v });
+    });
+    const groups = {};   // projections keep today's order over the position spots of then (as boardPlayers does)
+    list.forEach(q => { q.projRank = null; if (q.pos !== "PICK" && q.posNum != null && q.projScore != null) (groups[q.pos + "|" + q.source] = groups[q.pos + "|" + q.source] || []).push(q); });
+    for (const g of Object.values(groups)) {
+      const slots = g.map(q => q.posNum).sort((x, y) => x - y);
+      [...g].sort((x, y) => y.projScore - x.projScore).forEach((q, i) => { q.projRank = slots[i]; });
+    }
+    if (bd.componentsBase) list.forEach(q => { if (q.pos !== "PICK" && q.posNum != null) q.rawValue = modelValue(q.pos, q.posNum, q.projRank, q.games); });
+    else nativeRaw(list, bd);
+    const keep = { adj: LG.adj, adjPos: LG.adjPos, adjRank: LG.adjRank, factor: LG.factor, depth: LG.depth, players, byId, maxValue, CALC_BOARD };
+    let byPid;
+    try {
+      LG.adj = new Map(); LG.adjPos = new Map(); LG.adjRank = new Map(); LG.factor = new Map(); LG.depth = leagueDepth(vl);
+      players = list; byId = new Map(list.map(q => [q.id, q])); maxValue = Math.max(1, ...list.map(q => q.value)); CALC_BOARD = bd;
+      adjustValues(vl);
+      byPid = LG.adj;
+    } finally { LG.adj = keep.adj; LG.adjPos = keep.adjPos; LG.adjRank = keep.adjRank; LG.factor = keep.factor; LG.depth = keep.depth;
+      players = keep.players; byId = keep.byId; maxValue = keep.maxValue; CALC_BOARD = keep.CALC_BOARD; }
+    const out = { at: players, bySid: new Map(list.map(q => [q.sleeperId, byPid.get(q.id) ?? q.value])), byPid };
+    ADJ_AT.set(key, out);
+    return out;
+  }
   const SIDE_LABELS = [[3, "Fair", "Fair"], [7, "Slight win", "Slight loss"], [12, "Win", "Loss"], [20, "Clear win", "Clear loss"], [30, "Steal", "Lopsided loss"], [Infinity, "Robbery", "Robbed"]];
   function evalTrade(t) {
     // the league's board (Alan, Oct 14): a 1QB league reads AM PPR values, "then" from AM PPR's own history and snapshots;
@@ -13229,7 +13267,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     t.picks.forEach(pk => { const s = partOf(pk.owner); if (s) s.picks.push(pk); });
     t.faab.forEach(b => { const s = partOf(b.receiver); if (s) s.faab += b.amount; });
     // two snapshots, never mixed: "then" = the AM values published at or before the trade, "now" = today's AM values.
-    // Both are base AM Board values so they compare like for like (a league's past settings can't be rebuilt).
+    // Both are priced in the league's current settings so they compare like for like (a league's past settings can't
+    // be rebuilt); with no format set, both are the board's own values.
     const all = [...new Set(parts.flatMap(s => s.get))];
     const then = new Map(all.map(sid => [sid, noHist ? null : valueAt(sid, t.at, bd)]));
     const valued = all.filter(sid => map.get(sid) || then.get(sid));   // K, DEF and other unranked players are never valued
@@ -13237,23 +13276,32 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const thenNone = valued.every(sid => !then.get(sid));
     const basisTs = thenAll ? valued.map(sid => then.get(sid)).sort((a, b) => a.t - b.t).pop().ts : null;
     const preSpam = !thenAll && (noHist || t.at < spamStart(bd));
+    // both snapshots in this league's format (Alan, Oct 20): today's league-adjusted values, and the board as published
+    // then re-priced with the same league settings, so Then and Now still compare like for like
+    const adjusted = !!LG.fmtOn, thenAdj = adjusted && thenAll ? adjBoardAt(bd, t.at) : null;
     parts.forEach(s => {
       s.items = s.get.map(sid => {
         const e = rosterEntry(sid, map), p = map.get(sid), h = then.get(sid) || null;
-        return { sid, e, p, then: h, thenV: h ? h.v : null, now: p ? p.value : (h ? 0 : null), nowAdj: p ? adjOf(p) : null,
-          posThen: h && h.pr ? e.pos + h.pr : null, v: thenAll ? (h ? h.v : 0) : (p ? p.value : 0) };   // an unvalued player (K, DEF, off the board) counts 0 then too
+        const thenV = h ? (thenAdj ? thenAdj.bySid.get(sid) ?? h.v : h.v) : null, now = p ? (adjusted ? adjOf(p) : p.value) : (h ? 0 : null);
+        return { sid, e, p, then: h, thenV, thenBase: h ? h.v : null, now, nowBase: p ? p.value : (h ? 0 : null),
+          posThen: h && h.pr ? e.pos + h.pr : null, v: thenAll ? (h ? thenV : 0) : (now || 0) };   // an unvalued player (K, DEF, off the board) counts 0 then too
       }).sort((a, b) => b.v - a.v);
       s.total = s.items.reduce((a, x) => a + x.v, 0);
     });
     const snapshot = key => {   // the AM verdict with one set of values (key = "thenV" or "now")
       const got = s => s.items.reduce((a, x) => a + (x[key] || 0), 0);
       const sent = s => s.give.reduce((a, sid) => { const o = parts.flatMap(q => q.items).find(x => x.sid === sid); return a + ((o && o[key]) || 0); }, 0);
+      // in the league's format the package adjustment runs at the league's depth and the small-value floor is that
+      // format's average starter, as in the calculator (Analyze trade); base values keep depth 1 and the base floor
+      const depth = adjusted ? LG.depth || 1 : 1;
+      // (over the league's board, so identical boards give Then and Now the same floor)
+      const floor = () => !adjusted ? valueFloor(null, true) : withBoard(bd, () => valueFloor(key === "now" ? p => LG.adj.get(p.id) || 0 : p => (thenAdj && thenAdj.byPid.get(p.id)) || 0));
       if (parts.length === 2) {
-        const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 1;
+        const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = depth;
         const m = tradeModel(parts[0].items.map(x => ({ value: x[key] || 0 })), parts[1].items.map(x => ({ value: x[key] || 0 })));
         LEAGUE_DEPTH = keep;
         if (!(m.scoreA > 0 && m.scoreB > 0)) return { model: m, totals: [got(parts[0]), got(parts[1])], oneSided: true, ahead: m.scoreA >= m.scoreB ? 0 : 1, diff: Math.abs(m.scoreA - m.scoreB) };
-        const vr = valueRead(m, valueFloor(null, true)), more = vr.gap, rawDecides = vr.kind === "widened" || ((vr.kind === "evened" || vr.kind === "sensitive") && Math.abs(vr.raw) < VALUE_FAIR);
+        const vr = valueRead(m, floor()), more = vr.gap, rawDecides = vr.kind === "widened" || ((vr.kind === "evened" || vr.kind === "sensitive") && Math.abs(vr.raw) < VALUE_FAIR);
         if (vr.kind === "split") return { model: m, totals: [got(parts[0]), got(parts[1])], a: m.scoreA, b: m.scoreB, split: true, vr, ahead: vr.raw > 0 ? 0 : 1, more: 0,
           tier: { upTo: 99, title: () => "Split verdict" }, fair: false, diff: Math.abs(m.rawA - m.rawB) };
         const tier = vr.kind === "sensitive" ? { upTo: 3, title: () => "Package-sensitive" } : verdictTier(more);
@@ -13265,10 +13313,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const vals = key2 => s => s.items.map(x => ({ value: x[key2] || 0 }));
       const sentItems = s => s.give.map(sid => { const o = parts.flatMap(q => q.items).find(x => x.sid === sid); return { value: (o && o[key]) || 0 }; });
       const nets = parts.map(s => ({ got: got(s), sent: sent(s), recvI: vals(key)(s), sentI: sentItems(s) }));
-      const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 1;
+      const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = depth;
+      const fl = floor();
       nets.forEach(n => {
         n.net = n.got - n.sent;
-        n.vr = n.got > 0 && n.sent > 0 ? valueRead(tradeModel(n.recvI, n.sentI), valueFloor(null, true)) : null;
+        n.vr = n.got > 0 && n.sent > 0 ? valueRead(tradeModel(n.recvI, n.sentI), fl) : null;
         n.more = n.vr ? n.vr.gap : pctMore(n.got, n.sent);
         delete n.recvI; delete n.sentI;
       });
@@ -13277,7 +13326,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const fair = nets.every(n => n.vr ? n.vr.kind !== "split" && n.vr.kind !== "sensitive" && n.vr.gap < VALUE_FAIR : Math.abs(n.net) < 1);
       return { nets, totals: nets.map(n => n.got), ahead: lead, fair, diff: nets[lead].net };
     };
-    const res = { t, parts, thenAll, thenNone, basisTs, preSpam, noBoard: noHist || (preSpam && bd !== DEFAULT_BOARD) ? bd.label : null, nowLabel: bd === DEFAULT_BOARD ? "AM" : bd.label, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
+    const res = { t, parts, thenAll, thenNone, basisTs, preSpam, noBoard: noHist || (preSpam && bd !== DEFAULT_BOARD) ? bd.label : null, nowLabel: bd === DEFAULT_BOARD ? "AM" : bd.label, adjusted, then: thenAll ? snapshot("thenV") : null, now: snapshot("now") };
     // what the rest of the site reads (Analyze trade): today's snapshot for two-team trades
     res.historical = thenAll;
     if (parts.length === 2) { const n = res.now; res.model = n.model; res.a = n.a; res.b = n.b; res.ahead = n.ahead; res.more = n.more; res.tier = n.tier; res.fair = n.fair; }
@@ -13365,8 +13414,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const noThen = r.noBoard ? `No ${esc(r.noBoard)} value available then` : r.preSpam ? "No AM value existed at the time of this trade"
       : `Not every player had an AM value at the time (${P.flatMap(s => s.items).filter(x => (x.p || x.then) && !x.then).map(x => esc(x.e.name)).join(", ")})`;
     const ages = `<section class="th-ages" aria-label="Then vs now">
-        ${r.then ? thBlock(r, r.then, "then", `${basisDate} AM values`) : `<div class="th-age then none"><span class="th-age-k">Then</span><span class="th-age-none">${noThen}</span></div>`}
-        ${thBlock(r, r.now, "now", `Current ${esc(r.nowLabel || "AM")} values`)}
+        ${r.then ? thBlock(r, r.then, "then", `${basisDate} ${r.nowLabel || "AM"} values${r.adjusted ? " · league format" : ""}`) : `<div class="th-age then none"><span class="th-age-k">Then</span><span class="th-age-none">${noThen}</span></div>`}
+        ${thBlock(r, r.now, "now", `Current ${r.nowLabel || "AM"} values${r.adjusted ? " · league format" : ""}`)}
         ${aged ? `<p class="th-aged">${esc(aged.text)}</p>` : ""}
       </section>`;
     const anyPicks = P.some(s => s.picks.length);
@@ -13387,11 +13436,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const sign = n => (n > 0 ? "+" : n < 0 ? "−" : "±") + fmt(Math.abs(n));
     const row = x => {
       if (!x.p && !x.then) return `<li class="thh-row"><span class="thh-name">${esc(x.e.name)} <small>${esc(x.e.pos || "")}</small></span><span class="thh-vals muted">Not valued by AM</span></li>`;
-      const h = x.then, d = h && x.now != null ? x.now - h.v : null;
+      const h = x.then, d = h && x.now != null ? x.now - x.thenV : null;
       const meta = h ? `#${h.rank} · ${esc(x.e.pos)}${h.pr}${h.tier !== "" && h.tier != null && h.tier < 90 ? ` · Tier ${h.tier}` : h.tier >= 90 ? ` · ${esc(tierLabel(x.e.pos, h.tier))}` : ""} at trade` : "No AM value at the time";
       const nowMeta = x.p ? `#${x.p.rank} · ${esc(x.p.posRank)} today` : "Off the AM board today";
       return `<li class="thh-row"><span class="thh-name">${esc(x.e.name)}<small>${meta} · ${nowMeta}</small></span>
-        <span class="thh-vals">${h ? fmt(h.v) : `<span class="muted">–</span>`} <span class="thh-arrow">→</span> ${x.now != null ? fmt(x.now) : "–"}${d != null ? ` <b class="thh-d ${d > 0 ? "up" : d < 0 ? "down" : ""}">${sign(d)}</b>` : ""}</span></li>`;
+        <span class="thh-vals">${h ? fmt(x.thenV) : `<span class="muted">–</span>`} <span class="thh-arrow">→</span> ${x.now != null ? fmt(x.now) : "–"}${d != null ? ` <b class="thh-d ${d > 0 ? "up" : d < 0 ? "down" : ""}">${sign(d)}</b>` : ""}</span></li>`;
     };
     const side = s => {
       const thenT = s.items.reduce((a, x) => a + (x.thenV || 0), 0), nowT = s.items.reduce((a, x) => a + (x.now || 0), 0);
@@ -13404,7 +13453,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const verdictLine = (s, label) => P.length === 2 && s && !s.oneSided
       ? `<p><b>${label}:</b> ${esc(s.tier.title(P[s.ahead].team.name, P[1 - s.ahead].team.name))} · ${fmt(s.a)} vs ${fmt(s.b)}${s.more >= 0.05 ? ` (${s.more.toFixed(1)}%)` : ""}${adjNote(s) ? ` <span class="muted">package-adjusted (raw ${fmt(s.model.rawA)} vs ${fmt(s.model.rawB)}${s.vr && s.vr.kind !== "tempered" ? `: ${s.vr.kind === "split" ? "the adjustment reverses the raw winner" : "the raw gap decides the verdict"}` : ""})</span>` : ""}</p>`
       : P.length > 2 && s ? `<p><b>${label}:</b> ${P.map((q, i) => `${esc(q.team.name)} got ${fmt(s.nets[i].got)} for ${fmt(s.nets[i].sent)}`).join("; ")}</p>` : "";
-    const fmtNow = LG.fmtOn && P.length >= 2 && P.flatMap(s => s.items).some(x => x.p && Math.round(x.nowAdj) !== Math.round(x.now));
+    // the board's own values (before the league's format) as a muted reference, when the format changes any of them
+    const baseDiff = r.adjusted && P.flatMap(s => s.items).some(x => (x.p && Math.round(x.nowBase) !== Math.round(x.now)) || (x.then && Math.round(x.thenBase) !== Math.round(x.thenV)));
+    const baseTot = (s, k) => fmt(s.items.reduce((a, x) => a + (x[k] || 0), 0));
     return `<div class="th-full">
         <p class="thh-basis">${r.then
           ? `<b>At the time:</b> the latest AM values published at or before the trade (${esc(tsLong(r.basisTs))}; trade completed ${esc(new Date(t.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }))}). Never a ranking update from after it.`
@@ -13414,8 +13465,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <div class="thh-sides">${P.map(side).join("")}</div>
         ${verdictLine(r.then, "At the time")}
         ${verdictLine(r.now, "Today")}
-        ${fmtNow ? `<p class="muted">In this league's format today: ${P.map(s => `${esc(s.team.name)} ${fmt(s.items.reduce((a, x) => a + (x.nowAdj || 0), 0))}`).join(" · ")}.</p>` : ""}
-        <p class="muted">Both snapshots use base AM Board values so they compare like for like: Sleeper doesn't keep a league's past settings, so league-adjusted values for a past date can't be rebuilt reliably.${P.some(s => s.picks.length) ? " Draft picks aren't valued; a pick that later becomes a player isn't given that player's value." : ""}</p>
+        ${baseDiff ? `<p class="muted">On the ${esc(r.nowLabel || "AM")} board itself, before this league's format: ${P.map(s => `${esc(s.team.name)} ${r.then ? `${baseTot(s, "thenBase")} → ` : ""}${baseTot(s, "nowBase")}`).join(" · ")}.</p>` : ""}
+        <p class="muted">${r.adjusted ? `Both snapshots are priced in this league's current settings (scoring, TE premium, lineup and size), so they compare like for like. Sleeper doesn't keep a league's past settings, so a settings change since the trade isn't reflected.` : `Both snapshots use base AM Board values so they compare like for like.`}${P.some(s => s.picks.length) ? " Draft picks aren't valued; a pick that later becomes a player isn't given that player's value." : ""}</p>
       </div>`;
   }
   /* Transactions: trades (with the AM trade analysis), waiver claims, free-agent adds and drops, newest first */
@@ -18872,6 +18923,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         per: Object.fromEntries(Object.entries(M.per).map(([k, x]) => [k, { miss: x.miss, read: x.read && { a: x.read.a, b: x.read.b, gap: x.read.gap } }])) })(mkTrade(A, B, dv)),
       viewB: mktView(A.map(id => byId.get(id)), B.map(id => byId.get(id))) };
   };
+  if (window.__SPM_TEST_HOOKS === true) SPM.tradeEval = id => {   // a Transactions trade's Then / Now values per player (tests)
+    const d = activeData(), t = d && (d.tx || []).find(x => x.id === String(id)); if (!t) return null;
+    const r = evalTrade(t), adj = new Map((LG.board === ACTIVE_BOARD ? players : boardPlayers(LG.board)).map(q => [q.sleeperId, LG.adj.get(q.id)]));
+    return { board: (LG.board || leagueBoard()).id, adjusted: r.adjusted, thenAll: r.thenAll, items: r.parts.flatMap(s => s.items.map(x => ({ sid: x.sid, pos: x.e.pos, thenV: x.thenV, thenBase: x.thenBase, now: x.now, nowBase: x.nowBase, adj: adj.get(x.sid) ?? null }))),
+      thenDiff: r.then && r.then.diff, nowDiff: r.now && r.now.diff, thenPct: r.then && r.then.more, nowPct: r.now && r.now.more };
+  };
+  if (window.__SPM_TEST_HOOKS === true) SPM.leagueSidValues = () => Object.fromEntries((LG.board === ACTIVE_BOARD ? players : boardPlayers(LG.board)).filter(q => q.sleeperId && LG.adj.has(q.id)).map(q => [q.sleeperId, LG.adj.get(q.id)]));
+  // the league's board as published at ms, priced in the league's format, against today's league layer (tests)
+  if (window.__SPM_TEST_HOOKS === true) SPM.adjAt = ms => { const bd = LG.board || leagueBoard(), m = adjBoardAt(bd, ms); return m ? Object.fromEntries(m.bySid) : null; };
   if (window.__SPM_TEST_HOOKS === true) SPM.acceptance = a => acceptance(a);   // the shared Acceptance read on given inputs (tests)
   if (window.__SPM_TEST_HOOKS === true) SPM.hcVs = (am, v, who, lead) => hcVs(am, v, who, lead);   // AM vs a market price as shown in the cards
   if (window.__SPM_TEST_HOOKS === true) SPM.mkConfWhy = sids => mkConfWhy(sids.map(s => players.find(p => String(p.sleeperId) === String(s))));
