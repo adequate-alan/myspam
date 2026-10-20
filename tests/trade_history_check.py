@@ -11,6 +11,9 @@ Checks:
 3. A trade before any AM value says "No AM value existed at the time of this trade" and only shows today.
 4. A trade where only some players had a value then gives no at-the-time verdict (never today's value labeled as then).
 5. Draft picks and FAAB stay listed, unvalued. Three-team trades show each team's net in both snapshots. No page errors.
+6. A trade with a player AM doesn't value (a team defense, a kicker, a player off the board) whose other players all had
+   a value then still shows its Then / Now verdict, with that player listed as not valued (Oct 20: it crashed the whole
+   Transactions view with "Cannot read properties of null (reading 'v')").
 """
 import os, re, sys, json
 from datetime import datetime, timezone
@@ -34,12 +37,14 @@ b1 = R[1]["players"][3]                              # team 2 sends
 c1, d1 = R[2]["players"][5], R[3]["players"][5]
 e1, f1 = R[4]["players"][5], R[5]["players"][5]
 g1, g2, g3 = R[6]["players"][5], R[7]["players"][5], R[8]["players"][5]
+k1, k2 = R[9]["players"][5], R[10]["players"][5]
+UNV = "KC"                                           # a team defense: never on an AM board, no history
 T_HIST, T_PRE, T_PART, T_3 = NOW - 10 * DAY, NOW - 40 * DAY, NOW - 12 * DAY, NOW - 9 * DAY
 # synthetic history: everyone first valued 30 days ago; a1/a2/b1 re-valued 2 days before the trade, and b1 again an hour AFTER it
 first = NOW - 30 * DAY
 hist = {"note": "synthetic", "version": 2, "players": {}}
 def add(sid, ms, rank, pr, tier, v): hist["players"].setdefault(sid, []).append([iso(ms), rank, pr, tier, v, "M"])
-for sid, rk in [(a1, 20), (a2, 60), (b1, 15), (c1, 40), (e1, 50), (f1, 55), (g1, 70), (g2, 75), (g3, 80)]: add(sid, first, rk, 9, 3, 3000 - rk * 10)
+for sid, rk in [(a1, 20), (a2, 60), (b1, 15), (c1, 40), (e1, 50), (f1, 55), (g1, 70), (g2, 75), (g3, 80), (k1, 65), (k2, 66)]: add(sid, first, rk, 9, 3, 3000 - rk * 10)
 add(a1, T_HIST - 2 * DAY, 18, 7, 2, 6100); add(a2, T_HIST - 2 * DAY, 58, 22, 4, 2400); add(b1, T_HIST - 2 * DAY, 12, 5, 2, 8500)
 add(b1, T_HIST + 3600e3, 30, 11, 3, 4000)   # published after the trade: must never count as "at the time"
 # d1 has no history: the partial trade
@@ -48,7 +53,9 @@ L1["tx"] = {2: [
      "adds": {b1: 1, a1: 2, a2: 2}, "drops": {b1: 2, a1: 1, a2: 1}, "draft_picks": [{"season": "2027", "round": 1, "roster_id": 1, "owner_id": 2, "previous_owner_id": 1}],
      "waiver_budget": [{"sender": 2, "receiver": 1, "amount": 15}]},
     {"transaction_id": "th3", "type": "trade", "status": "complete", "roster_ids": [7, 8, 9], "leg": 2, "status_updated": T_3,
-     "adds": {g1: 8, g2: 9, g3: 7}, "drops": {g1: 7, g2: 8, g3: 9}, "draft_picks": [], "waiver_budget": []}],
+     "adds": {g1: 8, g2: 9, g3: 7}, "drops": {g1: 7, g2: 8, g3: 9}, "draft_picks": [], "waiver_budget": []},
+    {"transaction_id": "thk", "type": "trade", "status": "complete", "roster_ids": [10, 11], "leg": 2, "status_updated": T_3 + 3600e3,
+     "adds": {k1: 11, k2: 10, UNV: 10}, "drops": {k1: 10, k2: 11, UNV: 11}, "draft_picks": [], "waiver_budget": []}],
   1: [{"transaction_id": "thp", "type": "trade", "status": "complete", "roster_ids": [3, 4], "leg": 1, "status_updated": T_PART,
        "adds": {c1: 4, d1: 3}, "drops": {c1: 3, d1: 4}, "draft_picks": [], "waiver_budget": []},
       {"transaction_id": "th0", "type": "trade", "status": "complete", "roster_ids": [5, 6], "leg": 1, "status_updated": T_PRE,
@@ -80,9 +87,10 @@ with sync_playwright() as p:
             for i in range(cards.count()):
                 if f"Alpha League Team {team} " in " ".join(cards.nth(i).inner_text().split()) + " ": return i
             return 0
-        I = {"hist": idx(2), "three": idx(7), "part": idx(4), "pre": idx(6)}
+        I = {"hist": idx(2), "three": idx(7), "part": idx(4), "pre": idx(6), "unv": idx(10)}
         txt = lambda k: " ".join(cards.nth(I[k]).inner_text().split())
-        ok(cards.count() == 4, f"[{theme}] four trades listed ({cards.count()})")
+        ok(cards.count() == 5, f"[{theme}] five trades listed ({cards.count()})")
+        ok(not pg.locator(".lg-error").count() and "Something went wrong" not in pg.inner_text("#panel-league"), f"[{theme}] the Transactions view renders (no 'Something went wrong')")
         if theme == "dark":
             # 1. the two-team trade after AM existed: Team 1 got b1 (8,500 then), Team 2 got a1 + a2 (6,100 + 2,400 then)
             c = txt("hist")
@@ -125,6 +133,17 @@ with sync_playwright() as p:
             ok("No AM value existed at the time of this trade" in c0 and cards.nth(I["pre"]).locator(".th-tag.pre").count() == 1, "Pre-AM trade says no AM value existed, shows today only")
             ok(cards.nth(I["pre"]).locator(".th-verdict small").inner_text().upper() == "NOW", "Pre-AM headline verdict is labeled Now")
             ok(cards.nth(I["three"]).locator(".th-verdict small").inner_text().upper() == "THEN → NOW" and cards.nth(I["three"]).locator(".th-age.then .th-edge-sub").count() == 1, "Three-team trade: Then → Now headline, each team's net in the Then block")
+            # 6. an unvalued player (team defense) beside players who all had a value then
+            cu = txt("unv"); uc = cards.nth(I["unv"])
+            print("   unvalued:", cu[:300])
+            ok(uc.locator(".th-age.then .th-age-v").count() == 1 and uc.locator(".th-verdict small").inner_text().upper() == "THEN → NOW", "A trade with a team defense still gets its Then → Now verdict from the valued players")
+            ok(UNV in cu or "–" in cu, "The team defense stays listed, unvalued")
+            uc.locator("[data-th-full]").click(); pg.wait_for_timeout(300)
+            ok("Not valued by AM" in uc.locator(".th-full").inner_text(), "Breakdown lists the team defense as not valued by AM")
+            n_err = len(errs); uc.locator("[data-th-analyze]").click(); pg.wait_for_timeout(1200)
+            ok(len(errs) == n_err and pg.locator("#panel-trade").is_visible(), f"Analyze trade opens it in the calculator without an error {errs[n_err:][:1]}")
+            pg.click("#tab-league"); pg.wait_for_timeout(500)
+            cards = pg.locator(".th-card")
         if SHOTS:
             cards.nth(I["hist"]).scroll_into_view_if_needed()
             pg.screenshot(path=os.path.join(SHOTS, f"trade_history_{theme}.png"), full_page=False)
