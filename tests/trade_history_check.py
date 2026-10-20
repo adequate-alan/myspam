@@ -11,6 +11,10 @@ Checks:
 3. A trade before any AM value says "No AM value existed at the time of this trade" and only shows today.
 4. A trade where only some players had a value then gives no at-the-time verdict (never today's value labeled as then).
 5. Draft picks and FAAB stay listed, unvalued. Three-team trades show each team's net in both snapshots. No page errors.
+7. Then and Now are priced in the league's format (Oct 20: MONEY LEAGUE 2K27, a 1QB TE premium league on the no-TEP AM
+   PPR board, read base values, so a TE counted as if there were no TE premium). Now = the league-adjusted value of each
+   player; Then = the board as published then, priced in the league's format; the board's current snapshot priced that
+   way reproduces the league layer exactly; a TE in a 1QB TE+ league is worth more than on the AM PPR board itself.
 6. A trade with a player AM doesn't value (a team defense, a kicker, a player off the board) whose other players all had
    a value then still shows its Then / Now verdict, with that player listed as not valued (Oct 20: it crashed the whole
    Transactions view with "Cannot read properties of null (reading 'v')").
@@ -61,6 +65,18 @@ L1["tx"] = {2: [
       {"transaction_id": "th0", "type": "trade", "status": "complete", "roster_ids": [5, 6], "leg": 1, "status_updated": T_PRE,
        "adds": {e1: 6, f1: 5}, "drops": {e1: 5, f1: 6}, "draft_picks": [], "waiver_budget": []}]}
 
+# 7. a 1QB TE premium league (valued on AM PPR, which has no TE premium) with a trade after AM PPR's first snapshot:
+# a TE for two WRs, picked from that snapshot by position rank so the test doesn't depend on who they are
+_ps = json.load(open(os.path.join(ROOT, "data", "boards", "ppr", "rank_snapshots", "2026-10.json")))["snapshots"][0]
+_by = lambda pos, pr: next(sid for sid, a in _ps["players"].items() if a[1] == pr and pos == next((r_["pos"] for r_ in rows if r_["sleeper_id"] == sid), None))
+TE4, WRA, WRB = _by("TE", 4), _by("WR", 31), _by("WR", 43)
+T_TEP = int(datetime.fromisoformat(_ps["ts"].replace("Z", "+00:00")).timestamp() * 1000 + DAY)
+L3 = make_league("L3", "Gamma League", 12, ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6,
+                 {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5})
+L3["tx"] = {6: [{"transaction_id": "tep1", "type": "trade", "status": "complete", "roster_ids": [1, 2], "leg": 6, "status_updated": T_TEP,
+                 "adds": {TE4: 2, WRA: 1, WRB: 1}, "drops": {TE4: 1, WRA: 2, WRB: 2}, "draft_picks": [], "waiver_budget": []}]}
+LEAGUES["L3"] = L3
+
 port = serve()
 with sync_playwright() as p:
     br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
@@ -71,7 +87,7 @@ with sync_playwright() as p:
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route("**/data/rank_history.json*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(hist)))
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
-        pg.add_init_script(f"try {{ localStorage.setItem('spm_theme', '{theme}'); }} catch (e) {{}}")
+        pg.add_init_script(f"window.__SPM_TEST_HOOKS = true; try {{ localStorage.setItem('spm_theme', '{theme}'); }} catch (e) {{}}")
         pg.goto(f"http://127.0.0.1:{port}/#rankings"); pg.wait_for_timeout(4500)
         today = pg.evaluate("() => SPM.rankingSnapshot()")
         pg.evaluate("() => { const b = document.createElement('button'); b.dataset.act = 'account'; document.getElementById('league-menu').append(b); b.click(); b.remove(); }")
@@ -96,7 +112,11 @@ with sync_playwright() as p:
             c = txt("hist")
             print("   card:", c[:400])
             ok("THEN" in c.upper() and "NOW" in c.upper() and "AM VALUES" in c.upper() and "CURRENT AM VALUES" in c.upper(), "Both snapshots shown on the compact card as Then / Now with the values they use")
-            ok("8,500" in c and "6,100" in c and "2,400" in c and "4,000" not in c, "At the time = the entry before the trade, never the update an hour after it")
+            ev = pg.evaluate("() => SPM.tradeEval('th1')")
+            V = {x["sid"]: x for x in ev["items"]}
+            ok(ev["adjusted"] and V[b1]["thenBase"] == 8500 and V[a1]["thenBase"] == 6100 and V[a2]["thenBase"] == 2400, "At the time = the entry before the trade, never the update an hour after it (base 8,500 · 6,100 · 2,400)")
+            ok(all(f"{round(V[s_]['thenV']):,}" in c for s_ in (b1, a1, a2)), "The card shows each player's value then in the league's format")
+            ok(all(x["now"] == x["adj"] for x in ev["items"]), "Now = each player's league-adjusted value")
             # Then vs Now (Alan, Oct 12): two equal blocks (verdict, who had the edge and by how much, the values used),
             # a headline labeled Then → Now naming how it aged, and one sentence covering both states
             hc = cards.nth(I["hist"])
@@ -118,9 +138,9 @@ with sync_playwright() as p:
             cards.nth(I["hist"]).locator("[data-th-full]").click(); pg.wait_for_timeout(300)
             full = " ".join(cards.nth(I["hist"]).locator(".th-full").inner_text().split())
             print("   history:", full[:600])
-            nb1 = today[b1][3]
-            ok(f"#12 · " in full and "Tier 2 at trade" in full and f"8,500 → {nb1:,}" in full, "Breakdown: rank, position rank, tier and value at the time → today")
-            d = nb1 - 8500
+            tb1, nb1 = round(V[b1]["thenV"]), round(V[b1]["now"])
+            ok(f"#12 · " in full and "Tier 2 at trade" in full and f"{tb1:,} → {nb1:,}" in full, "Breakdown: rank, position rank, tier and value at the time → today")
+            d = nb1 - tb1
             ok(("+" if d > 0 else "−" if d < 0 else "±") + f"{abs(d):,}" in full, f"Per-player change shown ({d:+,})")
             ok("Not valued" in full and "published at or before the trade" in full, "Picks not valued; snapshot rule spelled out")
             ok("At the time:" in full and "Today:" in full, "Both verdicts in the breakdown")
@@ -184,6 +204,43 @@ with sync_playwright() as p:
         ok(pg.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"), f"[{theme}] no horizontal page scroll {wide}")
         ok(not errs, f"[{theme}] no page errors {errs[:2]}")
         pg.close()
+    # 7. the TE premium league
+    errs = []
+    pg = br.new_page(viewport={"width": 1440, "height": 1000})
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route("https://api.sleeper.app/**", sleeper)
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
+    pg.add_init_script("window.__SPM_TEST_HOOKS = true;")
+    pg.goto(f"http://127.0.0.1:{port}/#rankings"); pg.wait_for_timeout(4500)
+    pg.evaluate("() => { const b = document.createElement('button'); b.dataset.act = 'account'; document.getElementById('league-menu').append(b); b.click(); b.remove(); }")
+    pg.wait_for_timeout(400)
+    pg.fill("#sd-username", "tester"); pg.press("#sd-username", "Enter"); pg.wait_for_timeout(800)
+    pg.locator("#sd-leagues [data-league='L3']").click(); pg.wait_for_timeout(1500)
+    pg.click("#tab-league"); pg.wait_for_timeout(500)
+    pg.click("[data-lsub=tx]"); pg.wait_for_timeout(2500)
+    pg.click("[data-tx-type=trade]"); pg.wait_for_timeout(300)
+    while pg.locator("[data-tx-older]").count(): pg.click("[data-tx-older]"); pg.wait_for_timeout(300)
+    ev = pg.evaluate("() => SPM.tradeEval('tep1')")
+    V = {x["sid"]: x for x in ev["items"]}
+    print("   TE premium league:", ev)
+    ok(ev["board"] == "ppr" and ev["adjusted"] and ev["thenAll"], "The 1QB TE premium league reads AM PPR, in its own format, with values then")
+    ok(all(x["now"] == x["adj"] for x in ev["items"]), "Now = each player's league-adjusted value (TE premium applied)")
+    ok(V[TE4]["now"] > V[TE4]["nowBase"] * 1.05 and V[TE4]["thenV"] > V[TE4]["thenBase"] * 1.05, f"The TE is worth more with TE premium than on AM PPR itself (then {V[TE4]['thenBase']} → {V[TE4]['thenV']}, now {V[TE4]['nowBase']} → {V[TE4]['now']})")
+    same = pg.evaluate("() => SPM.adjAt(Date.now())")
+    lv = pg.evaluate("() => SPM.leagueSidValues()")
+    diff = [sid for sid, v in lv.items() if sid in same and same[sid] != v]
+    ok(same and len(same) >= 200 and not diff, f"AM PPR's current snapshot priced in the league's format = the league layer for every player ({len(same or {})} players, {len(diff)} differ {diff[:3]})")
+    ok(ev["thenDiff"] == ev["nowDiff"], f"Unchanged values for these players then and now give the same edge in points ({ev['thenDiff']} / {ev['nowDiff']})")
+    card = pg.locator(".th-card").first
+    ct = " ".join(card.inner_text().split())
+    ok(f"{round(V[TE4]['thenV']):,}" in ct and "league format" in ct, "The card shows the TE's value in the league's format and says so")
+    card.locator("[data-th-full]").click(); pg.wait_for_timeout(300)
+    full = " ".join(card.locator(".th-full").inner_text().split())
+    ok("before this league's format" in full and f"{round(V[TE4]['thenBase']):,}" in full, "The breakdown keeps the AM PPR board's own totals as a muted reference")
+    if SHOTS:
+        card.screenshot(path=os.path.join(SHOTS, "card_tep_dark_1440.png"))
+    ok(not errs, f"[TE premium league] no page errors {errs[:2]}")
+    pg.close()
     br.close()
 print(f"\n{len(failures)} failure(s)")
 sys.exit(1 if failures else 0)
