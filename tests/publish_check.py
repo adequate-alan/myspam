@@ -126,6 +126,7 @@ with sync_playwright() as p:
     def open_page(repo, ctx=None, token=True):
         ctx = ctx or br.new_context(viewport={"width": 1440, "height": 1000})
         pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.add_init_script("window.__SPM_ORDER_SYNC_OFF = true;")   # generic editor mechanics on the live AM SF board: the AM PPR position order lock (Oct 19) is tested in board_sync_check
         pg.route("https://api.github.com/**", repo.handle)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
         # the page and the files it publishes come from the repository's current head

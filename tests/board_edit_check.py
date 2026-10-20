@@ -164,13 +164,21 @@ with sync_playwright() as p:
     after = repo.read("index.html"); new = repo.log()[n0:]
     ok("Published and confirmed" in msg and repo.head != head0, f"AM PPR publish confirmed ({msg[:90]!r})")
     ok(len(new) == 1 and new[0].startswith("AM PPR rankings edit by @tester"), f"One commit naming the board: {[m.splitlines()[0] for m in new]}")
-    ok(outside(before, PPR_RE) == outside(after, PPR_RE), "index.html: only the RANKINGS_CSV_PPR block changed (RANKINGS_CSV and the code byte-identical)")
+    ok(outside(outside(before, PPR_RE), SF_RE) == outside(outside(after, PPR_RE), SF_RE), "index.html: only the two rankings blocks can change (the code byte-identical)")
+    want_sf = pg.evaluate("([p, s]) => SPM.syncOrder(p, s)", [block(after, PPR_RE), block(before, SF_RE)])
+    ok(block(after, SF_RE) == (want_sf["csv"] if want_sf["moved"] else block(before, SF_RE)),
+       f"RANKINGS_CSV changes only by following AM PPR's new position order ({len(want_sf['moved'])} players: {[m['name'] for m in want_sf['moved']][:4]})")
     pa = table(block(after, PPR_RE)); end = board()
     ok(all(pa[s][k] == str(v) for s, *vals in end for k, v in zip(("rank", "pos_rank", "tier", "value"), vals)), "The published block is the edited board")
     ok(pa[vid]["value"] == str(newv), f"The value edit is published ({pa[vid]['value']})")
     ch = [p for p in FILES if repo.read(p, head0) != repo.read(p)]
     newfiles = [p for p in ("data/boards/ppr/rank_snapshots/2026-10.json", "data/rank_snapshots/2026-10.json") if repo.read(p, head0) is None and repo.read(p) is not None]
-    ok(not [p for p in SF_FILES if p in ch], f"AM SF PPR TE+ history and snapshots untouched {[p for p in SF_FILES if p in ch]}")
+    if want_sf["moved"]:
+        sev = json.loads(repo.read("data/rank_history.json"))["events"][-1]
+        ok(sev.get("src") == "O" and sev.get("from") == "ppr" and len(sev["ranking"]) == len(want_sf["moved"]),
+           f"AM SF PPR TE+ history: one event from the AM PPR publish (src O) with {len(want_sf['moved'])} ranking changes")
+    else:
+        ok(not [p for p in SF_FILES if p in ch], f"AM SF PPR TE+ history and snapshots untouched {[p for p in SF_FILES if p in ch]}")
     hb, ha = json.loads(repo.read("data/boards/ppr/rank_history.json", head0)), json.loads(repo.read("data/boards/ppr/rank_history.json"))
     ok(len(ha["events"]) == len(hb["events"]) + 1 and ha["events"][:-1] == hb["events"], f"AM PPR history: one new event, earlier events kept ({len(hb['events'])} → {len(ha['events'])})")
     ok(all(ha["players"].get(s, [])[:len(l)] == l for s, l in hb["players"].items()), "Every earlier AM PPR history entry kept")
@@ -191,12 +199,15 @@ with sync_playwright() as p:
     with pg.expect_navigation(): pg.click("#ed-switch")
     load(); all_tab()
     ok(pg.evaluate("() => SPM.boards().active") == "sf-tep", "Back to editing AM SF PPR TE+")
-    srows = pg.evaluate(ROWS); s_mover = srows[59]["name"]
+    sb = sorted(board(), key=lambda r: r[1]); spos = pg.evaluate("() => Object.fromEntries(SPM.edit.board().map(p => [String(p.sid), [p.name, p.pos]]))")
+    k = next(i for i in range(59, 120) if spos[sb[i][0]][1] != spos[sb[i - 1][0]][1])   # the order across positions stays editable (Oct 19)
+    s_mover = spos[sb[k][0]][0]
     arrow(s_mover, -1)
     head1 = repo.head; b1 = repo.read("index.html"); n1 = len(repo.log())
     msg = save(); a1 = repo.read("index.html"); new = repo.log()[n1:]
     ok("Published and confirmed" in msg and len(new) == 1 and new[0].startswith("Rankings edit by @tester"), f"AM SF PPR TE+ publish: {[m.splitlines()[0] for m in new]}")
     ok(outside(b1, SF_RE) == outside(a1, SF_RE), "index.html: only the RANKINGS_CSV block changed (RANKINGS_CSV_PPR byte-identical)")
+    ok(not pg.evaluate("([p, s]) => SPM.syncOrder(p, s).moved.length", [block(a1, PPR_RE), block(a1, SF_RE)]), "…and it still follows AM PPR's position order")
     ch1 = [p for p in FILES if repo.read(p, head1) != repo.read(p)] + [p for p in ("data/boards/ppr/rank_snapshots/2026-10.json",) if repo.read(p, head1) != repo.read(p)]
     ok(not [p for p in PPR_FILES if p in ch1], f"AM PPR history and snapshots untouched {[p for p in PPR_FILES if p in ch1]}")
     ok("data/rank_history.json" in ch1, "The AM SF PPR TE+ history got the publish")

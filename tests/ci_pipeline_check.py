@@ -456,15 +456,23 @@ try:
     nosid = lines[:]; cols = nosid[0].split(","); i = cols.index("sleeper_id"); r = nosid[5].split(","); r[i] = ""; nosid[5] = ",".join(r)
     open(os.path.join(d, "index.html"), "w").write(with_csv(nosid))
     rc, o = static(d); ok(rc == 1 and "no Sleeper ID" in o, "static_check: a missing Sleeper ID fails")
-    swap = lines[:]; ri = cols.index("rank"); pi = cols.index("pos_rank")
-    # swap #1 and #2 (still a valid board); rows aren't always stored in rank order, so find them by rank
-    i1, i2 = (next(j for j in range(1, len(swap)) if swap[j].split(",")[ri] == str(n)) for n in (1, 2))
-    a, b = swap[i1].split(","), swap[i2].split(",")
-    a[ri], b[ri] = b[ri], a[ri]
-    if a[cols.index("pos")] == b[cols.index("pos")]: a[pi], b[pi] = b[pi], a[pi]
-    swap[i1], swap[i2] = ",".join(a), ",".join(b)
-    open(os.path.join(d, "index.html"), "w").write(with_csv(swap))
-    rc, o = static(d); ok(rc == 0, "static_check: a valid rankings edit passes without --frozen-rankings")
+    ri = cols.index("rank"); pi = cols.index("pos_rank"); qi = cols.index("pos")
+    # rows aren't always stored in rank order, so find them by rank
+    at = lambda rows, n: next(j for j in range(1, len(rows)) if rows[j].split(",")[ri] == str(n))
+    def swapped(n):
+        sw = lines[:]; i1, i2 = at(sw, n), at(sw, n + 1)
+        a, b = sw[i1].split(","), sw[i2].split(",")
+        a[ri], b[ri] = b[ri], a[ri]
+        if a[qi] == b[qi]: a[pi], b[pi] = b[pi], a[pi]
+        sw[i1], sw[i2] = ",".join(a), ",".join(b); return sw, a[qi] == b[qi]
+    # a swap across positions is a valid AM SF PPR TE+ edit; inside a position the order comes from AM PPR
+    n = next(k for k in range(1, len(lines) - 1) if not swapped(k)[1])
+    open(os.path.join(d, "index.html"), "w").write(with_csv(swapped(n)[0]))
+    rc, o = static(d); ok(rc == 0, f"static_check: a valid rankings edit passes without --frozen-rankings (#{n} ↔ #{n + 1}){'' if rc == 0 else o[-400:]}")
+    n2 = next(k for k in range(1, len(lines) - 1) if swapped(k)[1])
+    open(os.path.join(d, "index.html"), "w").write(with_csv(swapped(n2)[0]))
+    rc, o = static(d); ok(rc == 1 and "follows AM PPR" in o, f"static_check: a reorder inside a position on AM SF PPR TE+ fails (#{n2} ↔ #{n2 + 1})")
+    open(os.path.join(d, "index.html"), "w").write(with_csv(swapped(n)[0]))
     rc, o = static(d, "--base", "HEAD", "--frozen-rankings"); ok(rc == 1 and "No ranking field changed" in o, "static_check: the same edit fails for an automated job (--frozen-rankings)")
     shutil.copy(os.path.join(ROOT, "index.html"), os.path.join(d, "index.html"))
     h = json.load(open(os.path.join(d, "data/rank_history.json"))); sid = next(iter(h["players"])); h["players"][sid][0][1] += 1

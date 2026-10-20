@@ -40,7 +40,7 @@ players = json.load(open(os.path.join(ROOT, "data/sleeper_players.json")))
 missing = [r["player"] for r in FB.rows() if r["sleeper_id"] not in players]
 ok(not missing, f"Every fixture player has a Sleeper entry in data/sleeper_players.json {missing[:3]}")
 live = open(os.path.join(ROOT, "index.html"), "rb").read()
-page = FB.html()
+page = FB.html().replace(b"<head><script>window.__SPM_ORDER_SYNC_OFF = true;</script>", b"<head>", 1)   # the sync switch FB adds
 lm, fm = FB.CSV_RE.search(live), FB.CSV_RE.search(page)
 ok(live[:lm.start(2)] == page[:fm.start(2)] and live[lm.end(2):] == page[fm.end(2):] and page[fm.start(2):fm.end(2)] == FB.CSV.encode(),
    "The fixture page is the current index.html with only the rankings block replaced")
@@ -91,10 +91,20 @@ try:
         grp = [r for r in edited[1:] if r[c("pos")] == A[c("pos")] and r[c("tier")] == A[c("tier")]]
         for r in grp: r[tn] = (r[tn] or "Tier") + " (renamed)"
     write(edited)
+    # the same swap on AM PPR: AM SF PPR TE+ takes its position order from AM PPR (Oct 19), so an order change reaches
+    # it through an AM PPR publish
+    h2 = open(os.path.join(d, "index.html"), encoding="utf-8").read(); pm = re.search(r"const RANKINGS_CSV_PPR = `\n([\s\S]*?)\n`;", h2)
+    prow = list(csv.reader(io.StringIO(pm.group(1)))); ph = prow[0]; P = {r[ph.index("sleeper_id")]: r for r in prow[1:]}
+    pa, pb = P[pair[0][c("sleeper_id")]], P[pair[1][c("sleeper_id")]]
+    for h in ("player", "pos", "team", "proj_ppg", "games", "proj_score", "sleeper_id"):
+        if h in ph: i = ph.index(h); pa[i], pb[i] = pb[i], pa[i]
+    cell = lambda v: '"' + v.replace('"', '""') + '"' if re.search(r'[",\n]', v) else v
+    open(os.path.join(d, "index.html"), "w", encoding="utf-8").write(h2[:pm.start(1)] + "\n".join(",".join(cell(x) for x in r) for r in prow) + h2[pm.end(1):])
     rc, out = run("tests/static_check.py", "--base", "HEAD")
     ok(rc == 0, f"A legitimate edit of the live rankings ({pair[0][c('player')]} ↔ {pair[1][c('player')]}, a value −1, a tier renamed) still passes static_check")
     r2 = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'tests'); import fixture_board as FB; sys.stdout.buffer.write(FB.html())"], cwd=d, capture_output=True)
-    ok(r2.returncode == 0 and r2.stdout == page, f"The fixture page built in the edited copy is byte for byte the page built here ({len(r2.stdout)} bytes)")
+    noppr = lambda b: re.sub(rb"(const RANKINGS_CSV_PPR = `\n)[\s\S]*?(\n`;)", rb"\1\2", b)   # the AM PPR block took the same swap (above)
+    ok(r2.returncode == 0 and noppr(r2.stdout) == noppr(FB.html()), f"The fixture page built in the edited copy is byte for byte the page built here ({len(r2.stdout)} bytes)")
     here = subprocess.run([sys.executable, "tests/value_state_check.py"], cwd=ROOT, capture_output=True, text=True, timeout=600)
     rc, out = run("tests/value_state_check.py")
     lines = lambda o: sorted(l for l in o.splitlines() if l.startswith(("PASS", "FAIL")) and "live rankings" not in l)

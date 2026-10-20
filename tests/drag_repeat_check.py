@@ -59,6 +59,7 @@ port = serve()
 with sync_playwright() as p:
     br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
     pg = br.new_page(viewport={"width": 1440, "height": 900})
+    pg.add_init_script("window.__SPM_ORDER_SYNC_OFF = true;")   # generic editor mechanics on the live AM SF board: the AM PPR position order lock (Oct 19) is tested in board_sync_check
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     root = os.path.dirname(HERE)
     repo = Repo({"index.html": open(os.path.join(root, "index.html"), "rb").read(),
