@@ -71,7 +71,7 @@ RISK = {
                    "MV mvPop mvNeighbours mvTarget mvPlace mvRender mvOpen mvOutside mvClose mvApply edWarn hideEdWarn REVALUED RECALC_TAG TIER_EMPTY TIER_DEL on:rank-body:click on:rank-body:keydown on:rank-body:focusout on:ed-warn:click on:mvPop:click on:mvPop:keydown on:mv-input:input".split()),
  "drawer-ui":     (TARGETED, ["drawer_check", "xss_check"],
                    "openPlayer closePlayer renderPlayer ppSection ppOverview thisWeekCard ppSchedule ppPractice ppDepth ppGameLog ppStats ppPerformance ppHistory ppTradeValue ppCompare weeklySeries weeksChart barChart lineChart usageGrid prodRankLine statsStamp markCurrent mkDrawer".split()),
- "league-ui":     (TARGETED, ["league_hub_check", "trade_history_check", "xss_check", "form_trend_check"],
+ "league-ui":     (TARGETED, ["league_hub_check", "trade_history_check", "xss_check", "form_trend_check", "power_rank_check"],
                    "renderLeague powerHtml teamExpand standingsHtml matchupsHtml rostersHtml rostersInner scheduleHtml txHtml txRail moveRow openBids tradeCard tradeHistoryHtml snapText agedText thBlock renderMyTeam renderFA strengthCards recentForm recentFormData formTrend availability recentFormHtml RF_MIN_PTS RF_MIN_PCT mtActions".split()),
  "finder-ui":     (TARGETED, ["trade_target_check", "market_edge_check"],
                    "renderFinder renderDiscover renderFinderPick tfResults targetCard mlCard shortWhy fullWhy fitBadge".split()),
