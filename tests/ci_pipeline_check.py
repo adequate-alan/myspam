@@ -605,7 +605,7 @@ try:
         ("a class name in a lowercase string is code, not copy", [(line_of(lambda i: F0[i] == "tradeCard" and 'class="th-age' in L0[i - 1]), lambda l: l.replace('class="th-age', 'class="th-agex', 1))], {}, "targeted", None),
         ("a test file only", [], {"tests/drawer_check.py": "\n# x\n"}, "targeted", ["drawer_check"]),
         ("two UI features of one family (tradeCard + renderTrade, league): their suites together", [(in_fn("tradeCard"), code), (in_fn("renderTrade"), code)], {}, "targeted",
-            sorted({"form_trend_check", "league_hub_check", "power_rank_check", "trade_history_check", "xss_check", "roster_fit_check", "trade_target_check", "package_model_check"})),
+            sorted({"form_trend_check", "league_hub_check", "power_rank_check", "trade_history_check", "xss_check", "roster_fit_check", "trade_target_check", "package_model_check", "balance_check"})),
         ("UI features from different areas (tradeCard + ppSchedule)", [(in_fn("tradeCard"), code), (in_fn("ppSchedule"), code)], {}, "full", []),
         # the editor family (Alan, Oct 15): a control that reuses the movement functions runs the editor's suites, not the drawer's, league's or market's
         ("Move to rank's apply (mvApply): the editor lane", [(in_fn("mvApply"), code)], {}, "targeted", sorted(RT.RISK["editor-ui"][1])),
