@@ -75,7 +75,7 @@ concurrency:
 #     targeted  known UI features of one family → their suites (job `targeted`, the independent suites and the
 #               timing-sensitive drag suites on two runners at once) → deploy (~4–7 min; an editor feature ~6–9).
 #               A browser / server crash in a suite is retried once inside the job (tests/run_ci.py), never the job
-#     full      risky / core / unknown / CI → the whole suite (job `full`, 4 shards, 2 suites at a time) → deploy
+#     full      risky / core / unknown / CI → the whole suite (job `full`, 6 shards, 2 suites at a time) → deploy
 #   verify                              static + pipeline + smoke checks on the exact commit, beside the lane's suites
 #                                       (they start together; nothing deploys unless both pass)
 #   build → deploy                      only after the lane's checks passed, and only if the commit is still main's head;
@@ -286,11 +286,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements-ci.txt
       - name: Install the test browser (pinned Playwright + its Chromium)
-        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
-        run: |
-          pip install -r tests/requirements-ci.txt
-          python -m playwright install --with-deps --only-shell chromium
+        timeout-minutes: 8   # normally ~10 s (apt only when the browser needs it); a hung download fails fast instead of holding a release (Oct 14: 14+ min hang)
+        run: bash tests/ci_browser.sh
       - name: Pick the comparison commit
         id: base
         run: |
@@ -326,11 +326,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements-ci.txt
       - name: Install the test browser (pinned Playwright + its Chromium)
-        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
-        run: |
-          pip install -r tests/requirements-ci.txt
-          python -m playwright install --with-deps --only-shell chromium
+        timeout-minutes: 8   # normally ~10 s (apt only when the browser needs it); a hung download fails fast instead of holding a release (Oct 14: 14+ min hang)
+        run: bash tests/ci_browser.sh
       - name: The changed features' suites, ${{ matrix.group }} group (${{ needs.plan.outputs.suites }})
         run: python tests/run_ci.py targeted --suites "${{ needs.plan.outputs.suites }}" --group ${{ matrix.group }} --jobs 3 --logs "$RUNNER_TEMP/ci-logs"
       - name: Keep the logs
@@ -341,7 +341,7 @@ jobs:
           path: ${{ runner.temp }}/ci-logs
           retention-days: 14
 
-  # The whole suite on 4 runners, 2 independent suites at a time on each (4 cores); the timing-sensitive drag suites
+  # The whole suite on 6 runners, 2 independent suites at a time on each (4 cores); the timing-sensitive drag suites
   # run alone at the end of their shard; inflight_check runs as 2 parts (tests/ci_policy.json suites.parts).
   full:
     needs: plan
@@ -351,7 +351,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -360,13 +360,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements-ci.txt
       - name: Install the test browser (pinned Playwright + its Chromium)
-        timeout-minutes: 8   # normally ~30 s; a hung apt/browser download fails fast instead of holding a release (Oct 14: 14+ min hang)
-        run: |
-          pip install -r tests/requirements-ci.txt
-          python -m playwright install --with-deps --only-shell chromium
-      - name: Full regression suite (shard ${{ matrix.shard }} of 4)
-        run: python tests/run_ci.py full --shard ${{ matrix.shard }}/4 --jobs 2 --logs "$RUNNER_TEMP/ci-logs"
+        timeout-minutes: 8   # normally ~10 s (apt only when the browser needs it); a hung download fails fast instead of holding a release (Oct 14: 14+ min hang)
+        run: bash tests/ci_browser.sh
+      - name: Full regression suite (shard ${{ matrix.shard }} of 6)
+        run: python tests/run_ci.py full --shard ${{ matrix.shard }}/6 --jobs 2 --logs "$RUNNER_TEMP/ci-logs"
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4

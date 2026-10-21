@@ -414,7 +414,7 @@ try:
     # expected wall time per shard (2 suites at a time, timing suites alone) stays near the ideal split
     spec = importlib.util.spec_from_file_location("rc", os.path.join(ROOT, "tests/run_ci.py")); RC = importlib.util.module_from_spec(spec); spec.loader.exec_module(RC)
     allu = RC.units(RC.POLICY["suites"]["full"])
-    for n, jobs in ((4, 2), (3, 1)):
+    for n, jobs in ((6, 2), (3, 1)):
         sh = [RC.shard_of(allu, k, n, jobs) for k in range(1, n + 1)]
         flat = [u for x in sh for u in x]
         excl = set(RC.POLICY["suites"].get("exclusive", []))
