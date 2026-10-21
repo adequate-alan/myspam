@@ -67,6 +67,7 @@
       "market_pricing_check",
       "qb_role_check",
       "ros_prior_check",
+      "projection_check",
       "theme_transition_check",
       "board_check",
       "board_edit_check",
@@ -111,6 +112,7 @@
       "value_state_check": 15,
       "qb_role_check": 7,
       "ros_prior_check": 5,
+      "projection_check": 5,
       "value_curve_check": 1,
       "market_sync_check": 1
     },

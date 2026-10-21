@@ -155,6 +155,10 @@ jobs:
           python build_depth_charts.py --board ../index.html || echo "Depth charts not refreshed (kept the last file)"
           python build_roles.py 2026 || echo "Roles not refreshed (kept the last file)"
           python snapshot_projections.py
+          # projection accuracy (Oct 21 audit): stored pregame forecasts vs results, RMSE first, beside the old baselines;
+          # the C5 prospective test reads nflverse's injury reports. Report only: it never blocks or changes anything.
+          C5=""; curl -sfL -o /tmp/injuries.csv https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_2026.csv && C5="--c5 /tmp/injuries.csv"
+          { echo "### Projection accuracy (stored pregame forecasts)"; echo '```'; python eval_projections.py ../data/stats/2026.json ../data/projections $C5; echo '```'; } >> "$GITHUB_STEP_SUMMARY" || echo "Projection accuracy report not produced"
           python build_opportunity.py 2026 || echo "Expected points not refreshed (kept the last file)"
           python build_market.py || echo "Market values not refreshed (kept the last file)"
 
