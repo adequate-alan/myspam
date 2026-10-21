@@ -5635,6 +5635,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return rows;
   }
 
+  // Who is priced as the tail (Alan, Oct 21): Auto players, and on a board whose Auto players are provisional (AM PPR) everyone
+  // in a tier that holds them, Manual or not (the editor makes a moved Auto player Manual; that says who ranked him, never how
+  // he's priced). Used for the projection ranks behind the league layer's tier pricing and by adjustValues.
+  function provTierSet(list, b) {
+    if (!b || !b.provisionalAuto) return new Set();
+    const tag = Number(VALUE_MODEL.tagTierFrom) || Infinity;
+    return new Set(list.filter(p => p.source === "auto" && p.posNum != null && Number(p.tier) < tag).map(p => p.pos + "|" + p.tier));
+  }
+  function priceGroup(p, set) { return p.source === "auto" || set.has(p.pos + "|" + p.tier) ? "auto" : "manual"; }
   function loadPlayers(csvText, board = ACTIVE_BOARD) {
     const rows = parseCSV(csvText ?? RANKINGS_CSV);
     if (!rows.length) return [];
@@ -5680,9 +5689,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     // so the projection can disagree with your order without shifting everyone down.
     // Your players and auto-added players are re-ordered separately, so an auto
     // player's projection never takes a spot from one of yours.
-    const posGroups = {};
+    const posGroups = {}, provT = provTierSet(players, board);
     players.filter(p => isPlayer(p) && p.posNum != null && p.projScore != null)
-      .forEach(p => { const k = p.pos + "|" + p.source; (posGroups[k] = posGroups[k] || []).push(p); });
+      .forEach(p => { const k = p.pos + "|" + priceGroup(p, provT); (posGroups[k] = posGroups[k] || []).push(p); });
     for (const g of Object.values(posGroups)) {
       const slots = g.map(p => p.posNum).sort((a, b) => a - b);
       [...g].sort((a, b) => b.projScore - a.projScore).forEach((p, i) => { p.projRank = slots[i]; });
@@ -6088,7 +6097,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (p) { q.team = p.team; q.projPPG = p.projPPG; q.projScore = p.projScore; q.games = p.games; }
       });
       const groups = {};
-      c.list.forEach(q => { q.projRank = null; if (q.pos !== "PICK" && q.posNum != null && q.projScore != null) (groups[q.pos + "|" + q.source] = groups[q.pos + "|" + q.source] || []).push(q); });
+      const provT = provTierSet(c.list, b);
+      c.list.forEach(q => { q.projRank = null; const k = q.pos + "|" + priceGroup(q, provT); if (q.pos !== "PICK" && q.posNum != null && q.projScore != null) (groups[k] = groups[k] || []).push(q); });
       for (const g of Object.values(groups)) {
         const slots = g.map(q => q.posNum).sort((x, y) => x - y);
         [...g].sort((x, y) => y.projScore - x.projScore).forEach((q, i) => { q.projRank = slots[i]; });
@@ -11098,7 +11108,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       // format only decides how much each tier is worth. A league in the base format gets exactly the base values.
       // Only automatically valued players (source auto) are priced as the tail here; your own players below the first
       // Auto player keep normal tier pricing (Alan, Oct 14 valuation audit)
-      const isAutoP = p => p.source === "auto";
+      // On a board whose Auto players are provisional (AM PPR), the tiers that hold them are priced as one tail: a player
+      // you moved there (Manual: the editor marks a moved Auto player yours) is priced like the Auto players around him,
+      // not with a tier factor taken from the few Manual players in it (Alan, Oct 21: 14-team 1QB Ward QB31 Auto 94 ->
+      // Daniels QB32 Manual 12, -87% where the board has -52%). Manual / Auto stays who ranked him, never how he's priced.
+      const provT = provTierSet(players, CALC_BOARD);
+      const isAutoP = p => priceGroup(p, provT) === "auto";
       const mv = players.filter(p => !isAutoP(p) && p.rawValue != null && p.posNum != null && EDIT_POS.includes(p.pos));
       const rawF = p => {
         const i = Math.min(p.posNum, base[p.pos].length) - 1, b0 = base[p.pos][i], l0 = lg[p.pos][i];
@@ -13273,7 +13288,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       list.push({ ...q, rank: h.rank, posNum: h.pr, posRank: q.pos + h.pr, tier: h.tier, value: h.v });
     });
     const groups = {};   // projections keep today's order over the position spots of then (as boardPlayers does)
-    list.forEach(q => { q.projRank = null; if (q.pos !== "PICK" && q.posNum != null && q.projScore != null) (groups[q.pos + "|" + q.source] = groups[q.pos + "|" + q.source] || []).push(q); });
+    const provT = provTierSet(list, bd);
+    list.forEach(q => { q.projRank = null; const k = q.pos + "|" + priceGroup(q, provT); if (q.pos !== "PICK" && q.posNum != null && q.projScore != null) (groups[k] = groups[k] || []).push(q); });
     for (const g of Object.values(groups)) {
       const slots = g.map(q => q.posNum).sort((x, y) => x - y);
       [...g].sort((x, y) => y.projScore - x.projScore).forEach((q, i) => { q.projRank = slots[i]; });
@@ -19064,6 +19080,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   };
   if (window.__SPM_TEST_HOOKS === true) SPM.leagueSidValues = () => Object.fromEntries((LG.board === ACTIVE_BOARD ? players : boardPlayers(LG.board)).filter(q => q.sleeperId && LG.adj.has(q.id)).map(q => [q.sleeperId, LG.adj.get(q.id)]));
   // the league's board as published at ms, priced in the league's format, against today's league layer (tests)
+  // league-adjusted values of one board in a Custom format, by Sleeper ID (tests): f = Custom format fields, bid = board id
+  if (window.__SPM_TEST_HOOKS === true) SPM.adjFor = async (f, bid) => { await loadStatic(); await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason)); adjCache.clear(); const b = boardById(bid), m = adjMapFor(fmtLeague({ ...FMT_DEFAULT, ...f }), b);
+    return withBoard(b, () => players.filter(q => EDIT_POS.includes(q.pos) && q.posNum != null && q.sleeperId).map(q => ({ sid: q.sleeperId, name: q.name, pos: q.pos, pn: q.posNum, tier: String(q.tier), src: q.source, v: q.value, adj: m.get(q.id) }))); };
   if (window.__SPM_TEST_HOOKS === true) SPM.adjAt = ms => { const bd = LG.board || leagueBoard(), m = adjBoardAt(bd, ms); return m ? Object.fromEntries(m.bySid) : null; };
   if (window.__SPM_TEST_HOOKS === true) SPM.acceptance = a => acceptance(a);   // the shared Acceptance read on given inputs (tests)
   if (window.__SPM_TEST_HOOKS === true) SPM.hcVs = (am, v, who, lead) => hcVs(am, v, who, lead);   // AM vs a market price as shown in the cards
