@@ -11178,13 +11178,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           const blocks = [];
           g.forEach(p => { const b = blocks[blocks.length - 1]; if (b && b.k === tierKey(p)) b.m.push(p); else blocks.push({ k: tierKey(p), m: [p] }); });
           const gm = b => Math.exp(b.m.reduce((s, p) => s + Math.log(fac(p)), 0) / b.m.length);
+          // only next-door tiers ease toward each other: a block whose first player isn't the spot right after the block
+          // above (Auto players priced on their own sit between them) is no neighbour (Oct 21: AM PPR's last Tier 11 QBs
+          // eased halfway toward the three Manual stragglers of the Provisional tier at QB32+, and QB24 -> QB25 fell 28%)
+          const touch = (a, b) => b.m[0].posNum === a.m[a.m.length - 1].posNum + 1;
           blocks.forEach((b, bi) => {
             const n = b.m.length, w = Math.min(EW, n / 2);
             b.m.forEach((p, j) => {
               let f = Math.log(fac(p));
               const dUp = j + 0.5, dDn = n - j - 0.5;
-              if (bi > 0 && dUp < w) { const t = 0.5 * (1 - dUp / w); f = f * (1 - t) + Math.log(gm(blocks[bi - 1])) * t; }
-              if (bi < blocks.length - 1 && dDn < w) { const t = 0.5 * (1 - dDn / w); f = f * (1 - t) + Math.log(gm(blocks[bi + 1])) * t; }
+              if (bi > 0 && dUp < w && touch(blocks[bi - 1], b)) { const t = 0.5 * (1 - dUp / w); f = f * (1 - t) + Math.log(gm(blocks[bi - 1])) * t; }
+              if (bi < blocks.length - 1 && dDn < w && touch(b, blocks[bi + 1])) { const t = 0.5 * (1 - dDn / w); f = f * (1 - t) + Math.log(gm(blocks[bi + 1])) * t; }
               eased.set(p.id, p.value * Math.exp(f));
             });
           });
