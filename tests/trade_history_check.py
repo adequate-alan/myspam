@@ -230,7 +230,16 @@ with sync_playwright() as p:
     lv = pg.evaluate("() => SPM.leagueSidValues()")
     diff = [sid for sid, v in lv.items() if sid in same and same[sid] != v]
     ok(same and len(same) >= 200 and not diff, f"AM PPR's current snapshot priced in the league's format = the league layer for every player ({len(same or {})} players, {len(diff)} differ {diff[:3]})")
-    ok(ev["thenDiff"] == ev["nowDiff"], f"Unchanged values for these players then and now give the same edge in points ({ev['thenDiff']} / {ev['nowDiff']})")
+    # Then = the league's board as published at the trade, priced in the league's format (the same adjustValues as today).
+    # A league's values depend on the whole board (tiers are priced as blocks), so "then" and "now" give the same edge only
+    # while the board itself hasn't changed since the trade; what must always hold is that each side's value then is
+    # exactly that snapshot's league price, and now exactly today's league layer (above).
+    then_px = pg.evaluate(f"() => SPM.adjAt({T_TEP})") or {}
+    off = [x["sid"] for x in ev["items"] if x["thenV"] != then_px.get(x["sid"])]
+    ok(not off, f"Then = each player's value in AM PPR's snapshot at the trade, priced in the league's format ({len(off)} differ {off[:3]})")
+    same_board = pg.evaluate(f"() => JSON.stringify(SPM.adjAt({T_TEP})) === JSON.stringify(SPM.adjAt(Date.now()))")
+    if same_board: ok(ev["thenDiff"] == ev["nowDiff"], f"Board unchanged since the trade: then and now give the same edge in points ({ev['thenDiff']} / {ev['nowDiff']})")
+    else: print(f"INFO AM PPR changed since the trade, so its league prices did too: edge then {ev['thenDiff']} / now {ev['nowDiff']}")
     card = pg.locator(".th-card").first
     ct = " ".join(card.inner_text().split())
     ok(f"{round(V[TE4]['thenV']):,}" in ct and "league format" in ct, "The card shows the TE's value in the league's format and says so")

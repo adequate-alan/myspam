@@ -16,7 +16,8 @@ Run from the repo root:  python3 tests/fixture_check.py   (CHROMIUM=/path/to/chr
    values out of order, a split tier and a missing value each fail the page's own pre-publish checks that smoke_check
    runs (also in the fast tier). The fixture board is not involved in any of these.
 4. tests/ci_policy.json: the value_curve_check checks listed as advisory are exactly the two board-quality preferences
-   (tier-gap size, adjacent drop size); its correctness checks aren't listed anywhere; no suite has a known failure.
+   (tier-gap size, adjacent drop size); its correctness checks aren't listed anywhere; no suite has a known failure;
+   and (Oct 21) of the market checks only the live FantasyCalc TE comparison is advisory, never its fixed-fixture twin.
 """
 import csv, io, json, os, re, shutil, subprocess, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -54,6 +55,9 @@ ok(POL["advisory"].get("value_curve_check") == ["Every tier boundary has a real 
 hidden = [n for lst in POL["advisory"].values() if isinstance(lst, list) for n in lst
           if n.startswith(("Values never rise", "Tiers stay in one piece", "No tier is worth more", "Stored values show exactly", "No page errors"))]
 ok(not hidden and not POL["known_failures"], f"No correctness check is advisory or a known failure {hidden} {POL['known_failures']}")
+ok(POL["advisory"].get("format_check") == ["TE7–TE12 near FantasyCalc"] and POL["advisory"].get("league_hub_check") == ["formatCheck: TE7–TE12 near FantasyCalc"]
+   and not any(n.startswith("Fixed market") or "Fixed market".startswith(n) for lst in POL["advisory"].values() if isinstance(lst, list) for n in lst),
+   "Only the live FantasyCalc TE comparison is advisory; the same check on the fixed market fixture stays blocking (Alan, Oct 21)")
 ok("fixture_check" in POL["suites"]["full"], "This suite runs in the full tier")
 
 # a copy of the repo with the working tree's index.html and tests (like ci_pipeline_check)
