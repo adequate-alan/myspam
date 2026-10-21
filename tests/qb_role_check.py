@@ -82,7 +82,7 @@ chk(R, CALEB, l=0.85, msg="Starter ruled Out: Caleb back as the established star
 R = run([(CALEB, "Out"), (BAGENT, "Out"), (KEENUM, "")], report=[inj(CALEB, "Out"), inj(BAGENT, "Out")])
 chk(R, KEENUM, n=1, s=1, msg="QB1 and QB2 both Out: Keenum (QB3) starts")
 # 4. Questionable starter: his latest practice decides, the rest goes to QB2, QB3 still nothing
-for fri, a in (("FP", 0.9), ("LP", 0.75), ("DNP", 0.4)):
+for fri, a in (("FP", 0.98), ("LP", 0.68), ("DNP", 0.5)):
     R = run([(CALEB, "Questionable"), (BAGENT, ""), (KEENUM, "")], report=[inj(CALEB, "Questionable", fri)])
     chk(R, CALEB, s=a, msg=f"Questionable starter, Friday {fri}: Caleb {round(100 * a)}% to start")
     chk(R, BAGENT, s=round(1 - a, 3), msg=f"Questionable starter, Friday {fri}: Bagent starts the rest")
@@ -114,7 +114,7 @@ extra = {"RB": [[RB1, "a", "RB", "Out"], [RB2, "b", "RB", ""]], "LWR": [[WR1, "c
 st = stats_syn(); st["injuries"]["teams"]["DET"] = [[RB1, "RB", RB1, "Out", "DNP", "x", None, None, "DNP"], [WR1, "WR", WR1, "Questionable", "LP", "x", None, None, "LP"]]
 R = roles.team_roles(st, chart([(CALEB, "")], extra), PRIOR)
 ok(R[RB1]["n"] == 0 and R[RB2]["n"] == 1, "RB: the starter ruled Out gets 0, the healthy backup keeps his own role (1, not exclusive)")
-ok(near(R[WR1]["n"], 0.75) and R[WR1]["s"] is None, "WR: Questionable with a limited practice 75%, no start chance (not exclusive)")
+ok(near(R[WR1]["n"], 0.68) and R[WR1]["s"] is None, "WR: Questionable with a limited practice 68%, no start chance (not exclusive)")
 ok(R[TE1]["n"] == 0 and R[TE1]["l"] == 0, "TE on IR: 0 now and later")
 # 10. the repo's real files, all 32 teams
 stats = json.load(open(os.path.join(ROOT, "data/stats/2026.json"))); depth = json.load(open(os.path.join(ROOT, "data/depth_charts.json")))

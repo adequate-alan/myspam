@@ -20,7 +20,9 @@ The projection is a stat line, not a points average (Alan, Oct 14): projected op
    (data/props/<season>.json, not produced yet: it needs a keyed odds feed) are not used until that file exists.
 5. Remaining schedule: what his remaining opponents allow his position per game vs average, shrunk by sample, ^ SCHED_EL.
 
-Next 4 = the same role and efficiency with the environment and schedule of only his next four games (NEXT_N).
+Next 4 = the same role and efficiency over his next four games (NEXT_N), without the market or matchup factor (Oct 21
+audit: both added error), and with a faster-updating line after a snap-share jump (ROLE_JUMP). Next game = the line
+with that game's market and matchup factors (ENV1_EL / SCHED1_EL); it is the site's weekly projection since Oct 21.
 `project(stats, games, cutoff, prior_stats, params)` works for any season and cutoff week, so ros_backtest.py can
 score it against what actually happened; project_players.py runs it on the current season.
 """
@@ -42,11 +44,16 @@ RATES = [("cmp", "pass_cmp", "pass_att"), ("sack", "pass_sack", "pass_att"), ("p
          ("fum", "fum_lost", "touch")]
 
 # Set by pipeline/ros_backtest.py (Oct 14; numbers in CLAUDE.md §8). ENV_EL is 0 for the rest-of-season number: the
-# ratings-fitted environment term costs 0.05 PPG of MAE in the leak-free backtest. The next-4 outlook keeps environment
-# and schedule at ENV4_EL / SCHED4_EL: posted lines exist for the coming weeks and that horizon is what they're for.
+# ratings-fitted environment term costs 0.05 PPG of MAE in the leak-free backtest.
 QB_START_SNAP = 0.5   # a quarterback game under half the snaps that wasn't cut short by injury is a relief appearance
 PARAMS = dict(HALF_LIFE=20.0, K_PRIOR=None, K_PRIOR_FALLBACK=2.0, K_NOPRIOR=1.0, MIN_PRIOR_G=4, PRIOR_EFF_W=0.5, K_EFF=30.0, EFF_W=0.75,
-              ENV_EL=0.0, SCHED_EL=0.25, ENV4_EL=0.5, SCHED4_EL=0.25, PRIOR_GAMES=0.0, SHORT_MIN_F=0.15)
+              ENV_EL=0.0, SCHED_EL=0.25, ENV4_EL=0.0, SCHED4_EL=0.0, ENV1_EL=0.5, SCHED1_EL=0.25, PRIOR_GAMES=0.0, SHORT_MIN_F=0.15,
+              ROLE_JUMP=0.15, ROLE_HALF_LIFE=3.0, ROLE_K_SCALE=0.5)
+# Per horizon (Oct 21 projection audit, reports/projection-audit-2026-10-21/ in the project files; Alan's approval): the next
+# game keeps the market at 0.5 and the matchup at 0.25 (ENV1_EL / SCHED1_EL, the values the Oct 14 model used for it); Next 4
+# has neither (ENV4_EL / SCHED4_EL 0): both added error to Next 4 on 2024-25 and on held-out 2023 and 2026.
+# LEGACY_N4 reproduces the Next 4 before Oct 21 (eval_projections.py keeps it as a comparison baseline).
+LEGACY_N4 = dict(ENV4_EL=0.5, SCHED4_EL=0.25, ROLE_JUMP=None)
 # The market environment (implied team totals) and the matchup (defense vs position) are separate factors everywhere
 # (env / sched, env4 / sched4, env1 / sched1), never one blended "environment": eval_projections.py scores each on its own.
 
@@ -258,73 +265,93 @@ def prepare(stats, games, cutoff, prior_stats=None, rates=None, use_future_lines
                            pts=s.pts.to_numpy(), opps={o: s[o].to_numpy(float) for o in OPPS},
                            counts={name: (s.loc[s.f >= 1, num].sum(), s.loc[s.f >= 1, den].sum()) for name, num, den in RATES},
                            past_imp=np.mean(pi) if pi else None, prior=prior.get(sid), status=status.get(sid),
-                           fut_imp=[v for _, _, v in fut], fut_w=ros_weights(fut), fut_sched=[dvp.get((o, pos), 1.0) for _, o, _ in fut]))
+                           wk1=(int(fut[0][0]) if fut else None), fut_imp=[v for _, _, v in fut], fut_w=ros_weights(fut), fut_sched=[dvp.get((o, pos), 1.0) for _, o, _ in fut]))
     return dict(groups=groups, repl=repl, rates=rates, sc=sc, kw=kw)
+
+def snap_jump(g):
+    """Role-change signal (Oct 21 audit): his snap share over his last two games minus his earlier games' average this
+    season (full-game equivalents); 0 with fewer than three games."""
+    s = g["snap"]
+    return float(np.mean(s[-2:]) - np.mean(s[:-2])) if len(s) >= 3 else 0.0
 
 def project_from(ctx, params=PARAMS):
     repl, rates, sc = ctx["repl"], ctx["rates"], ctx["sc"]
-    lam = math.log(2) / params["HALF_LIFE"]
     rows = []
     for g in ctx["groups"]:
         pos = g["pos"]; f = g["f"]; rf = g["rf"]; lg = rates[pos]
-        rec = np.exp(-lam * (g["week"].max() - g["week"])); w = rec * rf
         g_eff = float(rf.sum()); full = f >= 1
         ppg = g["pts"].mean(); hppg = g["pts"][full].mean() if full.any() else ppg
-        # 1-2. role: current per-full-game opportunities blended with the prior by games of evidence
-        cur = {o: float(np.sum(g["opps"][o] / rf * w) / w.sum()) for o in OPPS}
         pr = g["prior"]
         # fitted weights (prior_weights) unless K_PRIOR forces one weight, none were fitted, or his position keeps the old
         # weighting (KW_OLD_POS); `moved` = a team change that made last season count less (always False on the old path)
         use_kw = params.get("K_PRIOR") is None and bool(ctx.get("kw")) and pos not in params.get("KW_OLD_POS", KW_OLD_POS)
         moved = bool(use_kw and pr and pr.get("team") and pr["team"] != g["team"])
-        if pr and pr["g"] >= params["MIN_PRIOR_G"]:
-            base = pr["opps"]
-            if use_kw and params.get("PRIOR_REGRESS", True):
-                kw = ctx["kw"]   # last season regressed toward what such a role becomes a year later (prior_weights)
-                base = {o: (kw["a"][pos][o] + kw["b"][pos][o] * base[o]) * (kw["lvl"] if moved else 1.0) for o in OPPS}
-            if not use_kw:   # one weight for every stat (the model before Oct 13)
-                kp = {o: params["K_PRIOR"] if params.get("K_PRIOR") is not None else params["K_PRIOR_FALLBACK"] for o in OPPS}
-            else:   # per position and stat, and lighter for a player on a new team (prior_weights)
-                kw = ctx["kw"]; kp = {o: kw["K"][pos][o] / (kw["move"] if moved else 1.0) for o in OPPS}
-        else:
-            # no usable previous season: shrink toward the position's regulars, scaled by his own share of the snaps for
-            # RB / WR / TE (Oct 12: a backup on 4% of the snaps was pulled halfway to a starter's workload); a quarterback's
-            # per-start volume is a starter's by definition, so his target stays the regulars' (the role layer, roles.py,
-            # decides whether he starts)
-            sn = float(np.sum(g["snap"] * rec) / rec.sum())
-            role = 1.0 if pos == "QB" or sn <= 0 else min(1.0, sn / lg.get("reg_snap", 1.0))   # no snap data: no scaling
-            kp, base = {o: params["K_NOPRIOR"] for o in OPPS}, {o: lg["opps"][o] * role for o in OPPS}
-        opp = {o: (g_eff * cur[o] + kp[o] * base[o]) / (g_eff + kp[o]) for o in OPPS}
-        # transparency: the share of his projected main opportunity (KW_MAIN) that comes from this season's games
-        mo = [o for o in KW_MAIN[pos] if opp[o] > 0]
-        cur_share = (sum(g_eff * cur[o] / (g_eff + kp[o]) for o in mo) / sum(opp[o] for o in mo)) if mo else 1.0
-        opp["rz_rush"] = min(opp["rz_rush"], opp["rush_att"]); opp["rz_tgt"] = min(opp["rz_tgt"], opp["rec_tgt"])
-        # 3. efficiency: own counts (this season + prior season at PRIOR_EFF_W) shrunk to the league rate, applied at EFF_W
-        rate = {}
-        for name, _, _ in RATES:
-            num, den = g["counts"][name]
-            if pr: num += params["PRIOR_EFF_W"] * pr["counts"][name][0]; den += params["PRIOR_EFF_W"] * pr["counts"][name][1]
-            r_lg = lg[name]
-            r = (num + params["K_EFF"] * r_lg) / (den + params["K_EFF"]) if den + params["K_EFF"] > 0 else r_lg
-            rate[name] = r_lg * (r / r_lg) ** params["EFF_W"] if r_lg > 0 else 0.0
-        rate["fum"] = lg["fum"]
-        line = dict(pass_att=opp["pass_att"], pass_cmp=opp["pass_att"] * rate["cmp"], pass_sack=opp["pass_att"] * rate["sack"], pass_yd=opp["pass_att"] * rate["pyd"], pass_td=opp["pass_att"] * rate["ptd"],
-                    pass_int=opp["pass_att"] * rate["pint"], rush_att=opp["rush_att"], rush_yd=opp["rush_att"] * rate["ryd"],
-                    rush_td=opp["rz_rush"] * rate["rtd_rz"] + (opp["rush_att"] - opp["rz_rush"]) * rate["rtd_out"],
-                    rec_tgt=opp["rec_tgt"], rec=opp["rec_tgt"] * rate["catch"], rec_yd=opp["rec_tgt"] * rate["recyd"],
-                    rec_td=opp["rz_tgt"] * rate["rectd_rz"] + (opp["rec_tgt"] - opp["rz_tgt"]) * rate["rectd_out"])
-        line["fum_lost"] = (line["rush_att"] + line["rec"]) * rate["fum"]
-        base_pts = game_points(line, pos, sc)
-        if params["PRIOR_GAMES"]:
-            pg = params["PRIOR_GAMES"]; base_pts = (g_eff * base_pts + pg * repl[pos]) / (g_eff + pg)
-        # 4-5. environment and schedule, rest of season and the next NEXT_N games
+
+        def role_line(half_life, k_scale):
+            """The projected per-game stat line from his role (recency half-life, prior weight x k_scale) and efficiency."""
+            rec = np.exp(-math.log(2) / half_life * (g["week"].max() - g["week"])); w = rec * rf
+            # 1-2. role: current per-full-game opportunities blended with the prior by games of evidence
+            cur = {o: float(np.sum(g["opps"][o] / rf * w) / w.sum()) for o in OPPS}
+            if pr and pr["g"] >= params["MIN_PRIOR_G"]:
+                base = pr["opps"]
+                if use_kw and params.get("PRIOR_REGRESS", True):
+                    kw = ctx["kw"]   # last season regressed toward what such a role becomes a year later (prior_weights)
+                    base = {o: (kw["a"][pos][o] + kw["b"][pos][o] * base[o]) * (kw["lvl"] if moved else 1.0) for o in OPPS}
+                if not use_kw:   # one weight for every stat (the model before Oct 13)
+                    kp = {o: params["K_PRIOR"] if params.get("K_PRIOR") is not None else params["K_PRIOR_FALLBACK"] for o in OPPS}
+                else:   # per position and stat, and lighter for a player on a new team (prior_weights)
+                    kw = ctx["kw"]; kp = {o: kw["K"][pos][o] / (kw["move"] if moved else 1.0) for o in OPPS}
+                kp = {o: v * k_scale for o, v in kp.items()}
+            else:
+                # no usable previous season: shrink toward the position's regulars, scaled by his own share of the snaps for
+                # RB / WR / TE (Oct 12: a backup on 4% of the snaps was pulled halfway to a starter's workload); a quarterback's
+                # per-start volume is a starter's by definition, so his target stays the regulars' (the role layer, roles.py,
+                # decides whether he starts)
+                sn = float(np.sum(g["snap"] * rec) / rec.sum())
+                role = 1.0 if pos == "QB" or sn <= 0 else min(1.0, sn / lg.get("reg_snap", 1.0))   # no snap data: no scaling
+                kp, base = {o: params["K_NOPRIOR"] for o in OPPS}, {o: lg["opps"][o] * role for o in OPPS}
+            opp = {o: (g_eff * cur[o] + kp[o] * base[o]) / (g_eff + kp[o]) for o in OPPS}
+            # transparency: the share of his projected main opportunity (KW_MAIN) that comes from this season's games
+            mo = [o for o in KW_MAIN[pos] if opp[o] > 0]
+            cur_share = (sum(g_eff * cur[o] / (g_eff + kp[o]) for o in mo) / sum(opp[o] for o in mo)) if mo else 1.0
+            opp["rz_rush"] = min(opp["rz_rush"], opp["rush_att"]); opp["rz_tgt"] = min(opp["rz_tgt"], opp["rec_tgt"])
+            # 3. efficiency: own counts (this season + prior season at PRIOR_EFF_W) shrunk to the league rate, applied at EFF_W
+            rate = {}
+            for name, _, _ in RATES:
+                num, den = g["counts"][name]
+                if pr: num += params["PRIOR_EFF_W"] * pr["counts"][name][0]; den += params["PRIOR_EFF_W"] * pr["counts"][name][1]
+                r_lg = lg[name]
+                r = (num + params["K_EFF"] * r_lg) / (den + params["K_EFF"]) if den + params["K_EFF"] > 0 else r_lg
+                rate[name] = r_lg * (r / r_lg) ** params["EFF_W"] if r_lg > 0 else 0.0
+            rate["fum"] = lg["fum"]
+            line = dict(pass_att=opp["pass_att"], pass_cmp=opp["pass_att"] * rate["cmp"], pass_sack=opp["pass_att"] * rate["sack"], pass_yd=opp["pass_att"] * rate["pyd"], pass_td=opp["pass_att"] * rate["ptd"],
+                        pass_int=opp["pass_att"] * rate["pint"], rush_att=opp["rush_att"], rush_yd=opp["rush_att"] * rate["ryd"],
+                        rush_td=opp["rz_rush"] * rate["rtd_rz"] + (opp["rush_att"] - opp["rz_rush"]) * rate["rtd_out"],
+                        rec_tgt=opp["rec_tgt"], rec=opp["rec_tgt"] * rate["catch"], rec_yd=opp["rec_tgt"] * rate["recyd"],
+                        rec_td=opp["rz_tgt"] * rate["rectd_rz"] + (opp["rec_tgt"] - opp["rz_tgt"]) * rate["rectd_out"])
+            line["fum_lost"] = (line["rush_att"] + line["rec"]) * rate["fum"]
+            pts = game_points(line, pos, sc)
+            if params["PRIOR_GAMES"]:
+                pg = params["PRIOR_GAMES"]; pts = (g_eff * pts + pg * repl[pos]) / (g_eff + pg)
+            return line, pts, cur_share
+
+        line, base_pts, cur_share = role_line(params["HALF_LIFE"], 1.0)
+        # Next 4 role change (Oct 21 audit, Alan's approval): a snap-share jump of ROLE_JUMP or more over his last two games
+        # is a role the model was slow to accept (under-projected 1-3 PPG in 2023-26), so his Next 4 line updates faster:
+        # recency half-life ROLE_HALF_LIFE and last season's weight x ROLE_K_SCALE. ROS and the next game are unchanged.
+        role_change = pos != "QB" and params.get("ROLE_JUMP") is not None and snap_jump(g) >= params["ROLE_JUMP"]
+        line4, base4 = (role_line(params["ROLE_HALF_LIFE"], params["ROLE_K_SCALE"])[:2] if role_change else (line, base_pts))
+        # 4-5. environment and schedule, per horizon: rest of season (ENV_EL / SCHED_EL), the next NEXT_N games
+        # (ENV4_EL / SCHED4_EL) and the next game (ENV1_EL / SCHED1_EL); market and matchup always separate factors
         def ctx_factors(n, e_el, s_el):
             imp, wts, sch = g["fut_imp"][:n], g["fut_w"][:n], g["fut_sched"][:n]
             env = (np.average(imp, weights=wts) / g["past_imp"]) ** e_el if imp and g["past_imp"] else 1.0
             sched = (np.average(sch, weights=wts) ** s_el) if sch else 1.0
             return env, sched
         env, sched = ctx_factors(None, params["ENV_EL"], params["SCHED_EL"]); env4, sched4 = ctx_factors(NEXT_N, params["ENV4_EL"], params["SCHED4_EL"])
-        env1, sched1 = ctx_factors(1, params["ENV4_EL"], params["SCHED4_EL"])
+        env1, sched1 = ctx_factors(1, params["ENV1_EL"], params["SCHED1_EL"])
+        env4_raw, sched4_raw = ctx_factors(NEXT_N, 1.0, 1.0)   # unweighted factors, stored with each forecast so the
+        # Next 4 before Oct 21 (LEGACY_N4: env4_raw^0.5 x sched4_raw^0.25 on the ROS line) stays scoreable as a baseline
         proj = base_pts * env * sched
         # confidence: healthy games, prior, role stability (CV of per-game opportunity volume over full games), injury signals
         vol = sum(g["opps"][o] for o in ("pass_att", "rush_att", "rec_tgt"))[full]
@@ -335,9 +362,10 @@ def project_from(ctx, params=PARAMS):
                           prior_info=(1.0 / kwi["move"]) if moved else 1.0)
         rows.append(dict(sleeper_id=g["sid"], player=g["name"], pos=pos, team=g["team"], games=len(f), g_eff=round(g_eff, 2),
                          ppg=ppg, healthy_ppg=hppg, prior_g=(pr["g"] if pr else 0), base_ppg=base_pts, env=env, sched=sched,
-                         env4=env4, sched4=sched4, env1=env1, sched1=sched1, proj_ppg=proj, n4_ppg=base_pts * env4 * sched4,
-                         n1_ppg=base_pts * env1 * sched1, conf=conf, cur_share=cur_share, moved=moved,
-                         rank_score=(g_eff * proj + 2 * repl[pos]) / (g_eff + 2), line={k: round(v, 3) for k, v in line.items()}))
+                         env4=env4, sched4=sched4, env1=env1, sched1=sched1, proj_ppg=proj, n4_ppg=base4 * env4 * sched4,
+                         n1_ppg=base_pts * env1 * sched1, n1_week=g.get("wk1"), env4_raw=env4_raw, sched4_raw=sched4_raw, conf=conf, cur_share=cur_share, moved=moved, role_change=role_change,
+                         rank_score=(g_eff * proj + 2 * repl[pos]) / (g_eff + 2), line={k: round(v, 3) for k, v in line.items()},
+                         line4=({k: round(v, 3) for k, v in line4.items()} if role_change else None)))
     out = pd.DataFrame(rows)
     out["proj_rank"] = out.groupby("pos").rank_score.rank(ascending=False, method="first").astype(int)
     return out

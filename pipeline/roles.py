@@ -58,14 +58,22 @@ def norm_status(st):
 
 
 def availability(status, practice=None):
-    """Chance he plays the game, from his designation and (when it's this game's report) his latest practice."""
+    """Chance he plays the game, from his designation and (when it's this game's report) his latest practice.
+
+    Fitted Oct 21 on the final injury reports of 2023-25 (projection accuracy audit): Questionable after a full
+    practice played 98% of the time, after a limited one 68%, after a DNP 50%; Doubtful 4%. A Questionable with no
+    practice entry keeps 0.75."""
     st = norm_status(status)
     if st is None: return 1.0
     if st == "Questionable":
         p = (practice or "").upper()
-        return 0.9 if p == "FP" else 0.4 if p == "DNP" else 0.75
-    if st == "Doubtful": return 0.15
+        return AVAIL_Q.get(p, 0.75)
+    if st == "Doubtful": return AVAIL_DOUBTFUL
     return 0.0
+
+
+AVAIL_Q = {"FP": 0.98, "LP": 0.68, "DNP": 0.50}
+AVAIL_DOUBTFUL = 0.04
 
 
 # A designation from last week's report (Monday / Tuesday, before this week's first report): the player may well be
