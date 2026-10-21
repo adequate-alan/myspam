@@ -14,6 +14,9 @@ rows = list(csv.DictReader(io.StringIO(re.search(r"RANKINGS_CSV\s*=\s*`(.*?)`", 
 sids = [r["sleeper_id"] for r in rows if r["sleeper_id"]]
 name_of = {r["sleeper_id"]: r["player"] for r in rows}
 NOW = int(time.time() * 1000)
+# the old trade sits at a fixed time before Ranking History began (Oct 1, 2026), so it stays Pre-AM as the calendar moves
+# (it was NOW - 20 days, which crossed Oct 1 on Oct 21 and stopped reading Pre-AM)
+PRE_AM_TS = 1789059600000   # 2026-09-10 17:00 UTC
 
 # Game line (Alan, Oct 11): his own team's logo, vs/@, the opponent's logo and abbreviation; never the opponent's logo alone
 VS_JS = """sel => [...document.querySelectorAll(sel)].map(v => {
@@ -46,7 +49,7 @@ def make_league(lid, name, teams, positions, scoring, divisions=None, unprojecte
     slots = [p for p in positions if p not in ("BN", "IR", "TAXI")]
     for r in rosters: r["starters"] = r["players"][:len(slots)]
     free = sids[teams * 12: teams * 12 + 6]
-    tx = {1: [{"transaction_id": f"{lid}t1", "type": "trade", "status": "complete", "roster_ids": [1, 2], "leg": 1, "status_updated": NOW - 20 * 86400e3,
+    tx = {1: [{"transaction_id": f"{lid}t1", "type": "trade", "status": "complete", "roster_ids": [1, 2], "leg": 1, "status_updated": PRE_AM_TS,
                "adds": {rosters[1]["players"][3]: 1, rosters[0]["players"][4]: 2}, "drops": {rosters[1]["players"][3]: 2, rosters[0]["players"][4]: 1}, "draft_picks": [], "waiver_budget": []}],
           4: [{"transaction_id": f"{lid}w1", "type": "waiver", "status": "complete", "roster_ids": [3], "leg": 4, "status_updated": NOW - 86400e3,
                "adds": {free[0]: 3}, "drops": {rosters[2]["players"][11]: 3}, "settings": {"waiver_bid": 12}},
