@@ -3702,6 +3702,10 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .st-badge.fp, .st-badge.ok { --st: color-mix(in srgb, var(--st-fp) 22%, transparent); color: var(--st-fp-text); }
 .st-badge.lp, .st-badge.q { --st: var(--st-q); color: var(--st-ink-amber); }
 .st-badge.d { --st: var(--st-d); } .st-badge.dnp { --st: var(--st-dnp); } .st-badge.out { --st: var(--st-out); } .st-badge.ir { --st: var(--st-ir); }
+/* Last week's report shown for reference (no report yet for this week's game): neutral, never a status colour */
+.st-badge.prior { --st: var(--fill-1, var(--surface-2)); color: var(--text-secondary); font-weight: 600; white-space: normal; }
+.pr-sec.prior .st-badge, .pr-sec.prior .st-blk { background: var(--fill-1, var(--surface-2)); color: var(--text-secondary); }
+.pr-sec.prior .pr-wk { color: var(--warn-text); }
 .inj-pos { display: inline-block; min-width: 30px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.06em; color: var(--muted); }
 .inj-table tr.inj-me td { background: color-mix(in srgb, var(--am-red) 9%, transparent); }
 .inj-table .pl-name { font-size: 0.86rem; }
@@ -14332,7 +14336,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const missed = [];
     for (const x of weeks) { if (x.tag === "OUT") missed.push(x.w); else break; }   // newest first; stop at a game he played or a bye
     const wkText = missed.length > 1 ? `Wk ${Math.min(...missed)}–${Math.max(...missed)}` : missed.length ? `Wk ${missed[0]}` : "";
-    const wk = currentWeek(), rep = team && sid ? injuryReport(team) : null, inj = rep && rep.week === wk ? injuryOf(team, sid) : null;
+    const wk = currentWeek(), rep = team && sid ? currentReport(team) : null, inj = rep && rep.week === wk ? rowOf(rep, sid) : null;
     const st = inj && inj.status ? (/^(ir|injured reserve)/i.test(inj.status) ? "IR" : inj.status) : "";
     if (/^(Out|Doubtful|Questionable|IR)$/.test(st)) {
       const tip = [`Week ${wk} injury report: ${st}${inj.injury ? ` (${inj.injury})` : ""}`, PRACTICE_TEXT[inj.practice] || "", missed.length ? `missed ${wkText}` : ""].filter(Boolean).join(" · ");
@@ -14650,7 +14654,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     if (e.p && outForSeason(e.p)) return { kind: "out", game: g, est: 0, text: "Out", season: true };   // Out for season tier: 0 every week
     if (g.kind === "upcoming" && week === now && e.p) {
-      const rep = injuryReport(e.team), inj = rep && rep.week === week ? injuryOf(e.team, e.sid) : null;
+      const rep = currentReport(e.team), inj = rep && rep.week === week ? rowOf(rep, e.sid) : null;
       if (inj && /^(out|ir|injured reserve)/i.test(inj.status || "")) return { kind: "out", game: g, est: 0, text: "Out" };   // once his game starts, his points speak
     }
     if (g.kind === "none" && !e.team) return { kind: "none", game: g, est: 0, missing: true, text: "" };
@@ -15827,7 +15831,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
             : o.kind === "out" ? tile(`Wk ${wk} proj`, "Out", "Ruled out")
             : o.missing ? tile(`Wk ${wk} proj`, "–", "No projection")
             : o.kind === "live" ? tile(`Wk ${wk} proj`, fp(o.proj), "Game in progress")
-            : `<div class="tw-stat"${hcWk(info.p || { name: info.name, pos: info.pos, sleeperId: info.sid, team: info.team }, o, wk, "pm")}><span class="tw-label">Wk ${wk} proj</span><span class="tw-val">${fp(o.proj)}</span><span class="tw-sub">${o.fallback ? "Season PPG" : `${esc(projSource())} · ${activeData() ? "league" : "site"} scoring`}</span></div>`; })()}
+            : `<div class="tw-stat"${hcWk(info.p || { name: info.name, pos: info.pos, sleeperId: info.sid, team: info.team }, o, wk, "pm")}><span class="tw-label">Wk ${wk} proj</span><span class="tw-val">${fp(o.proj)}</span><span class="tw-sub">${o.fallback ? "Season PPG" : roleSub(o) || `${esc(projSource())} · ${activeData() ? "league" : "site"} scoring`}</span></div>`; })()}
         ${tile("Spread", spread, "")}
         ${tile("Game total", ng.total != null ? fp(ng.total) : "–", "")}
         ${tile("Team total", implied ?? "–", implied ? "implied" : "")}
@@ -15839,8 +15843,24 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     </div>`;
   }
   const VERDICT = { good: "Favorable matchup", neutral: "Neutral matchup", tough: "Tough matchup" };
+  // Why this week's projection is below his "if he plays" line, in a few words (the full reason is in the hover card):
+  // a designation from last week reads as last week's, never as this week's report
+  const roleSub = o => { const R = o && o.role; if (!R || R.m >= 1 || R.depth === undefined || R.later) return "";
+    const st = R.status ? `${R.status}${R.fresh ? "" : " last week"}` : "";
+    return R.start != null ? [st, `${pctTxt(R.start)} to start`].filter(Boolean).join(" · ") : st ? `${st} · ${pctTxt(R.m)} to play` : ""; };
   // His own status: the practice-report line, or "not on practice report" once his team's report is out
-  const statusChip = info => { const r = injuryOf(info.team, info.sid); return r ? injuryChip(r) : injuryReport(info.team) ? stBadge("", "Not on practice report") : ""; };
+  // Only this week's report counts (Alan, Oct 21). Before it's out, no practice or game status is shown; an injury from last
+  // week's report stays visible as a dated, neutral note (the injury, not a designation for this game).
+  const statusChip = info => {
+    const wk = reportWeek(info.team), cur = currentReport(info.team), r = rowOf(cur, info.sid);
+    if (r) return `<span title="${esc(`${info.team}'s Week ${cur.week} injury report`)}">${injuryChip(r)}</span>`;
+    if (cur) return stBadge("", `Not on Week ${cur.week} report`);
+    const old = priorReport(info.team), o = rowOf(old, info.sid);
+    if (!o || !wk) return "";
+    const when = weekGameDate(info.team, old.week), what = [o.injury, o.status ? `${o.status} in Week ${old.week}` : `on the Week ${old.week} report`].filter(Boolean).join(" · ");
+    const tip = `From ${info.team}'s Week ${old.week} injury report${when ? ` (game ${when})` : ""}. No Week ${wk} practice report from ${info.team} yet, so no practice participation or game status is shown for Week ${wk}.`;
+    return `<span class="st-badge prior" title="${esc(tip)}">${esc(what)}</span>`;
+  };
   // The three weeks after this one, with each opponent's verdict dot
   function nextWeeksLine(info, thisWeek) {
     const rows = teamGames(STATS_SEASONS[0], info.team), D = (defenseVsPos() || {})[info.pos];
@@ -15867,7 +15887,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const SEVERITY = r => ({ Out: 0, Doubtful: 1, Questionable: 2 })[r.status] ?? ({ DNP: 3, LP: 4, FP: 5 })[r.practice] ?? 6;
   function relevantReports(info, ng) {
     const R = RELEVANT[info.pos]; if (!R) return [];
-    const pick = (team, list, opp) => { const rep = team && injuryReport(team); return rep ? rep.rows.filter(r => list.includes(r.pos) && String(r.sid) !== String(info.sid)).map(r => ({ ...r, team, opp })) : []; };
+    const pick = (team, list, opp) => { const rep = currentReport(team); return rep ? rep.rows.filter(r => list.includes(r.pos) && String(r.sid) !== String(info.sid)).map(r => ({ ...r, team, opp })) : []; };
     return pick(info.team, R.own, false).concat(ng ? pick(ng.opp, R.opp, true) : []).sort((a, b) => SEVERITY(a) - SEVERITY(b));
   }
   function keyReportsLine(info, ng) {
@@ -15879,7 +15899,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // A defense rank (1 = softest): the number with a short bar, tinted by third
   const gradeOf = (r, n) => (r <= Math.round(n / 3) ? "good" : r > n - Math.round(n / 3) ? "tough" : "neutral");
   const rankChip = (label, r, n) => r ? `<span class="tw-rank ${gradeOf(r, n)}"><span class="rk-l">${label}</span><b>${ordinal(r)}</b><span class="rk-bar"><span style="width:${(100 * (n - r + 1) / n).toFixed(0)}%"></span></span></span>` : "";
-  // Injury report (latest week in the stats file): [name, pos, sid, game status, practice, injury]
+  // Injury report (latest week in the stats file): [name, pos, sid, game status, practice, injury]. Raw: any week.
+  // A report speaks for one game only (Alan, Oct 21: Breece Hall's Week 6 "Out · did not practice" showed on his Week 7
+  // card), so every view of "this week" reads it through currentReport / injuryOf, which drop a report for an earlier week.
   function injuryReport(team) {
     const d = statsCache[STATS_SEASONS[0]], I = d && d.injuries;
     if (!I || !I.teams || !I.teams[team]) return null;
@@ -15887,10 +15909,26 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return { week: I.week, daily: c.includes("wed"), rows: I.teams[team].map(r => ({ name: at(r, "name"), pos: at(r, "pos"), sid: at(r, "sid"), status: at(r, "status"),
       practice: at(r, "practice"), injury: injuryText(at(r, "injury")), wed: at(r, "wed"), thu: at(r, "thu"), fri: at(r, "fri") })) };
   }
-  function injuryOf(team, sid) {
-    const rep = team && injuryReport(team);
-    return rep ? rep.rows.find(r => r.sid && String(r.sid) === String(sid)) || null : null;
+  // The game the team's report would be for: its next unplayed game (a live game counts until its score is in)
+  const reportWeek = team => { const g = team && nextGame(team); return g ? g.week : null; };
+  // His team's report for that game, or null (no report yet this week, or only last week's)
+  function currentReport(team) {
+    const rep = team && injuryReport(team), wk = reportWeek(team);
+    return rep && wk != null && rep.week === wk ? rep : null;
   }
+  // Last week's (or older) report when this week's isn't out: for an explicitly dated reference, never as current
+  function priorReport(team) {
+    const rep = team && injuryReport(team), wk = reportWeek(team);
+    return rep && (wk == null || rep.week < wk) ? rep : null;
+  }
+  const rowOf = (rep, sid) => (rep ? rep.rows.find(r => r.sid && String(r.sid) === String(sid)) || null : null);
+  function injuryOf(team, sid) { return rowOf(currentReport(team), sid); }
+  // A team's game date for a week ("Oct 19"), to date an older report
+  const weekGameDate = (team, w) => { const r = teamGames(STATS_SEASONS[0], team).find(x => x[0] === w); return r && r[3] ? shortDate(r[3]) : ""; };
+  const shortDate = iso => { const d = new Date(iso + "T12:00:00"); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  // The day of his latest practice entry this week (daily columns), for "did not practice (Wed)"
+  const PRACTICE_DAY = { wed: "Wed", thu: "Thu", fri: "Fri" };
+  const practiceDay = r => { for (const k of ["fri", "thu", "wed"]) if (r[k]) return PRACTICE_DAY[k]; return ""; };
   const injuryText = s => (!s ? null : /^not injury related/i.test(s) ? (/rest/i.test(s) ? "Rest (not injury)" : "Not injury related") : s);
   const PRACTICE_TEXT = { DNP: "did not practice", LP: "limited practice", FP: "full practice" };
   // One status colour language everywhere: FP green, LP amber, DNP red, Out deep red, Questionable amber, Doubtful orange-red, IR muted red
@@ -15898,7 +15936,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const stBlock = v => (v ? `<span class="st-blk ${ST_CLASS[v] || ""}" title="${esc(PRACTICE_TEXT[v] || v)}">${esc(v)}</span>` : `<span class="st-blk none">–</span>`);
   const stBadge = (v, text) => `<span class="st-badge ${ST_CLASS[v] || "ok"}">${esc(text || v)}</span>`;
   const statusCls = s => ST_CLASS[s] || "";
-  const injuryChip = r => stBadge(r.status || r.practice, [r.status || "On practice report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] || ""].filter(Boolean).join(" · "));
+  const injuryChip = r => { const day = practiceDay(r); return stBadge(r.status || r.practice, [r.status || "On practice report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] ? PRACTICE_TEXT[r.practice] + (day ? ` (${day})` : "") : ""].filter(Boolean).join(" · ")); };
 
   /* Schedule tab: every remaining week, with the opponent defense's ranks vs his position */
   function ppSchedule(info) {
@@ -15946,9 +15984,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const teamsList = [[info.team, false]].concat(ng ? [[ng.opp, true]] : []);
     const isMe = r => r.sid && String(r.sid) === String(info.sid);
     const section = (team, opp) => {
-      const rep = injuryReport(team), m = teamMeta(team);
-      const head = `<div class="pr-team tm" style="${teamStyle(team)}">${teamLogo(team, "md")}<b>${esc(m ? m.name : team)}</b>${opp ? `<span class="pr-opp">Opponent</span>` : ""}<span class="pr-wk">${rep ? `Week ${rep.week} practice report` : ""}</span></div>`;
-      if (!rep) return `<section class="pr-sec">${head}<p class="pp-note">No one on ${esc(team)}'s latest practice report.</p></section>`;
+      const cur = currentReport(team), old = cur ? null : priorReport(team), rep = cur || old, m = teamMeta(team), wk = reportWeek(team);
+      const when = old ? weekGameDate(team, old.week) : "";
+      const head = `<div class="pr-team tm${old ? " prior" : ""}" style="${teamStyle(team)}">${teamLogo(team, "md")}<b>${esc(m ? m.name : team)}</b>${opp ? `<span class="pr-opp">Opponent</span>` : ""}<span class="pr-wk">${cur ? `Week ${cur.week} practice report` : old ? `Week ${old.week} report · last week` : ""}</span></div>`;
+      const pending = wk ? `<p class="pp-note pr-pending">No Week ${wk} practice report from ${esc(team)} yet.${old ? ` Below is the Week ${old.week} report${when ? ` (game ${esc(when)})` : ""} for reference: those designations were for that game, not Week ${wk}.` : ""}</p>` : "";
+      if (!rep) return `<section class="pr-sec">${head}${pending || `<p class="pp-note">No one on ${esc(team)}'s latest practice report.</p>`}</section>`;
       let rows = rep.rows;
       if (!full) rows = rows.filter(r => isMe(r) || (opp ? R.opp : R.own).includes(r.pos));
       // his position group first on his own team, then the usual order
@@ -15960,12 +16000,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const days = rep.daily ? ["wed", "thu", "fri"] : null;
       const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}</td>
           ${days ? days.map(k => `<td class="pr-day">${stBlock(r[k])}</td>`).join("") : `<td class="pr-day">${stBlock(r.practice)}</td>`}<td class="pr-inj">${esc(r.injury || "")}</td></tr>`;
-      return `<section class="pr-sec">${head}<div class="table-scroll"><table class="gl-table inj-table">
+      return `<section class="pr-sec${old ? " prior" : ""}">${head}${old ? pending : ""}<div class="table-scroll"><table class="gl-table inj-table">
         <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day">Practice</th>`}<th scope="col">Injury</th></tr></thead>
         <tbody>${groups.map(([label, g]) => `<tr class="pr-group"><td colspan="${days ? 5 : 3}">${esc(label)}</td></tr>` + g.map(row).join("")).join("")}</tbody></table></div></section>`;
     };
-    const me = `<div class="pr-me">${statusChip(info) || `<span class="muted">No practice report yet this week.</span>`}${R && !full ? `<span class="pr-scope">Showing what matters for ${esc(info.name)}: ${esc(info.team)} ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)} ${esc(relevantLabel(R.opp))}` : ""}</span>` : ""}</div>`;
-    const anyDaily = teamsList.some(([t]) => { const r = injuryReport(t); return r && r.daily; });
+    const me = `<div class="pr-me">${statusChip(info) || `<span class="muted">No ${reportWeek(info.team) ? `Week ${reportWeek(info.team)} ` : ""}practice report yet.</span>`}${R && !full ? `<span class="pr-scope">Showing what matters for ${esc(info.name)}: ${esc(info.team)} ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)} ${esc(relevantLabel(R.opp))}` : ""}</span>` : ""}</div>`;
+    const anyDaily = teamsList.some(([t]) => { const r = currentReport(t) || priorReport(t); return r && r.daily; });
     return me + teamsList.map(([t, o]) => section(t, o)).join("") +
       (R ? `<button class="btn pr-full" type="button" data-pr-full aria-expanded="${full}">${full ? "Show only what matters for him" : "View full report"}</button>` : "") +
       `<p class="pp-note">Official practice report (nflverse): FP full, LP limited, DNP did not practice. ${anyDaily ? "Each day fills in from our Wednesday, Thursday and Friday evening updates; a dash means that day wasn't captured." : "Shows the latest day reported."}</p>`;

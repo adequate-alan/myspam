@@ -18,12 +18,13 @@ multiplier stays 1).
 RB, WR and TE share the field (several play every game; their per-game role already reflects how much they play when
 they do), so their multiplier is their availability alone.
 
-Availability, once this game's injury report is out (the stats file's report for his team's next week, Wednesday to
-Friday): no designation 1.0; Questionable 0.75 (0.9 / 0.75 / 0.4 when his latest practice was full / limited / did not
+Availability, once this game's final injury report is out (the stats file's report for his team's next week with game
+designations: Friday, or Wednesday before a Thursday game): no designation 1.0; Questionable 0.75 (0.9 / 0.75 / 0.4 when his latest practice was full / limited / did not
 practice); Doubtful 0.15; Out, IR, PUP, suspended 0. Before it (Monday, Tuesday), Sleeper's designation on the depth
 chart (data/depth_charts.json, refreshed with every stats run) is still last week's game status, so it only lowers his
 chance (CARRY: Questionable 0.85, Doubtful 0.5, Out 0.3; IR 0): the starting job stays genuinely uncertain until the
-report says otherwise.
+report says otherwise. Wednesday and Thursday's practice-only reports (no designations yet) don't decide: a player on
+them keeps that pre-report rule, a player not on them is healthy (Oct 21).
 
 Later weeks: a short-term designation (Questionable / Doubtful / Out) is assumed to clear (LATER_AVAIL) and IR stays out.
 Sleeper drops an injured quarterback down the depth chart (Chicago, Oct 12: Bagent, Keenum, Williams-Out), so a
@@ -119,12 +120,21 @@ def team_roles(stats, depth, prior_stats=None):
     nxt = next_weeks(stats)
     inj = stats.get("injuries") or {}
     ici = {c: i for i, c in enumerate(inj.get("cols") or [])}
-    report, fresh = {}, set()   # sid -> (status, practice) from this game's injury report; teams with this week's report
+    report, fresh = {}, set()   # sid -> (status, practice) from this game's injury report; teams with this week's final report
+    interim = set()             # players on this week's practice-only report (Wed / Thu, before game designations)
     for tm, rows in (inj.get("teams") or {}).items():
         if inj.get("week") != nxt.get(tm): continue   # a report for an earlier week says nothing about this game
-        fresh.add(tm)
+        # Game designations (Questionable, Doubtful, Out) come with the final report (Friday; Wednesday before a Thursday
+        # game). A practice-only report says who is hurt but not whether he plays (Oct 21: on Wednesday Kyle Monangai, DNP
+        # and Questionable on Sleeper, went to a full 1.0 because "no designation" read as healthy), so until it's final
+        # a listed player keeps the pre-report rule below; a player not on it is healthy.
+        final = any(r[ici["status"]] for r in rows)
+        if final: fresh.add(tm)
         for r in rows:
-            if r[ici["sid"]]: report[str(r[ici["sid"]])] = (r[ici["status"]], latest_practice(r, ici))
+            if not r[ici["sid"]]: continue
+            if final: report[str(r[ici["sid"]])] = (r[ici["status"]], latest_practice(r, ici))
+            else: interim.add(str(r[ici["sid"]]))
+    early = {tm for tm, rows in (inj.get("teams") or {}).items() if inj.get("week") == nxt.get(tm)} - fresh
     score = starts([(1.0, stats), (PRIOR_START_W, prior_stats)])
     out = {}
     for tm, chart in teams.items():
@@ -143,6 +153,9 @@ def team_roles(stats, depth, prior_stats=None):
                 if tm in fresh:   # this game's report is out: it decides (Sleeper's IR / PUP aside, which the report omits)
                     status = norm_status(rep[0]) if rep and rep[0] else ("IR" if sleeper == "IR" else None)
                     a = availability(status, rep[1] if rep else None)
+                elif tm in early and sid not in interim:   # not on this week's practice report: healthy (IR aside)
+                    status = "IR" if sleeper == "IR" else None
+                    a = 0.0 if status == "IR" else 1.0
                 else:             # only last week's designation so far: lower his chance, don't rule him out
                     status = sleeper
                     a = CARRY.get(status, 1.0)
