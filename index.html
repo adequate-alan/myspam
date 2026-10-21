@@ -1877,6 +1877,8 @@ button.rs-card:focus-visible { outline: 2px solid var(--focus-ring); outline-off
 }
 .tc-warn b { color: var(--cream); }
 .tc-warn-acts { display: inline-flex; gap: 8px; flex-shrink: 0; }
+.tc-warn .tc-swap { margin-left: 4px; font-size: inherit; white-space: nowrap; }
+.tc-warn .tc-swap-ask { align-items: center; flex-wrap: wrap; flex-shrink: 1; }
 .tc-hist { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 14px; padding: 9px 14px;
   border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--muted); background: var(--fill-1, transparent); border: 1px solid var(--line); }
 .tc-hist b { color: var(--ink); }
@@ -7672,7 +7674,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (!on) { $("teamroster-" + s).hidden = true; $("teamroster-" + s).innerHTML = ""; $("rtoggle-" + s).hidden = true; }
     });
     // players in the trade who aren't on the roster they're supposedly coming from (kept as hypothetical)
-    const warn = $("tc-warn"), stray = tcStray();
+    const warn = $("tc-warn"), stray = tcStray(), swap = TC.hist ? null : tcSwapOffer(stray);
+    if (!swap || TC_UI.swapAsk !== swap.key) TC_UI.swapAsk = null;
     warn.hidden = !stray.length;
     if (stray.length) {
       // a player already on the team set to receive him: the sides are reversed (Oct 10: an entered-backwards trade read as
@@ -7684,8 +7687,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         : own.length
         ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster impact is off until the sides are fixed.</span>
           <span class="tc-warn-acts">${TC3.on ? "" : `<button class="btn primary" type="button" data-tc-flip>Flip players</button> `}<button class="btn" type="button" data-tc-remove>Remove</button></span>`
-        : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).</span>
-          <button class="btn" type="button" data-tc-remove>Remove</button>`;
+        : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).${swap && TC_UI.swapAsk !== swap.key ? ` <button class="btn link inline tc-swap" type="button" data-tc-swap-ask>Want to swap teams?</button>` : ""}</span>
+          ${swap && TC_UI.swapAsk === swap.key
+            ? `<span class="tc-warn-acts tc-swap-ask"><span>Replace <b>${esc(swap.from.name)}</b> with <b>${esc(swap.to.name)}</b>?</span><button class="btn primary" type="button" data-tc-swap>Replace</button><button class="btn" type="button" data-tc-swap-cancel>Cancel</button></span>`
+            : `<button class="btn" type="button" data-tc-remove>Remove</button>`}`;
     }
     renderHist();
     renderCardNeeds();
@@ -7716,6 +7721,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     });
   }
   const uniq = list => [...new Set(list)];
+  // "Want to swap teams?": the hypothetical players all come from one picked team but belong to one other team
+  // that isn't in the trade, so that team can take the mismatched partner's place (players kept, sides not reversed).
+  // Offered only when there's exactly one such fix; nothing changes until the user confirms.
+  function tcSwapOffer(stray) {
+    if (!stray.length || stray.some(x => x.own || !x.giver)) return null;
+    const givers = uniq(stray.map(x => x.giver));
+    if (givers.length !== 1) return null;
+    const owners = uniq(stray.map(x => { const o = LG.ownerOf.get(x.p.id); return o ? String(o.rosterId) : ""; }));
+    if (owners.length !== 1 || !owners[0]) return null;
+    const picked = (TC3.on ? SIDES3 : ["A", "B"]).map(s => $("team-" + s).value);
+    const to = LG.teams.find(t => String(t.rosterId) === owners[0]), from = sideTeam(givers[0]);
+    if (!to || !from || picked.includes(owners[0]) || ![...$("team-" + givers[0]).options].some(o => o.value === owners[0])) return null;
+    return { side: givers[0], from, to, key: givers[0] + ":" + owners[0] + ":" + from.rosterId };
+  }
   function tcStray() {
     if (!tcLeague()) return [];
     const out = [];
@@ -7726,7 +7745,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const g = originOf(id, r), t = sideTeam(g), p = byId.get(id), mine = sideTeam(r);
         if (!p) return;
         if (mine && rosterIds(mine).includes(String(p.sleeperId))) out.push({ p, side: r, from: t ? t.name : sideName(g), own: mine.name });
-        else if (t && !rosterIds(t).includes(String(p.sleeperId))) out.push({ p, side: r, from: t.name });
+        else if (t && !rosterIds(t).includes(String(p.sleeperId))) out.push({ p, side: r, giver: g, from: t.name });
       }));
       return out;
     }
@@ -7734,7 +7753,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const t = sideTeam(giver); if (!t) return;
       const ids = new Set(rosterIds(t)), mine = sideTeam(getter);
       const own = new Set(mine ? rosterIds(mine) : []);
-      sides[getter].forEach(id => { const p = byId.get(id); if (p && !ids.has(String(p.sleeperId))) out.push({ p, side: getter, from: t.name, own: own.has(String(p.sleeperId)) ? mine.name : null }); });
+      sides[getter].forEach(id => { const p = byId.get(id); if (p && !ids.has(String(p.sleeperId))) out.push({ p, side: getter, giver, from: t.name, own: own.has(String(p.sleeperId)) ? mine.name : null }); });
     });
     return out;
   }
@@ -7755,6 +7774,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   });
   $("tc-warn").addEventListener("click", e => {
     if (e.target.closest("[data-tc-flip]")) { [sides.A, sides.B] = [sides.B, sides.A]; renderTrade(); return; }   // players change sides, teams stay
+    if (e.target.closest("[data-tc-swap-ask]")) { const o = tcSwapOffer(tcStray()); TC_UI.swapAsk = o ? o.key : null; renderTradeContext(); const b = $("tc-warn").querySelector("[data-tc-swap]"); if (b) b.focus(); return; }
+    if (e.target.closest("[data-tc-swap-cancel]")) { TC_UI.swapAsk = null; renderTradeContext(); const b = $("tc-warn").querySelector("[data-tc-swap-ask]"); if (b) b.focus(); return; }
+    if (e.target.closest("[data-tc-swap]")) {   // the mismatched partner's picker takes the players' owner; the players stay where they are
+      const o = tcSwapOffer(tcStray()); TC_UI.swapAsk = null;
+      if (o) { $("team-" + o.side).value = String(o.to.rosterId); toast(`${o.to.name} replaced ${o.from.name}. The players were kept.`); }
+      renderTrade(); return;
+    }
     if (!e.target.closest("[data-tc-remove]")) return;
     tcStray().forEach(x => { sides[x.side] = sides[x.side].filter(id => id !== x.p.id); });
     renderTrade();
