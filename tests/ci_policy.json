@@ -2,7 +2,7 @@
   "note": "Read by tests/run_ci.py. A suite fails CI when it prints a FAIL line not listed here, or exits non-zero without one (a crash). Entries match the start of a check's message exactly as the suite prints it after 'FAIL '. Keep this list short and specific: never add a pattern that could hide a new regression.",
   "known_failures": {},
   "advisory": {
-    "_why": "Reported in the summary, never block a deploy; every correctness check in the same suites stays blocking. Timing measurements (drag suites): they depend on the machine's speed and load (they fail when 15 browsers share 4 CPUs and pass alone); the landings, ranks 1..N, stale rows, scrolling stops at 0px, listeners and node counts stay blocking. Board-quality preferences (value_curve_check, Alan, Oct 14): a tier boundary under the preferred 3% gap and an adjacent value drop over 30% describe Alan's board, not the code, so they inform (the Review panel and the suite's own output list them) without overruling a ranking publish; values rising down the order, split or inverted tiers, stored values not shown as stored and page errors stay blocking.",
+    "_why": "Reported in the summary, never block a deploy; every correctness check in the same suites stays blocking. Timing measurements (drag suites): they depend on the machine's speed and load (they fail when 15 browsers share 4 CPUs and pass alone); the landings, ranks 1..N, stale rows, scrolling stops at 0px, listeners and node counts stay blocking. Board-quality preferences (value_curve_check, Alan, Oct 14): a tier boundary under the preferred 3% gap and an adjacent value drop over 30% describe Alan's board, not the code, so they inform (the Review panel and the suite's own output list them) without overruling a ranking publish; values rising down the order, split or inverted tiers, stored values not shown as stored and page errors stay blocking. Live market comparison (Alan, Oct 21): formatCheck's \"TE7–TE12 near FantasyCalc\" check on today's board against today's FantasyCalc file moves with every market refresh, weekly projection run and ranking publish, so it reports its deviation without blocking; the same check on fixed data (the frozen board and the Oct 13 FantasyCalc fixture, format_check's \"Fixed market fixture\" line) stays blocking, as does every check of AM's own valuation, format adjustments, positional order and pricing.",
     "drag_check": [
       "Grab restyles only the drag elements",
       "No long tasks",
@@ -24,6 +24,12 @@
     "value_curve_check": [
       "Every tier boundary has a real value gap",
       "No formula cliff over 30%"
+    ],
+    "format_check": [
+      "TE7–TE12 near FantasyCalc"
+    ],
+    "league_hub_check": [
+      "formatCheck: TE7–TE12 near FantasyCalc"
     ]
   },
   "suites": {
@@ -58,6 +64,7 @@
       "reversal_persist_check",
       "tier_boundary_check",
       "move_to_rank_check",
+      "positional_shared_check",
       "fixture_check",
       "inflight_check",
       "form_trend_check",
@@ -80,6 +87,7 @@
       "flock_manager_check": 60,
       "market_pricing_check": 45,
       "move_to_rank_check": 131,
+      "positional_shared_check": 150,
       "league_hub_check": 129,
       "roster_fit_check": 100,
       "drag_repeat_check": 94,

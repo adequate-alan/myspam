@@ -13,9 +13,19 @@ Needs Playwright for Python and a Chromium (set CHROMIUM=/path/to/chromium if Pl
    league-adjusted value for Kittle in both "No league" and league mode (never the base SPAM value),
    shows the Format adjustment table, and that a Custom format with TE Premium ++ raises his value.
 3. Checks the base SPAM Board (Rankings, SPAM Board view) is unchanged throughout.
+
+The "TE7–TE12 near FantasyCalc" check (Alan, Oct 21) runs twice: on today's board against today's FantasyCalc file
+(advisory in tests/ci_policy.json, since both move with every market refresh, weekly projection run and publish; a
+miss prints an INVESTIGATE line with the deviation) and on fixed data, the frozen test board with the FantasyCalc
+file synced the same day (tests/fixtures/market/redraft_2026-10-13.json), which stays blocking.
 """
 import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fixture_board as FB
+
+LIVE_TE = "TE7–TE12 near FantasyCalc"
+MARKET_FIXTURE = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "market", "redraft_2026-10-13.json"), "rb").read()
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
@@ -88,12 +98,30 @@ with sync_playwright() as p:
     base0 = board(pg)
     for c in pg.evaluate("() => SPM.formatCheck()"):
         ok(c["pass"], f'{c["check"]}: {c["values"]}')
+        if c["check"].startswith(LIVE_TE) and not c["pass"]:
+            # live FantasyCalc moves every 8 hours and Alan's board with every publish: advisory (tests/ci_policy.json),
+            # reported with the actual deviation; the same check on fixed data below stays blocking
+            print(f"INVESTIGATE live market deviation (advisory, not blocking): AM ÷ FantasyCalc TE7–12 {c['values'][0]} (want ≥ 0.85), TE13–20 {c['values'][1]} (want ≤ 1.10) on today's board and today's FantasyCalc file. Look into it if it persists over several refreshes or grows; never move AM values toward the market to make it pass.")
     # weekly projections follow the league's scoring (one shared projection function)
     for c in pg.evaluate("() => SPM.projectionCheck()"):
         ok(c["pass"], f'Projection: {c["check"]}: {c["values"]}')
     # one scoring engine: the same stat line under different league settings (Alan, Oct 5)
     for c in pg.evaluate("() => SPM.scoringCheck()"):
         ok(c["pass"], f'Scoring: {c["check"]}: {c["values"]}')
+    pg.close()
+
+    # 1b. the same TE vs market check on fixed data (blocking): the frozen test board and the FantasyCalc file synced the
+    # same day (tests/fixtures/market/redraft_2026-10-13.json), so only a change in AM's own format pricing can move it
+    pg = br.new_page(viewport={"width": 1400, "height": 1000})
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.route("https://api.sleeper.app/**", sleeper)
+    pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com)/.*"), lambda r: r.abort())
+    FB.route(pg, f"http://127.0.0.1:{port}")
+    pg.route("**/data/market/redraft.json*", lambda r: r.fulfill(status=200, content_type="application/json", body=MARKET_FIXTURE))
+    pg.add_init_script("if (!sessionStorage.getItem('t')) { sessionStorage.setItem('t', '1'); localStorage.clear(); }")
+    pg.goto(f"http://127.0.0.1:{port}/#rankings"); pg.wait_for_timeout(2500)
+    te = [c for c in pg.evaluate("() => SPM.formatCheck()") if c["check"].startswith(LIVE_TE)]
+    ok(len(te) == 1 and te[0]["pass"], f"Fixed market fixture (frozen board + Oct 13 FantasyCalc): {te[0]['check'] if te else LIVE_TE}: {te[0]['values'] if te else 'not run'}")
     pg.close()
 
     # 2. the calculator with a connected league that has no TE premium
