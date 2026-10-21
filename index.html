@@ -982,15 +982,13 @@ const STATS_SEASONS = [2026, 2025, 2024];
 //    the league's settings and with the site's, and his ratio is compared with the average
 //    at his position. A back who lives on catches loses a little in standard scoring; a
 //    rushing QB gains a little with 6-point passing TDs turned off, and so on.
-// 3. Your order stays unless a player's adjusted value passes the player above him by
-//    more than `margin`. Within a position nobody moves more than `maxPosMove` spots.
+// 3. Your order within each position always stays (Alan, Oct 21); across positions the
+//    league-adjusted board follows the adjusted values.
 const FORMAT_ADJUST = {
   games: 17,          // most recent games used (this season first, then last season)
   minGames: 4,        // fewer games than this: no personal nudge
   shrinkGames: 6,     // personal nudge counts games / (games + shrinkGames) of its full size
   maxFactor: 0.10,    // personal nudge never moves a value more than 10%
-  margin: 0.03,       // must pass the player above by more than 3% to jump him
-  maxPosMove: 2,      // most spots a player can move within his position
   avgDepth: { QB: 24, RB: 48, WR: 60, TE: 24 },  // players used for each position's average
   // Shallow formats can price a whole tier at waiver level (10-team 1QB: QB13+ ≈ 0). Two guards:
   tierKeep: 0.40,     // a tier keeps at least 40% of the last value above it (unless your base board's own drop there is steeper)
@@ -6817,9 +6815,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (mkOn()) return renderMkt();
     if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
     let list, rk, group;
-    const editing = editorShown() && !leagueView() && CALC_BOARD === ACTIVE_BOARD;
+    /* Positional edits from either view (Alan, Oct 21): a position tab can be reordered in the AM Board view and in the
+       League-adjusted view, through the same path (movePlayer), so both views always show one positional order. The
+       League-adjusted All view stays read-only (its overall board is derived from the league's values), and so do its
+       values and tiers (shown league-adjusted, edited on the AM Board). Only the board this page edits can be reordered. */
+    const lvEdit = leagueView(), editing = editorShown() && CALC_BOARD === ACTIVE_BOARD && (!lvEdit || EDIT_POS.includes(posFilter));
     maxValue = Math.max(1, ...players.map(dv));
-    const canReorder = editing && (EDIT_POS.includes(posFilter) || (posFilter === "ALL" && hasOverall()));
+    const canReorder = editing && (EDIT_POS.includes(posFilter) || (posFilter === "ALL" && hasOverall() && !lvEdit));
     const numOf = p => posFilter === "ALL" ? p.rank : p.posNum;
     if (posFilter === "PICK") {
       list = players.filter(p => p.pos === "PICK").sort((a, b) => b.value - a.value);
@@ -6864,7 +6866,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     let lastGroup = null;
     // tier editing: position tabs on the AM Board, no search/filter
     const tkey = tierKeyView(), tierView = scopeAll() ? posFilter === "ALL" && hasOverall() : EDIT_POS.includes(posFilter);   // where the tiers are edited: the board's tier scope
-    const tierEdit = editing && canReorder && tierView && !query && !filtered;
+    const tierEdit = editing && canReorder && tierView && !lvEdit && !query && !filtered;
     const empties = tierEdit ? (TIER_EMPTY[tkey] || []).slice().sort((a, b) => a.tier - b.tier) : [];
     // Small secondary note on each tier band, from the players currently in that tier only
     const tierStats = new Map();
@@ -6918,7 +6920,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           ? `<button class="rk-btn" type="button" data-mv="${p.id}" aria-haspopup="dialog" aria-expanded="${MV.id === p.id ? "true" : "false"}" title="Move to rank…" aria-label="Move ${esc(p.name)} to a rank (now ${posFilter === "ALL" ? "#" + n : esc(posLabel(p))})">${n}</button>` + h.slice(n.length) : h; })()}</td>
         <td><div class="pl-cell">${CMP.on && p.sleeperId ? (cmpA ? `<span class="cmp-pick a" title="Player A">A</span>` : `<button class="cmp-pick" type="button" data-cmp-pick="${esc(p.sleeperId)}" aria-label="Compare ${esc(p.name)} with ${esc(CMP.name)}"></button>`) : ""}${face(p.sleeperId, p.name)}<div class="pl-text">${nameLink(p.sleeperId, p.name)}${editing && p.source === "auto" ? `<span class="src-auto" title="Auto-ranked: added under your rankings. Move, re-tier or set his value and save to make him yours.">Auto</span>` : CALC_BOARD.provisionalAuto && p.source === "auto" ? provTag() : ""}${nflMark(p.team)}${ownerTag(p)}</div></div></td>
         <td class="pos-col"><span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span>${posFilter === "ALL" && p.tier ? tierTag(p) : ""}</td>
-        <td class="val"${p.hasValue === false ? "" : ` data-hc="am:${p.id}" data-hc-side="left"`}>${editing ? valueCellEdit(p) : valueCell(p)}</td>
+        <td class="val"${p.hasValue === false ? "" : ` data-hc="am:${p.id}" data-hc-side="left"`}>${editing && !lvEdit ? valueCellEdit(p) : valueCell(p)}</td>
       </tr>`);
     });
     if (tierEdit) flushEmpties(Infinity);
@@ -8993,7 +8995,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     renderMarketAudit();
     if (RV && RV.open) renderReview();
     $("editor-bar").hidden = !editorShown();
-    $("ed-reveal-wrap").hidden = !editor.on || editorShown() || leagueView() || prodOn() || mkOn() || wkOn();
+    $("ed-reveal-wrap").hidden = !editor.on || editorShown() || (leagueView() && !EDIT_POS.includes(posFilter)) || prodOn() || mkOn() || wkOn();
     if (!editor.on || savedCsv == null) return;
     const n = changedRows().length, local = Object.keys(localEdits).length;
     $("eb-who").textContent = editor.login ? "@" + editor.login : "";
@@ -9001,7 +9003,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("eb-count").textContent = n ? `${n} unsaved` : "All saved";
     $("eb-save").disabled = $("eb-cancel").disabled = n === 0 || editor.saving;
     $("editor-bar").classList.toggle("dirty", n > 0);   // Save turns red only while there are unsaved changes
-    $("eb-hint").textContent = leagueView() ? `${adjName()} view is read-only. Switch to AM Board to edit rankings.`
+    $("eb-hint").textContent = leagueView()
+      ? (EDIT_POS.includes(posFilter) ? `Reordering ${posFilter}s: the same ${posFilter} order as the AM Board. Values here follow the league's settings.`
+        : `${adjName()} overall order follows the league's values. Reorder on a position tab, or switch to AM Board to edit values.`)
       : posFilter === "ALL"
       ? "Drag or use the arrows to reorder. Click a value to edit it."
       : EDIT_POS.includes(posFilter)
@@ -9026,7 +9030,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function boardLocalCount(b) { try { return Object.keys(JSON.parse(localStorage.getItem(boardKey("spm_local_edits", b)) || "{}") || {}).length; } catch (e) { return 0; } }
   function renderBoardSwitch() {
     const w = $("ed-switch-wrap"); if (!w) return;
-    const rb = rankBoard(), show = editor.on && rb !== ACTIVE_BOARD && !leagueView() && !prodOn() && !mkOn() && !wkOn()
+    const rb = rankBoard(), show = editor.on && rb !== ACTIVE_BOARD && (!leagueView() || EDIT_POS.includes(posFilter)) && !prodOn() && !mkOn() && !wkOn()
       && (!EDIT_PHONE.matches || !!editor.token || editReveal || DIAG_DEBUG);
     w.hidden = !show; if (!show) return;
     const n = savedCsv == null ? 0 : changedRows().length, saved = boardLocalCount(rb), b = $("ed-switch");
@@ -9634,7 +9638,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   function mvRender() {
     const me = byId.get(MV.id); if (!me) { mvClose(); return; }
-    const canPos = me.posNum != null, canAll = me.rank != null && hasOverall();
+    const canPos = me.posNum != null, canAll = me.rank != null && hasOverall() && !leagueView();   // League-adjusted: positions only
     if (MV.mode === "pos" && !canPos) MV.mode = "overall"; if (MV.mode === "overall" && !canAll) MV.mode = "pos";
     $("mv-name").textContent = me.name;
     mvPop.querySelectorAll(".mv-mode").forEach(x => { x.setAttribute("aria-checked", x.dataset.mode === MV.mode ? "true" : "false"); x.disabled = x.dataset.mode === "pos" ? !canPos : !canAll; });
@@ -9650,7 +9654,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function mvOpen(id, btn) {
     const me = byId.get(id); if (!me || !editor.on) return;
     if (MV.btn && MV.btn !== btn) MV.btn.setAttribute("aria-expanded", "false");
-    MV.id = id; MV.btn = btn; MV.mode = posFilter === "ALL" || me.posNum == null ? "overall" : "pos";
+    MV.id = id; MV.btn = btn; MV.mode = (posFilter === "ALL" && !leagueView()) || me.posNum == null ? "overall" : "pos";
     const inp = $("mv-input"); inp.value = String(MV.mode === "overall" ? me.rank : me.posNum);
     mvPop.hidden = false; mvRender(); inp.focus(); inp.select();
     window.addEventListener("scroll", mvPlace, { passive: true }); window.addEventListener("resize", mvPlace);
@@ -9805,7 +9809,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        header the pointer is on decides his tier, so a drop just across a boundary is a tier move at the same rank
        (Burrow, last of QB Tier 3, dropped below the Tier 4 header stays QB6 and leads Tier 4; Goff, first of Tier 4,
        dropped above it stays QB7 and closes Tier 3). Dropping where he started changes nothing. */
-    const tv = scopeAll() ? all : !all;   // the view where tiers are edited (overall tiers: All)
+    const tv = !leagueView() && (scopeAll() ? all : !all);   // the view where tiers are edited (overall tiers: All); none in League-adjusted
     drag.heads = !tv ? null : Array.from({ length: rows.length + 1 }, (_, k) => {
       const a = rows[k - 1], z = rows[k];
       return tiers.filter(g => g.tr.classList.contains("tier-edit") && (!a || g.top >= a.mid) && (!z || g.bot <= z.mid)).sort((x, y) => x.top - y.top);
@@ -9970,7 +9974,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (key(me) < num) num -= 1;
     // position tab: dropping next to a player puts you in his tier
     // (or, in a gap between tiers, the tier on the side of the header he was dropped: tier)
-    const into = tier != null ? tier : tp.tier !== "" ? tp.tier : null;
+    const into = leagueView() ? null : tier != null ? tier : tp.tier !== "" ? tp.tier : null;   // League-adjusted: no tier bands, a rank move
     if (all) moveOverall(id, num, undefined, scopeAll() ? into : null); else movePlayer(id, num, scopeAll() ? null : into);   // tiers are dropped into where they're edited
   }
   $("rank-body").addEventListener("pointerdown", e => {
@@ -11191,11 +11195,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         }
       }
     } else players.forEach(p => raw.set(p.id, p.value));
-    // each position: your order, unless the adjusted value passes the player above by more than the margin
+    /* each position: your order, always (Alan, Oct 21: "my positional rankings are my rankings"). The league's format
+       changes values and the overall cross-position board, never who you rank above whom inside a position, so the
+       League-adjusted position tabs show the AM Board's order (and are edited through the same moves). Before, a player
+       whose adjusted value passed the player above by more than 3% could jump him (at most 2 spots, stickyOrder). */
     for (const pos of EDIT_POS) {
       const g = players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
       let prev = Infinity;
-      stickyOrder(g, p => raw.get(p.id), FA.margin, FA.maxPosMove).forEach((p, k) => {
+      g.forEach((p, k) => {
         LG.adjPos.set(p.id, k + 1);
         // never above the player ahead of him at the position (published values included, Alan Oct 4)
         const r = raw.get(p.id), v = prev === Infinity || r < prev ? r : Math.max(0, prev * (1 - VALUE_MODEL.minRankStep));
@@ -11528,22 +11535,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (FA.floor > 0) g.forEach(p => { raw.set(p.id, Math.max(raw.get(p.id), Math.min(p.value, FA.floor * Math.pow(FA.floorDecay || 1, p.posNum - 1)))); });
     }
   }
-  // Keeps the given order; a player moves up only past someone his value beats by more than `margin`,
-  // beyond any edge he already had on the base board (tiers can put a value above an overall rank there;
-  // only what the format changes may reorder)
-  function stickyOrder(list, val, margin, maxMove) {
-    const seq = list.slice(), home = new Map(list.map((p, i) => [p, i]));
-    const edge = (x, y) => (y.value > 0 ? Math.max(1, x.value / y.value) : 1);
-    for (let i = 1; i < seq.length; i++) {
-      for (let j = i; j > 0; j--) {
-        const x = seq[j], y = seq[j - 1];
-        if (!(val(x) > val(y) * (1 + margin) * edge(x, y))) break;
-        if (home.get(x) - (j - 1) > maxMove || j - home.get(y) > maxMove) break;
-        seq[j] = y; seq[j - 1] = x;
-      }
-    }
-    return seq;
-  }
   // Personal nudge per player: his recent games scored both ways, compared with his position's average
   let factorCache = { key: null, map: null }, factorLoading = false;
   function playerFactors(sc) {
@@ -11617,7 +11608,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("league-controls").querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === LG.mode));
     const vl = valueLeague();
     $("fmt-note").innerHTML = !vl ? "" : leagueView()
-      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order holds unless a player's adjusted value passes the player above him by more than " + Math.round(FORMAT_ADJUST.margin * 1000) / 10 + "% (never more than " + FORMAT_ADJUST.maxPosMove + " spots); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. Under each rank, “AM #12” is his spot on the AM Board.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
+      ? `<span title="${esc(configText(vl))}">${usingCustom() ? "Custom format" : d ? "Synced league" : "Adjusted for"}: <b>${esc(configText(vl))}</b>${depthTag(LG.depth)}</span>${infoIcon(depthText(LG.depth) + "Values move with these settings. At each position the AM order always holds (it's the same order as on the AM Board, and reordering a position tab here changes both); across positions the board follows the adjusted values, so nobody is ranked ahead of a higher value. Under each rank, “AM #12” is his spot on the AM Board.", "How adjusted rankings work")}<button class="btn link inline" type="button" data-open-fmt>${d ? "Customize format" : "Change"}</button>`
       : `<span>Showing ${esc(viewBoard().label)} · <b>${esc(formatLabel(boardLeague(viewBoard())))}</b></span>`;
     { const b = viewBoard(), base = $("league-controls").querySelector('[data-view="base"]');
       if (base) base.title = `AM Board: ${b.label}'s own rankings and values (${formatLabel(boardLeague(b))})`; }
