@@ -74,6 +74,7 @@
       "market_pricing_check",
       "qb_role_check",
       "ros_prior_check",
+      "projection_check",
       "theme_transition_check",
       "board_check",
       "board_edit_check",
@@ -119,6 +120,7 @@
       "flock_lists_check": 8,
       "qb_role_check": 8,
       "ros_prior_check": 4,
+      "projection_check": 5,
       "value_curve_check": 1,
       "market_sync_check": 1
     },
