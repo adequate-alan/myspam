@@ -11200,6 +11200,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         }
       }
     } else players.forEach(p => raw.set(p.id, p.value));
+    // a player worth 0 on the board is worth 0 in every format (Alan, Oct 21): no guard, floor or lift may make him positive
+    // (8- and 10-team 1QB: the tier-drop guard lifted AM PPR's Provisional tier, board values 0 included, to ~11)
+    players.forEach(p => { if (raw.has(p.id) && !(p.value > 0)) raw.set(p.id, 0); });
     /* each position: your order, always (Alan, Oct 21: "my positional rankings are my rankings"). The league's format
        changes values and the overall cross-position board, never who you rank above whom inside a position, so the
        League-adjusted position tabs show the AM Board's order (and are edited through the same moves). Before, a player
@@ -19024,6 +19027,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   };
   if (window.__SPM_TEST_HOOKS === true) SPM.leagueSidValues = () => Object.fromEntries((LG.board === ACTIVE_BOARD ? players : boardPlayers(LG.board)).filter(q => q.sleeperId && LG.adj.has(q.id)).map(q => [q.sleeperId, LG.adj.get(q.id)]));
   // the league's board as published at ms, priced in the league's format, against today's league layer (tests)
+  // league-adjusted values of one board in a Custom format, by Sleeper ID (tests): f = Custom format fields, bid = board id
+  if (window.__SPM_TEST_HOOKS === true) SPM.adjFor = async (f, bid) => { await loadStatic(); await Promise.all(STATS_SEASONS.slice(0, 2).map(loadSeason)); adjCache.clear(); const b = boardById(bid), m = adjMapFor(fmtLeague({ ...FMT_DEFAULT, ...f }), b);
+    return withBoard(b, () => players.filter(q => EDIT_POS.includes(q.pos) && q.posNum != null && q.sleeperId).map(q => ({ sid: q.sleeperId, name: q.name, pos: q.pos, pn: q.posNum, tier: String(q.tier), src: q.source, v: q.value, adj: m.get(q.id) }))); };
   if (window.__SPM_TEST_HOOKS === true) SPM.adjAt = ms => { const bd = LG.board || leagueBoard(), m = adjBoardAt(bd, ms); return m ? Object.fromEntries(m.bySid) : null; };
   if (window.__SPM_TEST_HOOKS === true) SPM.acceptance = a => acceptance(a);   // the shared Acceptance read on given inputs (tests)
   if (window.__SPM_TEST_HOOKS === true) SPM.hcVs = (am, v, who, lead) => hcVs(am, v, who, lead);   // AM vs a market price as shown in the cards
