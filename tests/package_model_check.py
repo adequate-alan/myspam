@@ -13,7 +13,8 @@ whole discount (Gibbs for K. Williams + C. Williams: Split -> "Team Beta is gett
   5. the live calculator: the audit's trades keep their verdict when 0-value players (Hurts, Dart: Out for season) are
      added; the Trade Finder's pre-filter uses the same model (tradeModel)
      (the receiving side's own adjusted value rises by 0 to his value; the margin can rise by more only when he becomes the
-     deal's new best player, which re-measures the other side's package against a bigger star, exactly as the old rule did)
+     deal's new best player, which re-measures the other side's package against a bigger star; the old rule did it in 5 of 866 sampled cases, by at most 97 points, the new one in
+     81, by at most 0.39× his value, and the verdict never turns against his side)
 P1, ownership: a player put on a card "from" a team that doesn't have him (a third team's player, a free agent) keeps the
 hypothetical value comparison but turns off Roster Impact, Acceptance and the roster rationale (2-team and 3-team).
 Synthetic 12-team Superflex league (Full PPR, TE+0.5), board values from RANKINGS_CSV.
@@ -101,7 +102,7 @@ def read(pg):
 # ---------------------------------------------------------------- model properties, in the page (the real tradeModel)
 PROPS = r"""
 () => {
-  const keep = LEAGUE_DEPTH, out = { zero: 0, zeroN: 0, worse: 0, direct: 0, over: 0, overStar: 0, addN: 0, k1: 0, k1N: 0, safe: 0, safeN: 0, evenWin: 0, worst: 0 };
+  const keep = LEAGUE_DEPTH, out = { zero: 0, zeroN: 0, worse: 0, direct: 0, over: 0, overStar: 0, addN: 0, k1: 0, k1N: 0, safe: 0, safeN: 0, evenWin: 0, worst: 0, exMax: 0, exRatio: 0, exPct: 0, exEx: null, starFlip: 0, starN: 0, exReal: 0, exRealEx: null, oldEx: 0, oldOver: 0, exList: [] };
   let seed = 7; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
   const val = () => Math.round(rnd() < 0.15 ? rnd() * 300 : 300 + Math.pow(rnd(), 1.6) * 9700);
   const side = n => Array.from({ length: n }, () => ({ value: val() }));
@@ -136,6 +137,20 @@ PROPS = r"""
         const dA = g.scoreA - m.scoreA, oldStar = Math.max(...A.map(p => p.value), ...B.map(p => p.value));
         if (dA < -1e-6 || dA > x + 1e-6) out.direct++;
         if (dm > x + 1e-6) { if (x > oldStar) out.overStar++; else out.over++; }
+        if (x > oldStar) {
+          // the new-best-player case: how far the margin moves beyond his own value, and whether the verdict leaves his side
+          out.starN++;
+          const ex = dm - x, tot = g.rawA + g.rawB, r1 = valueRead(m, F), r2 = valueRead(g, F);
+          if (r2.side === "B" && r1.side !== "B") out.starFlip++;
+          if (ex > out.exMax) { out.exMax = ex; out.exEx = { d, A: A.map(p => p.value), B: B.map(p => p.value), x, before: Math.round(margin(m)), after: Math.round(margin(g)),
+            rawBefore: m.rawA - m.rawB, rawAfter: g.rawA + 0 - g.rawB, vBefore: r1.kind + ":" + (r1.side || "-") + ":" + r1.gap.toFixed(1), vAfter: r2.kind + ":" + (r2.side || "-") + ":" + r2.gap.toFixed(1) }; }
+          out.exRatio = Math.max(out.exRatio, ex / x); out.exPct = Math.max(out.exPct, 100 * ex / tot);
+          const [oA0, oB0] = old(A, B), [oA1, oB1] = old(A.concat([{ value: x }]), B), oex = (oA1 - oB1) - (oA0 - oB0) - x;
+          out.oldEx = Math.max(out.oldEx, oex); if (oex > 1e-6) out.oldOver++;
+          if (ex > 1e-6) out.exList.push(Math.round(ex));
+          if (x <= 10000 && ex > out.exReal) { out.exReal = ex; out.exRealEx = { d, A: A.map(p => p.value), B: B.map(p => p.value), x, before: Math.round(margin(m)), after: Math.round(margin(g)),
+            vBefore: r1.kind + ":" + (r1.side || "-") + ":" + r1.gap.toFixed(1), vAfter: r2.kind + ":" + (r2.side || "-") + ":" + r2.gap.toFixed(1), oldEx: Math.round(oex) }; }
+        }
         out.worst = Math.min(out.worst, dm / x);
         // 3. k-for-1 = the old formula exactly
         if (A.length === 1 || B.length === 1) {
@@ -172,7 +187,17 @@ with sync_playwright() as p:
     ok(r["zero"] == 0, f"A 0-value player changes no score, package swing or verdict ({r['zeroN']} additions, {r['zero']} changed)")
     ok(r["worse"] == 0, f"Adding a player never makes the receiving side worse off ({r['addN']} additions at depths 1.00 / 0.72 / 1.12, {r['worse']} did; worst {r['worst']:.2f}× his value)")
     ok(r["direct"] == 0, f"The receiving side's own adjusted value rises by at least 0 and at most the value added ({r['direct']} of {r['addN']} broke it)")
-    ok(r["over"] == 0, f"Adding a player raises the margin by more than his value only when he becomes the deal's new best player ({r['over']} other cases; {r['overStar']} new-best-player cases, where the other side's package is measured against a bigger star, as before Oct 21)")
+    ok(r["over"] == 0, f"Adding a player raises the margin by more than his value only when he becomes the deal's new best player ({r['over']} other cases; {r['overStar']} new-best-player cases, where the other side's package is measured against a bigger star)")
+    xs = sorted(r.pop("exList")); print("INFO new-best-player excess beyond his value: median", xs[len(xs)//2] if xs else 0, "· 90th percentile", xs[int(len(xs)*0.9)] if xs else 0)
+    print("INFO new-best-player cases:", json.dumps({k: r[k] for k in ("starN", "overStar", "exMax", "exRatio", "exPct", "starFlip", "exEx", "exReal", "exRealEx", "oldEx", "oldOver")}))
+    ok(r["starN"] > 0 and r["exRatio"] < 0.5, f"New best player: the margin moves at most 1.5× his value ({r['starN']} cases, {r['overStar']} beyond his value; largest excess {r['exMax']:.0f} points = {r['exRatio']:.2f}× his value, {r['exPct']:.1f}% of the deal)")
+    ok(r["starFlip"] == 0, f"New best player: the verdict never turns against the side that receives him ({r['starFlip']} did)")
+    nb = pg.evaluate("""() => { const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = 0.72; try {
+        const f = (a, b) => { const m = tradeModel(a.map(v => ({ value: v })), b.map(v => ({ value: v }))), r = valueRead(m, 3000); return [Math.round(m.scoreA - m.scoreB), r.kind, r.side || "-"]; };
+        return { before: f([452], [5178, 4968, 1717]), after: f([452, 8112], [5178, 4968, 1717]) };
+      } finally { LEAGUE_DEPTH = keep; } }""")
+    ok(nb["before"] == [-9787, "tempered", "B"] and nb["after"] == [450, "split", "-"],
+       f"New best player, fixed example (depth 0.72): 452 for 5,178 + 4,968 + 1,717 reads {nb['before']}; adding an 8,112 star to the 452 side reads {nb['after']}: the margin moves 10,237 for 8,112 added, and the result is a Split verdict, never a win the raw values don't support")
     ok(r["k1N"] > 0 and r["k1"] == 0, f"1-for-1, 2-for-1, 3-for-1 and 4-for-1 give exactly the old scores ({r['k1N']} trades, {r['k1']} differ)")
     ok(r["safeN"] > 0 and r["safe"] == 0, f"A winner's gap never exceeds his raw edge ({r['safeN']} adjusted verdicts, {r['safe']} broke it)")
     ok(r["evenWin"] == 0, f"A raw about-even trade never reads as a clear win from the package alone ({r['evenWin']} did)")
