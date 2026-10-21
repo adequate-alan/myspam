@@ -230,7 +230,10 @@ with sync_playwright() as p:
     lv = pg.evaluate("() => SPM.leagueSidValues()")
     diff = [sid for sid, v in lv.items() if sid in same and same[sid] != v]
     ok(same and len(same) >= 200 and not diff, f"AM PPR's current snapshot priced in the league's format = the league layer for every player ({len(same or {})} players, {len(diff)} differ {diff[:3]})")
-    ok(ev["thenDiff"] == ev["nowDiff"], f"Unchanged values for these players then and now give the same edge in points ({ev['thenDiff']} / {ev['nowDiff']})")
+    if all(x["thenBase"] == x["nowBase"] for x in ev["items"]):
+        ok(ev["thenDiff"] == ev["nowDiff"], f"Unchanged values for these players then and now give the same edge in points ({ev['thenDiff']} / {ev['nowDiff']})")
+    else:   # a later publish moved them (e.g. the Oct 21 rankings update): the check needs values that stood still
+        print(f"INFO these players' AM PPR values changed since the trade ({[(x['thenBase'], x['nowBase']) for x in ev['items']]}), so the same-edge check doesn't apply")
     card = pg.locator(".th-card").first
     ct = " ".join(card.inner_text().split())
     ok(f"{round(V[TE4]['thenV']):,}" in ct and "league format" in ct, "The card shows the TE's value in the league's format and says so")

@@ -70,7 +70,8 @@ with sync_playwright() as p:
     ok(pg.locator("#rk-board-lab").is_visible(), "The AM Board view offers a board picker")
     ok(pg.evaluate("() => document.getElementById('rk-board').value") == "ppr", "It starts on the league's board (AM PPR)")
     fr = first_row(pg)
-    ok(fr and fr["rows"] == 260, f"AM PPR lists 260 players: {fr}")
+    n_ppr = len(re.search(r"const RANKINGS_CSV_PPR = `\n([\s\S]*?)\n`;", open(os.path.join(HERE, "..", "index.html"), encoding="utf-8").read())[1].split("\n")) - 1
+    ok(fr and fr["rows"] == n_ppr, f"AM PPR lists every published player ({n_ppr}): {fr}")
     ok(pg.locator("#editor-bar").is_hidden(), "AM PPR isn't the edited board: no editor bar")
     ok(pg.locator("#ed-switch").is_visible() and "Edit AM PPR" in pg.inner_text("#ed-switch"), "It offers Edit AM PPR instead")
     ok(pg.locator("#rank-body .prov").count() > 0, f"Provisional players are tagged on the board ({pg.locator('#rank-body .prov').count()} visible)")
