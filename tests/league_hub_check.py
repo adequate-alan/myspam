@@ -225,7 +225,8 @@ with sync_playwright() as p:
     ir_rows = row5.locator(".tx-col .tx-pl.ir")
     ok(ir_rows.count() == 2 and all(n in " ".join(ir_rows.all_inner_texts()) for n in ir_names), f"IR players sit in their position columns: {ir_names} (found {ir_rows.all_inner_texts()})")
     ok(all(t.strip() == "IR" for t in ir_rows.locator(".tx-role").all_inner_texts()), "IR players carry an IR tag, not a starter slot")
-    ok("Injured reserve counts as if healthy" in pg.inner_text(".method-note"), "Power Rankings note says IR counts")
+    note = pg.inner_text(".method-note")
+    ok("injured reserve and taxi squads not counted" in note and "injured reserve counted as healthy" in note, "Power Rankings note says how IR counts: out of roster value, healthy for expected PPG")
     # Position lens (Alan, Oct 5): a position rank re-sorts the Power Rankings list in place, selected team highlighted
     rb_place = row5.locator('.tx-sum[data-pos-board="RB"] b').inner_text()
     row5.locator('.tx-sum[data-pos-board="RB"]').click(); pg.wait_for_timeout(500)
