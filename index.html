@@ -7679,6 +7679,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return { title: row[0](), text: row[1]() };
   }
 
+  /* The headline verdict the calculator shows for a trade's model read (runModel), from valueRead with the average-starter
+     floor: renderTrade's title and every Balance suggestion use it, so a suggestion promises exactly the verdict it
+     produces (Oct 21 audit: 20 of 23 suggestions ranked and labelled by the smaller-side % gave another verdict, one flipped
+     the winner). dist = how far from even it is by the verdict's own measure: the verdict gap, or for a split /
+     package-sensitive read the larger of the two readings (neither is fair until both readings are). */
+  function verdictHead(res, names) {
+    const vr = valueRead(res, valueFloor()), split = vr.kind === "split", sens = vr.kind === "sensitive";
+    const tierIdx = Math.max(0, TRADE_VERDICTS.findIndex(t => vr.gap < t.upTo)), tier = verdictTier(vr.gap);
+    const side = vr.side || (res.a >= res.b ? "A" : "B"), other = side === "A" ? "B" : "A", pct = vr.gap.toFixed(1) + "%";
+    const title = sens ? "Package-sensitive" : split ? "Split verdict"
+      : youMode() ? youVerdictText(tierIdx, side, pct).title : tier.title(names[side], names[other]);
+    const even = !split && !sens && tier.upTo <= 3;
+    return { vr, title, tier, tierIdx, side, pct, even, fair: split || even, dist: split || sens ? Math.max(Math.abs(vr.raw), Math.abs(vr.adj)) : vr.gap };
+  }
+
   /* League context bar: universal mode (any players, base AM values) or league mode
      (a synced Sleeper league, both teams' rosters, league-adjusted values, roster-fit analysis) */
   const infoIcon = (text, label = "More info") => `<button class="info" type="button" aria-label="${esc(label)}" data-info="${esc(text)}">i</button>`;
@@ -8292,8 +8307,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   // Balancing in league mode: players from the roster of the team that's ahead (they owe value),
   // preferring expendable depth and never a player whose loss leaves a starting spot empty
-  function leagueBalance(res, ctx) {
-    const ahead = res.a >= res.b ? "A" : "B", other = ahead === "A" ? "B" : "A";
+  // what a Balance button promises: the exact headline the calculator will show after the add, and its gap
+  const balResult = h => `<span class="bal-result">→ ${esc(h.title)}${h.vr.kind === "split" || h.vr.kind === "sensitive" ? "" : ` · ${h.pct}`}</span>`;
+  function leagueBalance(res, ctx, head) {
+    const ahead = head.side, other = ahead === "A" ? "B" : "A", NM = { A: "Team A", B: "Team B" };
     // the team that receives more owes value: it adds players from its own roster to the other side
     const giverSide = ahead, giver = sideTeam(giverSide);
     if (!giver || !ctx) return null;
@@ -8306,14 +8323,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const rest = afterPool.filter(p => !list.includes(p)).sort((a, b) => dv(b) - dv(a));
       return bestLineup(rest.slice(0, limit), slots, lu.bench);
     };
-    const nowGap = pctMore(res.a, res.b), base = X.after.score || 1;
+    const nowGap = head.dist, base = X.after.score || 1;
     const evalSet = list => {
       const a = other === "A" ? sides.A.concat(list.map(p => p.id)) : sides.A, b = other === "B" ? sides.B.concat(list.map(p => p.id)) : sides.B;
-      const r = runModel(a, b), gapAfter = pctMore(r.a, r.b), W = scoreWithout(list);
+      const r = runModel(a, b), h = verdictHead(r, NM), gapAfter = h.dist, W = scoreWithout(list);
       const loss = Math.max(0, X.after.score - W.score), hole = W.starters.length < X.after.starters.length;
       // closest to fair first (anything inside the fair range is nearly as good), then the least lineup damage, then fewer players
-      const close = gapAfter < 3 ? gapAfter * 0.5 : 1.5 + (gapAfter - 3) * 1.5;
-      return { list, gapAfter, r, lossPct: 100 * loss / base, hole, key: close + 0.6 * (100 * loss / base) + (list.length - 1) * 1.0 + (hole ? 50 : 0) };
+      const close = h.even ? gapAfter * 0.5 : 1.5 + Math.max(0, gapAfter - 3) * 1.5;
+      return { list, gapAfter, r, h, lossPct: 100 * loss / base, hole, key: close + 0.6 * (100 * loss / base) + (list.length - 1) * 1.0 + (hole ? 50 : 0) };
     };
     const singles = pool.map(p => evalSet([p])).filter(x => x.gapAfter < nowGap).sort((a, b) => a.key - b.key);
     const need = Math.abs(res.a - res.b);
@@ -8327,7 +8344,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (useful.length) all = useful;
     all.sort((a, b) => a.key - b.key);
     // packages only when a single player can't do the job about as well; no two packages share a player
-    const fairSingle = all.find(x => x.list.length === 1 && x.gapAfter < 3);
+    const fairSingle = all.find(x => x.list.length === 1 && x.h.even);
     const picks = [], usedInPairs = new Set();
     for (const x of all) {
       if (x.list.length === 2) {
@@ -8453,7 +8470,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return;
     }
     // raw and package-adjusted value read together (valueRead): the adjustment can temper a verdict, never create or flip one
-    const vr = valueRead(res, valueFloor()), split = vr.kind === "split", sens = vr.kind === "sensitive", more = vr.gap;
+    const head = verdictHead(res, names), vr = head.vr, split = vr.kind === "split", sens = vr.kind === "sensitive", more = vr.gap;
     const vAhead = vr.side || ahead, vLoser = vAhead === "A" ? "B" : "A";
     const tierIdx = Math.max(0, TRADE_VERDICTS.findIndex(t => more < t.upTo));
     const tier = verdictTier(more);
@@ -8463,17 +8480,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     let advice;
     if (sens) {
       const evenRaw = Math.abs(vr.raw) < VALUE_FAIR, big = evenRaw ? vr.adj : vr.raw, bs = big > 0 ? "A" : "B", cap = t => t.charAt(0).toUpperCase() + t.slice(1);
-      title.className = "fair"; title.textContent = "Package-sensitive";
+      title.className = "fair"; title.textContent = head.title;
       advice = evenRaw ? `About even on raw value, but after the package adjustment ${subj(bs)} ${verb(bs, "come", "comes")} out ${Math.abs(big).toFixed(1)}% ahead. The verdict depends on the package adjustment, which isn't independently calibrated.`
         : `${cap(subj(bs))} ${verb(bs, "get", "gets")} ${Math.abs(big).toFixed(1)}% more total value, but the package adjustment evens it out. The verdict depends on the package adjustment, which isn't independently calibrated.`;
     } else if (split) {
       const rs = vr.raw > 0 ? "A" : "B", ps = rs === "A" ? "B" : "A", cap = t => t.charAt(0).toUpperCase() + t.slice(1);
-      title.className = "fair"; title.textContent = "Split verdict";
+      title.className = "fair"; title.textContent = head.title;
       advice = `${cap(subj(rs))} ${verb(rs, "get", "gets")} more total value; ${subj(ps)} ${verb(ps, "get", "gets")} the better package. The two readings disagree, so there's no single winner.`;
     } else {
       title.className = fair ? "fair" : "win-" + vAhead;
-      if (youMode()) { const v = youVerdictText(tierIdx, vAhead, pct); title.textContent = v.title; advice = afterFirst(v.text); }
-      else { title.textContent = tier.title(names[vAhead], names[vLoser]); advice = afterFirst(tier.text(names[vAhead], names[vLoser], pct)); }
+      title.textContent = head.title;
+      advice = afterFirst(youMode() ? youVerdictText(tierIdx, vAhead, pct).text : tier.text(names[vAhead], names[vLoser], pct));
     }
     const approx = histOn() && TC.histApprox ? ` <span class="fit-tag approx">Approximate rosters</span>` : "";
     gapLine.innerHTML = valueGapHtml(res, vr, fair, pct, forWhom) + approx;
@@ -8507,25 +8524,24 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (fair) return;
     let shown = false;
     if (ctx) {
-      const lb = leagueBalance(res, ctx);
+      const lb = leagueBalance(res, ctx, head);
       if (lb && lb.picks.length) { renderLeagueBalance(lb, res, names); shown = true; }
     }
     if (!shown) {
-      const pool = players.filter(p => !inTrade(p.id));
+      // one player to the side the verdict has behind, ranked by the verdict each add produces (verdictHead), never by a
+      // separate yardstick; an add that leaves the trade further from even than now isn't offered
+      const behind = head.side === "A" ? "B" : "A", pool = players.filter(p => !inTrade(p.id));
       const scored = pool.map(p => {
-        const a = loser === "A" ? sides.A.concat(p.id) : sides.A;
-        const b = loser === "B" ? sides.B.concat(p.id) : sides.B;
+        const a = behind === "A" ? sides.A.concat(p.id) : sides.A;
+        const b = behind === "B" ? sides.B.concat(p.id) : sides.B;
         const r = runModel(a, b);
-        return { p, r, gap: Math.max(r.a, r.b) > 0 ? Math.abs(r.a - r.b) / Math.max(r.a, r.b) : 1 };
-      }).filter(x => x.gap < gap).sort((x, y) => x.gap - y.gap).slice(0, 4);
+        return { p, r, h: verdictHead(r, names) };
+      }).filter(x => !x.r.error && x.h.dist < head.dist).sort((x, y) => (y.h.even - x.h.even) || x.h.dist - y.h.dist).slice(0, 4);
       if (scored.length) {
-        $("balance-sub").textContent = `Add one to ${possessive(loser)} side:`;
-        $("balance-list").innerHTML = scored.map(x => {
-          const g = pctMore(x.r.a, x.r.b), t = TRADE_VERDICTS.find(v => g < v.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
-          return `<button class="suggest bal" type="button" data-ids="${x.p.id}" data-side="${loser}">
+        $("balance-sub").textContent = `Add one to ${possessive(behind)} side:`;
+        $("balance-list").innerHTML = scored.map(x => `<button class="suggest bal" type="button" data-ids="${x.p.id}" data-side="${behind}">
             <span class="bal-players"><span class="bal-p">${face(x.p.sleeperId, x.p.name, "xs")}<span class="pos ${esc(x.p.pos)}">${esc(posLabel(x.p))}</span><span class="bal-n">${esc(x.p.name)}</span><span class="r-val">+${fmt(tv(x.p))}</span></span></span>
-            <span class="bal-result">→ ${g.toFixed(1)}% · ${esc(t.upTo <= 3 ? "Fair" : t.range.split(":")[0])}</span></button>`;
-        }).join("");
+            ${balResult(x.h)}</button>`).join("");
         shown = true;
       }
     }
@@ -8807,10 +8823,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("balance-sub").textContent = `Best fits from ${giverName}'s roster:`;
     const role = p => (lb.X.after.labels.has(p.id) ? `Starts at ${lb.X.after.labels.get(p.id)}` : "Bench depth");
     $("balance-list").innerHTML = lb.picks.map((x, i) => {
-      const t = TRADE_VERDICTS.find(v => x.gapAfter < v.upTo) || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
+      const h = verdictHead(x.r, names);   // the headline the calculator will show, with these team names
       return `${i ? `<span class="bal-or">or</span>` : ""}<button class="suggest bal" type="button" data-ids="${x.list.map(p => p.id).join(",")}" data-side="${lb.receiverSide}">
         <span class="bal-players">${x.list.map(p => `<span class="bal-p">${face(p.sleeperId, p.name, "xs")}<span class="pos ${esc(p.pos)}">${esc(posLabel(p))}</span><span class="bal-n">${esc(p.name)}<small>${esc(role(p))}</small></span><span class="r-val">+${fmt(tv(p))}</span></span>`).join(`<span class="bal-plus">+</span>`)}</span>
-        <span class="bal-result">→ ${x.gapAfter.toFixed(1)}% · ${esc(t.upTo <= 3 ? "Fair" : t.range.split(":")[0])}</span></button>`;
+        ${balResult(h)}</button>`;
     }).join("");
     $("balance").hidden = false;
   }
