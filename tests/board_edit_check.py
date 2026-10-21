@@ -110,8 +110,8 @@ with sync_playwright() as p:
     bc = pg.evaluate("async () => (await SPM.boardCheck()).filter(c => !c.pass).map(c => c.check)")
     ok(not bc, f"SPM.boardCheck() passes with AM PPR active {bc[:3]}")
     all_tab()
-    start = board(); rows = pg.evaluate(ROWS)
-    ok(len(start) == 260 and len(rows) == 260, f"AM PPR board: {len(start)} players, {len(rows)} rows")
+    start = board(); rows = pg.evaluate(ROWS); n_ppr = len(table(block(repo.read("index.html"), PPR_RE)))
+    ok(len(start) == n_ppr and len(rows) == n_ppr, f"AM PPR board: {len(start)} players, {len(rows)} rows (published: {n_ppr})")
     pub = table(block(repo.read("index.html"), PPR_RE))
     ok(all(pub[s][k] == str(v) for s, *vals in start for k, v in zip(("rank", "pos_rank", "tier", "value"), vals)), "The edited board is the published RANKINGS_CSV_PPR exactly")
 
