@@ -4777,8 +4777,6 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .pm-head .pm-ros .pr-conf.low { color: var(--warn-text); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
 .pm-head .pm-ros .pr-conf.out { color: var(--qb-text); border-color: color-mix(in srgb, var(--qb) 45%, transparent); }
 .pm-head .pm-ros .pd-item.n4 b { font-size: 0.95rem; color: var(--text-secondary); }
-.pm-head .pm-ros .pr-n4tag { font: 600 0.68rem/1 var(--font-body); margin-left: 6px; color: var(--text-muted); cursor: help; }
-.pm-head .pm-ros .pr-n4tag.down { color: var(--qb-text); } .pm-head .pm-ros .pr-n4tag.up { color: var(--rb-text); }
 .pp-glance.pp-ros .ros-why { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 0.8rem; }
 .pm-valline .pv-k { font: 600 0.7rem/1 var(--font-body); letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; }
 .pm-valline b { font: 700 1.15rem/1.2 var(--font-display); color: var(--text-primary); font-variant-numeric: tabular-nums; }
@@ -5023,7 +5021,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 @media (max-width: 400px) { #rank-body .face { width: 30px; height: 30px; } #rank-body .pl-cell { gap: 8px; } }
 /* drawer: "Next 4" gets the same separator as the other figures on its line */
 .pm-head .pm-ros > .pd-item.n4::before { content: "·"; margin: 0 9px; color: var(--text-muted); font-weight: 400; }
-.pm-head .pm-ros .pd-item.n4 .pr-n4tag { white-space: nowrap; }
 
 [data-hc]:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
 
@@ -6153,12 +6150,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   /* Weekly projections (data/projections.json, refreshed by the Tuesday job) feed weekly points only. The value model
      keeps the projection columns in RANKINGS_CSV, which change only when someone asks (Alan, Oct 5: nothing scheduled
      changes rankings or values). */
-  let PROJ_WEEKLY = null, PROJ_ROS = null, PROJ_LINE = null;   // the model's per-player factors (`f`) and projected stat lines (`line`)
+  let PROJ_WEEKLY = null, PROJ_ROS = null, PROJ_LINE = null, PROJ_LINE4 = null;   // the model's per-player factors (`f`), projected stat lines (`line`) and faster Next 4 lines after a role change (`line4`)
   /* Roles (Alan, Oct 12; pipeline/roles.py → data/roles.json, refreshed with every stats run): AM's projections are
      conditional (per game played; a quarterback's per start), so a weekly projection is that number × the chance he
      plays his role that week. Quarterbacks share one job: the chance to start cascades down the depth chart (QB3 only
      starts when both ahead of him are out), with a small relief share for QB2; RB / WR / TE: their availability
-     (Questionable 75%, Doubtful 15%, Out / IR 0, practice-adjusted with this week's report). sid → [n, l, s, sl, depth,
+     (Questionable 68% after a limited practice, 98% full, 50% DNP; Doubtful 4%; Out / IR 0; fitted Oct 21). sid → [n, l, s, sl, depth,
      status, team, week, fresh]: n / l = multiplier for his team's next game / later weeks, s / sl = chance to start (QB),
      fresh = this game's injury report is out (before it, a designation is last week's and only lowers his chance).
      ROS PPG keeps its conditional meaning; a backup quarterback's is labelled "If he starts". Never touches rankings,
@@ -6259,12 +6256,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // as the weekly projections do). rosRank = his place among everyone at his position with a projection.
   // With the model's projected stat line (Oct 14) the number is that line scored with the page's scoring, times the
   // environment and schedule factors (rest of season, or the next 4 games with horizon "n4"); older files without a
-  // line fall back to the base-scoring PPG rescored with projRatios.
+  // line fall back to the base-scoring PPG rescored with projRatios. Next 4 (Oct 21 audit): no market or matchup factor
+  // (f[4] / f[5] are 1 from then on), and after a snap-share jump the faster-updating `line4` (ros_model ROLE_JUMP).
   function rosPPG(p, R, horizon) {
     if (!p) return null;
     if (outForSeason(p)) return 0;
     const f = PROJ_ROS && PROJ_ROS[p.sleeperId], l = PROJ_LINE && PROJ_LINE[p.sleeperId];
-    if (f && l && f.length >= 6) { const pts = gamePoints(l, p.pos, scoringNow()); return horizon === "n4" ? pts * f[4] * f[5] : pts * f[2] * f[3]; }
+    if (f && l && f.length >= 6) {
+      if (horizon === "n4") return gamePoints((PROJ_LINE4 && PROJ_LINE4[p.sleeperId]) || l, p.pos, scoringNow()) * f[4] * f[5];
+      return gamePoints(l, p.pos, scoringNow()) * f[2] * f[3];
+    }
     const base = projPPGOf(p); if (base == null) return null;
     R = R || projRatios(scoringNow());
     return base * (R.get(p.id) ?? R.get("pos:" + p.pos) ?? 1);
@@ -10835,7 +10836,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const get = async url => { try { const r = await fetch(url); return r.ok ? r.json() : null; } catch (e) { return null; } };
     if (!slPlayers) slPlayers = (await get("data/sleeper_players.json")) || {};
     if (!comps) { comps = await get("data/curve_components.json"); if (comps && ACTIVE_BOARD.model) nativeRaw(players, ACTIVE_BOARD); }
-    if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; PROJ_AT = pj.updated || ""; }
+    if (!PROJ_WEEKLY) { const pj = (await get("data/projections.json")) || {}; PROJ_WEEKLY = pj.ppg || {}; PROJ_ROS = pj.f || {}; PROJ_LINE = pj.line || {}; PROJ_LINE4 = pj.line4 || {}; PROJ_AT = pj.updated || ""; }
     if (!ROLES) { const rj = await get("data/roles.json"); setRoles(rj ? rj.players : {}, rj ? rj.updated || "" : ""); if (rolesNote()) console.warn("Adequate: " + rolesNote()); }
   }
 
@@ -14182,12 +14183,59 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      without touching any page. Season PPG is not a provider: it's a flagged fallback when no provider has him.
      Weekly projections never touch rankings, values, tiers or history. */
   const PROJ_PROVIDERS = [
-    { id: "spam", label: "AM", get: e => { const v = projPPGOf(e.p); return v != null ? { basePts: v } : null; } },
+    { id: "spam", label: "AM", get: (e, week, legacy) => {
+      if (e.p && outForSeason(e.p)) return { basePts: 0 };
+      const m = !legacy && modelWeekly(e, week); if (m) return m;
+      const v = projPPGOf(e.p); return v != null ? { basePts: v, legacy: true } : null; } },
     // Kickers and team defenses (Oct 4): AM doesn't rank or project them, so Matchups use Sleeper's own
     // weekly projection, scored with this league's K/DEF settings (sleeperPoints). See SLPROJ below.
     { id: "sleeper", label: "Sleeper (K, DEF)", get: (e, week) => (SLPROJ_POS.includes(e.pos) ? slProjFor(e.sid, week) : null) }
   ];
   const projSource = () => PROJ_PROVIDERS.map(x => x.label).join(" / ");
+  /* The model's weekly forecast (Oct 21 projection audit, Alan's approval): his projected per-game stat line (the same
+     line ROS PPG is scored from), scored with the league's own scoring by the caller, × that game's market (implied team
+     total) and matchup (defense vs his position) factors when it's his team's next game (f[11], f[12]; the week in f[13]).
+     Later weeks: the line alone. Replaced ROS PPG × projRatios × the browser's own Vegas / matchup layer, which counted the
+     remaining schedule twice and rescored by ratio (held-out MAE 5.99 → 5.89, RMSE 7.55 → 7.45 in 2026). Any player the
+     model projects has one, board or not (a backup quarterback who gets the start keeps his own line). Older files
+     without f[13] fall back to the old path. */
+  // Scoring the model's line in any league (Oct 21): the line has no first downs or two-point plays, and a yardage or
+  // attempt bonus (THRESHOLDS) can't be read off an average line, so those points come from his own recent games (this
+  // season and last, up to 17 played): their per-game points from those keys, scaled by his projected volume vs those
+  // games'. Leagues that score none of them get exactly the line's points.
+  const EXTRA_KEYS = ["pass_fd", "rush_fd", "rec_fd", "pass_2pt", "rush_2pt", "rec_2pt"];
+  const lineExtraCache = { key: "", map: new Map() };
+  function linePoints(line, sid, pos, sc) {
+    const lin = { ...sc }; THRESHOLDS.forEach(([k]) => { delete lin[k]; });
+    const pts = gamePoints(line, pos, lin);
+    if (!sid || ![...EXTRA_KEYS, ...THRESHOLDS.map(([k]) => k)].some(k => Number(sc[k] || 0))) return pts;
+    const key = JSON.stringify(sc) + "|" + STATS_SEASONS.map(y => statsCache[y] ? statsCache[y].updated : "").join();
+    if (lineExtraCache.key !== key) { lineExtraCache.key = key; lineExtraCache.map = new Map(); }
+    const ck = sid + "|" + pos + "|" + JSON.stringify(line);
+    if (lineExtraCache.map.has(ck)) return pts + lineExtraCache.map.get(ck);
+    const covered = Object.keys(line);
+    let extra = 0, vol = 0, n = 0;
+    for (const y of STATS_SEASONS.slice(0, 2)) {
+      const d = statsCache[y], pl = d && d.players && d.players[sid];
+      if (!pl) continue;
+      for (let i = pl.g.length - 1; i >= 0 && n < 17; i--) {
+        const g = {}, c = {}; d.cols.forEach((col, k) => { g[col] = pl.g[i][k]; });
+        if (!enteredGame(g)) continue;
+        covered.forEach(k => { c[k] = g[k] || 0; });
+        const base = gamePoints(c, pos, lin);
+        extra += gamePoints(g, pos, sc) - base; vol += base; n++;
+      }
+    }
+    const x = n && vol > 0 ? (extra / n) * Math.max(0.5, Math.min(2, pts / (vol / n))) : 0;
+    lineExtraCache.map.set(ck, x);
+    return pts + x;
+  }
+  function modelWeekly(e, week) {
+    const f = e.sid && PROJ_ROS && PROJ_ROS[e.sid], l = e.sid && PROJ_LINE && PROJ_LINE[e.sid];
+    if (!f || !l || f.length < 14) return null;
+    const next = f[13] != null && week === f[13];
+    return { stats: l, mult: next ? f[11] * f[12] : 1, model: true, next, env: next ? f[11] : 1, mx: next ? f[12] : 1 };
+  }
   const leagueScoring = () => scoringNow();
   let projRatioCache = { key: "", map: null };
   function projRatios(sc) {
@@ -14216,13 +14264,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return t / pl.g.length;
   }
   // Per-game projection for one player in a scoring system: { pts, source, fallback } or null (can't be projected)
-  function weeklyProjection(e, sc = leagueScoring(), week) {
+  // legacy = the weekly path before Oct 21 (ROS PPG rescored by ratio; contextProjection adds its own Vegas / matchup),
+  // kept for comparison (SPM.projectionCheck, tests)
+  function weeklyProjection(e, sc = leagueScoring(), week, legacy = false) {
     for (const prov of PROJ_PROVIDERS) {
-      const r = prov.get(e, week);
+      const r = prov.get(e, week, legacy);
       if (!r) continue;
       if (r.raw) return { pts: sleeperPoints(r.raw, sc), source: prov.id, fallback: false };
-      if (r.stats) return { pts: gamePoints(r.stats, e.pos, sc), source: prov.id, fallback: false };
-      if (r.basePts != null) { const R = projRatios(sc); return { pts: r.basePts * ((e.p && R.get(e.p.id)) ?? R.get("pos:" + e.pos) ?? 1), source: prov.id, fallback: false }; }
+      if (r.stats) return { pts: (r.model ? linePoints(r.stats, e.sid, e.pos, sc) : gamePoints(r.stats, e.pos, sc)) * (r.mult ?? 1), source: prov.id, fallback: false, model: !!r.model, next: !!r.next, env: r.env, mx: r.mx };
+      if (r.basePts != null) { const R = projRatios(sc); return { pts: r.basePts * ((e.p && R.get(e.p.id)) ?? R.get("pos:" + e.pos) ?? 1), source: prov.id, fallback: false, legacy: !!r.legacy }; }
     }
     // the season-PPG stand-in never goes below zero (Oct 10: a newly added QB with one bad snap projected −1.0 and pulled
     // a lineup's projected total down); Sleeper's K/DEF numbers above can still be negative, as defenses really can
@@ -14350,14 +14400,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     return markets ? { pts: gamePoints(st, e.pos, sc), markets } : null;
   }
-  // The calibrated weekly projection for a game: AM base × Vegas × matchup, blended with props when available.
-  // opts.props / opts.ctx override the inputs (tests); returns { pts, source, fallback, inputs } or null.
+  // The calibrated weekly projection for a game: the model's next-game line (its own market and matchup factors), or on the
+  // old path (opts.legacy, or a file without the model's next-game fields) AM's ROS PPG × Vegas × matchup; blended with
+  // props when available, then × the chance he plays his role. opts.props / opts.ctx / opts.legacy override the inputs
+  // (tests); returns { pts, source, fallback, inputs } or null.
   function contextProjection(e, g, sc, opts = {}) {
-    const P = weeklyProjection(e, sc, g && g.week);
+    const P = weeklyProjection(e, sc, g && g.week, !!opts.legacy);
     if (!P) return null;
     // Sleeper's K/DEF projection is already a weekly, matchup-aware number: no Vegas / matchup / props layer on top
     if (P.source === "sleeper") return { pts: P.pts, source: P.source, fallback: false, inputs: [`Sleeper's weekly ${e.pos === "DEF" ? "defense" : "kicker"} projection, scored with this league's settings`] };
-    const ctx = opts.ctx || gameContext(e, g), inputs = [P.fallback ? `Season PPG (no AM projection)` : "AM projection: usage, results, team outlook", ...ctx.inputs];
+    const pctF = x => `${x >= 1 ? "+" : "−"}${Math.abs(100 * (x - 1)).toFixed(0)}%`;
+    const ctx = P.model ? { env: 1, mx: 1, inputs: P.next ? [`Team market ${pctF(P.env)} · matchup ${pctF(P.mx)} (this game)`] : [] } : opts.ctx || gameContext(e, g);
+    const inputs = [P.fallback ? `Season PPG (no AM projection)` : P.model ? "AM projection: his projected stat line in this league's scoring" : "AM projection: usage, results, team outlook", ...ctx.inputs];
     let pts = P.pts * ctx.env * ctx.mx;
     const pr = propsProjection(e, sc, opts.props !== undefined ? opts.props : (g && g.week ? propsFor(e.sid, g.week) : null));
     if (pr) { const w = Math.min(0.6, 0.15 + 0.15 * pr.markets); pts = w * pr.pts + (1 - w) * pts; inputs.push(`Player props: ${pr.markets} market${pr.markets === 1 ? "" : "s"}${PROPS.data && PROPS.data.books ? ` (consensus of ${PROPS.data.books.length} books)` : ""}`); }
@@ -14455,16 +14509,39 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     check(`${wr.name}: a 100-yard receiving bonus never lowers his projection`, [b0, b1], b1 >= b0);
     // calibration layer: Vegas, matchup and props move the weekly projection; missing props change nothing
     const g0 = { oppTeam: "KC", week: 99, total: 47, spread: 0 }, sc0 = scOf({}), we = entry(wr), te0 = entry(te);
-    const cp = (e, g, o = {}) => Math.round(10 * contextProjection(e, g, o.sc || sc0, { props: o.props === undefined ? null : o.props, ctx: o.ctx, role: null }).pts) / 10;
+    const cp = (e, g, o = {}) => Math.round(10 * contextProjection(e, g, o.sc || sc0, { props: o.props === undefined ? null : o.props, ctx: o.ctx, role: null, legacy: o.legacy }).pts) / 10;
+    // the model's weekly forecast (Oct 21): the projected line in the league's scoring × its own next-game market and
+    // matchup factors; the browser's Vegas / matchup layer stays only on the old path (kept for comparison)
+    const mf = p => { const f = PROJ_ROS && PROJ_ROS[p.sleeperId]; return f && f.length >= 14 && f[13] != null && PROJ_LINE[p.sleeperId] ? f : null; };
+    const mw = players.find(p => p.pos === "WR" && p.sleeperId && mf(p) && Math.abs(mf(p)[11] * mf(p)[12] - 1) > 0.01) || players.find(p => p.pos === "WR" && p.sleeperId && mf(p));
+    if (mw) {
+      const f = mf(mw), e = entry(mw), gN = { oppTeam: "KC", week: f[13], total: 56, spread: -7 };
+      for (const x of [0, 1]) {
+        const sc = scOf({ rec: x, tep: 0 }), want = Math.round(10 * linePoints(PROJ_LINE[mw.sleeperId], mw.sleeperId, "WR", sc) * f[11] * f[12]) / 10;
+        const got = cp(e, gN, { sc });
+        check(`${mw.name}: next-game projection = his stat line in ${x ? "Full PPR" : "Standard"} × market ${f[11]} × matchup ${f[12]}`, [got, want], got === want);
+      }
+      const later = cp(e, { ...gN, week: f[13] + 1 }), line = Math.round(10 * linePoints(PROJ_LINE[mw.sleeperId], mw.sleeperId, "WR", sc0)) / 10;
+      check(`${mw.name}: a later week uses his stat line alone`, [later, line], later === line);
+      const hl = [cp(e, gN), cp(e, { ...gN, total: 38, spread: 7 })];
+      check(`${mw.name}: the model's projection doesn't add the browser's Vegas layer on top (no double counting)`, hl, hl[0] === hl[1]);
+      const lg = cp(e, gN, { legacy: true, ctx: { env: 1, mx: 1, inputs: [] } }), R = projRatios(sc0), old = Math.round(10 * projPPGOf(mw) * (R.get(mw.id) ?? R.get("pos:WR") ?? 1)) / 10;
+      check(`${mw.name}: the old weekly path stays available for comparison (ROS PPG rescored)`, [lg, old], lg === old);
+    }
+    const off = Object.keys(PROJ_LINE || {}).find(sid => !players.some(p => p.sleeperId === sid) && (PROJ_ROS[sid] || []).length >= 14);
+    if (off) {
+      const pos = slPlayers && slPlayers[off] ? slPlayers[off][1] : "QB", P = weeklyProjection({ sid: off, pos, team: "", p: null }, sc0, PROJ_ROS[off][13]);
+      check(`A player the model projects who isn't on the board (${slPlayers && slPlayers[off] ? slPlayers[off][0] : off}) gets his own projection, not the season-PPG stand-in`, [P && P.source, P && Math.round(10 * P.pts) / 10], P && P.model && !P.fallback);
+    }
     // the Vegas term needs 2+ of his team's upcoming games with posted lines (its baseline); lines are usually posted a week
     // ahead, so pick the best WR whose team has them, and with none anywhere check that no baseline means no adjustment
     const lined = p => teamGames(STATS_SEASONS[0], p.team).filter(r => r[4] == null && r[7] != null && r[8] != null).length >= 2;
     const vw = players.filter(p => p.pos === "WR" && p.projPPG != null && p.sleeperId && p.team && lined(p) && (statsCache[STATS_SEASONS[0]].players[p.sleeperId] || {}).g).sort((a, b) => a.posNum - b.posNum)[0];
-    const ve = vw ? entry(vw) : we, hiLo = [cp(ve, { ...g0, total: 56, spread: -7 }), cp(ve, { ...g0, total: 38, spread: 7 })];
-    if (vw) check(`${vw.name}: a higher Vegas team total raises his projection`, hiLo, hiLo[0] > hiLo[1]);
+    const ve = vw ? entry(vw) : we, hiLo = [cp(ve, { ...g0, total: 56, spread: -7 }, { legacy: true }), cp(ve, { ...g0, total: 38, spread: 7 }, { legacy: true })];
+    if (vw) check(`${vw.name}: old path: a higher Vegas team total raises his projection`, hiLo, hiLo[0] > hiLo[1]);
     else check(`${wr.name}: no team has two posted lines yet, so the Vegas total adds no adjustment`, hiLo, hiLo[0] === hiLo[1]);
-    const mxv = [cp(we, g0, { ctx: { env: 1, mx: 1.08, inputs: [] } }), cp(we, g0, { ctx: { env: 1, mx: 0.92, inputs: [] } })];
-    check(`${wr.name}: a soft matchup beats a tough one`, mxv, mxv[0] > mxv[1]);
+    const mxv = [cp(we, g0, { ctx: { env: 1, mx: 1.08, inputs: [] }, legacy: true }), cp(we, g0, { ctx: { env: 1, mx: 0.92, inputs: [] }, legacy: true })];
+    check(`${wr.name}: old path: a soft matchup beats a tough one`, mxv, mxv[0] > mxv[1]);
     const flat = { env: 1, mx: 1, inputs: [] };
     const yd = [cp(we, g0, { ctx: flat, props: { rec_yd: 110 } }), cp(we, g0, { ctx: flat, props: { rec_yd: 40 } })];
     check(`${wr.name}: a higher receiving-yards prop raises his projection`, yd, yd[0] > yd[1]);
@@ -15224,11 +15301,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (d != null) a.push(`<span class="pr-delta ${d >= 0.05 ? "up" : d <= -0.05 ? "down" : ""}" title="ROS PPG minus his actual season PPG: what AM expects to change going forward">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)} vs season</span>`);
       const conf = rosConfidence(p);
       if (conf) a.push(`<span class="pr-conf ${conf.cls}" title="${esc(conf.tip)}">${conf.label}</span>`);
-      const n4 = rosPPG(p, null, "n4"), F = rosFactors(p);
-      if (n4 != null && F) {
-        const r = n4 / ros, tag = r < 0.97 ? "Tough stretch" : r > 1.03 ? "Soft stretch" : "";
-        const why = [F.sched4 < 0.98 ? "tougher opponents" : F.sched4 > 1.02 ? "softer opponents" : "", F.env4 < 0.98 ? "lower team totals" : F.env4 > 1.02 ? "higher team totals" : ""].filter(Boolean).join(", ");
-        a.push(it("n4", "Next 4", fp(n4), `Projected points per game over his next ${NEXT_N_LABEL} games: the same role and efficiency as ROS PPG, with the environment and schedule of those games only${why ? ` (${why})` : ""}`) + (tag ? `<span class="pr-n4tag ${r < 1 ? "down" : "up"}" title="${esc(`Next 4 vs ROS PPG: ${r >= 1 ? "+" : "−"}${Math.abs(100 * (r - 1)).toFixed(0)}%`)}">${tag}</span>` : "").replace(/<\/span>(<span class="pr-n4tag[^]*<\/span>)$/, "$1</span>"));
+      // Next 4 (Oct 21 audit, Alan's approval): his role and efficiency over the next 4 games, no market or matchup factor
+      // and no Tough / Soft stretch tag (both added error); a faster-updating line after a snap-share jump
+      const n4 = rosPPG(p, null, "n4");
+      if (n4 != null && rosFactors(p)) {
+        const fast = !!(PROJ_LINE4 && PROJ_LINE4[p.sleeperId]);
+        a.push(it("n4", "Next 4", fp(n4), `Projected points per game over his next ${NEXT_N_LABEL} games: his role and sustainable efficiency${fast ? ", updated faster because his snap share jumped in his last two games" : ""}; opponents and team totals aren't factored in (they made this horizon less accurate)`));
       }
     } else if (p) a.push(it("ros nr", "ROS PPG", "—", "No rest-of-season projection yet"));
     if (ppg != null) b.push(it("sppg", "Season PPG", fp(ppg), `Actual points per game this season over ${curT.g} game${curT.g === 1 ? "" : "s"} played (${scName}), injury-shortened games included`));
@@ -15262,7 +15340,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function rosFactors(p) {
     const f = p && PROJ_ROS && PROJ_ROS[p.sleeperId], proj = p ? projPPGOf(p) : null;
     if (!f || f.length < 8 || proj == null || !(f[6] > 0)) return null;
-    const [g, base, env, sched, env4, sched4, hppg, priorG] = f, L = Math.log;
+    const [g, base, env, sched, , , hppg, priorG] = f, L = Math.log;
     // last season's role still carries most of the weight: f[9] = share of his projected workload from this season's
     // games (Oct 13, per-stat prior weights); older files only have games of evidence
     const early = f.length >= 10 ? f[9] < 0.5 && priorG >= 4 : g < 4 && priorG >= 4;
@@ -15271,7 +15349,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         down: early ? "last season's role and efficiency weigh in below this year's points" : "TD / efficiency regression toward his projected stat line" },
       { k: "env", v: L(env), up: "team expected to score more", down: "team expected to score less" },
       { k: "sched", v: L(sched), up: "softer remaining schedule", down: "tougher remaining schedule" }];
-    return { g, proj, hppg, total: L(proj / hppg), items, env4, sched4 };
+    return { g, proj, hppg, total: L(proj / hppg), items };
   }
   // One short reason line for the Overview (Alan, Oct 14): why ROS PPG sits above or below his healthy PPG; never a paragraph.
   function rosWhy(p) {

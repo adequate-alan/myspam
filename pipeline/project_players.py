@@ -6,7 +6,8 @@ remaining schedule, small-sample shrinkage); ros_backtest.py scores it against 2
 data/stats/<SEASON>.json (so build_stats.py must run first) and writes one row per player keyed by Sleeper ID:
     sleeper_id, player, pos, team, games, g_eff, prior_g, ppg, healthy_ppg, base_ppg, env, sched, env4, sched4, env1, sched1,
     proj_ppg, n4_ppg, n1_ppg, conf, rank_score, proj_rank, line_json (the projected per-game stat line, which the browser scores with the league's scoring),
-    cur_share (share of his projected main opportunity that comes from this season's games), moved (on a new team since last season)
+    cur_share (share of his projected main opportunity that comes from this season's games), moved (on a new team since last season),
+    role_change (a snap-share jump: his Next 4 uses line4_json, a faster-updating line)
 merge_projections.py puts proj_ppg / rank_score / games into RANKINGS_CSV and the per-player factors into data/projections.json.
 
     python3 project_players.py [games.csv]     (default: nflverse's games.csv)
@@ -21,7 +22,7 @@ SEASON = 2026
 HIST_SEASONS = [2024, 2025]
 COLS = ["sleeper_id", "player", "pos", "team", "games", "g_eff", "prior_g", "ppg", "healthy_ppg", "base_ppg", "env", "sched",
         "env4", "sched4", "env1", "sched1", "proj_ppg", "n4_ppg", "n1_ppg", "conf", "rank_score", "proj_rank", "line_json",
-        "cur_share", "moved"]
+        "cur_share", "moved", "role_change", "line4_json", "env4_raw", "sched4_raw", "n1_week"]
 
 def norm(name):
     """Name key used by the name-based fallbacks (merge_projections.py, build_sleeper_ids.py)."""
@@ -42,6 +43,7 @@ def project(games_path=tr.GAMES_URL, season=SEASON):
     games = pd.read_csv(games_path)
     out = m.project(stats, games, stats["through_week"], prior_stats=hist[season - 1], rates=rates, use_future_lines=True, sc=sc, kw=kw)
     out["line_json"] = out.line.map(json.dumps)
+    out["line4_json"] = out.line4.map(lambda l: json.dumps(l) if l else "")
     return out[COLS], rates, kw
 
 if __name__ == "__main__":
