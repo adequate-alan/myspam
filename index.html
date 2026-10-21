@@ -14205,17 +14205,24 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // games'. Leagues that score none of them get exactly the line's points.
   const EXTRA_KEYS = ["pass_fd", "rush_fd", "rec_fd", "pass_2pt", "rush_2pt", "rec_2pt"];
   const lineExtraCache = { key: "", map: new Map() };
+  let lineExtraLoading = false;
   function linePoints(line, sid, pos, sc) {
     const lin = { ...sc }; THRESHOLDS.forEach(([k]) => { delete lin[k]; });
     const pts = gamePoints(line, pos, lin);
     if (!sid || ![...EXTRA_KEYS, ...THRESHOLDS.map(([k]) => k)].some(k => Number(sc[k] || 0))) return pts;
+    // both seasons, always: scoring with only this season loaded gave a different number than with both (Oct 21)
+    const seasons = STATS_SEASONS.slice(0, 2);
+    if (seasons.some(y => statsCache[y] === undefined)) {
+      if (!lineExtraLoading) { lineExtraLoading = true; Promise.all(seasons.map(loadSeason)).then(() => { lineExtraLoading = false; renderLeagueAll(); }); }
+      return pts;
+    }
     const key = JSON.stringify(sc) + "|" + STATS_SEASONS.map(y => statsCache[y] ? statsCache[y].updated : "").join();
     if (lineExtraCache.key !== key) { lineExtraCache.key = key; lineExtraCache.map = new Map(); }
     const ck = sid + "|" + pos + "|" + JSON.stringify(line);
     if (lineExtraCache.map.has(ck)) return pts + lineExtraCache.map.get(ck);
     const covered = Object.keys(line);
     let extra = 0, vol = 0, n = 0;
-    for (const y of STATS_SEASONS.slice(0, 2)) {
+    for (const y of seasons) {
       const d = statsCache[y], pl = d && d.players && d.players[sid];
       if (!pl) continue;
       for (let i = pl.g.length - 1; i >= 0 && n < 17; i--) {
