@@ -4668,7 +4668,7 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .mv-lab { font-size: 0.7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
 .mv-pop .mv-input { width: 84px; text-align: left; }
 .mv-now, .mv-to { margin: 7px 0 0; font-size: 0.78rem; line-height: 1.35; color: var(--text-muted); } .mv-to { color: var(--text-primary); } .mv-to.err { color: var(--warn-text); }
-.mv-acts { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+.mv-acts { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; } .mv-acts .mv-out { margin-right: auto; }
 /* drag and drop: a floating copy of the row, a faded placeholder, a thin red insertion line, a live rank preview */
 #rank-body img { -webkit-user-drag: none; user-drag: none; }
 #panel-rankings .handle { position: relative; }
@@ -5201,7 +5201,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <label class="mv-row"><span class="mv-lab" id="mv-lab">To #</span><input class="mv-input" id="mv-input" type="number" min="1" step="1" inputmode="numeric" aria-describedby="mv-now mv-to"></label>
       <p class="mv-now" id="mv-now"></p>
       <p class="mv-to" id="mv-to"></p>
-      <div class="mv-acts"><button type="button" class="btn link" id="mv-cancel">Cancel</button><button type="button" class="btn primary" id="mv-apply">Move</button></div>
+      <div class="mv-acts"><button type="button" class="btn link mv-out" id="mv-out" title="Send him to the Out for season tier: the bottom of the board, value 0">Out for season</button><button type="button" class="btn link" id="mv-cancel">Cancel</button><button type="button" class="btn primary" id="mv-apply">Move</button></div>
     </div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
@@ -9650,6 +9650,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("mv-now").textContent = `Now #${me.rank ?? "–"} overall · ${me.posRank || me.pos}` + (me.tier !== "" && me.tier != null ? ` · ${isTagTier(me.tier) ? tierLabel(me.pos, me.tier) : "Tier " + me.tier}` : "");
     const to = $("mv-to"); to.textContent = t.error && inp.value !== "" ? t.error : t.text || `Type a rank from 1 to ${t.max}.`; to.classList.toggle("err", !!t.error && inp.value !== "");
     $("mv-apply").disabled = !!t.error;
+    $("mv-out").hidden = me.posNum == null || String(me.tier) === String(OUT_TIER);   // already out: move him back with a rank
     mvPlace();
   }
   function mvOpen(id, btn) {
@@ -9683,11 +9684,24 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       tr.classList.remove("flash"); void tr.offsetWidth; tr.classList.add("flash");
     });
   }
+  /* Out for season from the popover (Alan, Oct 21): the same sendOut as a drop on the Out for season band, so it works
+     wherever the rank button does: AM Board and League-adjusted, position tabs and All, either board. */
+  function mvOut() {
+    const me = byId.get(MV.id); if (!me) { mvClose(); return; }
+    const id = MV.id; mvClose();
+    if (String(me.tier) !== String(OUT_TIER)) sendOut(me);
+    requestAnimationFrame(() => {
+      const tr = $("rank-body").querySelector(`tr[data-id="${id}"]`); if (!tr) return;
+      const b = tr.querySelector(".rk-btn"); if (b) b.focus({ preventScroll: true });
+      tr.classList.remove("flash"); void tr.offsetWidth; tr.classList.add("flash");
+    });
+  }
   mvPop.addEventListener("click", e => {
     const m = e.target.closest(".mv-mode");
     if (m && !m.disabled) { MV.mode = m.dataset.mode; const me = byId.get(MV.id); if (me) $("mv-input").value = String(MV.mode === "overall" ? me.rank : me.posNum); mvRender(); $("mv-input").focus(); $("mv-input").select(); return; }
     if (e.target.closest("#mv-cancel")) { mvClose(true); return; }
     if (e.target.closest("#mv-apply")) mvApply();
+    if (e.target.closest("#mv-out")) mvOut();
   });
   $("mv-input").addEventListener("input", mvRender);
   mvPop.addEventListener("keydown", e => {

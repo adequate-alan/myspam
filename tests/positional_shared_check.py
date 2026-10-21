@@ -256,6 +256,28 @@ with sync_playwright() as pw:
         ok(no_hscroll(pg) and pg.locator("#rank-body .rk-btn").count() > 0, f"Desktop {theme}: League-adjusted WR has the controls, no sideways scroll")
         shot(pg, f"league-wr-{theme}-1440")
         ctx.close()
+    # 11. Out for season from the Move to rank popover, in both views and on both boards (Alan, Oct 21)
+    def out_via_pop(pg, pid):
+        r = rowof(pg, pid); r.evaluate("el => el.scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(80)
+        r.locator(".rk-btn").click(); pg.wait_for_timeout(200)
+        shown = pg.locator("#mv-out").is_visible()
+        if shown: pg.click("#mv-out"); pg.wait_for_timeout(500)
+        return shown
+    def tier_of(pg, pid): return next(r[3] for r in state(pg)["board"] if r[0] == pid)
+    for board, fmt, live in [("sf-tep", FMT, False), ("sf-tep", FMT, True), ("ppr", FMT_1QB, True)]:
+        for v in ["league", "base"]:
+            name = f"{'AM PPR' if board == 'ppr' else 'AM SF PPR TE+'}{' (live, order sync on)' if live else ''}, {'League-adjusted' if v == 'league' else 'AM Board'}"
+            ctx = new_ctx(fixture=not live, edit_board=board); pg = open_page(ctx, fmt); view(pg, v); tab(pg, "WR")
+            w = at(pg, 6)
+            ok(out_via_pop(pg, w), f"{name}: the Move to rank popover offers Out for season")
+            st = state(pg); me = next(r for r in st["board"] if r[0] == w)
+            ok(str(me[3]) == "99" and me[4] == 0 and me[1] == len(st["board"]) and st["unsaved"] > 0,
+               f"{name}: WR6 is out for the season (tier {me[3]}, value {me[4]}, #{me[1]} of {len(st['board'])})")
+            c = new_ctx(fixture=not live, edit_board=board); q = open_page(c, fmt); view(q, "base"); q.evaluate(f"SPM.edit.sendOut({w!r})"); q.wait_for_timeout(300)
+            ok(same(st, state(q)), f"{name}: equals sendOut on the AM Board (draft, touched, unsaved)"); c.close()
+            tab(pg, "WR"); rowof(pg, w).locator(".rk-btn").click(); pg.wait_for_timeout(200)
+            ok(not pg.locator("#mv-out").is_visible(), f"{name}: once he's out the popover no longer offers it"); pg.keyboard.press("Escape")
+            ctx.close()
     ok(not errs, f"No page errors ({errs[:2]})")
     br.close()
 
