@@ -166,6 +166,43 @@ with sync_playwright() as p:
     s = state(pg)
     ok("+0.0%" not in s["gap"] and not s["lens"] and "starting-lineup value" not in s["hint"], f"One-sided trade (Alpha gives nothing): no fake roster impact read ({s['gap'][:120]})")
     pg.close()
+    # 3a. a hypothetical player who belongs to a team outside the trade (Oct 21): the warning offers "Want to swap teams?",
+    # which asks first and then puts his owner in the mismatched partner's place, players kept, Team 1 untouched
+    inv = {v: k for k, v in sid.items()}
+    roster_of = lambda i: [inv[str(x)] for x in league_data(False)[2][i]["players"] if str(x) in inv]
+    team3, team4, team5 = roster_of(2)[0], roster_of(3)[0], roster_of(4)[0]
+    pg = page(False)
+    add(pg, "A", team3)
+    s = state(pg)
+    ok("isn't on Team Beta's roster" in s["warn"] and "Want to swap teams?" in s["warn"] and "Replace" not in s["warn"],
+       f"Owner swap: the warning offers to swap teams, nothing changed yet ({s['warn'][:160]})")
+    pg.click("#tc-warn [data-tc-swap-ask]"); pg.wait_for_timeout(300)
+    s = state(pg)
+    ok("Replace Team Beta with Team 3?" in s["warn"] and s["B"] == "2", f"Owner swap: asks before replacing ({s['warn'][:160]})")
+    pg.click("#tc-warn [data-tc-swap-cancel]"); pg.wait_for_timeout(300)
+    s = state(pg)
+    ok(s["B"] == "2" and "Want to swap teams?" in s["warn"], "Owner swap: Cancel keeps Team Beta")
+    pg.click("#tc-warn [data-tc-swap-ask]"); pg.wait_for_timeout(300); pg.click("#tc-warn [data-tc-swap]"); pg.wait_for_timeout(500)
+    s = state(pg)
+    kept = pg.evaluate("() => document.querySelector('.side.A').textContent")
+    ok(s["A"] == "1" and s["B"] == "3" and not s["warn"] and team3 in kept, f"Owner swap: Team 3 replaces Team Beta, Team Alpha and the player stay ({s['A']}/{s['B']} | {s['warn'][:80]})")
+    add(pg, "A", team4); add(pg, "A", team5)
+    s = state(pg)
+    ok("aren't on Team 3's roster" in s["warn"] and "Want to swap teams?" not in s["warn"],
+       f"Owner swap: no offer when the hypothetical players belong to different teams ({s['warn'][:160]})")
+    pg.close()
+    pg = page(False)
+    pg.click("#add-third"); pg.wait_for_timeout(400)
+    pg.evaluate("""() => { const s = document.getElementById('team-C'); s.value = '3'; s.dispatchEvent(new Event('change', { bubbles: true })); }"""); pg.wait_for_timeout(400)
+    add(pg, "A", team4)
+    pg.click("#tc-warn [data-tc-swap-ask]"); pg.wait_for_timeout(300)
+    s = state(pg)
+    ok("Replace Team Beta with Team 4?" in s["warn"], f"Owner swap, 3-team: offers the team he's sent from ({s['warn'][:160]})")
+    pg.click("#tc-warn [data-tc-swap]"); pg.wait_for_timeout(500)
+    s = state(pg)
+    ok(s["A"] == "1" and s["B"] == "4" and pg.evaluate("() => document.getElementById('team-C').value") == "3" and not s["warn"],
+       f"Owner swap, 3-team: only the sending team is replaced ({s['A']}/{s['B']} | {s['warn'][:80]})")
+    pg.close()
     # 3b. 3-team (Oct 13 audit): a team set to get its own player. The "from" fallback used to credit him to another
     # team, which then "sent" a player it doesn't have, and the verdicts read it as a real trade ("Robbing the others")
     inv = {v: k for k, v in sid.items()}
