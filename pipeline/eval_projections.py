@@ -81,7 +81,7 @@ def c5_adjust(snap, rep, played_before):
         rows.append(dict(sid=sid, team=p["team"], pos=p["pos"], a=a, tgt=tgt, car=car, n1=p["n1"], scale=scale,
                          ppt=recp / tgt if tgt > 0.05 else 0.0, ppc=rushp / car if car > 0.05 else 0.0, new=sid in played_before))
     t = pd.DataFrame(rows)
-    if t.empty: return {}
+    if t.empty: return {}, {}
     t["adj"] = t.n1
     for _, g in t.groupby("team"):
         gone = (1 - g.a) * g.new
@@ -92,7 +92,7 @@ def c5_adjust(snap, rep, played_before):
         prb = g[(g.a >= 0.5) & (g.pos == "RB")]
         if vc > 0 and prb.car.sum() > 0:
             t.loc[prb.index, "adj"] += C5_RC * vc * prb.car / prb.car.sum() * prb.ppc * prb.scale
-    return dict(zip(t.sid, t.adj))
+    return dict(zip(t.sid, t.adj)), dict(zip(t.sid, t.a))
 
 def main(stats_path="../data/stats/2026.json", proj_dir="../data/projections", from_week=None, c5=None):
     stats = json.load(open(stats_path)); sc = m.scoring(); through = stats["through_week"]
@@ -115,21 +115,25 @@ def main(stats_path="../data/stats/2026.json", proj_dir="../data/projections", f
         a1_any = act_any[act_any.week == wk].groupby("id").pts.sum()   # any game he played, cut short or not
         a4 = act[(act.week >= wk) & (act.week < wk + m.NEXT_N)].groupby("id").pts.agg(["mean", "size"])
         aros = act[act.week >= wk].groupby("id").pts.agg(["mean", "size"])
-        adj = {}
-        if inj is not None and wk >= C5_FROM_WEEK:
+        adj, avail = {}, {}
+        # C5 is scored only on a forecast stored before that week's first kickoff ("made" < "kickoff"), so baseline and
+        # candidate start from the same pregame information
+        pregame = bool(snap.get("kickoff")) and snap.get("made", "9") < snap["kickoff"]
+        if inj is not None and wk >= C5_FROM_WEEK and pregame:
             w = inj[inj.week == wk]
             rep = {r.sid: (r.report_status if isinstance(r.report_status, str) else None, r.practice_status if isinstance(r.practice_status, str) else None)
                    for r in w.itertuples()}
             past = fr[fr.week < wk]   # played his team's latest game before this week: an absence that starts now
             team_last = past.groupby("team").week.max(); last = past.sort_values("week").groupby("id").tail(1)
             before = {r.id for r in last.itertuples() if team_last.get(r.team) == r.week}
-            adj = c5_adjust(snap, rep, before)
+            adj, avail = c5_adjust(snap, rep, before)
         for sid, p in snap["players"].items():
             if p["ros"] < 5: continue
             rows.append(dict(week=wk, sid=sid, pos=p["pos"], team=p["team"], conf=p["conf"], ros=p["ros"], n4=p["n4"], n1=p["n1"],
                              n1_legacy=p.get("n1_legacy"), n4_legacy=p.get("n4_legacy"),
                              v_base=p["base"], v_market=p["base"] * p["env1"], v_matchup=p["base"] * p["sched1"],
-                             c5=adj.get(sid) if adj else None,
+                             c5=adj.get(sid) if adj else None, avail=avail.get(sid) if avail else None,
+                             act1_any=float(a1_any.get(sid, 0.0)),
                              act1=a1.get(sid), act4=a4["mean"].get(sid) if a4["size"].get(sid, 0) >= 3 else None,
                              actros=aros["mean"].get(sid) if aros["size"].get(sid, 0) >= 3 else None,
                              # role layer (stored from Oct 12): the expected forecast against what he scored, 0 when he didn't play
@@ -148,6 +152,12 @@ def main(stats_path="../data/stats/2026.json", proj_dir="../data/projections", f
     report(d, [("ros", "ROS forecast"), ("v_base", "model line alone")], "actros", "rest of season so far:", by_pos=False)
     if d.c5.notna().any():
         report(d, [("n1", "n1 (as shipped)"), ("c5", "n1 + C5 teammate absences")], "act1", "C5 prospective test (c5-prospective.md), full games:")
+        # same pregame cutoff for both (Alan, Oct 21): the stored n1 is frozen before the week's first kickoff and C5 adds
+        # only that week's final pregame report; scored as expected points, both forecasts are weighted by the same play
+        # chance from that same report, so the report itself can't make the candidate look better
+        d["n1_rep"] = d.n1 * d.avail; d["c5_rep"] = d.c5 * d.avail
+        report(d, [("n1_rep", "n1 x report play chance"), ("c5_rep", "C5 x the same play chance")], "act1_any",
+               "C5, expected (same report for both; didn't play = 0):", by_pos=False)
         moved = d[(d.c5 - d.n1).abs() > 0.05]
         if len(moved) >= 20: report(moved, [("n1", "n1, affected rows"), ("c5", "C5, affected rows")], "act1", "C5, rows it changes:", by_pos=False)
     j = d.dropna(subset=["act1"]).assign(err=lambda x: x.n1 - x.act1)
