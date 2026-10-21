@@ -18839,7 +18839,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const wr1 = boardPlayers(ppr).find(p => p.pos === "WR" && p.posNum === 1), rec = [0, 0.5, 1].map(r => Math.round(adjMapFor(lg({ qb: "1", tep: 0, rec: r }), ppr).get(wr1.id)));
     check(`${wr1.name} (AM PPR WR1) rises with points per catch 0 → 0.5 → 1 and Full PPR is his saved value`, rec, rec[0] < rec[1] && rec[1] < rec[2] && rec[2] === Math.round(wr1.value));
     // overall tiers don't become format cliffs: a drop of 25%+ where the board drops 5% or less and the format's own scarcity under 20%
-    const cliffs = [];
+    /* One documented exception (Alan, Oct 21, PR #78): in 8-team, 0 PPR, no TE premium leagues, Kincaid (TE9) → Kelce (TE10)
+       drops ~31% (531 → 368) where AM PPR has them 1.8% apart. The Week 7 sheet makes them the only two TEs in Tier 8, and the
+       league layer prices each tier as a block and eases the two players at each edge, so a two-TE tier in a format where TE9+
+       are bench players opens this gap. Exact pair, spots and format only; a bigger drop, or the same gap anywhere else, fails. */
+    const CLIFF_OK = [{ teams: 8, rec: 0, tep: 0, pos: "TE", a: "10236", c: "1466", at: 9, max: 0.33 }];
+    const cliffs = [], tolerated = [];
     for (const f of fams.filter(f => f.qb === "1")) {
       const vl = lg(f), m = adjMapFor(vl, ppr), T = modelTable(curvesFor(vl.scoring_settings), lineupOf(vl));
       for (const pos of EDIT_POS) {
@@ -18848,11 +18853,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           const a = g[i - 1], c = g[i], va = m.get(a.id), vc = m.get(c.id); if (!(a.value > 0) || !(va >= 300)) continue;
           const t = T[pos], ta = t[Math.min(a.posNum, t.length) - 1], tc = t[Math.min(c.posNum, t.length) - 1];
           const board = 1 - c.value / a.value, own = ta > 0 ? 1 - tc / ta : 0, drop = 1 - vc / va;
-          if (board <= 0.05 && own < 0.2 && drop >= 0.25) cliffs.push(`${f.teams}-team rec ${f.rec} TEP ${f.tep}: ${pos}${a.posNum} ${a.name} → ${c.name} ${Math.round(-100 * drop)}%`);
+          if (!(board <= 0.05 && own < 0.2 && drop >= 0.25)) continue;
+          const known = CLIFF_OK.find(k => k.teams === f.teams && k.rec === f.rec && k.tep === f.tep && k.pos === pos && k.a === a.sleeperId && k.c === c.sleeperId && k.at === a.posNum && c.posNum === a.posNum + 1);
+          if (known && drop <= known.max) { tolerated.push(`${f.teams}-team rec ${f.rec} TEP ${f.tep}: ${pos}${a.posNum} ${a.name} → ${c.name} ${Math.round(-100 * drop)}% (known, up to ${Math.round(100 * known.max)}%)`); continue; }
+          cliffs.push(`${f.teams}-team rec ${f.rec} TEP ${f.tep}: ${pos}${a.posNum} ${a.name} → ${c.name} ${Math.round(-100 * drop)}%${known ? ` (past the documented ${Math.round(100 * known.max)}%: investigate)` : ""}`);
         }
       }
     }
     check("AM PPR's overall tiers create no format cliffs in 36 1QB formats", cliffs.slice(0, 5), !cliffs.length);
+    if (tolerated.length) check("Documented format-cliff exception still within its recorded size (8-team Standard TE9 → TE10)", tolerated, true);
     const prov = boardPlayers(ppr).filter(p => p.source === "auto"), provOk = prov.every(p => provisionalOn(byId.get(p.id), ppr)) && !players.some(p => provisionalOn(p, sf));
     check(`AM PPR's ${prov.length} Auto players are marked provisional (AM SF PPR TE+ has none)`, [prov.length], prov.length > 0 && provOk);
     const after = { sf: snap(players), lists: BOARDS.map(b => snap(boardPlayers(b))) };
