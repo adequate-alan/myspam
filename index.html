@@ -3300,8 +3300,10 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .pr-strength { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .pr-score { font-size: 0.98rem; font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; }
 .pr-score small { font-size: 0.66rem; font-weight: 600; color: var(--text-muted); }
-/* Overall power (Oct 21): the gap to the next team, and a quiet Close tag when it's within 2 PPG */
-.pr-gap { display: block; margin-top: 1px; font-size: 0.7rem; font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* Overall power (Oct 21): roster value leads; expected PPG and the gap to the next team sit under the bar, a quiet Close tag
+   when a neighbour is within 2% of its value */
+.pr-gap { display: block; margin-top: 1px; font-size: 0.7rem; font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; line-height: 1.35; }
+.pr-ppg { color: var(--text-secondary); }
 .pr-close { display: inline-block; margin-left: 6px; vertical-align: 1px; text-transform: uppercase; border: 1px solid var(--border); color: var(--text-secondary); }
 .pr-bar { height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
 .pr-bar span { display: block; height: 100%; background: var(--text-secondary); opacity: 0.7; border-radius: 2px; }
@@ -4129,8 +4131,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .pr-rank { grid-area: rank; align-self: start; padding-top: 6px; }
   .pr-team { grid-area: team; }
   .pr-name { white-space: normal; line-height: 1.25; }
-  .pr-strength { grid-area: strength; flex-direction: row; align-items: center; gap: 12px; }
+  .pr-strength { grid-area: strength; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
   .pr-strength .pr-bar { flex: 1; }
+  .pr-strength .pr-gap { flex-basis: 100%; margin-top: 0; }
   .pr-score { min-width: 56px; font-size: 0.9rem; }
   .pr-pos { grid-area: pos; flex-direction: row; flex-wrap: wrap; gap: 6px 18px; }
   .pr-pos-label { width: auto; }
@@ -8533,8 +8536,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const powerOf = (X, Y) => {
       const ex = ev.byRoster.get(String(X.t.rosterId)), ey = ev.byRoster.get(String(Y.t.rosterId));
       if (!ex || !ey) return null;
-      const ax = ex.ppg + pwrDelta(X.before, X.after), ay = ey.ppg + pwrDelta(Y.before, Y.after);   // power = expected PPG (Oct 21)
-      const after = 1 + ev.list.filter(z => z.team !== X.t && z.team !== Y.t && z.ppg > ax).length + (ay > ax ? 1 : 0);
+      const ax = pwrRV(ex) + rvDelta(X.before, X.after), ay = pwrRV(ey) + rvDelta(Y.before, Y.after);   // power = roster value (Oct 21)
+      const after = 1 + ev.list.filter(z => z.team !== X.t && z.team !== Y.t && pwrRV(z) > ax).length + (ay > ax ? 1 : 0);
       return [ex.power, after];
     };
     const cls = ([b, a]) => (a < b ? "up" : a > b ? "down" : "same");
@@ -12593,7 +12596,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const seg = (cls, label, val, of, tip) => `<div class="mt-sum ${cls}"${tip ? ` title="${esc(tip)}"` : ""}><span class="mt-sum-l">${label}</span><span class="mt-sum-v">${val}${of ? `<i>${of}</i>` : ""}</span></div>`;
     const rankV = k => `<b class="${gradeOf(k, n)}">#${k}</b>`;
     const summary = `<div class="mt-summary">
-        ${seg("mt-pr", "Power rank", `<b>#${mineEv.power}</b>`, `of ${n} · ${fp(mineEv.ppg)} PPG`, `Expected ${fp(mineEv.ppg)} points per week for the rest of the regular season: your best available lineup each week with byes, typical absences and bench depth, from AM values converted to points. Injured reserve counted as healthy.`)}
+        ${seg("mt-pr", "Power rank", `<b>#${mineEv.power}</b>`, `of ${n} · ${fmt(pwrRV(mineEv))}`, `Roster value ${fmt(pwrRV(mineEv))}: your best starting lineup's league-adjusted AM values plus a share of the bench, injured reserve counted as healthy. Expected ${fp(mineEv.ppg)} points per week for the rest of the regular season.`)}
         ${seg("mt-proj", pj ? `${pj.label} · Wk ${pj.wk}` : "This week", pj ? `<b>${fp(pj.sum)}${pj.missing.length ? "*" : ""}</b>` : `<span class="muted">—</span>`, "", pj ? (pj.missing.length ? `Partial: no projection for ${pj.missing.join(", ")}. ` : "") + "Your starting lineup's projected points this week in your league's scoring, the same sum as Matchups' Live proj" : "")}
         ${seg("mt-st", "Starter strength", rankV(startPlace), `of ${n} · ${fp(mineEv.startPpg)} PPG`, `Your best healthy starting lineup: ${fp(mineEv.startPpg)} points per week if everyone plays (no byes, absences or injured reserve), from the same AM-value points as Power rank, ranked in the league`)}
         ${seg("mt-dp", "Depth", rankV(mineEv.place.DEPTH), `of ${n}`, "Bench depth, ranked in the league")}
@@ -12764,7 +12767,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      Injured reserve counts as healthy and taxi doesn't (as before). Kickers and defenses aren't valued by AM and are
      left out. Starter strength (My Team) = the best healthy lineup's points with no byes or absences. Position rooms,
      the Depth lens, the Trade Finder's and calculator's verdicts and playoff odds keep AM values (score). */
-  const PWR = { haz: 0.07, draws: 400, close: 2, key: "", curves: null, start: null, memo: new Map() };
+  const PWR = { haz: 0.07, draws: 400, closePct: 0.02, key: "", curves: null, start: null, memo: new Map() };
   function pwrIso(xs, ys) {   // pool-adjacent-violators: a non-decreasing step curve through (value, points)
     const pts = xs.map((x, i) => [x, ys[i]]).sort((a, b) => a[0] - b[0] || a[1] - b[1]), B = [];
     for (const [x, y] of pts) {
@@ -12857,18 +12860,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     PWR.memo.set(mkey, res);
     return res;
   }
-  // Ranks stay sequential (Alan, Oct 21); the gap to the team above (for #1, its lead over #2) is shown, and a team is
-  // "Close" when the team above or below it is within PWR.close PPG: their order could easily flip
+  // Overall power ranks by roster value (Alan, Oct 21, later: "whose roster is strongest?"): the team score, the best
+  // lineup's league-adjusted AM value plus a discounted bench, with IR counted as healthy (the score playoff odds use);
+  // expected PPG stays beside it as what that roster should score. Ranks stay sequential; the gap to the team above
+  // (for #1, its lead over #2) is shown, and a team is "Close" when the team above or below it is within
+  // PWR.closePct of its roster value: their order could easily flip
+  const pwrRV = x => x.score;
   const pwrGap = (ev, x) => { const i = ev.list.indexOf(x); if (i < 0 || ev.n < 2) return null;
-    return i === 0 ? { ahead: true, rank: 2, d: x.ppg - ev.list[1].ppg } : { ahead: false, rank: i, d: ev.list[i - 1].ppg - x.ppg }; };
-  const pwrNear = d => Math.round(d * 10) / 10 <= PWR.close;
+    return i === 0 ? { ahead: true, rank: 2, d: pwrRV(x) - pwrRV(ev.list[1]) } : { ahead: false, rank: i, d: pwrRV(ev.list[i - 1]) - pwrRV(x) }; };
+  const pwrNear = (hi, lo) => hi - lo <= PWR.closePct * Math.max(1, hi);
   const pwrClose = (ev, x) => { const i = ev.list.indexOf(x); if (i < 0) return false;
-    return (i > 0 && pwrNear(ev.list[i - 1].ppg - x.ppg)) || (i < ev.n - 1 && pwrNear(x.ppg - ev.list[i + 1].ppg)); };
-  // A trade's change in expected PPG between two lineup reads (bestLineup results: starters, bench and any cut players)
-  const pwrDelta = (B, A) => { const d = activeData(); if (!d || !B || !A) return 0;
-    const all = L => L.starters.concat(L.bench || [], L.cut || []);
-    return pwrTeam(all(A), d.league).ppg - pwrTeam(all(B), d.league).ppg; };
-  const pwrGapHtml = (ev, x) => { const g = pwrGap(ev, x); return g ? `<span class="pr-gap">${g.ahead ? `${fp(g.d)} ahead of #2` : `${fp(g.d)} behind #${g.rank}`}</span>` : ""; };
+    return (i > 0 && pwrNear(pwrRV(ev.list[i - 1]), pwrRV(x))) || (i < ev.n - 1 && pwrNear(pwrRV(x), pwrRV(ev.list[i + 1]))); };
+  const pwrClosePct = () => `${+(PWR.closePct * 100).toFixed(1)}%`;
+  // A trade's change in roster value between two lineup reads (bestLineup results), for "Power rank before → after"
+  const rvDelta = (B, A) => (B && A ? (A.score || 0) - (B.score || 0) : 0);
+  const pwrGapText = (ev, x) => { const g = pwrGap(ev, x); return g ? (g.ahead ? `${fmt(g.d)} ahead of #2` : `${fmt(g.d)} behind #${g.rank}`) : ""; };
   // Slots AM doesn't value (kickers, defenses, IDP): named so a league with them knows they aren't in the score
   function pwrUnvalued(league) {
     const pos = [...new Set((league.roster_positions || []).filter(s => s !== "BN" && s !== "IR" && s !== "TAXI" && !ELIG[s]))];
@@ -12894,7 +12900,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
                ppg: P.ppg, ppgLineup: P.lineup, ppgDepth: P.depth, ppgIdeal: P.ideal, startPpg: S.ideal };
     });
     const n = list.length;
-    [...list].sort((a, b) => b.ppg - a.ppg || b.score - a.score).forEach((x, k) => { x.power = k + 1; });
+    [...list].sort((a, b) => pwrRV(b) - pwrRV(a) || b.ppg - a.ppg).forEach((x, k) => { x.power = k + 1; });
     [...list].sort((a, b) => b.startPpg - a.startPpg || b.startVal - a.startVal).forEach((x, k) => { x.place.START = k + 1; });
     for (const pos of EDIT_POS) [...list].sort((a, b) => b.room[pos] - a.room[pos]).forEach((x, k) => { x.place[pos] = k + 1; });
     [...list].sort((a, b) => b.depthVal - a.depthVal).forEach((x, k) => { x.place.DEPTH = k + 1; });
@@ -12990,7 +12996,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function powerHtml(ev, d) {
     const mode = LT.pb ? LT.pb.pos : null, label = mode === "DEPTH" ? "Depth" : mode;
     const lb = mode ? positionLeaderboard(ev, mode) : null;
-    const order = mode ? (LT.pb.dir === "asc" ? lb.slice().reverse() : lb) : ev.list.map(x => ({ x, rank: x.power, score: x.ppg }));
+    const order = mode ? (LT.pb.dir === "asc" ? lb.slice().reverse() : lb) : ev.list.map(x => ({ x, rank: x.power, score: pwrRV(x) }));
     const top = Math.max(1, ...order.map(r => r.score));
     HC_EV = { ev, mode };   // the team hover cards read this render's numbers
     const sign = v => `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v))}`;
@@ -13006,7 +13012,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <span class="pr-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(t.name !== t.manager ? t.manager : "")}${mode ? `${t.name !== t.manager ? " · " : ""}Power #${x.power}` : ""}</span></span></span>
           <span class="pr-rec">${esc(recordText(st) || "–")}</span>
           <span class="pr-pf">${st.pf ? pts(st.pf) : "–"}<small>${st.pa ? pts(st.pa) : ""}</small></span>
-          <span class="pr-strength" data-hc="pw:${esc(rid)}"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${mode ? fmt(r.score) : `${fp(r.score)}<small> PPG</small>${pwrClose(ev, x) ? `<span class="pr-close" title="Within ${PWR.close} PPG of the team above or below: their order could easily flip">Close</span>` : ""}`}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : pwrGapHtml(ev, x)}</span>
+          <span class="pr-strength" data-hc="pw:${esc(rid)}"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}${!mode && pwrClose(ev, x) ? `<span class="pr-close" title="Within ${pwrClosePct()} of the roster value of the team above or below: their order could easily flip">Close</span>` : ""}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : `<span class="pr-gap"><span class="pr-ppg" title="Expected points per week for the rest of the regular season: the best available lineup each week with byes and typical absences">${fp(x.ppg)} expected PPG</span>${pwrGapText(ev, x) ? `<span class="pr-gap-d"> · ${pwrGapText(ev, x)}</span>` : ""}</span>`}</span>
           <span class="pr-pos">${posLink(x.best[0], x.best[1], rid, "Best")}
             ${posLink(x.worst[0], x.worst[1], rid, "Weakest")}</span>
           <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${names}</span></span>
@@ -13024,13 +13030,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const note = mode
       ? (mode === "DEPTH" ? "Teams ranked by bench depth: the best bench players by AM value (injured reserve counts, taxi doesn't)."
         : `Teams ranked by ${label} room: a team's best ${label}s count in full (the position's starting slots plus one flex option), and depth counts with less weight for each extra player. Each room is its own comparison: the flex option counts in every room it's open to, so rooms don't add up to team strength.`)
-      : `Power rankings show the points per week each team can expect to field for the rest of the regular season, from AM values converted to points in this league's scoring: the best available lineup each week, with byes and typical absences, so bench depth counts when it has to play. Injured reserve counts as if healthy; taxi squads don't.${pwrUnvalued(d.league)} A team within ${PWR.close} PPG of the team above or below is marked Close: their order could easily flip.`;
+      : `Power rankings order teams by roster value: the best starting lineup's league-adjusted AM values plus a share of the bench. Under it, expected PPG is the points per week that roster can expect to field for the rest of the regular season (the best available lineup each week, with byes and typical absences). Injured reserve counts as if healthy; taxi squads don't.${pwrUnvalued(d.league)} A team within ${pwrClosePct()} of the roster value of the team above or below is marked Close: their order could easily flip.`;
     return `<div class="lg-toolbar">
         <p class="method-note">${note}</p>
         <label class="lg-keep"><input type="checkbox" id="lg-keep"${LT.keep ? " checked" : ""}> Keep teams open to compare</label>
       </div>
       ${lens}
-      <div class="pr-head"><span>Rk</span><span>Team</span><span>Record</span><span>PF / PA</span><span>${mode ? label + (mode === "DEPTH" ? " score" : " room") : "Expected PPG"}</span><span>Positions</span><span>${mode ? (mode === "DEPTH" ? "Top bench" : "Top " + label + "s") : "Top players"}</span><span></span></div>
+      <div class="pr-head"><span>Rk</span><span>Team</span><span>Record</span><span>PF / PA</span><span>${mode ? label + (mode === "DEPTH" ? " score" : " room") : "Roster value"}</span><span>Positions</span><span>${mode ? (mode === "DEPTH" ? "Top bench" : "Top " + label + "s") : "Top players"}</span><span></span></div>
       <div class="pr-list">${rows}</div>`;
   }
   // The expanded team: position ranks (why it ranks where it does), then the roster board by position
@@ -13083,7 +13089,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : `${me ? `<button class="btn primary" type="button" data-trade-with="${t.rosterId}">Trade with ${esc(t.name)}</button><button class="btn" type="button" data-find-with="${t.rosterId}">Find trades</button>` : ""}`;
     return `<div class="tx-head">
         <div class="tx-title"><span class="tx-rank${LT.pb ? " lens" : ""}"${LT.pb ? ` title="Overall power rank (the row shows the ${LT.pb.pos === "DEPTH" ? "depth" : LT.pb.pos + " room"} rank)"` : ""}>${LT.pb ? `<small>Overall</small>` : ""}#${x.power}</span><div><b>${esc(t.name)}</b>
-          <span>Power rank ${ordinal(x.power)} of ${n} · ${fp(x.ppg)} expected PPG · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
+          <span>Power rank ${ordinal(x.power)} of ${n} · ${fmt(pwrRV(x))} roster value · ${fp(x.ppg)} expected PPG · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
         <div class="tx-actions">${actions}</div>
       </div>
       <div class="tx-summary">${summary}</div>
@@ -18493,11 +18499,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // Power rank before → after (Power Rankings' score plus the lineup change), like the calculator's roster changes
   function powerMoves(it, K) {
-    const ev = evaluateTeams(), sc = new Map(ev.list.map(x => [x.team.rosterId, x.ppg]));   // power = expected PPG (Oct 21)
+    const ev = evaluateTeams(), sc = new Map(ev.list.map(x => [x.team.rosterId, pwrRV(x)]));   // power = roster value (Oct 21)
     const before = new Map(ev.list.map(x => [x.team.rosterId, x.power]));
     const after = new Map(sc);
-    after.set(it.S.rosterId, sc.get(it.S.rosterId) + pwrDelta(K.base.get(it.S.rosterId), it.sAfter));
-    after.set(it.team.rosterId, sc.get(it.team.rosterId) + pwrDelta(K.base.get(it.team.rosterId), it.tAfter));
+    after.set(it.S.rosterId, sc.get(it.S.rosterId) + rvDelta(K.base.get(it.S.rosterId), it.sAfter));
+    after.set(it.team.rosterId, sc.get(it.team.rosterId) + rvDelta(K.base.get(it.team.rosterId), it.tAfter));
     const rankAfter = rid => 1 + [...after.values()].filter(v => v > after.get(rid)).length;
     return rid => [before.get(rid), rankAfter(rid)];
   }
@@ -19187,7 +19193,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       return { teams: ev.list.map(x => ({ team: x.team.name, rid: x.team.rosterId, power: x.power, ppg: x.ppg, lineup: x.ppgLineup, depth: x.ppgDepth, ideal: x.ppgIdeal, startPpg: x.startPpg, start: x.place.START, score: x.score })),
         curves: Object.fromEntries(EDIT_POS.map(pos => [pos, grid.map(v => [v, PWR.curves[pos](v)])])),
         players: players.filter(p => EDIT_POS.includes(p.pos)).map(p => ({ sid: p.sleeperId, name: p.name, pos: p.pos, team: p.team, value: dv(p), pts: pwrPts(p), start: PWR.start.get(p.id), out: outForSeason(p), cond: rosPPG(p) })),
-        weeks: pwrWeeks(d && d.league), haz: PWR.haz, draws: PWR.draws, close: PWR.close };
+        weeks: pwrWeeks(d && d.league), haz: PWR.haz, draws: PWR.draws, closePct: PWR.closePct };
     } finally { Object.assign(PWR, keep); }
   };
   if (window.__SPM_TEST_HOOKS === true) SPM.roomSlots = (slots, pos) => roomSlots(slots, pos);   // players a room counts in full for a lineup (tests)
@@ -19576,12 +19582,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const rankOf = f => 1 + ev.list.filter(y => f(y) > f(x) + 1e-9).length;
     const head = `<div class="hc-h">${teamFace(t, "xs")}<span class="hc-id"><span class="hc-n">${esc(t.name)}</span><span class="hc-sub">${esc(t.manager || "")}${t.mine ? " · your team" : ""}</span></span></div>`;
     const g = pwrGap(ev, x);
-    let body = hcRow("Power rank", `<b>#${x.power}</b> of ${n}`, `· ${fp(x.ppg)} expected PPG`) +
-      (g ? hcRow(g.ahead ? "Lead" : "Gap", `${fp(g.d)} PPG`, `${g.ahead ? "ahead of #2" : `behind #${g.rank}`}${pwrClose(ev, x) ? ` · close: within ${PWR.close} PPG of a neighbour, the order could easily flip` : ""}`) : "") +
+    let body = hcRow("Power rank", `<b>#${x.power}</b> of ${n}`, `· ${fmt(pwrRV(x))} roster value`) +
+      (g ? hcRow(g.ahead ? "Lead" : "Gap", fmt(g.d), `${g.ahead ? "ahead of #2" : `behind #${g.rank}`}${pwrClose(ev, x) ? ` · close: within ${pwrClosePct()} of a neighbour, the order could easily flip` : ""}`) : "") +
+      hcRow("Lineup value", fmt(x.startVal), "· best starting lineup") +
+      hcRow("Bench share", fmt(x.score - x.startVal), "· bench depth, discounted") +
+      hcRow("Expected PPG", `<b>${fp(x.ppg)}</b>`, `· ${ordinal(rankOf(y => y.ppg))} of ${n} · rest of the regular season`) +
       hcRow("Starting lineup", `${fp(x.ppgLineup)} PPG`, "· its regular starters, when they play") +
       hcRow("Depth adds", `${fp(x.ppgDepth)} PPG`, `· bench filling byes and absences · ${ordinal(rankOf(y => y.ppgDepth))} of ${n}`) +
-      hcRow("Full strength", `${fp(x.ppgIdeal)} PPG`, "· nobody missing") +
-      hcRow("AM value", fmt(x.score), "· starters + bench share (the old team score)");
+      hcRow("Full strength", `${fp(x.ppgIdeal)} PPG`, "· nobody missing");
     const rooms = EDIT_POS.map(pos => { const pl = x.place[pos], d = x.room[pos] - ev.avg[pos];
       return hcRow(`<span class="pos ${pos}">${pos}</span>`, `${ordinal(pl)} <span class="hc-d ${pl <= third ? "up" : pl > n - third ? "down" : ""}">${d >= 0 ? "+" : "−"}${fmt(Math.abs(d))}</span>`, "vs avg"); }).join("");
     let lens = "";
@@ -19590,7 +19598,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < ns ? "Full" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
     }
     return head + hcSec("", body) + hcSec("Position rooms", rooms) + lens +
-      hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: expected points per week for the rest of the regular season, from AM values converted to points, with byes and typical absences; injured reserve counts, taxi doesn't. Position rooms are AM values. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
+      hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: roster value = the best lineup's league-adjusted AM values plus a discounted bench; expected PPG = points per week for the rest of the regular season, from AM values converted to points, with byes and typical absences; injured reserve counts, taxi doesn't. Position rooms are AM values. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
   };
 
   // Start-up: restore a saved connection
