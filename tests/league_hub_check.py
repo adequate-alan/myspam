@@ -272,7 +272,7 @@ with sync_playwright() as p:
     pg.click("[data-pb-pos=DEPTH]"); pg.wait_for_timeout(300)
     ok("DEPTH SCORE" in pg.inner_text(".pr-head").upper(), "Depth lens")
     pg.click("[data-pb-pos=OVERALL]"); pg.wait_for_timeout(300)
-    ok(pg.locator(".pb-ctx").count() == 0 and "TEAM SCORE" in pg.inner_text(".pr-head").upper(), "Overall restores the normal Power Rankings")
+    ok(pg.locator(".pb-ctx").count() == 0 and "EXPECTED PPG" in pg.inner_text(".pr-head").upper(), "Overall restores the normal Power Rankings (expected PPG)")
     # Switching lens never scrolls by itself (Alan, Oct 5): same scroll position, no focus on the team row
     pg.set_viewport_size({"width": 1280, "height": 500})
     pg.evaluate("window.scrollTo(0, document.querySelector('.pb-modes').getBoundingClientRect().top + window.scrollY - 120)")
