@@ -80,7 +80,8 @@
       "board_edit_check",
       "board_sync_check",
       "board_pipeline_check",
-      "provisional_pricing_check"
+      "provisional_pricing_check",
+      "zero_value_check"
     ],
     "weights": {
       "inflight_check": 395,
@@ -110,6 +111,7 @@
       "history_check": 30,
       "board_sync_check": 28,
       "provisional_pricing_check": 60,
+      "zero_value_check": 50,
       "xss_check": 26,
       "board_edit_check": 26,
       "injury_check": 25,

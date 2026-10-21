@@ -11255,6 +11255,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         }
       }
     } else players.forEach(p => raw.set(p.id, p.value));
+    // a player worth 0 on the board is worth 0 in every format (Alan, Oct 21): no guard, floor or lift may make him positive
+    // (8- and 10-team 1QB: the tier-drop guard lifted AM PPR's Provisional tier, board values 0 included, to ~11)
+    players.forEach(p => { if (raw.has(p.id) && !(p.value > 0)) raw.set(p.id, 0); });
     /* each position: your order, always (Alan, Oct 21: "my positional rankings are my rankings"). The league's format
        changes values and the overall cross-position board, never who you rank above whom inside a position, so the
        League-adjusted position tabs show the AM Board's order (and are edited through the same moves). Before, a player
