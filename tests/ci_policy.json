@@ -59,6 +59,7 @@
       "roster_fit_check",
       "package_model_check",
       "balance_check",
+      "tc_team1_check",
       "trade_history_check",
       "power_rank_check",
       "trade_target_check",
@@ -134,7 +135,8 @@
       "value_curve_check": 1,
       "market_sync_check": 1,
       "package_model_check": 30,
-      "balance_check": 45
+      "balance_check": 45,
+      "tc_team1_check": 40
     },
     "exclusive": [
       "drag_check",

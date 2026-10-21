@@ -6564,6 +6564,14 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (viewStale.delete(name) && !flip) {
       try { ({ myteam: renderMyTeam, league: () => { renderLeague(); renderFA(); }, trade: renderTrade }[name] || (() => {}))(); } catch (e) { console.warn("tab redraw", e); }
     } else if (name === "trade" && tradeStale && !flip) renderTrade();
+    // opened fresh from another page with nothing in it: Team 1 is your team (Alan, Oct 21); a trade someone
+    // started (Trade with, Analyze trade, the Trade Finder) keeps its teams, and on the page your pick stands
+    if (name === "trade" && was && was !== "trade" && LG.myRosterId != null && !TC.hist
+        && !sides.A.length && !sides.B.length && !sides.C.length && $("team-A").value !== String(LG.myRosterId)) {
+      $("team-A").value = String(LG.myRosterId);
+      if ($("team-B").value === String(LG.myRosterId)) $("team-B").value = "";
+      renderTrade();
+    }
     if (name === "finder" && typeof renderFinder === "function") renderFinder();
   }
   for (const [k, btn] of Object.entries(tabs)) {
@@ -7718,11 +7726,6 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       (leagues.length ? `<optgroup label="${esc(SOURCE_NAME[slSource()])} league${leagues.length > 1 ? "s" : ""}">${leagues.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}</optgroup>` : "") +
       `<option value="connect">${sl ? "Connect a different league…" : "Connect a league…"}</option>`;
     sel.value = on ? sl.activeId : "none";
-    // first time in league mode for this league: the left side starts as your team
-    if (on && TC.defaulted !== sl.activeId) {
-      TC.defaulted = sl.activeId;
-      if (!$("team-A").value && LG.myRosterId != null && !$("team-B").value) $("team-A").value = String(LG.myRosterId);
-    }
     $("tc-teams").hidden = !on;
     $("tc-teamC").hidden = !(on && TC3.on);
     $("tc-badge").innerHTML = on
@@ -7827,9 +7830,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (v !== sl.activeId) {
       toast("Loading league…");
       try {
-        await syncLeague(v);
-        $("team-A").value = LG.myRosterId != null ? String(LG.myRosterId) : ""; $("team-B").value = "";
-        toast(`Switched to ${activeData().league.name}. Your trade was kept.`);
+        await syncLeague(v);   // Team 1 becomes your team there (renderLeagueUI → tcLeagueReset)
+        toast(`Switched to ${activeData().league.name}.${TC.dropped ? ` ${TC.dropped} player${TC.dropped > 1 ? "s" : ""} not on these rosters ${TC.dropped > 1 ? "were" : "was"} removed.` : ""}`);
       } catch (err) { toast("Couldn't load that league: " + err.message); }
     } else if (!$("team-A").value && LG.myRosterId != null) $("team-A").value = String(LG.myRosterId);
     renderTradeContext(); renderTrade();
@@ -8562,6 +8564,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("balance").hidden = !(shown && TC_UI.balance);
     $("balance-btn").setAttribute("aria-expanded", shown && TC_UI.balance);
     $("balance-btn").textContent = TC_UI.balance ? "Hide suggestions" : "Balance this trade";
+  }
+  /* Another league became active (Alan, Oct 21): the trade drops what doesn't fit the new setup, the way the
+     wrong-side warning's Remove does. Team 1 is you, Team 2 / 3 start unpicked, so a player stays only when he
+     still fits: Team 1 sends him and he's on your roster here, or Team 1 gets him and another team here has him.
+     A past trade (its rosters belong to the old league) and the third team end. */
+  function tcLeagueReset() {
+    const n = sides.A.length + sides.B.length + sides.C.length;
+    TC.hist = null; setThree(false);
+    const mine = LG.myRosterId != null ? String(LG.myRosterId) : null, own = id => { const o = LG.ownerOf.get(id); return o ? String(o.rosterId) : null; };
+    sides.B = sides.B.filter(id => mine && own(id) === mine);
+    sides.A = sides.A.filter(id => own(id) && own(id) !== mine);
+    origin.clear(); TC_UI.undo = null;
+    TC.dropped = n - sides.A.length - sides.B.length;
+    if (currentTab === "trade") renderTrade(); else tradeStale = true;
   }
   // League mode: a team left on "Pick a team" is filled from the owner of the players it sends (all one team),
   // so a trade built from search still shows real team names and roster impact. Never overrides a picked team.
@@ -11735,6 +11751,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!d) {
       $("fmt-override").hidden = true; $("league-chip").classList.remove("custom");
       ["A", "B", "C"].forEach(s => { $("teamroster-" + s).hidden = true; });
+      TC.teamsFor = null;
       if (["myteam", "league"].some(k => tabs[k].getAttribute("aria-selected") === "true")) showTab("rankings");
       return;
     }
@@ -11754,12 +11771,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     of.innerHTML = opts.join("");
     if (![...of.options].some(o => o.value === LG.ownerFilter)) LG.ownerFilter = "all";
     of.value = LG.ownerFilter;
+    // Team 1 is you (Alan, Oct 21): a new league (or account, or "my team") resets the pickers, so roster ids
+    // from the previous league never carry over; a refresh of the same league keeps whatever was picked
+    const tcKey = [sl.userId || "", sl.activeId, LG.myRosterId].join("|"), fresh = TC.teamsFor !== tcKey;
     ["A", "B", "C"].forEach(s => {
-      const sel = $("team-" + s), cur = sel.value;
+      const sel = $("team-" + s), cur = fresh ? (s === "A" && LG.myRosterId != null ? String(LG.myRosterId) : "") : sel.value;
       sel.innerHTML = `<option value="">Pick a team</option>` + LG.teams.map(t =>
         `<option value="${t.rosterId}">${esc(t.mine ? "My Team · " + t.name : t.name)}</option>`).join("");
       sel.value = [...sel.options].some(o => o.value === cur) ? cur : "";
     });
+    if (fresh && TC.teamsFor != null) tcLeagueReset();
+    TC.teamsFor = tcKey;
     renderTeamRosters();
   }
   function renderLeagueMenu() {

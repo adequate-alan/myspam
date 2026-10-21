@@ -75,7 +75,7 @@ RISK = {
                    "renderLeague powerHtml teamExpand standingsHtml matchupsHtml rostersHtml rostersInner scheduleHtml txHtml txRail moveRow openBids tradeCard tradeHistoryHtml snapText agedText thBlock renderMyTeam renderFA strengthCards recentForm recentFormData formTrend availability recentFormHtml RF_MIN_PTS RF_MIN_PCT mtActions".split()),
  "finder-ui":     (TARGETED, ["trade_target_check", "market_edge_check"],
                    "renderFinder renderDiscover renderFinderPick tfResults targetCard mlCard shortWhy fullWhy fitBadge".split()),
- "calc-ui":       (TARGETED, ["roster_fit_check", "trade_target_check", "package_model_check", "balance_check"],
+ "calc-ui":       (TARGETED, ["roster_fit_check", "trade_target_check", "package_model_check", "balance_check", "tc_team1_check"],
                    "renderTrade renderTrade3 renderImpact rationaleHtml renderBreakdown formatBreakdown renderBeforeAfter renderHist renderTradeContext renderTcMarket".split()),
 }
 FN = {n: k for k, (_, _, ns) in RISK.items() for n in ns}
