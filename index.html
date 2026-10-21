@@ -4681,7 +4681,18 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .mv-lab { font-size: 0.7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
 .mv-pop .mv-input { width: 84px; text-align: left; }
 .mv-now, .mv-to { margin: 7px 0 0; font-size: 0.78rem; line-height: 1.35; color: var(--text-muted); } .mv-to { color: var(--text-primary); } .mv-to.err { color: var(--warn-text); }
-.mv-acts { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; } .mv-acts .mv-out { margin-right: auto; }
+.mv-acts { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+/* Out for season (Alan, Oct 21): a muted-red status line above the footer, never a footer action; the footer is Cancel | Move.
+   Not out yet: the same line is a small text link that sends him out; already out: the plain status. */
+.mv-status { display: flex; align-items: center; gap: 6px; margin: 9px 0 0; padding: 7px 0 0; border-top: 1px solid var(--line); font-size: 0.68rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--st-out-text); }
+.mv-status[hidden] { display: none; }
+.mv-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--st-out); flex: none; }
+.mv-status .mv-sub { white-space: nowrap; text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--text-muted); }
+.mv-out { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; border: 0; padding: 2px 0; margin: 0; min-height: 0; width: auto; white-space: nowrap; text-align: left; cursor: pointer;
+  text-decoration: underline dotted transparent; text-underline-offset: 3px; }
+.mv-out:hover, .mv-out:focus-visible { text-decoration-color: currentColor; outline: none; }
+.mv-out:focus-visible { box-shadow: 0 0 0 2px var(--focus-ring); border-radius: 3px; }
+.mv-status.is-out::before { box-shadow: 0 0 0 2px color-mix(in srgb, var(--st-out) 30%, transparent); }
 /* drag and drop: a floating copy of the row, a faded placeholder, a thin red insertion line, a live rank preview */
 #rank-body img { -webkit-user-drag: none; user-drag: none; }
 #panel-rankings .handle { position: relative; }
@@ -5214,7 +5225,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <label class="mv-row"><span class="mv-lab" id="mv-lab">To #</span><input class="mv-input" id="mv-input" type="number" min="1" step="1" inputmode="numeric" aria-describedby="mv-now mv-to"></label>
       <p class="mv-now" id="mv-now"></p>
       <p class="mv-to" id="mv-to"></p>
-      <div class="mv-acts"><button type="button" class="btn link mv-out" id="mv-out" title="Send him to the Out for season tier: the bottom of the board, value 0">Out for season</button><button type="button" class="btn link" id="mv-cancel">Cancel</button><button type="button" class="btn primary" id="mv-apply">Move</button></div>
+      <p class="mv-status" id="mv-status-set" hidden><button type="button" class="mv-out" id="mv-out" title="Send him to the Out for season tier: the bottom of the board, value 0">Mark out for season</button><span class="mv-sub">· value 0</span></p>
+      <p class="mv-status is-out" id="mv-status-out" hidden>Out for season<span class="mv-sub">· projections 0</span></p>
+      <div class="mv-acts"><button type="button" class="btn link" id="mv-cancel">Cancel</button><button type="button" class="btn primary" id="mv-apply">Move</button></div>
     </div>
     <div class="controls">
       <div class="chips" id="pos-chips" role="group" aria-label="Filter by position"></div>
@@ -9697,7 +9710,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("mv-now").textContent = `Now #${me.rank ?? "–"} overall · ${me.posRank || me.pos}` + (me.tier !== "" && me.tier != null ? ` · ${isTagTier(me.tier) ? tierLabel(me.pos, me.tier) : "Tier " + me.tier}` : "");
     const to = $("mv-to"); to.textContent = t.error && inp.value !== "" ? t.error : t.text || `Type a rank from 1 to ${t.max}.`; to.classList.toggle("err", !!t.error && inp.value !== "");
     $("mv-apply").disabled = !!t.error;
-    $("mv-out").hidden = me.posNum == null || String(me.tier) === String(OUT_TIER);   // already out: move him back with a rank
+    const isOut = String(me.tier) === String(OUT_TIER);   // already out: the plain status; move him back with a rank
+    $("mv-status-set").hidden = me.posNum == null || isOut; $("mv-status-out").hidden = !isOut;
     mvPlace();
   }
   function mvOpen(id, btn) {
