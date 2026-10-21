@@ -783,20 +783,32 @@ function modelValue(pos, posRank, projRank = null, games = 0) {
    Receives the players each team GETS ({ name, pos, value, ... }).
    Returns { scoreA, scoreB, rawA, rawB, note }.
 
-   The trade is decided by raw player value (the numbers on the board).
-   1-for-1 and even-count trades are pure raw value.
+   The trade is decided by raw player value (the numbers on the board),
+   with a package adjustment for how the value is spread over players.
 
-   Uneven trades (2-for-1, 3-for-1, 3-for-2 …), Alan Oct 5: the side getting
-   more players only has so many lineup spots, so its EXTRA players (the
-   lowest-valued ones beyond the other side's count) count for a share of
-   their value: (his value / the best player in the deal) ^ PACKAGE_POWER.
-   A 4,000 piece next to an 8,000 star counts about half; a piece close to
-   the star counts nearly in full; a 500 throw-in counts for almost nothing.
-   So three mid-tier players don't equal one elite player just because the
-   raw totals match. Shallow leagues raise the power (÷ league depth, see
-   DEPTH_ADJUST): stars matter more there, extra bodies less.
-   (Replaced a 5% best-player bonus + 2% roster-spot cost, which let three
-   RB13-RB17s beat Bijan Robinson by 32% in the Oct 5 mock-trade audit.)
+   Rank-matched package adjustment (Alan, Oct 21, Trade Calculator audit;
+   replaced the Oct 5 extras rule): both sides are sorted high to low and
+   the shorter one is padded with empty spots. At each rank, the part of a
+   piece the other side's piece at that rank doesn't match, max(0, v - o),
+   counts at (v / the best player in the deal) ^ PACKAGE_POWER of its value,
+   the rest in full. A piece facing an empty spot (an extra player) is
+   priced exactly as before: a 4,000 piece next to an 8,000 star counts
+   about half, a piece close to the star nearly in full, a 500 throw-in
+   almost nothing. So 1-for-1, 2-for-1 and 3-for-1 read as before, three
+   mid-tier players still don't equal one elite player, and 8,000 + 1,000
+   is no longer the same as 5,000 + 4,000 just because both are two players.
+   The old rule only discounted the extras when the counts differed, so a
+   0-value throw-in that made the counts equal removed the whole discount
+   and could flip a verdict (Gibbs for K. Williams + C. Williams: Split →
+   "Team Beta is getting a steal" after adding Jalen Hurts at 0), and in
+   14% of tested additions a player made the side receiving him worse off.
+   Now a 0-value player changes nothing (he is the same as an empty spot),
+   and adding a player never lowers the receiving side's adjusted margin
+   nor raises it by more than his value (tests/package_model_check.py).
+   Shallow leagues raise the power (÷ league depth, see DEPTH_ADJUST):
+   stars matter more there, extra bodies less. valueRead below keeps the
+   raw reading beside the adjusted one, so the adjustment never creates or
+   reverses a winner on its own.
    ===================================================================== */
 const PACKAGE_POWER = 1.0;
 
@@ -819,29 +831,30 @@ let LEAGUE_DEPTH = 1;   // set by the site for the league or settings in use
 function tradeModel(sideA, sideB) {
   const raw = side => side.reduce((sum, p) => sum + p.value, 0);
   const rawA = raw(sideA), rawB = raw(sideB);
-  const extra = sideA.length - sideB.length;
-  if (!sideA.length || !sideB.length || extra === 0) return { scoreA: rawA, scoreB: rawB, rawA, rawB, note: "", adj: null };
+  if (!sideA.length || !sideB.length) return { scoreA: rawA, scoreB: rawB, rawA, rawB, note: "", adj: null };
 
-  const deal = (rawA + rawB) / 2;
-  const top = side => Math.max(0, ...side.map(p => p.value));
-  const tA = top(sideA), tB = top(sideB), star = Math.max(tA, tB, 1);
+  const desc = side => side.map(p => Math.max(0, p.value)).sort((x, y) => y - x);
+  const va = desc(sideA), vb = desc(sideB), tA = va[0] || 0, tB = vb[0] || 0, star = Math.max(tA, tB, 1);
   const d = LEAGUE_DEPTH > 0 ? LEAGUE_DEPTH : 1;   // shallow leagues: stars matter more, extra bodies less
-  const more = extra > 0 ? "A" : "B", n = Math.abs(extra);
-  const big = (extra > 0 ? sideA : sideB).map(p => Math.max(0, p.value)).sort((x, y) => y - x);
-  const extras = big.slice(big.length - n);
-  const spot = extras.reduce((sum, v) => sum + v * (1 - Math.pow(Math.min(1, v / star), PACKAGE_POWER / d)), 0);
+  // the unmatched part of v (o = the other side's piece at the same rank, 0 for an empty spot) counts at (v / star) ^ power
+  const cut = (v, o) => Math.max(0, v - o) * (1 - Math.pow(Math.min(1, v / star), PACKAGE_POWER / d));
+  let cutA = 0, cutB = 0; const extras = [];
+  for (let i = 0; i < Math.max(va.length, vb.length); i++) {
+    const a = va[i] || 0, b = vb[i] || 0, ca = cut(a, b), cb = cut(b, a);
+    cutA += ca; cutB += cb;
+    if (ca >= 0.5) extras.push({ v: a, kept: a - ca, side: "A", vs: b });
+    if (cb >= 0.5) extras.push({ v: b, kept: b - cb, side: "B", vs: a });
+  }
+  if (!extras.length) return { scoreA: rawA, scoreB: rawB, rawA, rawB, note: "", adj: null };
 
-  let scoreA = rawA, scoreB = rawB;
-  if (extra > 0) scoreA -= spot; else scoreB -= spot;
-
+  const scoreA = rawA - cutA, scoreB = rawB - cutB;
   const swing = Math.round((scoreA - scoreB) - (rawA - rawB));
-  const best = tA > tB ? "A" : tB > tA ? "B" : null;
+  const deal = (rawA + rawB) / 2, best = tA > tB ? "A" : tB > tA ? "B" : null;
+  const more = cutA >= cutB ? "A" : "B", n = extras.filter(x => x.side === more).length;
   const note = swing === 0 ? "" :
     `Package adjustment: ${Math.abs(swing).toLocaleString("en-US")} toward Team ${swing > 0 ? "A" : "B"} `
-    + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal; Team ${more}'s ${n} extra player${n > 1 ? "s count" : " counts"} for less next to the best player).`;
-  // each extra piece's value and what it keeps (for the hover cards; the totals above are unchanged)
-  const kept = extras.map(v => ({ v, kept: v * Math.pow(Math.min(1, v / star), PACKAGE_POWER / d) }));
-  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: 0, spot, extras: kept } };
+    + `(${(100 * Math.abs(swing) / deal).toFixed(1)}% of the deal; Team ${more}'s value is spread over more or smaller pieces, which count for less next to the best player).`;
+  return { scoreA, scoreB, rawA, rawB, note, adj: { swing, deal, best, more, extra: n, bonus: 0, spot: Math.abs(cutA - cutB), cutA, cutB, extras } };
 }
 
 /* The value verdict from the raw and the package-adjusted totals (Alan, Oct 11). The package adjustment is a heuristic
@@ -7625,7 +7638,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (a && a.swing !== 0) {
       const to = a.swing > 0 ? "A" : "B";
       out.push(`Package adjustment: ${Math.abs(a.swing).toLocaleString("en-US")} toward ${subj(to)} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal`
-        + `; ${subj(a.more)} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, who count for less next to the best player`
+        + `; ${subj(a.more)} ${verb(a.more, "get", "gets")} value spread over more or smaller pieces, which count for less next to the best player`
         + (a.depth && Math.abs(a.depth - 1) > 0.02 ? `; ×${(1 / a.depth).toFixed(2)} for ${depthWord(a.depth) ? "a " + depthWord(a.depth) + " league" : "league depth"}` : "") + `).`);
     } else if (r.note && !a) out.push(r.note);
     return out.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join("\n");
@@ -7687,7 +7700,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         : own.length
         ? `<span>${ownLine}, so ${own.length === 1 ? "he's" : "they're"} on the wrong side: each card lists what that team <i>gets</i>. Roster impact is off until the sides are fixed.</span>
           <span class="tc-warn-acts">${TC3.on ? "" : `<button class="btn primary" type="button" data-tc-flip>Flip players</button> `}<button class="btn" type="button" data-tc-remove>Remove</button></span>`
-        : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster (kept as hypothetical).${swap && TC_UI.swapAsk !== swap.key ? ` <button class="btn link inline tc-swap" type="button" data-tc-swap-ask>Want to swap teams?</button>` : ""}</span>
+        : `<span>${names(stray)} ${stray.length === 1 ? "isn't" : "aren't"} on ${esc(uniq(stray.map(x => x.from)).join(" or "))}'s roster. The value comparison still counts ${stray.length === 1 ? "him" : "them"} (hypothetical), but Roster Impact, Acceptance and the roster rationale are off until every player comes from the team that has him.${swap && TC_UI.swapAsk !== swap.key ? ` <button class="btn link inline tc-swap" type="button" data-tc-swap-ask>Want to swap teams?</button>` : ""}</span>
           ${swap && TC_UI.swapAsk === swap.key
             ? `<span class="tc-warn-acts tc-swap-ask"><span>Replace <b>${esc(swap.from.name)}</b> with <b>${esc(swap.to.name)}</b>?</span><button class="btn primary" type="button" data-tc-swap>Replace</button><button class="btn" type="button" data-tc-swap-cancel>Cancel</button></span>`
             : `<button class="btn" type="button" data-tc-remove>Remove</button>`}`;
@@ -7938,7 +7951,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function rosterContext() {
     const d = activeData(), tA = sideTeam("A"), tB = sideTeam("B");
     if (!d || !tA || !tB || tA === tB || (!sides.A.length && !sides.B.length)) return null;
-    if (tcStray().some(x => x.own)) return null;   // reversed sides: a lineup read would be meaningless (see the warning)
+    // any player who isn't on the roster of the team sending him: no roster read (Oct 21 audit, P1). Reversed sides read
+    // as "+0.0%, basically even"; a player from a third team or the waiver wire was added to the receiving roster for
+    // free (Bowers on Team 3 put Alpha's lineup at +9.9% instead of −4.2%). The value comparison stays (hypothetical).
+    if (tcStray().length) return null;
     const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
@@ -8124,7 +8140,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       tempered: "The extra player counts for less next to the best one in the deal, which narrows the raw gap.",
       evened: "One reading is about even and the other only a slight edge, so the trade reads as fair.",
     }[vr.kind] || "";
-    return `Raw asset value: <b>${txt(vr.raw)}</b> · Package-adjusted: <b>${txt(vr.adj)}</b> ${infoIcon(`Raw = the players' league-adjusted values added up. In an uneven trade the side getting more players counts its ${a.extra} extra player${a.extra > 1 ? "s" : ""} at a share of their value (value ÷ the best player's in the deal): ${fmt(Math.abs(a.swing))} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal) toward ${who(a.swing > 0 ? "A" : "B")}. It's a provisional heuristic (it under-credits extra players who'd start on most rosters), so it can narrow a verdict but never create or reverse a winner by itself. Roster needs never change these numbers.`, "About the package adjustment")}<br><span class="muted">${esc(note)}</span>${smallNote}`;
+    return `Raw asset value: <b>${txt(vr.raw)}</b> · Package-adjusted: <b>${txt(vr.adj)}</b> ${infoIcon(`Raw = the players' league-adjusted values added up. Both sides are lined up best to best; the part of a piece the other side doesn't match at the same spot (an extra player, or a smaller second piece) counts at a share of its value (value ÷ the best player's in the deal): ${fmt(Math.abs(a.swing))} (${(100 * Math.abs(a.swing) / a.deal).toFixed(1)}% of the deal) toward ${who(a.swing > 0 ? "A" : "B")}. It's a provisional heuristic (it under-credits extra players who'd start on most rosters), so it can narrow a verdict but never create or reverse a winner by itself. Roster needs never change these numbers.`, "About the package adjustment")}<br><span class="muted">${esc(note)}</span>${smallNote}`;
   }
   // the same trade in market / expert consensus values (FantasyCalc + Flock on AM's scale), when every player has one
   // the calculator's trade in market values (mkTrade at the calculator's depth); null without a complete source
@@ -8575,7 +8591,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function rosterContext3() {
     const d = activeData(), T = Object.fromEntries(SIDES3.map(s => [s, sideTeam(s)]));
     if (!d || SIDES3.some(s => !T[s]) || new Set(SIDES3.map(s => T[s].rosterId)).size < 3) return null;
-    if (tcStray().some(x => x.own)) return null;   // a team set to get its own player: no roster read (see the warning)
+    if (tcStray().length) return null;   // a player not from the team sending him (or a team set to get its own): no roster read
     const map = bySleeper(), lu = lineupOf(d.league), slots = leagueSlots(d.league), limit = slots.length + lu.bench;
     const byVal = (a, b) => dv(b) - dv(a);
     const outSet = t => new Set([...(t.roster.reserve || []), ...(t.roster.taxi || [])].map(String));
@@ -8727,19 +8743,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const cap = t => t.charAt(0).toUpperCase() + t.slice(1), a = res.adj, out = [];
     out.push(`${cap(subj("A"))} ${verb("A", "get", "gets")} ${fmt(res.rawA)} in AM Value and ${subj("B")} ${verb("B", "get", "gets")} ${fmt(res.rawB)}.`);
     if (a && a.bonus) out.push(`${cap(subj(a.best))} ${verb(a.best, "land", "lands")} the best player in an uneven trade, worth a small bonus (+${fmt(a.bonus)}).`);
-    if (a && a.spot) out.push(`${cap(subj(a.more))} ${verb(a.more, "take", "takes")} on ${a.extra} extra player${a.extra > 1 ? "s" : ""}, who only fill${a.extra > 1 ? "" : "s"} lineup spots next to the best player in the deal, so ${a.extra > 1 ? "they count" : "he counts"} for less (−${fmt(a.spot)}).`);
+    if (a && Math.round(a.spot)) out.push(`${cap(subj(a.more))} ${verb(a.more, "get", "gets")} value spread over more or smaller pieces, which only fill lineup spots next to the best player in the deal, so that part counts for less (−${fmt(a.spot)} net).`);
     out.push(fair ? `After adjustments the two sides are within ${pct} of each other.` : `After adjustments, ${subj(ahead)} ${verb(ahead, "come", "comes")} out ${pct} ahead.`);
     return out.join(" ");
   }
   function renderBreakdown(res, names, pct, tier) {
     const a = res.adj || {}, row = (label, va, vb, info, cls = "") => `<tr class="${cls}"><th scope="row">${label}${info ? " " + infoIcon(info, "About " + label) : ""}</th><td>${va}</td><td>${vb}</td></tr>`;
     const sign = v => (Math.round(v) === 0 ? "–" : `${v > 0 ? "+" : "−"}${fmt(Math.abs(v))}`);
-    const spotA = a.spot && a.more === "A" ? -a.spot : 0, spotB = a.spot && a.more === "B" ? -a.spot : 0;
+    const spotA = -(a.cutA || 0), spotB = -(a.cutB || 0);
     $("tc-breakdown-body").innerHTML = `<table class="bd-table">
         <thead><tr><th scope="col"></th><th scope="col">${esc(names.A)}</th><th scope="col">${esc(names.B)}</th></tr></thead>
         <tbody>
           ${row("Raw value", fmt(res.rawA), fmt(res.rawB), LG.fmtOn ? `League-adjusted AM values (${tcValuesName()}) for the players each side gets. See Format adjustment below.` : "Base AM values for the players each side gets.")}
-          ${row("Package adjustment", sign(spotA), sign(spotB), "In an uneven trade (2-for-1, 3-for-1 …), the side getting more players counts its extra players at a share of their value: their value divided by the best player's in the deal (a 4,000 piece next to an 8,000 star counts about half). Shallow leagues discount extras more.")}
+          ${row("Package adjustment", sign(spotA), sign(spotB), "Both sides are lined up best to best. The part of a piece the other side doesn't match at the same spot (an extra player, or a much smaller second piece) counts at a share of its value: its value divided by the best player's in the deal (an extra 4,000 piece next to an 8,000 star counts about half). A player worth 0 changes nothing. Shallow leagues discount more.")}
           ${row("Adjusted value", fmt(res.a), fmt(res.b), "", "bd-total")}
         </tbody></table>
       <p class="pp-note">${pct} gap · ${esc(tier.range)}</p>${formatBreakdown(names)}`;
@@ -17061,21 +17077,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const uniq = sets => { const seen = new Set(); return sets.filter(x => { const k = x.map(p => p.id).sort().join(","); return seen.has(k) ? false : seen.add(k); }); };
         giveSets = uniq(giveSets); getSets = uniq(getSets);
       }
-      // the same package adjustment the trade model applies (extra players next to the best one count for less): the
-      // 3-for-1 / 2-for-4 pre-filter compares these, since their raw totals are far apart even when the trade is fair
-      const depth = leagueView() ? LG.depth || 1 : 1;   // the depth runModel uses for dv (never whatever the last read left)
+      // the same package adjustment the trade model applies (tradeModel itself, at the depth runModel uses for dv):
+      // the 3-for-1 / 2-for-4 pre-filter compares these, since their raw totals are far apart even when the trade is fair
+      const depth = leagueView() ? LG.depth || 1 : 1;   // never whatever the last read left in LEAGUE_DEPTH
       const adjSums = (a, b) => {
-        const star = Math.max(1, ...a.map(V), ...b.map(V)), n = a.length - b.length, more = n > 0 ? a : b;
-        const extras = more.map(V).sort((x, y) => y - x).slice(more.length - Math.abs(n));
-        const spot = extras.reduce((t, v) => t + v * (1 - Math.pow(Math.min(1, Math.max(0, v) / star), PACKAGE_POWER / depth)), 0);
-        return n > 0 ? [sum(a) - spot, sum(b)] : [sum(a), sum(b) - spot];
+        const keep = LEAGUE_DEPTH; LEAGUE_DEPTH = depth;
+        try { const m = tradeModel(a.map(p => ({ value: V(p) })), b.map(p => ({ value: V(p) }))); return [m.scoreA, m.scoreB]; }
+        finally { LEAGUE_DEPTH = keep; }
       };
       for (const give of giveSets) for (const get of getSets) {
         if (opts.shapes && !opts.shapes.some(([a, b]) => give.length === a && get.length === b)) continue;   // trade type: S gives a, gets b
         if (give.length === 3 && get.length !== 2 && !big) continue;   // three pieces only as a 3-for-2 (or a picked 3-for-1)
         if (give.some(p => get.includes(p))) continue;
-        const [rawGive, rawGet] = big ? adjSums(give, get) : [sum(give), sum(get)], lo = Math.min(rawGive, rawGet), hi = Math.max(rawGive, rawGet);
-        if (lo <= 0 || (hi - lo) / lo * 100 > opts.gap + 9) continue;   // the roster adjustment is capped well under 9%
+        // kept when either reading (raw or package-adjusted) is within reach: the verdict reads both, never one alone
+        const near = ([x, y]) => { const lo = Math.min(x, y); return lo > 0 && (Math.max(x, y) - lo) / lo * 100 <= opts.gap + 9; };
+        if (!near([sum(give), sum(get)]) && !near(adjSums(give, get))) continue;
         if (give.length === 2 && get.length === 2 && Math.min(V(give[1]), V(get[1])) < 0.3 * Math.min(V(give[0]), V(get[0]))) continue;
         if (opts.pos !== "ANY") {
           const side = mode === "give" ? get : give, main = side.slice().sort(byVal)[0];
@@ -19354,11 +19370,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      (tradeModel's own extras) → the market's view (Market edge) → what he does to the receiving lineup (the calculator's
      roster fit, when it was calculated). Nothing new is computed. */
   function hcPackage(p) {
-    if (TC3.on || !sides.A.length || !sides.B.length || sides.A.length === sides.B.length) return "";
+    if (TC3.on || !sides.A.length || !sides.B.length) return "";
     const side = sides.A.includes(p.id) ? "A" : sides.B.includes(p.id) ? "B" : null; if (!side) return "";
-    const r = runModel(sides.A, sides.B), a = r.adj; if (!a || !a.extras || a.more !== side) return "";
-    const v = tv(p), hit = a.extras.find(x => Math.abs(x.v - Math.max(0, v)) < 0.5);
-    return hit ? hcRow("Package", `<b>${fmt(hit.kept)}</b>`, `· counts ${Math.round(100 * hit.kept / Math.max(1, hit.v))}% as an extra piece next to the deal's best player`) : hcRow("Package", "counts in full", "· not one of the extra pieces");
+    const r = runModel(sides.A, sides.B), a = r.adj; if (!a || !a.extras) return "";
+    const v = tv(p), hit = a.extras.find(x => x.side === side && Math.abs(x.v - Math.max(0, v)) < 0.5);
+    return hit ? hcRow("Package", `<b>${fmt(hit.kept)}</b>`, `· counts ${Math.round(100 * hit.kept / Math.max(1, hit.v))}% ${hit.vs ? "where the other side's piece at his spot is smaller" : "as an extra piece"} next to the deal's best player`) : hcRow("Package", "counts in full", "· matched by the other side's piece at his spot");
   }
   HC_KINDS.tv = (arg) => {
     const [id, side] = arg.split(":"), p = hcPlayer(id); if (!p) return null;

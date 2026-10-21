@@ -57,6 +57,7 @@
       "production_check",
       "week_stats_check",
       "roster_fit_check",
+      "package_model_check",
       "trade_history_check",
       "trade_target_check",
       "value_state_check",
@@ -122,7 +123,8 @@
       "ros_prior_check": 4,
       "projection_check": 5,
       "value_curve_check": 1,
-      "market_sync_check": 1
+      "market_sync_check": 1,
+      "package_model_check": 30
     },
     "exclusive": [
       "drag_check",
