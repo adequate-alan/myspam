@@ -15003,7 +15003,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const W = waiverUpgrades(WU.all ? WU.mode : "pos");
     if (!W) return "";
     const { list, info } = W, any = W.mode === "any";
-    const shown = WU.all ? list : list.slice(0, 3);
+    // Collapsed: the best upgrade at each position (the list is by value gain), so one position never fills the summary
+    const seen = new Set(), shown = WU.all ? list : list.filter(x => !seen.has(x.p.pos) && seen.add(x.p.pos));
+    const hidden = list.length - shown.length;
     const rk = (p, ov) => (ov ? `#${LG.adjRank.get(p.id)}` : posLabel(p));
     const side = (p, ov, sub) => `<span class="wu-pl">${face(p.sleeperId, p.name, "sm")}<span class="wu-tx"><span class="wu-nm">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
       <span class="wu-meta"><span class="pos ${esc(p.pos)}">${esc(rk(p, false))}</span>${ov ? `<span class="wu-ov">#${LG.adjRank.get(p.id)} overall</span>` : ""}<span class="wu-v">AM Value ${fmt(dv(p))}</span>${sub ? `<span class="wu-sub">${sub}</span>` : ""}</span></span></span>`;
@@ -15023,6 +15025,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       info.ir ? `IR and taxi players aren't compared` : "",
       info.unranked ? `${info.unranked} rostered player${info.unranked === 1 ? "" : "s"} without an AM rank (K, DEF or unranked) not compared` : ""
     ].filter(Boolean);
+    if (!WU.all && hidden) notes.unshift(`Best at each position · ${hidden} more in View all`);
     const count = list.length;
     const head = `<div class="wu-head"><div><h3 class="wu-title">Waiver upgrades</h3>
         <p class="wu-sub">${any ? "Available players ranked above someone on your roster at any position, by league-adjusted overall AM rank." : "Available players ranked above someone on your roster at their position."} Ranked higher isn't a drop recommendation: check your lineup, byes and injuries first.</p></div>
@@ -15030,7 +15033,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const ctl = WU.all ? `<div class="view-toggle wu-mode" role="group" aria-label="Compare upgrades by"><button class="vt-btn" type="button" data-wu-mode="pos" aria-pressed="${!any}">Same position</button><button class="vt-btn" type="button" data-wu-mode="any" aria-pressed="${any}">Any position</button></div>` : "";
     const body = count ? `<ol class="wu-list">${rows}</ol>`
       : `<p class="wu-empty">No available player is ranked above anyone on ${esc(info.team.mine ? "your" : info.team.name + "'s")} roster${any ? "" : " at his position"}.</p>`;
-    const more = `<button class="wu-all" type="button" data-wu-all aria-expanded="${WU.all}">${WU.all ? "Show top 3" : list.length > 3 ? `View all ${list.length} upgrades` : "View all · any position"}</button>`;
+    const more = `<button class="wu-all" type="button" data-wu-all aria-expanded="${WU.all}">${WU.all ? "Show best per position" : hidden ? `View all ${list.length} upgrades` : "View all · any position"}</button>`;
     return `<section class="wu" aria-label="Waiver upgrades">${head}${ctl}${body}<div class="wu-foot">${notes.length ? `<span class="wu-notes">${esc(notes.join(" · "))}</span>` : "<span></span>"}${more}</div></section>`;
   }
   $("fa-upg").addEventListener("click", e => {

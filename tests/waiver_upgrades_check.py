@@ -4,11 +4,13 @@ Two synthetic 12-team leagues (a Superflex TE premium one on AM SF PPR TE+ and a
 owns roster 3. Every expected list is recomputed here in Python from the page's own league-adjusted numbers
 (SPM.leagueRanks: value, position, position rank, overall rank by Sleeper ID) and the mocked rosters. Checks:
   1. Same position (default): the list, its order (value gain, then rank), the lowest-ranked rostered player each one
-     outranks, the gains and rank gaps; the top three rows on screen; the tab's count
+     outranks, the gains and rank gaps; the tab's count = every qualifying available player
+  1b. the collapsed card shows the best upgrade at each position (Alan, Oct 22: one position never fills the summary),
+     in value-gain order, with the rest in View all; when only one position has upgrades it shows that one and says more exist
   2. players owned by another team never appear; an available player at value 0 never does; injured reserve and taxi
      players are never the comparison; a rostered player without an AM rank is counted in the note, never compared;
      open roster spots are named
-  3. View all lists every upgrade; Any position compares by overall rank; Show top 3 goes back
+  3. View all lists every upgrade; Any position compares by overall rank; Show best per position goes back
   4. clicking the available player, and the rostered one, opens that player's drawer
   5. values follow the league's own board (1QB → AM PPR) and the numbers shown are its league-adjusted values
   6. switching leagues and a Sleeper refresh that changes ownership recalculate the list and the count
@@ -67,6 +69,12 @@ def expected(lid, R, mode="pos"):
     out.sort(key=lambda x: (-x["gain"], k(x["sid"])))
     return out, mine, me
 
+def summary(exp, R):
+    seen, out = set(), []
+    for x in exp:
+        if R[x["sid"]][1] not in seen: seen.add(R[x["sid"]][1]); out.append(x)
+    return out
+
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
 h = functools.partial(Quiet, directory=ROOT)
@@ -122,9 +130,14 @@ with sync_playwright() as p:
     exp, mine, me = expected("L1", S["R"])
     ok(len(exp) >= 4, f"the synthetic league has more than three same-position upgrades ({len(exp)})")
     ok(same(S["pos"], exp), "Same position: the page's list equals the list recomputed from league-adjusted ranks and the rosters")
-    ok([(r["av"], r["over"]) for r in S["rows"]] == [(x["sid"], x["over"]) for x in exp[:3]], "the top three rows on screen are the three strongest, each against the lowest-ranked player of yours he outranks")
-    ok(all(r["gain"] == "+" + fmtn(x["gain"]) for r, x in zip(S["rows"], exp)), "each row shows the value difference")
-    ok(all(r["vals"] == ["AM Value " + fmtn(S["R"][x["sid"]][0]), "AM Value " + fmtn(S["R"][x["over"]][0])] for r, x in zip(S["rows"], exp)), "both players show their league-adjusted AM value")
+    sm = summary(exp, S["R"])
+    poss = [S["R"][x["sid"]][1] for x in exp]
+    ok(len(set(poss[:3])) < 3 and len(sm) >= 2, f"(the value-sorted top three repeat a position, {poss[:3]}, so the summary rule matters)")
+    ok([(r["av"], r["over"]) for r in S["rows"]] == [(x["sid"], x["over"]) for x in sm], f"the collapsed card shows the best upgrade at each position, by value gain ({[S['R'][x['sid']][1] for x in sm]})")
+    ok(len({S["R"][r["av"]][1] for r in S["rows"]}) == len(S["rows"]), "no position appears twice in the collapsed card")
+    ok(f"{len(exp) - len(sm)} more in View all" in S["notes"], f"the card says how many more are in View all ({S['notes']!r})")
+    ok(all(r["gain"] == "+" + fmtn(x["gain"]) for r, x in zip(S["rows"], sm)), "each row shows the value difference")
+    ok(all(r["vals"] == ["AM Value " + fmtn(S["R"][x["sid"]][0]), "AM Value " + fmtn(S["R"][x["over"]][0])] for r, x in zip(S["rows"], sm)), "both players show their league-adjusted AM value")
     ok(S["cnt"] == str(len(exp)), f"the Waiver Wire tab carries the count ({S['cnt']!r})")
     ok(S["n"].startswith(f"{len(exp)} potential upgrade"), f"the header names the count ({S['n']!r})")
     owned = {s for r in DATA["L1"][2] for s in r["players"]}
@@ -142,6 +155,8 @@ with sync_playwright() as p:
     pg.click("#fa-upg [data-wu-all]"); pg.wait_for_timeout(300)
     n_all = pg.locator("#fa-upg .wu-row").count()
     ok(n_all == len(exp), f"View all lists every upgrade ({n_all} of {len(exp)})")
+    rows_all = pg.eval_on_selector_all("#fa-upg .wu-row", "rs => rs.map(r => r.querySelector('.wu-av [data-player]').dataset.player)")
+    ok(rows_all == [x["sid"] for x in exp], "View all keeps the complete list in value-gain order, every qualifying player")
     ok(pg.locator("#fa-upg [data-wu-mode]").count() == 2, "the expanded view offers Same position / Any position")
     pg.click('#fa-upg [data-wu-mode="any"]'); pg.wait_for_timeout(300)
     exp_any, _, _ = expected("L1", S["R"], "any")
@@ -152,10 +167,10 @@ with sync_playwright() as p:
     ok(pg.locator('[data-lsub="waivers"] .lg-cnt').text_content() == str(len(exp)), "the tab count stays the same-position count")
     shot(pg, "waiver-upgrades-any-position-dark")
     pg.click("#fa-upg [data-wu-all]"); pg.wait_for_timeout(300)
-    ok(pg.locator("#fa-upg .wu-row").count() == min(3, len(exp)) and pg.locator("#fa-upg [data-wu-mode]").count() == 0, "Show top 3 goes back to the same-position top three")
+    ok(pg.locator("#fa-upg .wu-row").count() == len(sm) and pg.locator("#fa-upg [data-wu-mode]").count() == 0, "Show best per position goes back to the collapsed summary")
 
     # 4: the drawer
-    first = exp[0]
+    first = sm[0]
     pg.click(f'#fa-upg .wu-av [data-player="{first["sid"]}"]'); pg.wait_for_timeout(700)
     ok(pg.evaluate("() => document.getElementById('player-modal').open") and NAME[first["sid"]] in pg.locator("#player-modal").inner_text(), "clicking the available player opens his drawer")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
@@ -173,6 +188,21 @@ with sync_playwright() as p:
     ok(S2["cnt"] == str(len(exp2)) and len(exp2) == len(exp) - 1, f"the tab count follows the refresh ({S2['cnt']})")
     other["players"].remove(top)
 
+    # 1b: only one position has upgrades: the card shows its best one and says more are in View all
+    by = {}
+    for x in exp: by.setdefault(S["R"][x["sid"]][1], []).append(x["sid"])
+    keep = max(by, key=lambda k: len(by[k]))
+    gone = [s for k, v in by.items() if k != keep for s in v]
+    other["players"].extend(gone)
+    pg.click("#league-chip"); pg.wait_for_timeout(200); pg.click('#league-menu [data-act="refresh"]'); pg.wait_for_timeout(1500)
+    S4 = state(pg)
+    exp4, _, _ = expected("L1", S4["R"])
+    ok(len(by[keep]) >= 2 and {S4["R"][x["sid"]][1] for x in exp4} == {keep}, f"(only {keep} upgrades left: {len(exp4)})")
+    ok([r["av"] for r in S4["rows"]] == [exp4[0]["sid"]], f"one position with upgrades: the card shows only his strongest {keep}")
+    ok(f"{len(exp4) - 1} more in View all" in S4["notes"] and pg.locator("#fa-upg [data-wu-all]").text_content() == f"View all {len(exp4)} upgrades", "and says more options are in View all")
+    ok(S4["cnt"] == str(len(exp4)) and S4["n"].startswith(f"{len(exp4)} potential upgrade"), f"the tab count is every qualifying available player, not the number of positions ({S4['cnt']})")
+    for s_ in gone: other["players"].remove(s_)
+
     # 6b + 5: switch to the 1QB league (AM PPR)
     pg.click("#league-chip"); pg.wait_for_timeout(200); pg.click('#league-menu [data-league="L2"]'); pg.wait_for_timeout(1800)
     if not pg.locator("#fa-upg .wu").count(): pg.click('[data-lsub="waivers"]'); pg.wait_for_timeout(500)
@@ -180,8 +210,8 @@ with sync_playwright() as p:
     exp3, _, _ = expected("L2", S3["R"])
     ok(S3["board"] == "ppr" and base_board != "ppr", f"the 1QB league reads AM PPR ({base_board} → {S3['board']})")
     ok(same(S3["pos"], exp3), "after switching leagues the list is recomputed on the new league's rosters and values")
-    ok([(r["av"], r["over"]) for r in S3["rows"]] == [(x["sid"], x["over"]) for x in exp3[:3]], "the rows on screen follow the switch")
-    ok(all(r["vals"][0] == "AM Value " + fmtn(S3["R"][x["sid"]][0]) for r, x in zip(S3["rows"], exp3)), "values shown are the 1QB league's league-adjusted AM PPR values")
+    ok([(r["av"], r["over"]) for r in S3["rows"]] == [(x["sid"], x["over"]) for x in summary(exp3, S3["R"])], "the rows on screen follow the switch")
+    ok(all(r["vals"][0] == "AM Value " + fmtn(S3["R"][x["sid"]][0]) for r, x in zip(S3["rows"], summary(exp3, S3["R"]))), "values shown are the 1QB league's league-adjusted AM PPR values")
     ok(S3["cnt"] == (str(len(exp3)) if exp3 else ""), "the tab count follows the switch")
     pg.close()
 
