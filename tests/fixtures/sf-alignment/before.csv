@@ -1,0 +1,263 @@
+player,pos,team,rank,pos_rank,tier,value,proj_ppg,games,proj_score,sleeper_id,source,tier_name
+Jahmyr Gibbs,RB,DET,1,1,1,10000,23.65,5,20.04,9221,manual,Elite RB1
+Bijan Robinson,RB,ATL,3,3,2,9685,19.41,6,17.31,9509,manual,High RB1
+Kenneth Walker III,RB,KC,2,2,2,9690,20.94,5,18.10,8151,manual,High RB1
+Josh Allen,QB,BUF,6,1,1,9296,19.92,6,18.18,4984,manual,Elite QB1
+Jaxon Smith-Njigba,WR,SEA,4,1,2,9636,20.18,6,17.89,9488,manual,Elite WR1
+Puka Nacua,WR,LAR,7,2,2,9272,20.12,4,17.08,9493,manual,Elite WR1
+Brock Bowers,TE,LV,5,1,1,9320,20.65,4,17.33,11604,manual,Elite TE1
+Trey Mcbride,TE,ARI,8,2,1,8417,22.94,6,19.88,8130,manual,Elite TE1
+CeeDee Lamb,WR,DAL,11,5,3,7286,18.49,6,16.62,6786,manual,WR1
+Ja'Marr Chase,WR,CIN,9,3,3,7780,17.80,5,15.61,7564,manual,WR1
+Amon-Ra St. Brown,WR,DET,10,4,3,7305,19.13,5,16.81,7547,manual,WR1
+Christian McCaffrey,RB,SF,12,4,3,7268,19.53,6,17.40,4034,manual,RB1
+Derrick Henry,RB,BAL,15,6,3,7230,16.99,6,15.49,3198,manual,RB1
+Jonathan Taylor,RB,IND,13,5,3,7249,18.86,6,16.89,6813,manual,RB1
+Lamar Jackson,QB,BAL,14,2,2,7239,17.93,4,16.14,4881,manual,High QB1
+Brock Purdy,QB,SF,16,3,2,6890,19.27,6,17.70,8183,manual,High QB1
+Jayden Daniels,QB,WAS,22,7,3,5804,17.74,4,16.03,11566,manual,QB1
+Joe Burrow,QB,CIN,17,4,2,6689,18.38,5,16.84,6770,manual,High QB1
+Drake Maye,QB,NE,19,5,2,6552,19.10,6,17.54,11564,manual,High QB1
+Patrick Mahomes II,QB,KC,23,8,3,5663,17.33,5,16.09,4046,manual,QB1
+Kyren Williams,RB,LAR,20,8,4,5956,16.62,6,15.21,8150,manual,Low RB1
+James Cook III,RB,BUF,18,7,4,6569,17.22,6,15.67,8138,manual,Low RB1
+Caleb Williams,QB,CHI,21,6,3,5941,17.93,3,15.96,11560,manual,QB1
+Jared Goff,QB,DET,28,9,3,5548,18.62,5,17.01,3163,manual,QB1
+Dak Prescott,QB,DAL,39,13,4,4418,17.85,6,16.64,3294,manual,Low QB1
+Ashton Jeanty,RB,LV,36,10,4,4857,15.92,6,14.69,12527,manual,Low RB1
+Chris Olave,WR,NO,26,7,4,5577,16.47,6,15.10,8144,manual,Low WR1
+Drake London,WR,ATL,30,10,4,5349,14.45,6,13.59,8112,manual,Low WR1
+Zay Flowers,WR,BAL,29,9,4,5465,14.30,5,13.36,9997,manual,Low WR1
+Nico Collins,WR,HOU,31,11,4,5343,14.55,4,13.37,7569,manual,Low WR1
+Justin Jefferson,WR,MIN,27,8,4,5562,13.16,4,12.33,6794,manual,Low WR1
+Christian Watson,WR,GB,33,12,4,5061,13.36,6,12.77,8167,manual,Low WR1
+Parker Washington,WR,JAX,34,13,4,4869,12.31,6,11.98,9487,manual,Low WR1
+Javonte Williams,RB,DAL,24,9,4,5606,15.30,6,14.23,7588,manual,Low RB1
+Chase Brown,RB,CIN,43,13,5,3911,14.84,5,13.75,9224,manual,High RB2
+Trevor Lawrence,QB,JAX,32,10,3,5326,17.60,6,16.45,7523,manual,QB1
+Matthew Stafford,QB,LAR,40,14,4,4406,18.84,6,17.38,421,manual,Low QB1
+Jordan Love,QB,GB,38,12,4,4495,17.26,6,16.19,6804,manual,Low QB1
+Bryce Young,QB,CAR,35,11,3,4863,16.47,5,15.48,9228,manual,QB1
+George Kittle,TE,SF,42,3,2,3982,15.22,6,14.09,4217,manual,High TE1
+Jaylen Warren,RB,PIT,47,15,5,3850,14.06,6,13.30,8228,manual,High RB2
+Malik Nabers,WR,NYG,25,6,4,5591,17.17,6,15.63,11632,manual,Low WR1
+Garrett Wilson,WR,NYJ,45,15,5,3885,13.38,6,12.79,8146,manual,High WR2
+Tetairoa McMillan,WR,CAR,52,17,5,3730,14.10,5,13.22,12526,manual,High WR2
+D'Andre Swift,RB,CHI,41,12,5,4011,15.98,6,14.74,6790,manual,High RB2
+Chuba Hubbard,RB,CAR,37,11,5,4682,13.03,5,12.45,7594,manual,High RB2
+Sam LaPorta,TE,DET,61,5,3,3096,15.89,5,14.40,10859,manual,Mid TE1
+Bucky Irving,RB,TB,50,16,5,3760,14.16,6,13.38,11584,manual,High RB2
+Bhaysul Tuten,RB,JAX,46,14,5,3860,10.49,6,10.62,12490,manual,High RB2
+Jeremiyah Love,RB,ARI,51,17,5,3740,11.56,5,11.40,13287,manual,High RB2
+George Pickens,WR,DAL,54,19,5,3669,15.03,6,14.02,8137,manual,High WR2
+Jalen Hurts,QB,PHI,260,45,99,0,17.39,5,16.14,6904,manual,Out for season
+Tee Higgins,WR,CIN,53,18,5,3674,12.41,5,12.01,6801,manual,High WR2
+Davante Adams,WR,LAR,262,103,99,0,14.58,6,13.69,2133,manual,
+Tyler Shough,QB,NO,56,15,5,3632,16.56,6,15.67,12545,manual,QB2
+C.J. Stroud,QB,HOU,57,16,5,3567,16.73,6,15.79,9758,manual,QB2
+Kyler Murray,QB,MIN,58,17,5,3495,14.37,4,13.84,5849,manual,QB2
+Mike Evans,WR,SF,94,32,7,1849,13.27,6,12.64,2216,manual,Low WR2
+Matthew Golden,WR,GB,44,14,5,3893,10.79,6,10.84,12501,manual,High WR2
+Michael Wilson,WR,ARI,60,22,5,3378,13.17,6,12.63,10232,manual,High WR2
+Isaiah Likely,TE,NYG,49,4,2,3765,17.17,6,15.55,8131,manual,High TE1
+Tyler Warren,TE,IND,73,8,4,2505,14.78,5,13.61,12518,manual,Low TE1/ High TE2
+DeVonta Smith,WR,PHI,48,16,5,3811,13.97,4,12.93,7525,manual,High WR2
+Saquon Barkley,RB,PHI,64,19,6,2843,12.81,4,11.98,4866,manual,RB2
+Breece Hall,RB,NYJ,63,18,6,2850,13.29,3,12.38,8155,manual,RB2
+DJ Moore,WR,BUF,65,23,6,2835,9.46,4,10.03,4983,manual,WR2
+Tucker Kraft,TE,GB,66,7,3,2784,14.01,6,13.18,9484,manual,Mid TE1
+Bo Nix,QB,DEN,74,21,6,2419,15.23,6,14.67,11563,manual,Shaky Plays
+Rhamondre Stevenson,RB,NE,82,21,6,1989,10.40,6,10.56,7611,manual,RB2
+A.J. Brown,WR,NE,55,20,5,3664,13.50,2,12.07,5859,manual,High WR2
+Justin Herbert,QB,LAC,75,22,6,2329,15.00,6,14.50,6797,manual,Shaky Plays
+Rashee Rice,WR,KC,83,27,6,1971,15.34,3,13.61,10229,manual,WR2
+Kirk Cousins,QB,LV,67,18,6,2684,15.16,6,14.62,1166,manual,Shaky Plays
+Travis Kelce,TE,KC,77,10,4,2216,12.16,5,11.74,1466,manual,Low TE1/ High TE2
+Aaron Rodgers,QB,PIT,70,19,6,2599,15.65,6,14.99,96,manual,Shaky Plays
+Sam Darnold,QB,SEA,93,26,7,1853,15.41,5,14.62,4943,manual,Shaky Plays
+Dalton Kincaid,TE,BUF,76,9,4,2298,11.17,6,11.05,10236,manual,Low TE1/ High TE2
+Dallas Goedert,TE,PHI,79,11,4,2134,13.82,4,12.64,5022,manual,Low TE1/ High TE2
+Jacoby Brissett,QB,ARI,87,24,6,1928,16.29,6,15.47,3257,manual,Shaky Plays
+Colston Loveland,TE,CHI,62,6,3,2931,11.77,6,11.50,12517,manual,Mid TE1
+Harold Fannin Jr.,TE,CLE,108,14,5,1307,10.65,6,10.66,12506,manual,TE2
+Jameson Williams,WR,DET,69,24,6,2600,10.65,5,10.75,8148,manual,WR2
+Cam Skattebo,RB,NYG,109,27,8,1185,12.74,5,12.24,12481,manual,RB3/Flex
+Jalen Coker,WR,CAR,59,21,5,3437,9.95,4,10.30,11646,manual,High WR2
+Luther Burden III,WR,CHI,71,25,6,2523,10.89,6,10.92,12519,manual,WR2
+Jaylen Waddle,WR,DEN,95,33,7,1845,9.92,6,10.19,7526,manual,Low WR2
+Juwan Johnson,TE,NO,80,12,4,2042,12.77,6,12.25,7002,manual,Low TE1/ High TE2
+Baker Mayfield,QB,TB,72,20,6,2515,15.81,3,14.69,4892,manual,
+Emeka Egbuka,WR,TB,81,26,6,2008,12.45,6,12.09,12514,manual,WR2
+Denzel Boston,WR,CLE,97,35,7,1466,9.99,6,10.25,13346,manual,Low WR2
+Quinshon Judkins,RB,CLE,90,22,7,1880,12.18,5,11.85,12512,manual,Low RB2
+Omarion Hampton,RB,LAC,107,26,8,1312,11.48,6,11.37,12507,manual,RB3/Flex
+Terry McLaurin,WR,WAS,261,102,99,0,10.80,5,10.87,5927,manual,
+Carnell Tate,WR,TEN,84,28,7,1952,11.37,6,11.28,13279,manual,Low WR2
+DK Metcalf,WR,PIT,88,30,7,1916,11.85,6,11.64,5846,manual,Low WR2
+Josh Downs,WR,IND,112,39,8,1139,9.79,6,10.10,9500,manual,WR3
+Kyle Monangai,RB,CHI,91,23,7,1862,11.53,4,11.36,12534,manual,Low RB2
+Malik Willis,QB,MIA,99,27,7,1366,12.23,5,12.45,8161,manual,Shaky Plays
+Ladd McConkey,WR,LAC,101,36,7,1328,8.89,5,9.50,11635,manual,Low WR2
+Rome Odunze,WR,CHI,96,34,7,1474,10.57,6,10.68,11620,manual,Low WR2
+Stefon Diggs,WR,WAS,89,31,7,1898,12.12,5,11.80,2449,manual,Low WR2
+Aaron Jones Sr.,RB,MIN,106,25,8,1316,13.69,5,12.92,4199,manual,RB3/Flex
+Ollie Gordon II,RB,MIA,98,24,7,1462,8.16,4,9.11,12495,manual,Low RB2
+Brenton Strange,TE,JAX,120,15,6,681,11.41,6,11.23,9480,manual,Low TE2
+Tony Pollard,RB,TEN,117,31,9,802,11.24,6,11.19,5967,manual,Low RB3/Flex
+Woody Marks,RB,HOU,119,33,9,737,9.33,6,9.75,12474,manual,Low RB3/Flex
+David Montgomery,RB,HOU,121,34,9,629,9.59,5,10.05,5892,manual,Low RB3/Flex
+Jordyn Tyson,WR,NO,102,37,7,1324,,,,13281,manual,Low WR2
+Daniel Jones,QB,IND,100,28,7,1362,15.07,6,14.55,5870,manual,Shaky Plays
+Geno Smith,QB,NYJ,103,29,7,1323,12.88,6,12.90,1373,manual,Shaky Plays
+Deshaun Watson,QB,CLE,92,25,7,1858,16.16,6,15.37,4017,manual,Shaky Plays
+Michael Penix Jr.,QB,ATL,78,23,6,2136,15.03,4,14.35,11559,manual,
+Jameis Winston,QB,NYG,170,33,8,225,13.73,5,13.52,2306,manual,Dead
+Deebo Samuel SR.,WR,SF,114,41,8,967,10.12,5,10.39,5872,manual,WR3
+KC Concepcion Jr.,WR,CLE,105,38,8,1320,10.69,6,10.78,13298,manual,WR3
+Cam Ward,QB,TEN,115,31,7,966,12.27,6,12.45,12522,manual,Shaky Plays
+Jacorey Croskey-Merritt,RB,WAS,163,51,11,236,8.53,5,9.24,12533,manual,Deep bench
+Josh Jacobs,RB,GB,68,20,6,2645,,,,5850,manual,RB2
+Blake Corum,RB,LAR,111,29,8,1178,7.18,6,8.13,11586,manual,RB3/Flex
+J.K. Dobbins,RB,DEN,116,30,9,964,10.41,6,10.56,6806,manual,Low RB3/Flex
+Pat Freiermuth,TE,PIT,135,18,6,418,10.04,6,10.20,7600,manual,Low TE2
+RJ Harvey,RB,DEN,110,28,8,1181,9.96,5,10.26,12489,manual,RB3/Flex
+Jordan Mason,RB,MIN,123,36,9,625,8.94,1,10.32,8408,manual,Low RB3/Flex
+TreVeyon Henderson,RB,NE,122,35,9,627,8.94,5,9.58,12529,manual,Low RB3/Flex
+Travis Ettienne Jr.,RB,NO,128,40,10,556,11.67,3,11.41,7543,manual,Bench/Handcuff
+Alvin Kamara,RB,NO,125,38,9,621,9.50,5,9.93,4035,manual,Low RB3/Flex
+Braelon Allen,RB,NYJ,124,37,9,623,8.46,6,9.10,11576,manual,Low RB3/Flex
+T.J. Hockenson,TE,MIN,127,16,6,579,13.30,5,12.45,5844,manual,Low TE2
+Emanuel Wilson,RB,SEA,165,52,11,233,9.50,6,9.88,11435,manual,Deep bench
+Jadarian Price,RB,SEA,129,41,10,554,8.07,3,9.24,13286,manual,Bench/Handcuff
+Germie Bernard,WR,PIT,85,29,7,1934,11.44,5,11.31,13274,manual,Low WR2
+Rico Dowdle,RB,PIT,131,42,10,527,10.62,3,10.80,7021,manual,Bench/Handcuff
+Mark Andrews,TE,BAL,168,22,6,227,10.62,6,10.63,5012,manual,Low TE2
+Marvin Harrison Jr.,WR,HOU,130,42,10,552,7.25,5,8.32,11628,manual,Flex Play
+Jordan Addison,WR,MIN,145,49,10,356,9.33,4,9.89,9756,manual,Flex Play
+Kenyon Sadiq,TE,NYJ,169,23,6,226,8.57,6,9.13,13330,manual,Low TE2
+Keaton Mitchell,RB,LAC,166,53,11,232,6.11,6,7.33,9511,manual,Deep bench
+Zach Charbonnet,RB,SEA,126,39,9,619,,,,9753,manual,Low RB3/Flex
+Devaughn Vele,WR,NO,143,47,10,359,9.21,6,9.66,11834,manual,Flex Play
+MarShawn Lloyd,RB,GB,167,54,11,231,8.50,6,9.12,11581,manual,Deep bench
+Xavier Worthy,WR,KC,113,40,8,970,9.08,5,9.63,11624,manual,WR3
+Emmet Johnson,RB,KC,137,44,10,368,4.87,5,6.63,13337,manual,Bench/Handcuff
+Brian Robinson,RB,ATL,139,45,10,365,6.29,6,7.47,8154,manual,Bench/Handcuff
+Romeo Doubs,WR,NE,164,60,12,234,8.72,6,9.36,8121,manual,Deep bench
+Jakobi Meyers,WR,JAX,133,43,10,442,10.72,6,10.79,5947,manual,Flex Play
+Chris Godwin Jr.,WR,TB,155,52,11,245,9.11,6,9.58,4037,manual,Shaky Flex
+Tyler Higbee,TE,LAR,132,17,6,492,10.52,5,10.56,3271,manual,Low TE2
+Tyler Allgeier,RB,ARI,142,47,10,361,8.40,6,9.06,8132,manual,Bench/Handcuff
+Kaelon Black,RB,SF,141,46,10,362,5.07,6,6.56,13414,manual,Bench/Handcuff
+Rachaad White,RB,WAS,118,32,9,776,8.29,5,9.07,8136,manual,Low RB3/Flex
+Keon Coleman,WR,BUF,159,56,11,241,8.24,6,8.94,11637,manual,Shaky Flex
+Khalil Shakir,WR,BUF,150,50,11,332,9.84,6,10.14,8134,manual,Shaky Flex
+Kyle Pitts Sr.,TE,ATL,86,13,4,1929,10.52,6,10.56,7553,manual,Low TE1/ High TE2
+Tyson Bagent,QB,CHI,253,42,8,12,11.06,3,11.99,11256,manual,Dead
+Jake Ferguson,TE,DAL,175,26,6,218,9.78,6,10.00,8110,manual,Low TE2
+Makai Lemon,WR,PHI,161,58,11,239,6.86,6,7.89,13294,manual,Shaky Flex
+Dontayvion Wicks,WR,PHI,160,57,11,240,7.93,6,8.70,9486,manual,Shaky Flex
+Adonai Mitchell,WR,NYJ,179,61,12,184,7.92,2,9.46,11625,manual,Deep bench
+Wan'Dale Robinson,WR,TEN,180,62,12,183,10.92,6,10.94,8126,manual,Deep bench
+Ryan Flournoy,WR,DAL,181,63,12,182,8.22,6,8.92,11783,manual,Deep bench
+Keenan Allen,WR,IND,144,48,10,358,11.44,5,11.32,1479,manual,Flex Play
+Antonio Williams,WR,WAS,156,53,11,244,7.33,6,8.25,13301,manual,Shaky Flex
+Josh Cameron,WR,JAX,185,64,12,151,4.45,6,6.09,13394,manual,Deep bench
+Kendrick Bourne,WR,ARI,186,65,12,148,9.42,5,9.88,4454,manual,Deep bench
+Jonah Coleman,RB,DEN,147,48,10,336,5.86,2,8.44,13345,manual,Bench/Handcuff
+Malik Washington,WR,MIA,151,51,11,331,8.71,5,9.37,11610,manual,Shaky Flex
+Courtland Sutton,WR,DEN,187,66,12,141,10.08,6,10.31,5045,manual,Deep bench
+Mike Washington Jr.,RB,LV,136,43,10,369,4.90,6,6.43,13305,manual,Bench/Handcuff
+Kenny Gainwell,RB,TB,172,55,11,222,6.87,6,7.90,7567,manual,Deep bench
+Jaylen Wright,RB,MIA,173,56,11,221,3.52,4,6.02,11643,manual,Deep bench
+Hunter Henry,TE,NE,152,20,6,302,10.12,6,10.26,3214,manual,Low TE2
+Darren Waller,TE,CAR,171,24,6,223,8.99,5,9.47,2505,manual,Low TE2
+Marcus Mariota,QB,WAS,182,35,8,176,15.57,3,14.14,2307,manual,Dead
+Chig Okonkwo,TE,WAS,146,19,6,355,9.34,4,9.79,8210,manual,Low TE2
+Will Shipley,RB,PHI,183,57,11,166,4.47,5,6.50,11577,manual,Deep bench
+Chris Rodriguez,RB,JAX,202,58,11,117,5.42,6,6.81,10219,manual,Deep bench
+Dalton Schultz,TE,HOU,174,25,6,220,12.48,6,12.03,5001,manual,Low TE2
+Mike Gesicki,TE,CIN,176,27,6,217,9.35,4,9.79,4993,manual,Low TE2
+Oronde Gadsden II,TE,LAC,177,28,6,215,8.73,6,9.21,12493,manual,Low TE2
+Terrance Ferguson,TE,LAR,205,29,9,111,7.50,3,8.93,12487,auto,Low TE2
+Carson Wentz,QB,MIN,184,36,8,155,14.95,2,13.97,3161,manual,Dead
+Tre Tucker,WR,LV,140,46,10,363,10.27,6,10.45,10213,manual,Flex Play
+Kalif Raymond,WR,CHI,188,67,12,139,7.29,6,8.22,3634,manual,Deep bench
+Brian Thomas Jr.,WR,JAX,189,68,12,138,7.78,6,8.62,11631,manual,Deep bench
+Case Keenum,QB,CHI,207,37,8,106,17.76,2,14.90,1737,manual,Dead
+Jonathon Brooks,RB,CAR,204,59,11,112,5.91,2,8.46,11583,manual,Deep bench
+Drew Lock,QB,SEA,212,38,8,87,15.59,2,14.29,5854,manual,Dead
+Michael Pittman Jr.,WR,PIT,190,69,12,137,8.10,3,9.26,6819,manual,Deep bench
+Quentin Johnston,WR,LAC,191,70,12,135,9.06,5,9.62,9754,manual,Deep bench
+Tyreek Hill,WR,FA,192,71,12,134,,,,3321,manual,Deep bench
+Cyrus Allen,WR,KC,193,72,12,133,1.78,3,5.47,13413,manual,Deep bench
+Dohnte Meyers,WR,CIN,194,73,12,132,5.63,5,7.17,13264,manual,Deep bench
+Chris Bell,WR,MIA,195,74,12,131,5.48,5,7.16,13311,manual,Deep bench
+Rashod Batemen,WR,BAL,196,75,12,130,5.88,6,7.24,7571,manual,Deep bench
+Caleb Douglas,WR,MIA,197,76,12,129,9.44,2,10.22,13296,manual,Deep bench
+Alec Pierce,WR,IND,162,59,11,237,8.88,2,9.94,8142,manual,Shaky Flex
+Mack Hollins,WR,NE,198,77,12,128,8.58,4,9.45,4177,manual,Deep bench
+Pat Bryant,WR,DEN,199,78,12,127,6.26,4,7.97,12492,manual,Deep bench
+Jauan Jennings,WR,MIN,200,79,12,121,5.35,4,7.23,7049,manual,Deep bench
+De'Zhaun Stribling,WR,SF,201,80,12,120,,,,13417,manual,Deep bench
+Ted Hurst,WR,TB,203,81,12,113,7.80,5,8.72,13317,auto,Deep bench
+Roman Wilson,WR,PIT,211,82,12,88,6.21,5,7.67,11630,manual,Deep bench
+Tre Harris,WR,LAC,216,83,12,65,6.49,5,7.87,12509,manual,Deep bench
+Travis Hunter,WR,JAX,220,84,12,60,,,,12530,auto,Deep bench
+Tyjae Spears,RB,TEN,206,60,11,109,6.38,6,7.53,9508,manual,Deep bench
+Xavier Hutchinson,WR,HOU,222,85,12,49,6.81,6,7.86,10218,manual,Deep bench
+Kaleb Johnson,RB,GB,208,61,11,104,2.71,6,4.79,12504,auto,Deep bench
+Cade Otton,TE,TB,209,30,9,103,9.24,6,9.60,8111,auto,Low TE2
+Kimani Vidal,RB,LAC,215,62,11,66,7.50,5,8.51,11647,auto,Deep bench
+J.J. McCarthy,QB,NYG,104,30,7,1321,14.66,2,13.35,11565,manual,Shaky Plays
+Isiah Pacheco,RB,DET,217,63,11,64,,,,8205,manual,Deep bench
+AJ Barner,TE,SEA,210,31,9,89,9.29,6,9.64,11603,manual,Low TE2
+Michael Mayer,TE,LV,154,21,6,257,10.48,6,10.53,9482,manual,Low TE2
+Ja'Kobi Lane,WR,BAL,134,44,10,441,7.69,2,9.35,13293,manual,Flex Play
+Tua Tagovailoa,QB,ATL,213,39,8,76,11.92,1,12.92,6768,manual,Dead
+Shedeur Sanders,QB,CLE,214,40,8,67,12.40,1,12.95,12524,manual,Dead
+Justin Fields,QB,KC,221,41,8,50,,,,7591,manual,Dead
+Devin Singletary,RB,NYG,219,64,11,61,5.47,3,7.69,6130,auto,Deep bench
+Rashid Shaheed,WR,SEA,225,86,12,44,8.14,6,8.86,8676,auto,Deep bench
+Kendre Miller,RB,NO,148,49,10,335,6.90,5,8.07,9757,manual,Bench/Handcuff
+Zach Ertz,TE,PHI,218,32,10,62,7.29,3,8.64,1339,auto,
+Tyrone Tracy Jr.,RB,NYG,149,50,10,334,5.46,6,6.85,11655,manual,Bench/Handcuff
+Cooper Kupp,WR,SEA,226,87,12,41,7.25,6,8.19,4039,auto,Deep bench
+Mac Jones,QB,SF,257,43,8,7,13.60,1,13.03,7527,auto,Dead
+Jayden Reed,WR,GB,228,88,12,37,8.30,2,10.02,10222,auto,Deep bench
+Noah Fant,TE,NO,223,33,10,48,6.34,5,7.58,5857,auto,
+David Njoku,TE,LAC,224,34,10,47,11.18,2,10.87,4033,auto,
+Omar Cooper Jr.,WR,NYJ,138,45,10,366,,,,13276,manual,Flex Play
+Jaylin Noel,WR,HOU,158,55,11,242,,,,12536,manual,Shaky Flex
+Tank Bigsby,RB,PHI,227,65,11,38,4.70,4,6.80,9225,manual,Deep bench
+Tory Horton,WR,SEA,230,89,12,35,5.28,3,7.57,12497,manual,Deep bench
+Trey Benson,RB,ARI,229,66,11,36,,,,11589,auto,Deep bench
+Kayshon Boutte,WR,HOU,231,90,12,34,6.63,6,7.72,9504,manual,Deep bench
+Ricky Pearsall,WR,SF,233,91,12,32,,,,11638,auto,Deep bench
+Jake Tonges,TE,SF,232,35,10,33,,,,8698,auto,
+Troy Franklin,WR,DEN,236,92,12,29,7.69,5,8.69,11627,auto,Deep bench
+Greg Dulcich,TE,MIA,234,36,11,31,9.12,4,9.64,8172,auto,
+Dylan Sampson,RB,CLE,235,67,11,30,4.82,1,8.95,12469,auto,Deep bench
+Josh Palmer,WR,BUF,237,93,12,28,5.24,4,7.16,7670,auto,Deep bench
+Jayden Higgins,WR,HOU,240,94,12,25,,,,12484,auto,Deep bench
+Justice Hill,RB,BAL,238,68,11,27,4.83,6,6.37,5995,auto,Deep bench
+Mason Taylor,TE,NYJ,239,37,11,26,8.52,3,9.38,12498,auto,
+Marquise Brown,WR,PHI,242,95,12,23,5.57,1,9.20,5848,auto,Deep bench
+Raheim Sanders,RB,CLE,241,69,11,24,4.67,5,6.48,12472,auto,Deep bench
+Elic Ayomanor,WR,TEN,245,96,12,20,6.59,6,7.70,12499,auto,Deep bench
+Theo Johnson,TE,NYG,243,38,11,22,6.45,4,7.86,11597,auto,
+Samaje Perine,RB,CIN,244,70,11,21,6.23,5,7.60,4147,auto,Deep bench
+DeMario Douglas,WR,NE,157,54,11,243,7.25,6,8.19,9501,manual,Shaky Flex
+Gunnar Helm,TE,TEN,246,39,11,19,6.06,5,7.38,12502,auto,
+Malachi Fields,WR,NYG,247,97,12,18,7.21,6,8.16,13285,auto,Deep bench
+Evan Engram,TE,DEN,248,40,11,17,6.97,6,7.90,4066,auto,
+Jerry Jeudy,WR,CLE,249,98,12,16,7.54,5,8.53,6783,auto,Deep bench
+Najee Harris,RB,FA,250,71,11,15,3.85,5,5.89,7528,auto,Deep bench
+Colby Parkinson,TE,LAR,251,41,11,14,7.49,5,8.40,6865,auto,
+Jalen Nailor,WR,LV,252,99,12,13,5.21,4,7.14,8180,auto,Deep bench
+Jalon Daniels,QB,TB,153,32,8,258,13.84,4,13.51,13425,manual,Dead
+Ty Johnson,RB,BUF,254,72,11,11,5.03,4,7.02,6039,auto,Deep bench
+Xavier Legette,WR,CAR,255,100,12,10,6.49,2,8.75,11626,auto,Deep bench
+Calvin Ridley,WR,TEN,256,101,12,8,8.02,5,8.87,4981,auto,Deep bench
+Fernando Mendoza,QB,LV,178,34,8,200,15.86,1,13.21,13269,manual,Dead
+De'Von Achane,RB,MIA,258,73,99,6,17.04,3,14.13,9226,manual,Out for season
+Jaxson Dart,QB,NYG,259,44,99,0,16.76,2,14.37,12508,manual,Out for season

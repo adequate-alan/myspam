@@ -139,6 +139,46 @@ with sync_playwright() as p:
         ok(not pg.errs, f"[{mode}] no page errors ({pg.errs[:2]})")
         pg.close()
     ok(total >= 8, f"Balance offered suggestions to click through ({total})")
+
+    # noFlip regression (Alan, Oct 21): trades whose best-gap add would overshoot into a win for the side that was behind.
+    # With the guard switched off (test hook) such suggestions appear; with it on none does, nothing else is lost, and
+    # the trade still gets suggestions whenever a non-flipping one exists
+    def promises(pg):
+        if not read(pg)["balBtn"]: return []
+        if pg.locator("#balance").is_hidden(): pg.click("#balance-btn"); pg.wait_for_timeout(250)
+        return [re.sub(r"\s+", " ", t).strip().lstrip("→").strip() for t in pg.locator("#balance-list .bal-result").all_text_contents()]
+    def flips(t0, ps):
+        w0 = winner(t0)
+        return [x for x in ps if w0 and winner(x.split(" · ")[0]) not in (None, w0) and any(k in x.lower() for k in BIG)]
+    used, CAND = set(), []
+    for t in (8200, 7000, 6000, 5000, 4200, 3500, 2900, 2400, 1900, 1500):
+        for r in (0.78, 0.86, 0.93):
+            a = near(t, skip=used); used.add(a); b = near(t * r, skip=used); used.add(b); CAND.append((a, b))
+    seen_flip = {"league": 0, "none": 0}
+    for mode in ("league", "none"):
+        pg = open_page(br, {0: [b for a, b in CAND], 1: [a for a, b in CAND]})
+        if mode == "none": setsel(pg, "tc-league", "none"); pg.wait_for_timeout(600)
+        for a, b in CAND:
+            pg.evaluate("() => { window.__SPM_NOFLIP_OFF = true; }"); r0 = trade(pg, [a], [b]); off = promises(pg)
+            pg.evaluate("() => { window.__SPM_NOFLIP_OFF = false; }"); r1 = trade(pg, [a], [b]); on = promises(pg)
+            lab = f"[{mode}] noFlip {a} for {b} ({r0['title']})"
+            f_off, f_on = flips(r0["title"], off), flips(r1["title"], on)
+            if f_off:
+                seen_flip[mode] += 1
+                ok(not f_on, f"{lab}: without the guard {len(f_off)} suggestion(s) hand the other side a win ({f_off[0]}); with it none ({on})")
+                keep = [x for x in off if x not in f_off]
+                ok(bool(on) or not keep, f"{lab}: the guard leaves suggestions when a non-flipping one exists ({len(on)} of {len(keep)})")
+                if on:   # a kept suggestion still shows exactly what it promises
+                    pg.locator("#balance-list button").first.click(); pg.wait_for_timeout(450)
+                    ok(read(pg)["title"] == on[0].split(" · ")[0], f"{lab}: the first guarded suggestion shows its promised verdict ({on[0]} / {read(pg)['title']})")
+            else:   # nothing to guard: the guard changes nothing
+                ok(not f_on and on == off, f"{lab}: no suggestion hands the other side a win, the same suggestions with and without the guard")
+        ok(not pg.errs, f"[{mode}] noFlip run: no page errors ({pg.errs[:2]})")
+        pg.close()
+    print(f"     noFlip flip cases found without the guard: {seen_flip}")
+    # league mode adds from the giver's own roster, where the closest add can overshoot; No league searches every player, so
+    # a closer non-flipping add always ranks first and the guard is a safety net there (same lists with and without it)
+    ok(seen_flip["league"] > 0, f"the regression set contains league trades that flip without the guard ({seen_flip})")
     ok(fair_seen["league"] > 0 and fair_seen["none"] > 0, f"Some suggestions really make the trade fair, in league and No league mode ({fair_seen})")
     br.close()
 print(f"\n{fails} failure(s)")
