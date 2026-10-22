@@ -2765,7 +2765,51 @@ dialog.bids-dialog::backdrop { background: var(--backdrop); }
 .mx-livetag { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rb-text); }
 .mx-table :is(tr.bye, tr.out) :is(.face, img) { opacity: 0.65; }   /* dimmed, still readable: photos and badges fade, text goes muted */
 .mx-table :is(tr.bye, tr.out) :is(.mx-name, .mx-pts:not(.off), .mx-pts:not(.off) b) { color: var(--text-muted); }
-#fa-wrap { max-width: 1180px; margin-inline: auto; }   /* centered in the page on wide screens, like Transactions */
+#fa-wrap { max-width: 1180px; margin-inline: auto; }
+/* Waiver upgrades (Oct 22): a compact discovery card above the Waiver Wire's filters */
+.lg-cnt { display: inline-block; margin-left: 6px; min-width: 16px; padding: 0 5px; border-radius: 8px; background: var(--fill-2, rgba(127,127,127,.14)); color: var(--ink-2); font-size: 0.66rem; font-weight: 600; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; vertical-align: 1px; }
+#fa-upg:empty { display: none; }
+.wu { border: 1px solid var(--line-soft); border-radius: 8px; background: var(--surface); padding: 12px 16px 10px; margin: 0 0 16px; }
+.wu-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.wu-title { margin: 0; font-size: 0.98rem; font-weight: 600; color: var(--heading); }
+.wu-sub { margin: 2px 0 0; font-size: 0.76rem; color: var(--muted); }
+.wu-n { flex: none; font-size: 0.74rem; font-weight: 600; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wu-mode { margin: 10px 0 2px; }
+.wu-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.wu-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 112px; gap: 4px 16px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line-soft); }
+.wu-lab { display: block; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.wu-pl { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.wu-tx { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.wu-nm { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.wu-nm .pl-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wu-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 0.72rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.wu-meta .fa-avail { font-size: 0.7rem; }
+.wu-v { font-weight: 600; }
+.wu-sub { display: inline-flex; gap: 6px; }
+@media (min-width: 601px) { .wu-row + .wu-row .wu-lab { display: none; } .wu-row { padding: 6px 0; } }   /* the column labels once, on the first row */
+.wu-ov, .wu-role, .wu-more { color: var(--muted); }
+.wu-role.st { color: var(--ink-2); font-weight: 600; }
+.wu-gain { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-variant-numeric: tabular-nums; }
+.wu-gain b { font-size: 0.98rem; font-weight: 700; color: var(--rb-text); }
+.wu-gain span { font-size: 0.66rem; color: var(--muted); }
+.wu-gain small { font-size: 0.72rem; color: var(--ink-2); }
+.wu-empty { margin: 8px 0 2px; font-size: 0.8rem; color: var(--ink-2); }
+.wu-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 8px; border-top: 1px solid var(--line-soft); margin-top: 2px; }
+.wu-notes { font-size: 0.7rem; color: var(--muted); }
+.wu-all { all: unset; cursor: pointer; flex: none; font-size: 0.76rem; font-weight: 600; color: var(--ink); padding: 4px 0; }
+.wu-all:hover { text-decoration: underline; }
+.wu-all:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
+@media (max-width: 600px) {
+  .wu { padding: 10px 12px 8px; }
+  .wu-head { flex-direction: column; gap: 4px; }
+  .wu-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .wu-mine { grid-column: 1; grid-row: 2; }
+  .wu-gain { grid-column: 2; grid-row: 1 / span 2; }
+  .wu-nm .pl-name { white-space: normal; }
+  .wu-pl .face { display: none; }   /* like the Waiver Wire's rows: names get the width */
+  .wu-row { padding: 7px 0; gap: 6px 12px; }
+  .wu-foot { flex-direction: column; align-items: flex-start; gap: 4px; }
+}   /* centered in the page on wide screens, like Transactions */
 .fa-table td { padding-top: 8px; padding-bottom: 8px; }
 #fa-wrap .fa-table tbody td, #fa-wrap .fa-table thead th { padding-inline: 16px; }   /* Impeccable pass (Oct 11): 20/22px cell padding made the 10 columns 1210px wide in the 1180px wrap, clipping the Fit column */
 .fa-proj { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -5327,6 +5371,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     <div id="league-body"></div>
     <!-- League → Waiver Wire (shown by renderLeague when that sub-tab is open) -->
     <div id="fa-wrap" hidden>
+    <div id="fa-upg"></div>
     <div class="controls">
       <div class="chips" id="fa-chips" role="group" aria-label="Filter available players by position"></div>
       <input class="search" id="fa-search" type="search" placeholder="Search available players" aria-label="Search available players">
@@ -13050,6 +13095,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       body = `<div class="lg-error"><p>Something went wrong showing this view (${esc(err.message)}).</p><button class="btn" type="button" data-lg-retry>Retry</button></div>`;
     }
     const title = LEAGUE_SUBS.find(([k]) => k === LT.sub)[1];
+    let wuN = 0; try { const W = waiverUpgrades("pos"); wuN = W ? W.list.length : 0; } catch (err) { console.error(err); }   // the Waiver Wire tab's upgrade count
     const sub = faOn ? "Available players in this league · sorted by AM rank"
       : LT.sub === "tx" ? "Trades, waiver claims, adds and drops"
       : LT.sub === "matchups" ? "This league's weekly matchups, scored by Sleeper"
@@ -13064,7 +13110,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         </div>
       </div>
       <div class="lg-subtabs chips" role="tablist" aria-label="League views">${LEAGUE_SUBS.map(([k, l]) =>
-        `<button class="chip-btn" type="button" role="tab" data-lsub="${k}" aria-selected="${LT.sub === k}" aria-pressed="${LT.sub === k}">${l}</button>`).join("")}</div>
+        `<button class="chip-btn" type="button" role="tab" data-lsub="${k}" aria-selected="${LT.sub === k}" aria-pressed="${LT.sub === k}">${l}${k === "waivers" && wuN ? `<span class="lg-cnt" title="${wuN} available player${wuN === 1 ? "" : "s"} ranked above someone on your roster at their position">${wuN}</span>` : ""}</button>`).join("")}</div>
       ${body}`;
     if (LT.sub === "tx" || faOn) ensureTrades();
     if (LT.sub === "matchups") ensureMatchups();
@@ -14916,9 +14962,89 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const trendCount = n => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "") + "k" : String(n));
   let faFitSort = false;
   $("fa-fitsort").addEventListener("change", e => { faFitSort = e.target.checked; renderFA(); });
+  /* Waiver upgrades (Alan, Oct 22): available players ranked above someone on your roster, a discovery read at the top of
+     the Waiver Wire, never a drop recommendation. Same position (default): his league-adjusted position rank is better than
+     at least one of your rostered players at that position; Any position: his league-adjusted overall rank is better than
+     at least one of yours. Each is shown against the lowest-ranked player of yours he outranks, with the value and rank
+     gaps. League-adjusted values and ranks only (dv, LG.adjPos, LG.adjRank: the league's own board, priced once in its
+     format), so it follows every league switch, Sleeper refresh and value change through renderLeague / renderFA.
+     Compared against your active roster: injured reserve and taxi players hold no active roster spot, so they're left out;
+     an available player at 0 is never an upgrade; a rostered player without an AM rank (K, DEF, unranked) can't be
+     compared and is counted in the note. Never changes rankings, values or tiers. */
+  const WU = { all: false, mode: "pos" };
+  function waiverUpgrades(mode = "pos") {
+    const d = activeData(), me = d && LG.teams.find(t => t.mine);
+    if (!d || !me || !LG.fmtOn) return null;
+    const map = bySleeper(), r = me.roster;
+    const off = new Set([...(r.reserve || []), ...(r.taxi || [])].map(String));
+    const starters = new Set((r.starters || []).map(String).filter(s => s && s !== "0"));
+    const active = (r.players || []).map(String).filter(s => !off.has(s));
+    const posN = p => LG.adjPos.get(p.id), ovN = p => LG.adjRank.get(p.id);
+    const ranked = p => p && EDIT_POS.includes(p.pos) && posN(p) != null && ovN(p) != null;
+    const mine = active.map(s => map.get(s)).filter(ranked);
+    const lu = lineupOf(d.league), limit = (d.league.roster_positions || []).filter(x => x !== "IR" && x !== "TAXI").length;
+    const info = {
+      team: me, unranked: active.length - mine.length, ir: off.size,
+      open: Math.max(0, limit - active.length), emptyStart: (r.starters || []).filter(s => !s || String(s) === "0").length, bench: lu.bench
+    };
+    const key = mode === "any" ? ovN : posN;
+    const list = [];
+    players.forEach(p => {
+      if (!EDIT_POS.includes(p.pos) || !p.sleeperId || LG.ownerOf.has(p.id) || !ranked(p) || !(dv(p) > 0)) return;
+      const beat = mine.filter(m => (mode === "any" || m.pos === p.pos) && key(m) > key(p) && dv(m) < dv(p));
+      if (!beat.length) return;
+      const over = beat.reduce((a, b) => (key(b) > key(a) ? b : a));
+      list.push({ p, over, more: beat.length - 1, gain: dv(p) - dv(over), ranks: key(over) - key(p), bench: !starters.has(over.sleeperId) });
+    });
+    list.sort((a, b) => (b.gain - a.gain) || (key(a.p) - key(b.p)));
+    return { list, info, mode };
+  }
+  function waiverUpgradesHtml() {
+    const W = waiverUpgrades(WU.all ? WU.mode : "pos");
+    if (!W) return "";
+    const { list, info } = W, any = W.mode === "any";
+    // Collapsed: the best upgrade at each position (the list is by value gain), so one position never fills the summary
+    const seen = new Set(), shown = WU.all ? list : list.filter(x => !seen.has(x.p.pos) && seen.add(x.p.pos));
+    const hidden = list.length - shown.length;
+    const rk = (p, ov) => (ov ? `#${LG.adjRank.get(p.id)}` : posLabel(p));
+    const side = (p, ov, sub) => `<span class="wu-pl">${face(p.sleeperId, p.name, "sm")}<span class="wu-tx"><span class="wu-nm">${nameLink(p.sleeperId, p.name)}${nflTag(p.team)}</span>
+      <span class="wu-meta"><span class="pos ${esc(p.pos)}">${esc(rk(p, false))}</span>${ov ? `<span class="wu-ov">#${LG.adjRank.get(p.id)} overall</span>` : ""}<span class="wu-v">AM Value ${fmt(dv(p))}</span>${sub ? `<span class="wu-sub">${sub}</span>` : ""}</span></span></span>`;
+    const rows = shown.map(x => {
+      const wv = waiverUntil(x.p);
+      const avail = wv ? `<span class="fa-avail waivers">On waivers</span>` : `<span class="fa-avail">Free agent</span>`;
+      const role = `<span class="wu-role${x.bench ? "" : " st"}">${x.bench ? "Bench" : "Starter"}</span>${x.more ? `<span class="wu-more" title="${x.more} more of your rostered players rank below him${any ? "" : " at " + x.p.pos}">+${x.more} more</span>` : ""}`;
+      return `<li class="wu-row">
+        <div class="wu-side wu-av"><span class="wu-lab">Available</span>${side(x.p, any, avail)}</div>
+        <div class="wu-side wu-mine"><span class="wu-lab">Outranks your player</span>${side(x.over, any, role)}</div>
+        <div class="wu-gain"><b>+${fmt(x.gain)}</b><span>AM value</span><small>+${x.ranks} ${any ? "overall" : x.p.pos} rank${x.ranks === 1 ? "" : "s"}</small></div>
+      </li>`;
+    }).join("");
+    const notes = [
+      info.open ? `${info.open} open roster spot${info.open === 1 ? "" : "s"}: you can add without a drop` : "",
+      info.emptyStart ? `${info.emptyStart} empty starting slot${info.emptyStart === 1 ? "" : "s"}` : "",
+      info.ir ? `IR and taxi players aren't compared` : "",
+      info.unranked ? `${info.unranked} rostered player${info.unranked === 1 ? "" : "s"} without an AM rank (K, DEF or unranked) not compared` : ""
+    ].filter(Boolean);
+    if (!WU.all && hidden) notes.unshift(`Best at each position · ${hidden} more in View all`);
+    const count = list.length;
+    const head = `<div class="wu-head"><div><h3 class="wu-title">Waiver upgrades</h3>
+        <p class="wu-sub">${any ? "Available players ranked above someone on your roster at any position, by league-adjusted overall AM rank." : "Available players ranked above someone on your roster at their position."} Ranked higher isn't a drop recommendation: check your lineup, byes and injuries first.</p></div>
+        <span class="wu-n">${count ? `${count} potential upgrade${count === 1 ? "" : "s"}` : "None right now"}</span></div>`;
+    const ctl = WU.all ? `<div class="view-toggle wu-mode" role="group" aria-label="Compare upgrades by"><button class="vt-btn" type="button" data-wu-mode="pos" aria-pressed="${!any}">Same position</button><button class="vt-btn" type="button" data-wu-mode="any" aria-pressed="${any}">Any position</button></div>` : "";
+    const body = count ? `<ol class="wu-list">${rows}</ol>`
+      : `<p class="wu-empty">No available player is ranked above anyone on ${esc(info.team.mine ? "your" : info.team.name + "'s")} roster${any ? "" : " at his position"}.</p>`;
+    const more = `<button class="wu-all" type="button" data-wu-all aria-expanded="${WU.all}">${WU.all ? "Show best per position" : hidden ? `View all ${list.length} upgrades` : "View all · any position"}</button>`;
+    return `<section class="wu" aria-label="Waiver upgrades">${head}${ctl}${body}<div class="wu-foot">${notes.length ? `<span class="wu-notes">${esc(notes.join(" · "))}</span>` : "<span></span>"}${more}</div></section>`;
+  }
+  $("fa-upg").addEventListener("click", e => {
+    const a = e.target.closest("[data-wu-all]"), m = e.target.closest("[data-wu-mode]");
+    if (a) { WU.all = !WU.all; if (!WU.all) WU.mode = "pos"; renderFA(); }
+    else if (m) { WU.mode = m.dataset.wuMode; renderFA(); }
+  });
   function renderFA() {
     const d = activeData();
-    if (!d) { $("fa-body").innerHTML = ""; $("fa-wrap").hidden = true; return; }
+    if (!d) { $("fa-body").innerHTML = ""; $("fa-upg").innerHTML = ""; $("fa-wrap").hidden = true; return; }
+    $("fa-upg").innerHTML = waiverUpgradesHtml();
     const need = STATS_SEASONS.slice(0, 2).filter(y => !statsCache[y]);
     if (need.length) Promise.all(need.map(loadSeason)).then(() => { if (!$("fa-wrap").hidden) renderFA(); });
     loadTrending();
@@ -19205,6 +19331,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   SPM.boards = f => ({ boards: BOARDS.map(b => ({ id: b.id, label: b.label, tierScope: b.tierScope, fmt: { ...b.fmt } })), active: ACTIVE_BOARD.id,
     league: leagueBoard().id, view: viewBoard().id, auto: f ? autoBoardFor(fmtLeague({ ...FMT_DEFAULT, ...f })).id : undefined });
   SPM.leagueValues = () => ({ board: LG.board ? LG.board.id : null, adj: Object.fromEntries([...LG.adj].map(([k, v]) => [String(k), v])) });
+  // Waiver upgrades (Oct 22): the list the Waiver Wire shows, by Sleeper ID, and the league-adjusted numbers it reads
+  SPM.waiverUpgrades = (mode = "pos") => { const W = waiverUpgrades(mode); return W && W.list.map(x => ({ sid: x.p.sleeperId, over: x.over.sleeperId, gain: x.gain, ranks: x.ranks, bench: x.bench, more: x.more })); };
+  SPM.leagueRanks = () => Object.fromEntries(players.filter(p => p.sleeperId && LG.adj.has(p.id)).map(p => [p.sleeperId, [LG.adj.get(p.id), p.pos, LG.adjPos.get(p.id) ?? null, LG.adjRank.get(p.id) ?? null]]));
   /* Ranking sets self-test (Alan, Oct 14; tests/board_check.py): each board in its own format gives exactly its values,
      the QB format picks the board, pricing one board never touches another, adjustments start from the board's own
      format (TE premium, PPR and lineup applied once), overall tiers create no format cliffs, provisional players are marked. */

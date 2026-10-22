@@ -207,7 +207,7 @@ with sync_playwright() as p:
         ok(c["pass"], "formatCheck: " + c["check"] + " " + str(c["values"])[:160])
 
     pg.click("#tab-league"); pg.wait_for_timeout(600)
-    tabs = pg.locator("[data-lsub]").all_inner_texts()
+    tabs = pg.eval_on_selector_all("[data-lsub]", "bs => bs.map(b => [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim())")   # the label, without the Waiver Wire's upgrade count
     ok(tabs == ["Power Rankings", "Standings", "Matchups", "Rosters", "Transactions", "Waiver Wire"], f"League sub-tabs: {tabs}")
     ok(pg.locator("[data-lsub=power][aria-pressed=true]").count() == 1, "Power Rankings is the default")
     nav = [t.strip() for t in pg.locator(".tabs [role=tab]").all_inner_texts() if t.strip()]
