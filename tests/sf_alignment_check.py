@@ -22,7 +22,7 @@ Checks, over 108 formats (8 / 10 / 12 / 14 teams x 1QB / Superflex / 2QB x 0 / 0
    within 1 point of each other (they were about 10 apart).
 7. SPM.formatCheck() passes on the after board. No page errors.
 """
-import csv, functools, http.server, io, math, os, re, socketserver, statistics, sys, threading
+import csv, functools, http.server, io, json, math, os, re, socketserver, statistics, sys, threading
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -121,8 +121,25 @@ for label, res in (("before", before), ("after", after)):
     q1, q2 = trade_pct(res, dict(teams=12, qb="1", rec=1, tep=0.5)), trade_pct(res, dict(teams=12, qb="sf", rec=1, tep=0.5))
     print(f"     {label}: Bowers + Concepcion + Jones for Nabers + Burden + Kincaid, raw 1QB {q1:+.1f}% · Superflex {q2:+.1f}%")
     if label == "after": ok(abs(q1 - q2) <= 1, f"Named trade: 1QB and Superflex raw % within 1 point ({q1:+.1f}% vs {q2:+.1f}%)")
+for c in chk:
+    if c.get("info"): print(f"     {c['check']}: {'; '.join(map(str, c.get('values') or []))}")
 bad = [c["check"] + ": " + "; ".join(map(str, c.get("values") or []))[:160] for c in chk if not c.get("pass")]
 ok(not bad, f"SPM.formatCheck() passes on the after board ({len(chk)} checks)" + (f"; failing: {bad}" if bad else ""))
+# the published history event is the alignment itself (Alan, Oct 21: reconcile 139 recorded vs 138 rank moves): its ranking
+# changes are exactly the players whose overall rank, position rank or tier differ between the fixtures, its value edits
+# exactly the changed values; a tier-only change at the same rank (Etienne #128, RB40 | RB41) counts as a ranking change
+
+_b = {r["sleeper_id"]: r for r in csv.DictReader(io.StringIO(BEFORE))}; _a = {r["sleeper_id"]: r for r in csv.DictReader(io.StringIO(AFTER))}
+_ev = next((e for e in json.load(open(os.path.join(ROOT, "data", "rank_history.json")))["events"] if e["ts"] == "2026-10-21T23:28:48.000Z"), None)
+_rk = {k for k in _a if any(_a[k][c] != _b[k][c] for c in ("rank", "pos_rank", "tier"))}
+_mv = {k for k in _a if _a[k]["rank"] != _b[k]["rank"]}; _val = {k for k in _a if _a[k]["value"] != _b[k]["value"]}
+if _ev:
+    _evr = {e[0] for e in _ev["ranking"]}; _evm = {e[0] for e in _ev["manual"]} if isinstance(_ev["manual"], list) else None
+    print(f"     history event: {len(_evr)} ranking changes = {len(_mv)} overall rank moves + {len(_rk - _mv)} same-rank tier change(s) ({', '.join(_a[k]['player'] for k in _rk - _mv)})")
+    ok(_evr == _rk, f"History event's ranking changes are exactly the fixtures' rank / position rank / tier changes ({len(_evr)} vs {len(_rk)})")
+    ok(all((e[1], e[2], e[3], e[4]) == (int(_b[e[0]]["rank"]), int(_a[e[0]]["rank"]), int(_b[e[0]]["tier"]), int(_a[e[0]]["tier"])) for e in _ev["ranking"]), "History event's from / to ranks and tiers match the fixtures")
+    if _evm is not None: ok(_evm == _val, f"History event's value edits are exactly the fixtures' changed values ({len(_evm)} vs {len(_val)})")
+else: ok(False, "History event of the alignment publish (2026-10-21T23:28:48Z) found")
 ok(not errors, "No page errors" + (": " + "; ".join(errors[:3]) if errors else ""))
 srv.shutdown()
 print(f"\n{len(failures)} failure(s)")

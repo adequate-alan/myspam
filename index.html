@@ -8324,7 +8324,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // preferring expendable depth and never a player whose loss leaves a starting spot empty
   // what a Balance button promises: the exact headline the calculator will show after the add, and its gap
   // an add may tip the trade into a slight edge the other way, never into a win for the side that was behind
-  const noFlip = (h, head) => h.fair || h.vr.kind === "sensitive" || h.side === head.side || h.vr.gap < 7;
+  const noFlip = (h, head) => (window.__SPM_TEST_HOOKS && window.__SPM_NOFLIP_OFF === true) || h.fair || h.vr.kind === "sensitive" || h.side === head.side || h.vr.gap < 7;
   const balResult = h => `<span class="bal-result">→ ${esc(h.title)}${h.vr.kind === "split" || h.vr.kind === "sensitive" ? "" : ` · ${h.pct}`}</span>`;
   function leagueBalance(res, ctx, head) {
     const ahead = head.side, other = ahead === "A" ? "B" : "A", NM = { A: "Team A", B: "Team B" };
@@ -11607,7 +11607,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     {
       const F = { "12-team 1QB": { qb: "1", tep: 0 }, "12-team 1QB Half": { qb: "1", tep: 0, rec: 0.5 }, "10-team 1QB": { teams: 10, qb: "1", tep: 0 },
         "8-team 1QB": { teams: 8, qb: "1", tep: 0 }, "10-team SF": { teams: 10 }, "8-team SF": { teams: 8 }, "14-team 1QB": { teams: 14, qb: "1", tep: 0 } };
-      const cliffs = [], drift = [];
+      const cliffs = [], drift = [], drift0 = [];
       for (const [name, f] of Object.entries(F)) {
         const lg0 = fmtLeague({ ...FMT_DEFAULT, ...f }), adj = adjMapFor(lg0), lu = lineupOf(lg0);
         const keep = TIER_EDGE; TIER_EDGE = false; let blk; try { blk = adjMapFor(lg0); } finally { TIER_EDGE = keep; }
@@ -11629,12 +11629,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           const EW = Number(FORMAT_ADJUST.tierEdge) || 0;
           const n0 = n;
           for (let i = Math.max(1, n0 - EW + 1); i < g.length && i < n0 + EW; i++) if (g[i].tier !== g[i - 1].tier) n = Math.max(n, i + EW);
-          const sum = m => g.slice(0, n).reduce((s, p) => s + (m.get(p.id) || 0), 0), s0 = sum(blk);
-          if (s0 > 0 && Math.abs(sum(adj) / s0 - 1) > 0.02) drift.push(`${name} ${pos} top ${n}: ${(100 * (sum(adj) / s0 - 1)).toFixed(1)}%`);
+          const sum = (m, k) => g.slice(0, k).reduce((s, p) => s + (m.get(p.id) || 0), 0), s0 = sum(blk, n);
+          if (s0 > 0 && Math.abs(sum(adj, n) / s0 - 1) > 0.02) drift.push(`${name} ${pos} top ${n}: ${(100 * (sum(adj, n) / s0 - 1)).toFixed(1)}%`);
+          // the strict window (exactly the weekly starters, n0) is kept as a diagnostic beside the check
+          const t0 = sum(blk, n0);
+          if (t0 > 0 && Math.abs(sum(adj, n0) / t0 - 1) > 0.02) drift0.push(`${name} ${pos} top ${n0}: ${(100 * (sum(adj, n0) / t0 - 1)).toFixed(1)}%` + (n > n0 ? ` (top ${n} across the easing zone: ${(100 * (sum(adj, n) / s0 - 1)).toFixed(1)}%)` : ""));
         }
       }
       check("Nearly flat board tier boundaries (<= 5%) don't become 25%+ format drops the scarcity curve doesn't have", cliffs, cliffs.length === 0);
       check("Tier boundary easing keeps each position's weekly starters within 2% of one-factor tier pricing", drift, drift.length === 0);
+      // information, never a failure (Alan, Oct 21): the same 2% read over exactly the weekly starters; past it means a tier
+      // boundary sits inside the easing zone and the easing moved value to the far side, which the check above counts
+      out.push({ check: "Diagnostic: weekly starters drift over exactly the starters (strict window; information only)", values: drift0.length ? drift0 : ["all within 2%"], pass: true, info: true });
     }
     // Ranking sets (Alan, Oct 14): the AM default format is AM SF PPR TE+'s own format, a league in a board's own format
     // gives exactly that board's values, and every format family picks a registered board
