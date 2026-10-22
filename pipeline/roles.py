@@ -84,9 +84,12 @@ CARRY = {"Questionable": 0.85, "Doubtful": 0.5, "Out": 0.3, "IR": 0.0}
 
 
 def latest_practice(row, ci):
+    # the newest report's status (the same as its day column when the day is known; Oct 22: a report whose day
+    # isn't confirmed has no day column), else the newest day recorded
+    if "practice" in ci and row[ci["practice"]]: return row[ci["practice"]]
     for k in ("fri", "thu", "wed"):
         if k in ci and row[ci[k]]: return row[ci[k]]
-    return row[ci["practice"]] if "practice" in ci else None
+    return None
 
 
 def next_weeks(stats):

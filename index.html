@@ -15995,8 +15995,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const d = statsCache[STATS_SEASONS[0]], I = d && d.injuries;
     if (!I || !I.teams || !I.teams[team]) return null;
     const c = I.cols || ["name", "pos", "sid", "status", "practice", "injury"], at = (r, k) => (c.indexOf(k) >= 0 ? r[c.indexOf(k)] : null);
-    return { week: I.week, daily: c.includes("wed"), rows: I.teams[team].map(r => ({ name: at(r, "name"), pos: at(r, "pos"), sid: at(r, "sid"), status: at(r, "status"),
-      practice: at(r, "practice"), injury: injuryText(at(r, "injury")), wed: at(r, "wed"), thu: at(r, "thu"), fri: at(r, "fri") })) };
+    // undated: nflverse doesn't say which day this team's latest report is from (a non-Sunday game, or no source time; Oct 22)
+    const daily = c.includes("wed"), undated = daily && (I.undated || []).includes(team);
+    return { week: I.week, daily, undated, rows: I.teams[team].map(r => ({ name: at(r, "name"), pos: at(r, "pos"), sid: at(r, "sid"), status: at(r, "status"),
+      practice: at(r, "practice"), injury: injuryText(at(r, "injury")), wed: at(r, "wed"), thu: at(r, "thu"), fri: at(r, "fri"), daily, undated })) };
   }
   // The game the team's report would be for: its next unplayed game (a live game counts until its score is in)
   const reportWeek = team => { const g = team && nextGame(team); return g ? g.week : null; };
@@ -16017,7 +16019,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const shortDate = iso => { const d = new Date(iso + "T12:00:00"); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
   // The day of his latest practice entry this week (daily columns), for "did not practice (Wed)"
   const PRACTICE_DAY = { wed: "Wed", thu: "Thu", fri: "Fri" };
-  const practiceDay = r => { for (const k of ["fri", "thu", "wed"]) if (r[k]) return PRACTICE_DAY[k]; return ""; };
+  // When the source last rebuilt its file and whose report that is (Oct 22: nflverse posts a day's report the next morning)
+  const srcLine = () => {
+    const d = statsCache[STATS_SEASONS[0]], I = d && d.injuries;
+    if (!I || !I.cols || !I.cols.includes("wed")) return "";
+    if (!I.source_updated) return ", source update time unknown";
+    const day = { wed: "Wednesday", thu: "Thursday", fri: "Friday" }[I.day];
+    return `, updated ${etStamp(I.source_updated)}${day ? ` · latest: ${day}'s report for Sunday games` : ""}`;
+  };
+  // His latest status's day, only when the report says so: "" when the day isn't confirmed (never guessed)
+  const practiceDay = r => { if (r.undated) return ""; for (const k of ["fri", "thu", "wed"]) if (r[k]) return r[k] === r.practice ? PRACTICE_DAY[k] : ""; return ""; };
   const injuryText = s => (!s ? null : /^not injury related/i.test(s) ? (/rest/i.test(s) ? "Rest (not injury)" : "Not injury related") : s);
   const PRACTICE_TEXT = { DNP: "did not practice", LP: "limited practice", FP: "full practice" };
   // One status colour language everywhere: FP green, LP amber, DNP red, Out deep red, Questionable amber, Doubtful orange-red, IR muted red
@@ -16025,7 +16036,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const stBlock = v => (v ? `<span class="st-blk ${ST_CLASS[v] || ""}" title="${esc(PRACTICE_TEXT[v] || v)}">${esc(v)}</span>` : `<span class="st-blk none">–</span>`);
   const stBadge = (v, text) => `<span class="st-badge ${ST_CLASS[v] || "ok"}">${esc(text || v)}</span>`;
   const statusCls = s => ST_CLASS[s] || "";
-  const injuryChip = r => { const day = practiceDay(r); return stBadge(r.status || r.practice, [r.status || "On practice report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] ? PRACTICE_TEXT[r.practice] + (day ? ` (${day})` : "") : ""].filter(Boolean).join(" · ")); };
+  const injuryChip = r => { const day = practiceDay(r); return stBadge(r.status || r.practice, [r.status || "On practice report", r.injury ? r.injury.toLowerCase() : "", PRACTICE_TEXT[r.practice] ? PRACTICE_TEXT[r.practice] + (day ? ` (${day})` : r.daily ? " (day not confirmed)" : "") : ""].filter(Boolean).join(" · ")); };
 
   /* Schedule tab: every remaining week, with the opponent defense's ranks vs his position */
   function ppSchedule(info) {
@@ -16086,18 +16097,19 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const groups = order.map(([label, list]) => [label, rows.filter(r => list.includes(r.pos)).sort((a, b) => isMe(b) - isMe(a) || SEVERITY(a) - SEVERITY(b))])
         .concat([["Other", rows.filter(r => !POS_GROUPS.some(([, l]) => l.includes(r.pos)))]]).filter(([, g]) => g.length);
       if (!groups.length) return `<section class="pr-sec">${head}<p class="pp-note">No ${esc(relevantLabel(opp ? R.opp : R.own))} on ${esc(team)}'s report.</p></section>`;
-      const days = rep.daily ? ["wed", "thu", "fri"] : null;
+      const days = rep.daily && !rep.undated ? ["wed", "thu", "fri"] : null;
       const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}</td>
           ${days ? days.map(k => `<td class="pr-day">${stBlock(r[k])}</td>`).join("") : `<td class="pr-day">${stBlock(r.practice)}</td>`}<td class="pr-inj">${esc(r.injury || "")}</td></tr>`;
       return `<section class="pr-sec${old ? " prior" : ""}">${head}${old ? pending : ""}<div class="table-scroll"><table class="gl-table inj-table">
-        <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day">Practice</th>`}<th scope="col">Injury</th></tr></thead>
+        <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day"${rep.undated ? ` title="nflverse doesn't say which practice day this report is from"` : ""}>${rep.undated ? "Latest" : "Practice"}</th>`}<th scope="col">Injury</th></tr></thead>
         <tbody>${groups.map(([label, g]) => `<tr class="pr-group"><td colspan="${days ? 5 : 3}">${esc(label)}</td></tr>` + g.map(row).join("")).join("")}</tbody></table></div></section>`;
     };
     const me = `<div class="pr-me">${statusChip(info) || `<span class="muted">No ${reportWeek(info.team) ? `Week ${reportWeek(info.team)} ` : ""}practice report yet.</span>`}${R && !full ? `<span class="pr-scope">Showing what matters for ${esc(info.name)}: ${esc(info.team)} ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)} ${esc(relevantLabel(R.opp))}` : ""}</span>` : ""}</div>`;
     const anyDaily = teamsList.some(([t]) => { const r = currentReport(t) || priorReport(t); return r && r.daily; });
+    const anyUndated = teamsList.some(([t]) => { const r = currentReport(t) || priorReport(t); return r && r.undated; });
     return me + teamsList.map(([t, o]) => section(t, o)).join("") +
       (R ? `<button class="btn pr-full" type="button" data-pr-full aria-expanded="${full}">${full ? "Show only what matters for him" : "View full report"}</button>` : "") +
-      `<p class="pp-note">Official practice report (nflverse): FP full, LP limited, DNP did not practice. ${anyDaily ? "Each day fills in from our Wednesday, Thursday and Friday evening updates; a dash means that day wasn't captured." : "Shows the latest day reported."}</p>`;
+      `<p class="pp-note">Official practice report (nflverse${srcLine()}): FP full, LP limited, DNP did not practice. ${anyDaily ? "nflverse posts each day's report the next morning, so a day fills in about a day after practice; a dash means no report for that day yet." : "Shows the latest day reported."}${anyUndated ? " Latest: the newest status for a team whose report day nflverse doesn't confirm (a game not on Sunday, or no source time), shown without a day." : ""}</p>`;
   }
 
   /* Depth Chart (Oct 4): his NFL team's depth chart from Sleeper (depth_chart_position / depth_chart_order in
