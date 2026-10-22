@@ -143,6 +143,15 @@ def defense(season, src=PBP_URL):
 PRACTICE = {"Did Not Participate In Practice": "DNP", "Limited Participation in Practice": "LP", "Full Participation in Practice": "FP"}
 INJURY_COLS = ["name", "pos", "sid", "status", "practice", "injury", "wed", "thu", "fri"]
 DAY_OF_RUN = {2: "wed", 3: "thu", 4: "fri", 5: "fri", 6: "fri", 0: "fri"}   # Monday=0 ... Tuesday (1): new week, no report yet
+# Which practice day a report belongs to (Alan, Oct 22). nflverse rebuilds the injuries file about once a day, in the
+# morning ET, so the file a Thursday run reads holds Wednesday's practice report (Week 7: Wednesday's report for 24 teams
+# landed Thu 12:55 UTC). Labelling it by the run's weekday put Wednesday's DNP / LP / FP under Thu, Thursday's under
+# Fri, and let Friday's final report overwrite Thursday's; a later run on an unchanged file copied the same report into
+# the next day too. The day now comes from when the source file was last rebuilt: the newest practice day whose report
+# (posted by ~4 PM ET) was out by then.
+DAYS = ["wed", "thu", "fri"]
+REPORT_POSTED_H = 16   # NFL clubs post the day's practice report by about 4 PM ET
+DAY_OF_REPORT = {2: "wed", 3: "thu", 4: "fri", 5: "fri", 6: "fri", 0: "fri", 1: "wed"}   # Tuesday: Thursday-game teams' early report
 
 
 def practice_day(now=None):
@@ -151,10 +160,40 @@ def practice_day(now=None):
     return DAY_OF_RUN.get(now.weekday())
 
 
-def injuries(season, ids, src=INJ_URL, prev=None, day=None):
+def report_day(modified):
+    """The practice day of the latest report in a source file last rebuilt at `modified` (aware datetime), or None."""
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+    if modified is None:
+        return None
+    t = modified.astimezone(ZoneInfo("America/New_York")) - timedelta(hours=REPORT_POSTED_H)
+    return DAY_OF_REPORT[t.weekday()]
+
+
+def source_modified(url):
+    """The Last-Modified time of a downloadable file (following redirects), or None (local file, no header, offline)."""
+    if not str(url).startswith("http"):
+        return None
+    from email.utils import parsedate_to_datetime
+    from urllib.request import Request, urlopen
+    try:
+        with urlopen(Request(url, method="HEAD"), timeout=30) as r:
+            h = r.headers.get("Last-Modified")
+        return parsedate_to_datetime(h) if h else None
+    except Exception as e:   # the run still records the report, labelled by the run's day as before
+        print(f"injury report: no Last-Modified ({e})", file=sys.stderr)
+        return None
+
+
+def injuries(season, ids, src=INJ_URL, prev=None, day=None, modified=None):
     """The latest regular-season week's report: per team, everyone listed (game status, latest practice status,
-    injury) plus practice status by day, carried over from prev (the last file's injuries) for the same week."""
-    d = pd.read_csv(src.format(season), low_memory=False)
+    injury) plus practice status by day, carried over from prev (the last file's injuries) for the same week.
+    The day is the report's own (report_day of the source's Last-Modified); `day` (the run's weekday) only when the
+    source gives no time. `modified` overrides the lookup (tests)."""
+    url = src.format(season)
+    mod = modified if modified is not None else source_modified(url)
+    day = report_day(mod) or day
+    d = pd.read_csv(url, low_memory=False)
     d = d[d.season_type == "REG"]
     if not len(d):
         return None
@@ -173,11 +212,18 @@ def injuries(season, ids, src=INJ_URL, prev=None, day=None):
         days = dict(old.get((tm, r.full_name), {"wed": None, "thu": None, "fri": None}))
         if day and prac:
             days[day] = prac
+        if day in DAYS:   # a later day's report can't be out yet (clears what the old run-day labelling put there)
+            for k in DAYS[DAYS.index(day) + 1:]:
+                days[k] = None
         teams.setdefault(tm, []).append([
             r.full_name, r.position, ids.get(r.gsis_id) if isinstance(r.gsis_id, str) else None,
             r.report_status if isinstance(r.report_status, str) else None, prac,
             inj if isinstance(inj, str) else None, days["wed"], days["thu"], days["fri"]])
-    return {"week": wk, "cols": INJURY_COLS, "teams": dict(sorted(teams.items()))}
+    out = {"week": wk, "cols": INJURY_COLS, "teams": dict(sorted(teams.items()))}
+    if mod is not None:   # when the source was last rebuilt, and the practice day its report is for
+        out["source_updated"] = mod.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+        out["day"] = day
+    return out
 
 
 NOT_INJURY = re.compile(r"not injury|illness|personal|rest", re.I)   # report reasons that aren't an in-game injury

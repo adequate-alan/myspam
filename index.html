@@ -16017,6 +16017,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const shortDate = iso => { const d = new Date(iso + "T12:00:00"); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
   // The day of his latest practice entry this week (daily columns), for "did not practice (Wed)"
   const PRACTICE_DAY = { wed: "Wed", thu: "Thu", fri: "Fri" };
+  // When the source last rebuilt its file and whose report that is (Oct 22: nflverse posts a day's report the next morning)
+  const srcLine = () => {
+    const d = statsCache[STATS_SEASONS[0]], I = d && d.injuries;
+    if (!I || !I.source_updated) return "";
+    const day = { wed: "Wednesday", thu: "Thursday", fri: "Friday" }[I.day];
+    return `, updated ${etStamp(I.source_updated)}${day ? ` · latest: ${day}'s report` : ""}`;
+  };
   const practiceDay = r => { for (const k of ["fri", "thu", "wed"]) if (r[k]) return PRACTICE_DAY[k]; return ""; };
   const injuryText = s => (!s ? null : /^not injury related/i.test(s) ? (/rest/i.test(s) ? "Rest (not injury)" : "Not injury related") : s);
   const PRACTICE_TEXT = { DNP: "did not practice", LP: "limited practice", FP: "full practice" };
@@ -16097,7 +16104,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const anyDaily = teamsList.some(([t]) => { const r = currentReport(t) || priorReport(t); return r && r.daily; });
     return me + teamsList.map(([t, o]) => section(t, o)).join("") +
       (R ? `<button class="btn pr-full" type="button" data-pr-full aria-expanded="${full}">${full ? "Show only what matters for him" : "View full report"}</button>` : "") +
-      `<p class="pp-note">Official practice report (nflverse): FP full, LP limited, DNP did not practice. ${anyDaily ? "Each day fills in from our Wednesday, Thursday and Friday evening updates; a dash means that day wasn't captured." : "Shows the latest day reported."}</p>`;
+      `<p class="pp-note">Official practice report (nflverse${srcLine()}): FP full, LP limited, DNP did not practice. ${anyDaily ? "nflverse posts each day's report the next morning, so a day fills in about a day after practice; a dash means no report for that day yet." : "Shows the latest day reported."}</p>`;
   }
 
   /* Depth Chart (Oct 4): his NFL team's depth chart from Sleeper (depth_chart_position / depth_chart_order in
