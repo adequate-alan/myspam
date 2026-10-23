@@ -163,5 +163,24 @@ ok(m == utc("2026-10-22T12:55:53") and calls == ["HEAD", "GET"], "G. no Last-Mod
 o13 = bs.injuries(2026, ids, src=wed, modified=utc("2026-10-22T12:55"))
 ok(day(row(o13, "Breece Hall")) == {"wed": None, "thu": None, "fri": None} and o13["undated"] == ["NYJ"], "H. no schedule: undated, not guessed")
 
+# I. The Falcons' real Week 7 reports (Alan, Oct 23, checked against atlantafalcons.com): Wednesday's file reached
+#    nflverse Thu 12:55 UTC, Thursday's Fri 12:34 UTC. Starting from the file as labelled before the fix (Wednesday's LP
+#    under Thu, the state Alan's open tab still showed), each day ends up under its own column.
+FALCONS = [("00-a", "RB", "Brian Robinson", "Hamstring", "LP", "DNP"), ("00-b", "WR", "Beaux Collins", "Hip", "LP", "FP"),
+           ("00-c", "T", "Michael Jerrell", "Biceps", "LP", "DNP"), ("00-d", "WR", "Olamide Zaccheaus", "Shoulder", "LP", "LP")]
+GAMES_ATL = pd.concat([GAMES, pd.DataFrame([dict(season=2026, game_type="REG", week=7, away_team="SF", home_team="ATL", gameday="2026-10-25")])])
+atl_wed = report(7, [(g, pos, n, inj, w, None) for g, pos, n, inj, w, t in FALCONS], team="ATL")
+atl_thu = report(7, [(g, pos, n, inj, t, None) for g, pos, n, inj, w, t in FALCONS], team="ATL")
+old = {"week": 7, "cols": bs.INJURY_COLS, "teams": {"ATL": [[n, pos, None, None, w, inj, None, w, None] for g, pos, n, inj, w, t in FALCONS]}}
+a1 = bs.injuries(2026, {}, src=atl_wed, prev=old, games=GAMES_ATL, modified=utc("2026-10-22T12:55"))
+ok(all(day(row(a1, n, "ATL")) == {"wed": w, "thu": None, "fri": None} for g, pos, n, inj, w, t in FALCONS),
+   "I. Falcons, Thursday 8:55 AM ET file: Wednesday's LPs move from Thu to Wed, Thu empty")
+a2 = bs.injuries(2026, {}, src=atl_thu, prev=a1, games=GAMES_ATL, modified=utc("2026-10-23T12:34"))
+ok(all(day(row(a2, n, "ATL")) == {"wed": w, "thu": t, "fri": None} for g, pos, n, inj, w, t in FALCONS),
+   "I. Falcons, Friday 8:34 AM ET file: Robinson LP / DNP, Collins LP / FP, Jerrell LP / DNP, Zaccheaus LP / LP (the official reports)")
+ok(a2["day"] == "thu" and row(a2, "Brian Robinson", "ATL")[4] == "DNP", "I. the report day is Thursday and the latest status is Thursday's")
+a3 = bs.injuries(2026, {}, src=atl_thu, prev=a2, games=GAMES_ATL, modified=utc("2026-10-23T12:34"))
+ok(all(day(row(a3, n, "ATL"))["fri"] is None for g, pos, n, inj, w, t in FALCONS), "I. Friday afternoon run on Thursday's file: Fri stays empty until Friday's report")
+
 print(f"\n{'FAILED' if failures else 'OK'}: {len(failures)} failure(s)")
 sys.exit(1 if failures else 0)

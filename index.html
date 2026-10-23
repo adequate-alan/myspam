@@ -3756,6 +3756,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 :root[data-theme="light"] { --st-dnp-text: var(--st-dnp); --st-out-text: var(--st-out); --st-fp: #2F8550; --st-fp-text: #23703F; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
 .st-blk { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 24px; padding: 0 6px; border-radius: 5px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; color: var(--st-ink); background: var(--st, var(--surface-2)); }
 .st-blk.none { --st: transparent; color: var(--muted); font-weight: 500; }
+.st-blk.pr-pend { font-size: 0.6rem; letter-spacing: 0.02em; }
 .st-blk.fp { --st: var(--st-fp); } .st-blk.lp { --st: var(--st-lp); color: var(--st-ink-amber); } .st-blk.dnp { --st: var(--st-dnp); }
 .st-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; color: var(--st-ink); background: var(--st, var(--surface-2)); white-space: nowrap; }
 .st-badge.fp, .st-badge.ok { --st: color-mix(in srgb, var(--st-fp) 22%, transparent); color: var(--st-fp-text); }
@@ -6538,11 +6539,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (m && m[1] !== BUILD_ID && !(editor.on && changedRows().length)) showUpdate();
     } catch (e) {}
   }
-  function showUpdate() {
+  function showUpdate(msg) {
     if ($("update-bar")) return;
     const bar = document.createElement("div");
     bar.id = "update-bar"; bar.className = "update-bar"; bar.setAttribute("role", "status");
-    bar.innerHTML = `<span>A new version of Adequate is available.</span><button class="btn primary" type="button">Refresh</button>`;
+    bar.innerHTML = `<span>${msg || "A new version of Adequate is available."}</span><button class="btn primary" type="button">Refresh</button>`;
     bar.querySelector("button").addEventListener("click", () => location.reload());
     document.body.appendChild(bar);
   }
@@ -15165,7 +15166,25 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        history   data/rank_history.json    (a snapshot saved each time rankings are published)
        league    Sleeper data in this browser (ownership, scoring, rosters)
      Photos come from Sleeper's CDN by Sleeper ID (face()). */
-  const statsCache = {}, statsLoading = {};
+  const statsCache = {}, statsLoading = {}, statsTag = {};
+  /* An open tab keeps the stats file it loaded (Oct 23: Alan's drawer still showed the Falcons' Oct 22 afternoon report, Wednesday's
+     statuses under Thu, a day after the fix and Thursday's report had gone live; stats refreshes don't change BUILD_ID, so no
+     update prompt appeared). When the tab comes back or every 15 minutes, ask for the file's ETag / Last-Modified and offer a
+     refresh once it changed. */
+  const fileTag = r => r.headers.get("etag") || r.headers.get("last-modified") || "";
+  let statsCheckAt = 0;
+  async function checkStatsFresh() {
+    const season = STATS_SEASONS[0], had = statsTag[season];
+    if (!had || document.hidden || Date.now() - statsCheckAt < 5 * 60e3) return;
+    statsCheckAt = Date.now();
+    try {
+      const r = await fetch(`data/stats/${season}.json`, { method: "HEAD", cache: "no-cache" });
+      const now = r.ok ? fileTag(r) : "";
+      if (now && now !== had && !(editor.on && changedRows().length)) showUpdate("New stats and practice reports are available.");
+    } catch (e) {}
+  }
+  setInterval(checkStatsFresh, 15 * 60e3);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkStatsFresh(); });
   const sumV = list => list.reduce((a, p) => a + dv(p), 0);
   /* Ranking history per board (Oct 14): each board has its own history file and snapshot folder (BOARDS: history,
      snaps). rankHistory is the edited board's (ACTIVE_BOARD: what Save queues against and Publish commits to); another
@@ -15182,7 +15201,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function loadSeason(season) {
     if (statsCache[season] !== undefined) return Promise.resolve(statsCache[season]);
     if (!statsLoading[season]) {
-      statsLoading[season] = fetch(`data/stats/${season}.json`, { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null)
+      statsLoading[season] = fetch(`data/stats/${season}.json`, { cache: "no-cache" }).then(r => { if (r.ok) statsTag[season] = fileTag(r); return r.ok ? r.json() : null; }).catch(() => null)
         .then(d => { statsCache[season] = d; return d; });
     }
     return statsLoading[season];
@@ -16123,7 +16142,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const c = I.cols || ["name", "pos", "sid", "status", "practice", "injury"], at = (r, k) => (c.indexOf(k) >= 0 ? r[c.indexOf(k)] : null);
     // undated: nflverse doesn't say which day this team's latest report is from (a non-Sunday game, or no source time; Oct 22)
     const daily = c.includes("wed"), undated = daily && (I.undated || []).includes(team);
-    return { week: I.week, daily, undated, rows: I.teams[team].map(r => ({ name: at(r, "name"), pos: at(r, "pos"), sid: at(r, "sid"), status: at(r, "status"),
+    // day: the newest practice day nflverse has posted for a dated team; later days aren't out yet (Pending, Oct 23)
+    const day = daily && !undated && ["wed", "thu", "fri"].includes(I.day) ? I.day : null;
+    return { week: I.week, daily, undated, day, rows: I.teams[team].map(r => ({ name: at(r, "name"), pos: at(r, "pos"), sid: at(r, "sid"), status: at(r, "status"),
       practice: at(r, "practice"), injury: injuryText(at(r, "injury")), wed: at(r, "wed"), thu: at(r, "thu"), fri: at(r, "fri"), daily, undated })) };
   }
   // The game the team's report would be for: its next unplayed game (a live game counts until its score is in)
@@ -16224,8 +16245,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         .concat([["Other", rows.filter(r => !POS_GROUPS.some(([, l]) => l.includes(r.pos)))]]).filter(([, g]) => g.length);
       if (!groups.length) return `<section class="pr-sec">${head}<p class="pp-note">No ${esc(relevantLabel(opp ? R.opp : R.own))} on ${esc(team)}'s report.</p></section>`;
       const days = rep.daily && !rep.undated ? ["wed", "thu", "fri"] : null;
+      // a day after the newest report nflverse has posted reads Pending, never "–" (no report yet ≠ not on that day's report); only for this week's report
+      const DAY_NAME = { wed: "Wednesday", thu: "Thursday", fri: "Friday" };
+      const posted = cur && rep.day ? days.indexOf(rep.day) : 2;
+      const cell = (r, k) => days.indexOf(k) > posted ? `<span class="st-blk none pr-pend" title="${DAY_NAME[k]}'s report isn't out yet">Pending</span>`
+        : r[k] ? stBlock(r[k]) : `<span class="st-blk none" title="Not on ${DAY_NAME[k]}'s report">–</span>`;
       const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}</td>
-          ${days ? days.map(k => `<td class="pr-day">${stBlock(r[k])}</td>`).join("") : `<td class="pr-day">${stBlock(r.practice)}</td>`}<td class="pr-inj">${esc(r.injury || "")}</td></tr>`;
+          ${days ? days.map(k => `<td class="pr-day">${cell(r, k)}</td>`).join("") : `<td class="pr-day">${stBlock(r.practice)}</td>`}<td class="pr-inj">${esc(r.injury || "")}</td></tr>`;
       return `<section class="pr-sec${old ? " prior" : ""}">${head}${old ? pending : ""}<div class="table-scroll"><table class="gl-table inj-table">
         <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day"${rep.undated ? ` title="nflverse doesn't say which practice day this report is from"` : ""}>${rep.undated ? "Latest" : "Practice"}</th>`}<th scope="col">Injury</th></tr></thead>
         <tbody>${groups.map(([label, g]) => `<tr class="pr-group"><td colspan="${days ? 5 : 3}">${esc(label)}</td></tr>` + g.map(row).join("")).join("")}</tbody></table></div></section>`;
@@ -16235,7 +16261,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const anyUndated = teamsList.some(([t]) => { const r = currentReport(t) || priorReport(t); return r && r.undated; });
     return me + teamsList.map(([t, o]) => section(t, o)).join("") +
       (R ? `<button class="btn pr-full" type="button" data-pr-full aria-expanded="${full}">${full ? "Show only what matters for him" : "View full report"}</button>` : "") +
-      `<p class="pp-note">Official practice report (nflverse${srcLine()}): FP full, LP limited, DNP did not practice. ${anyDaily ? "nflverse posts each day's report the next morning, so a day fills in about a day after practice; a dash means no report for that day yet." : "Shows the latest day reported."}${anyUndated ? " Latest: the newest status for a team whose report day nflverse doesn't confirm (a game not on Sunday, or no source time), shown without a day." : ""}</p>`;
+      `<p class="pp-note">Official practice report (nflverse${srcLine()}): FP full, LP limited, DNP did not practice. ${anyDaily ? "nflverse posts each day's report the next morning, so a day fills in about a day after practice; a dash means he wasn't on that day's report, and Pending means that day's report isn't out yet." : "Shows the latest day reported."}${anyUndated ? " Latest: the newest status for a team whose report day nflverse doesn't confirm (a game not on Sunday, or no source time), shown without a day." : ""}</p>`;
   }
 
   /* Depth Chart (Oct 4): his NFL team's depth chart from Sleeper (depth_chart_position / depth_chart_order in
