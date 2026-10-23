@@ -14,8 +14,11 @@ the frozen test board and a clock on Thursday or Friday:
   B. Friday, Thursday's report out: Robinson LP / DNP, Collins LP / FP, Jerrell LP / DNP, Zaccheaus LP / LP, Fri Pending;
      a player first listed Thursday reads "–" (not on Wednesday's report) under Wed; Bijan himself "Not on Week 7 report".
   C. Thursday- and Monday-game teams (CHI, DAL) show one Latest column, no day and no Pending.
-  D. An open tab: when the stats file changes (ETag), returning to the tab offers "New stats and practice reports";
-     an unchanged file offers nothing.
+  D. An open tab (Alan, Oct 23, at approval): with a synthetic league connected and a player's Practice Report open, for a
+     Sunday (ATL), Thursday (CHI) and Monday (DAL) team: an unchanged file offers nothing; a changed file (Wednesday's ->
+     Thursday's report) offers a quiet refresh; × keeps that version from offering again, a newer one offers once more;
+     Refresh reloads with the same league, tab and drawer (player, Practice Report) and the new report, and offers nothing
+     after it; board values and ranks are identical before and after.
 
     python3 tests/practice_display_check.py            (CHROMIUM=/path for a non-Playwright Chromium)
 """
@@ -115,17 +118,6 @@ with sync_playwright() as p:
     if os.environ.get("SHOTS"): pg.screenshot(path=os.path.join(os.environ["SHOTS"], "friday_falcons.png"))
     ok(not errs, f"no page errors ({errs[:2]})")
 
-    # D. the open tab learns the file changed (same page, Friday clock, served Thursday's file)
-    pg.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))"); pg.wait_for_timeout(600)
-    ok(pg.query_selector("#update-bar") is None, "D. file unchanged: no refresh offer")
-    serve["etag"] = '"fri"'
-    pg.clock.fast_forward("06:00"); pg.wait_for_timeout(200)
-    pg.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))"); pg.wait_for_timeout(600)
-    bar = pg.query_selector("#update-bar")
-    if os.environ.get("SHOTS"): pg.screenshot(path=os.path.join(os.environ["SHOTS"], "refresh_offer.png"))
-    ok(bar is not None and "New stats and practice reports" in bar.inner_text(), f"D. file changed: the tab offers a refresh ({bar and bar.inner_text()!r})")
-    pg.close()
-
     # C. Thursday- and Monday-game teams: one Latest column, no day, no Pending
     pg = page_at(THURSDAY, "wed")
     secs, _ = practice(pg, MONANGAI)
@@ -138,6 +130,96 @@ with sync_playwright() as p:
     dal = secs.get("Dallas Cowboys")
     ok(dal and dal["head"][1] == "Latest" and days(dal["rows"].get("George Pickens", [])) == ["LP"], f"C. Dallas (Monday game): Latest LP ({dal and [dal['head'], days(dal['rows'].get('George Pickens', []))]})")
     pg.close()
+
+    # D. an open tab learns the stats changed, for a Sunday, a Thursday and a Monday team, with a league connected
+    LID = "LG1"
+    lg = {"league_id": LID, "name": "Refresh League", "season": "2026", "status": "in_season", "total_rosters": 2,
+          "roster_positions": ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "SUPER_FLEX"] + ["BN"] * 6,
+          "scoring_settings": {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "rush_yd": 0.1, "rec_yd": 0.1, "rush_td": 6, "rec_td": 6, "bonus_rec_te": 0.5},
+          "settings": {"num_teams": 2, "type": 0}}
+    users = [{"user_id": f"u{i}", "display_name": f"mgr{i}", "metadata": {"team_name": f"Team {i}"}, "avatar": ""} for i in (1, 2)]
+    rosters = [{"roster_id": 1, "owner_id": "u1", "co_owners": [], "players": [BIJAN, MONANGAI, PICKENS], "starters": [], "reserve": [], "taxi": [],
+                "settings": {"wins": 3, "losses": 3, "ties": 0, "fpts": 600, "pf": 600, "streak": "1W", "division": 0}},
+               {"roster_id": 2, "owner_id": "u2", "co_owners": [], "players": [], "starters": [], "reserve": [], "taxi": [],
+                "settings": {"wins": 3, "losses": 3, "ties": 0, "fpts": 600, "pf": 600, "streak": "1L", "division": 0}}]
+    lg["divisions"] = None
+    def sleeper_api(route):
+        path = route.request.url.split("/v1", 1)[-1].split("?")[0]
+        body = lg if path == f"/league/{LID}" else users if path.endswith("/users") else rosters if path.endswith("/rosters") \
+            else {"season": "2026", "week": WEEK, "season_type": "regular"} if path == "/state/nfl" else []
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+    VALS = """() => [...document.querySelectorAll('#rank-body tr.player')].slice(0, 80).map(tr => tr.querySelector('.pl-name').textContent.trim() + '|' + tr.querySelector('td.rk').textContent.trim() + '|' + (tr.querySelector('.val') ? tr.querySelector('.val').textContent.trim() : ''))"""
+    STATE = """() => ({ hash: location.hash, league: (JSON.parse(localStorage.getItem('spm_sleeper') || 'null') || {}).activeId,
+      chip: (document.querySelector('#league-ui, .league-chip') || {}).textContent || '',
+      open: document.getElementById('player-modal').open, tab: (document.querySelector('#player-body [data-pp-tab][aria-selected=true]') || {}).dataset?.ppTab || '',
+      name: (document.querySelector('#player-body .pm-name, #player-body h2') || {}).textContent || '' })"""
+
+    def open_tab(clock, sid):
+        serve.update(key="wed", etag='"wed"')
+        pg = br.new_page(viewport={"width": 1440, "height": 1000})
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.clock.install(time=clock)
+        FB.route(pg, BASE)
+        pg.route("**/data/stats/2026.json*", lambda r: r.fulfill(status=200, content_type="application/json", headers={"ETag": serve["etag"]},
+                                                                   body="" if r.request.method == "HEAD" else BODY[serve["key"]]))
+        pg.route("https://api.sleeper.app/**", sleeper_api)
+        pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|use\.typekit\.net)/.*"), lambda r: r.abort())
+        sl = {"source": "sleeper", "username": "mgr1", "userId": "u1", "displayName": "mgr1", "season": "2026",
+              "leagues": [{"id": LID, "name": lg["name"], "season": "2026", "status": "in_season", "format": ""}],
+              "activeId": LID, "data": {LID: {"league": lg, "users": users, "rosters": rosters, "syncedAt": 0}}, "view": "league"}
+        init = f"localStorage.clear(); localStorage.setItem('spm_sleeper', {json.dumps(json.dumps(sl))});"
+        pg.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); {init} }}")
+        pg.goto(BASE + "/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
+        before_vals = pg.evaluate(VALS)
+        practice(pg, sid, full=False)
+        return pg, before_vals
+
+    def visible_again(pg):
+        pg.clock.fast_forward("06:00"); pg.wait_for_timeout(200)
+        pg.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))"); pg.wait_for_timeout(700)
+        return pg.query_selector("#update-bar")
+
+    for label, clock, sid, team, row, before_txt, after_txt in (
+        ("Sunday (ATL)", THURSDAY, BIJAN, "Atlanta Falcons", "Brian Robinson", ["LP", "Pending", "Pending"], ["LP", "DNP", "Pending"]),
+        ("Thursday (CHI)", THURSDAY, MONANGAI, "Chicago Bears", None, None, None),
+        ("Monday (DAL)", THURSDAY, PICKENS, "Dallas Cowboys", "George Pickens", None, None)):
+        pg, vals0 = open_tab(clock, sid)
+        st0 = pg.evaluate(STATE)
+        ok(st0["open"] and st0["tab"] == "practice" and st0["league"] == LID, f"D. {label}: league connected, Practice Report open ({st0['league']}, {st0['tab']})")
+        secs0 = {s["team"]: s for s in pg.evaluate(TABLE)}
+        if before_txt:
+            ok(days(secs0[team]["rows"].get(row, [])) == before_txt, f"D. {label}: before the refresh {row} {before_txt} ({days(secs0.get(team, {'rows': {}})['rows'].get(row, []))})")
+        bar = visible_again(pg)
+        ok(bar is None, f"D. {label}: unchanged file, no refresh offer")
+        bar = visible_again(pg)
+        ok(bar is None, f"D. {label}: still unchanged on the next look, still nothing")
+        serve.update(key="thu", etag='"thu"')
+        bar = visible_again(pg)
+        ok(bar is not None and "New stats and practice reports" in bar.inner_text(), f"D. {label}: changed file, the open tab offers a refresh ({bar and bar.inner_text()!r})")
+        if bar:
+            quiet = pg.evaluate("() => { const b = document.getElementById('update-bar'); return [b.classList.contains('quiet'), !!b.querySelector('.btn.secondary'), !b.querySelector('.btn.primary'), !!b.querySelector('[data-ub-close]'), Math.round(b.getBoundingClientRect().height)]; }")
+            ok(quiet[:4] == [True, True, True, True] and quiet[4] <= 44, f"D. {label}: the offer is quiet: neutral Refresh, a dismiss, at most 44px tall ({quiet})")
+            if label.startswith("Sunday") and os.environ.get("SHOTS"): pg.screenshot(path=os.path.join(os.environ["SHOTS"], "refresh_offer.png"))
+            pg.click("#update-bar [data-ub-close]"); pg.wait_for_timeout(200)
+            ok(pg.query_selector("#update-bar") is None, f"D. {label}: × dismisses it")
+            ok(visible_again(pg) is None and visible_again(pg) is None, f"D. {label}: the same file version never offers again after ×")
+            serve["etag"] = '"thu2"'
+            ok(visible_again(pg) is not None, f"D. {label}: a newer file version offers again")
+        pg.click("#update-bar [data-ub-refresh]"); pg.wait_for_load_state(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(3000)
+        st1 = pg.evaluate(STATE)
+        ok(st1["hash"] == st0["hash"] and st1["league"] == LID, f"D. {label}: after Refresh the same tab and league ({st1['hash']}, {st1['league']})")
+        ok(st1["open"] and st1["tab"] == "practice" and st1["name"] == st0["name"], f"D. {label}: the drawer reopens on the same player's Practice Report ({st1['open']}, {st1['tab']}, {st1['name']!r})")
+        secs1 = {s["team"]: s for s in pg.evaluate(TABLE)}
+        sec = secs1.get(team)
+        if after_txt:
+            ok(sec and days(sec["rows"].get(row, [])) == after_txt, f"D. {label}: the new report shows: {row} {after_txt} ({sec and days(sec['rows'].get(row, []))})")
+        else:
+            ok(sec and sec["head"][1] == "Latest" and all(c and c[0]["t"] != "Pending" for c in sec["rows"].values()), f"D. {label}: one Latest column, no day, no Pending ({sec and sec['head']})")
+        ok(visible_again(pg) is None, f"D. {label}: no refresh offer after the refresh")
+        modal_close = "() => { const m = document.getElementById('player-modal'); if (m.open) m.close(); }"
+        pg.evaluate(modal_close); pg.wait_for_timeout(300)
+        ok(pg.evaluate(VALS) == vals0, f"D. {label}: board ranks and values identical before and after the refresh")
+        pg.close()
 
     # phone: Pending fits its column
     pg = page_at(THURSDAY, "wed", 390)

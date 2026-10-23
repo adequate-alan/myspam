@@ -2318,6 +2318,12 @@ button.tr-player:hover:not(:disabled) { background: var(--surface-2); }
   background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--ink); font-size: 0.86rem; font-weight: 600;
   box-shadow: 0 18px 40px -16px var(--shadow-color); max-width: calc(100vw - 32px);
 }
+/* new stats (Oct 23): smaller and quieter than a new version; one × dismisses it for that file version */
+.update-bar.quiet { gap: 10px; padding: 6px 6px 6px 14px; font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); box-shadow: 0 10px 24px -14px var(--shadow-color); }
+.update-bar.quiet .btn { min-height: 30px; height: 30px; padding: 0 12px; font-size: 0.78rem; }
+.ub-x { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.ub-x:hover { background: var(--hover-bg); color: var(--ink); }
+.ub-x:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 /* ---------- Theme toggle (sun shows in dark mode, moon in light mode) ---------- */
 .theme-toggle {
   display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0;
@@ -6539,12 +6545,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (m && m[1] !== BUILD_ID && !(editor.on && changedRows().length)) showUpdate();
     } catch (e) {}
   }
-  function showUpdate(msg) {
+  // opts.quiet (new stats, Oct 23): a neutral Refresh and a × that keeps it away for that file version (opts.onDismiss);
+  // a refresh reopens the player drawer on the same tab (spm_reopen, this tab only), so the page comes back where it was
+  function showUpdate(msg, opts = {}) {
     if ($("update-bar")) return;
     const bar = document.createElement("div");
-    bar.id = "update-bar"; bar.className = "update-bar"; bar.setAttribute("role", "status");
-    bar.innerHTML = `<span>${msg || "A new version of Adequate is available."}</span><button class="btn primary" type="button">Refresh</button>`;
-    bar.querySelector("button").addEventListener("click", () => location.reload());
+    bar.id = "update-bar"; bar.className = "update-bar" + (opts.quiet ? " quiet" : ""); bar.setAttribute("role", "status");
+    bar.innerHTML = `<span>${msg || "A new version of Adequate is available."}</span><button class="btn ${opts.quiet ? "secondary" : "primary"}" type="button" data-ub-refresh>Refresh</button>` +
+      (opts.quiet ? `<button class="ub-x" type="button" data-ub-close aria-label="Dismiss" title="Not now">×</button>` : "");
+    bar.querySelector("[data-ub-refresh]").addEventListener("click", () => {
+      try { if (modalOpen() && PP.sid) sessionStorage.setItem("spm_reopen", JSON.stringify({ sid: PP.sid, tab: PP.tab, at: Date.now() })); } catch (e) {}
+      location.reload();
+    });
+    const x = bar.querySelector("[data-ub-close]");
+    if (x) x.addEventListener("click", () => { bar.remove(); if (opts.onDismiss) opts.onDismiss(); });
     document.body.appendChild(bar);
   }
   setTimeout(checkForUpdate, 4000);
@@ -15180,7 +15194,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     try {
       const r = await fetch(`data/stats/${season}.json`, { method: "HEAD", cache: "no-cache" });
       const now = r.ok ? fileTag(r) : "";
-      if (now && now !== had && !(editor.on && changedRows().length)) showUpdate("New stats and practice reports are available.");
+      let seen = ""; try { seen = sessionStorage.getItem("spm_stats_seen") || ""; } catch (e) {}
+      if (now && now !== had && now !== seen && !(editor.on && changedRows().length))
+        showUpdate("New stats and practice reports are available.", { quiet: true, onDismiss: () => { try { sessionStorage.setItem("spm_stats_seen", now); } catch (e) {} } });
     } catch (e) {}
   }
   setInterval(checkStatsFresh, 15 * 60e3);
@@ -19909,6 +19925,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   rebuild();   // show any edits saved in this browser
   renderLeagueUI();   // header settings chip and the rankings view row
+  // after Refresh on the update bar: reopen the player drawer that was open, on the same tab (once, within a minute)
+  try {
+    const ro = JSON.parse(sessionStorage.getItem("spm_reopen") || "null");
+    sessionStorage.removeItem("spm_reopen");
+    if (ro && ro.sid && Date.now() - ro.at < 60e3 && /^\d+$/.test(String(ro.sid))) { openPlayer(ro.sid); PP.tab = ro.tab || "overview"; renderPlayer(); }
+  } catch (e) {}
 
   // The calculator opens empty (Alan, Oct 4: no example trade pre-filled)
   renderTrade();
