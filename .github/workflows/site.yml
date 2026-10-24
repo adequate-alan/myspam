@@ -28,6 +28,8 @@ on:
     - cron: "0 22 * * 5"    # Fri 6 PM ET: final practice report with game statuses
     - cron: "45 16 * * 3"   # Wed 12:45 PM ET: midweek refresh (FantasyCalc market values, depth charts, stats)
     - cron: "45 16 * * 6"   # Sat 12:45 PM ET: pre-Sunday refresh (market values, depth charts, stats)
+    - cron: "17 13 * * 6"   # Sat 9:17 AM ET: Friday's practice report (nflverse posts it Saturday ~8 AM ET)
+    - cron: "17 20 * * 6"   # Sat 4:17 PM ET: retry, in case GitHub drops a scheduled run
     # FantasyCalc market values only, every 8 hours (Alan, Oct 9): 00:20, 08:20 and 16:20 UTC. Stdlib only, no
     # stats, projections or snapshot; failures keep the last file. Never touches ranks, tiers or values.
     - cron: "20 */8 * * *"
