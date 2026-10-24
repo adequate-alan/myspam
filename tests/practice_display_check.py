@@ -116,6 +116,17 @@ with sync_playwright() as p:
     ok(ct and days(ct) == ["–", "LP", "Pending"] and "Not on Wednesday's report" in ct[0]["tip"], f"B. first listed Thursday: Wed reads – 'not on Wednesday's report' ({ct and [days(ct), ct[0]['tip']]})")
     ok("Not on Week 7 report" in txt, "B. Bijan himself: Not on Week 7 report")
     if os.environ.get("SHOTS"): pg.screenshot(path=os.path.join(os.environ["SHOTS"], "friday_falcons.png"))
+    # Team header bands (Alan, Oct 24): the team's own color as a solid background, its text readable (≥ 4.5:1) in both themes
+    BANDS = """() => { const rgb = s => s.match(/[\\d.]+/g).slice(0, 3).map(Number), lum = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * g + .0722 * b; };
+      return [...document.querySelectorAll('#player-body .pr-team.tm')].map(h => { const bg = rgb(getComputedStyle(h).backgroundColor), out = [h.querySelector('b'), h.querySelector('.pr-wk')].map(e => rgb(getComputedStyle(e).color));
+        const cr = c => { const a = lum(bg), b = lum(c); return (Math.max(a, b) + .05) / (Math.min(a, b) + .05); };
+        return { team: h.querySelector('b').textContent, bg, min: Math.min(...out.map(cr)) }; }); }"""
+    for theme in ("dark", "light"):
+        pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme); pg.wait_for_timeout(100)
+        bands = pg.evaluate(BANDS)
+        atlb = next((b for b in bands if b["team"] == "Atlanta Falcons"), None)
+        ok(atlb and atlb["bg"] == [167, 25, 48], f"B. {theme}: the Falcons' band is their red #A71930 ({atlb and atlb['bg']})")
+        ok(len(bands) >= 2 and all(b["min"] >= 4.5 for b in bands), f"B. {theme}: every team band's text reads at 4.5:1 or more ({[(b['team'], round(b['min'], 2)) for b in bands]})")
     ok(not errs, f"no page errors ({errs[:2]})")
 
     # C. Thursday- and Monday-game teams: one Latest column, no day, no Pending
