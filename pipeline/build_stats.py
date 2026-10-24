@@ -440,6 +440,14 @@ def team_totals(season, d, pbp_src=PBP_URL, snap_src=SNAP_URL):
     return {"cols": TEAM_COLS, "teams": {t: dict(sorted(v.items(), key=lambda x: int(x[0]))) for t, v in sorted(out.items())}}
 
 
+def same_data(prev, data):
+    """True when `data` equals the previous file in everything but its build time."""
+    if not prev:
+        return False
+    strip = lambda d: {k: v for k, v in d.items() if k != "updated"}
+    return strip(prev) == strip(json.loads(json.dumps(data)))
+
+
 def build(season, ids, games, stats_src=STATS_URL, pbp_src=PBP_URL, inj_src=INJ_URL, prev=None, pfr=None, snap_src=SNAP_URL):
     d = pd.read_csv(stats_src.format(season), low_memory=False)
     every = d[d.season_type == "REG"]
@@ -493,6 +501,11 @@ if __name__ == "__main__":
             prev = None
         data = build(s, ids, games, stats_src, os.environ.get("PBP_SRC", PBP_URL), os.environ.get("INJ_SRC", INJ_URL), prev,
                      pfr, os.environ.get("SNAP_SRC", SNAP_URL))
+        if same_data(prev, data):
+            # nothing new from nflverse: keep the file (and its `updated`) as it is, so a repeat run commits nothing,
+            # deploys nothing and never offers open tabs a refresh for unchanged stats (Alan, Oct 24)
+            print(f"{s}: unchanged since {prev.get('updated')}, file kept")
+            continue
         with open(path, "w") as f:
             json.dump(data, f, separators=(",", ":"))
         print(f"{s}: {len(data['players'])} players through week {data['through_week']}, "

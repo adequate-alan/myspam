@@ -59,6 +59,15 @@ if __name__ == "__main__":
     for s in seasons:
         data = build(s, ids, os.environ.get("EP_SRC", EP_URL))
         path = os.path.join(out_dir, f"{s}.json")
+        try:
+            with open(path) as f:
+                prev = json.load(f)
+        except (OSError, ValueError):
+            prev = None
+        strip = lambda d: {k: v for k, v in d.items() if k != "updated"}
+        if prev and strip(prev) == strip(json.loads(json.dumps(data))):
+            print(f"{s}: unchanged since {prev.get('updated')}, file kept")   # a repeat run commits nothing
+            continue
         with open(path, "w") as f:
             json.dump(data, f, separators=(",", ":"))
         print(f"{s}: {len(data['players'])} players through week {data['through_week']}, {os.path.getsize(path) / 1024:.0f} KB")
