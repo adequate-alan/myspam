@@ -3748,11 +3748,15 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .pr-me { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 14px; }
 .pr-scope { font-size: 0.78rem; color: var(--muted); }
 .pr-sec { margin-bottom: 18px; }
-.pr-team.tm { display: flex; align-items: center; gap: 10px; padding: 9px 14px; margin-bottom: 8px; border-radius: var(--radius-sm); border: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--tc) 8%, var(--surface)); box-shadow: inset 3px 0 0 var(--tc); }   /* .tm scopes it: Power Rankings rows use .pr-team too (Oct 11) */
-.pr-team.tm b { font-size: 0.98rem; font-weight: 760; color: var(--cream); }
-.pr-opp { font-size: 0.58rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-.pr-wk { margin-left: auto; font-size: 0.72rem; color: var(--muted); }
+.pr-team.tm { --tb: var(--tb-d, var(--surface-2)); --tbi: var(--tbi-d, var(--cream));
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 8px; border-radius: var(--radius-sm);
+  background: var(--tb); color: var(--tbi); border: 1px solid color-mix(in srgb, var(--tbi) 10%, transparent); }   /* .tm scopes it: Power Rankings rows use .pr-team too (Oct 11) */
+:root[data-theme="light"] .pr-team.tm { --tb: var(--tb-l, var(--surface-2)); --tbi: var(--tbi-l, var(--cream)); }
+.pr-team.tm b { font-size: 0.98rem; font-weight: 760; color: var(--tbi); }
+.pr-team.tm .pr-opp { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--tbi);
+  padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, var(--tbi) 14%, transparent); }
+.pr-team.tm .pr-wk { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: var(--tbi); }
+.pr-team.tm .tlogo.md { width: 30px; height: 30px; padding: 3px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }   /* a white disc so a logo in the band's own color stays visible */
 .gl-table.inj-table tr.pr-group td { padding: 6px 12px 5px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); background: color-mix(in srgb, var(--muted) 6%, transparent); text-align: left; }
 .gl-table.inj-table td.pr-day, .gl-table.inj-table th.pr-day { text-align: center; width: 64px; }
 .pr-player .st-badge { margin-left: 8px; }
@@ -3771,7 +3775,7 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 /* Last week's report shown for reference (no report yet for this week's game): neutral, never a status colour */
 .st-badge.prior { --st: var(--fill-1, var(--surface-2)); color: var(--text-secondary); font-weight: 600; white-space: normal; }
 .pr-sec.prior .st-badge, .pr-sec.prior .st-blk { background: var(--fill-1, var(--surface-2)); color: var(--text-secondary); }
-.pr-sec.prior .pr-wk { color: var(--warn-text); }
+.pr-sec.prior .pr-team.tm .pr-wk { font-style: italic; }
 .inj-pos { display: inline-block; min-width: 30px; font-size: 0.62rem; font-weight: 650; letter-spacing: 0.06em; color: var(--muted); }
 .inj-table tr.inj-me td { background: color-mix(in srgb, var(--am-red) 9%, transparent); }
 .inj-table .pl-name { font-size: 0.86rem; }
@@ -6522,6 +6526,20 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return (TEAM_ACCENT[abbr] = { d, l });
   }
   const teamStyle = abbr => { const a = teamAccent(abbr); return a ? `--tc-d:${a.d};--tc-l:${a.l}` : ""; };
+  /* Solid team band (Alan, Oct 24: the Practice Report and Depth Chart team headers): the team's primary color as the
+     background (its secondary when the primary is pure black, so the Raiders and Steelers don't vanish into the dark
+     page), lifted just enough on the dark theme to stand off the near-black page; text in white or near-black,
+     whichever reads better on it. --tb-d / --tb-l are the band per theme, --tbi-d / --tbi-l its ink. */
+  const TEAM_BAND = {};
+  function teamBand(abbr) {
+    if (TEAM_BAND[abbr]) return TEAM_BAND[abbr];
+    const m = teamMeta(abbr); if (!m) return null;
+    const base = lumOf(m.c1) < 0.005 ? m.c2 : m.c1;
+    let d = base; for (let f = 0.06; lumOf(d) < 0.03 && f < 0.6; f += 0.06) d = mixHex(base, "#FFFFFF", f);
+    const ink = c => (1.05 / (lumOf(c) + 0.05) >= (lumOf(c) + 0.05) / 0.0556 ? "#FFFFFF" : "#141414");
+    return (TEAM_BAND[abbr] = { d, l: base, di: ink(d), li: ink(base) });
+  }
+  const teamBandStyle = abbr => { const b = teamBand(abbr); return b ? `${teamStyle(abbr)};--tb-d:${b.d};--tb-l:${b.l};--tbi-d:${b.di};--tbi-l:${b.li}` : teamStyle(abbr); };
   const teamLogo = (abbr, size = "") => { const m = teamMeta(abbr); return m ? `<img class="tlogo${size ? " " + size : ""}" src="${m.logo}" alt="${esc(m.nick)}" title="${esc(m.name)}" loading="lazy" decoding="async" onerror="this.classList.add('broken')">` : ""; };
   /* Game line for player listings (Alan, Oct 11): his own team's logo first, then vs/@, then the opponent's logo and
      abbreviation, so the opponent's logo never reads as the player's team (his abbreviation stays beside his name). */
@@ -16249,7 +16267,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const section = (team, opp) => {
       const cur = currentReport(team), old = cur ? null : priorReport(team), rep = cur || old, m = teamMeta(team), wk = reportWeek(team);
       const when = old ? weekGameDate(team, old.week) : "";
-      const head = `<div class="pr-team tm${old ? " prior" : ""}" style="${teamStyle(team)}">${teamLogo(team, "md")}<b>${esc(m ? m.name : team)}</b>${opp ? `<span class="pr-opp">Opponent</span>` : ""}<span class="pr-wk">${cur ? `Week ${cur.week} practice report` : old ? `Week ${old.week} report · last week` : ""}</span></div>`;
+      const head = `<div class="pr-team tm${old ? " prior" : ""}" style="${teamBandStyle(team)}">${teamLogo(team, "md")}<b>${esc(m ? m.name : team)}</b>${opp ? `<span class="pr-opp">Opponent</span>` : ""}<span class="pr-wk">${cur ? `Week ${cur.week} practice report` : old ? `Week ${old.week} report · last week` : ""}</span></div>`;
       const pending = wk ? `<p class="pp-note pr-pending">No Week ${wk} practice report from ${esc(team)} yet.${old ? ` Below is the Week ${old.week} report${when ? ` (game ${esc(when)})` : ""} for reference: those designations were for that game, not Week ${wk}.` : ""}</p>` : "";
       if (!rep) return `<section class="pr-sec">${head}${pending || `<p class="pp-note">No one on ${esc(team)}'s latest practice report.</p>`}</section>`;
       let rows = rep.rows;
@@ -16303,7 +16321,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     loadDepth();
     if (DEPTH === "loading" || !DEPTH) return `<p class="empty-note lg-loading">Loading the ${esc(info.team)} depth chart…</p>`;
     const m = teamMeta(info.team), chart = DEPTH.teams && DEPTH.teams[info.team];
-    const head = `<div class="pr-team tm" style="${teamStyle(info.team)}">${teamLogo(info.team, "md")}<b>${esc(m ? m.name : info.team)}</b><span class="pr-wk">Depth chart</span></div>`;
+    const head = `<div class="pr-team tm" style="${teamBandStyle(info.team)}">${teamLogo(info.team, "md")}<b>${esc(m ? m.name : info.team)}</b><span class="pr-wk">Depth chart</span></div>`;
     if (!chart) return `<section class="pr-sec">${head}<p class="pp-note">${DEPTH.teams ? `Sleeper has no depth chart for ${esc(info.team)} right now.` : "Depth charts arrive with the next data update (they refresh with every stats update)."}</p></section>`;
     const me = String(info.sid), full = !!PP.fullDepth;
     const known = new Set(DC_ROWS.flatMap(([, rows]) => rows.map(([k]) => k)));
