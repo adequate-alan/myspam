@@ -41,6 +41,7 @@ b1 = R[1]["players"][3]                              # team 2 sends
 c1, d1 = R[2]["players"][5], R[3]["players"][5]
 e1, f1 = R[4]["players"][5], R[5]["players"][5]
 g1, g2, g3 = R[6]["players"][5], R[7]["players"][5], R[8]["players"][5]
+g4 = R[6]["players"][7]                              # team 7 also sends g4 to team 9: one team sending to both others
 k1, k2 = R[9]["players"][5], R[10]["players"][5]
 UNV = "KC"                                           # a team defense: never on an AM board, no history
 T_HIST, T_PRE, T_PART, T_3 = NOW - 10 * DAY, NOW - 40 * DAY, NOW - 12 * DAY, NOW - 9 * DAY
@@ -48,7 +49,7 @@ T_HIST, T_PRE, T_PART, T_3 = NOW - 10 * DAY, NOW - 40 * DAY, NOW - 12 * DAY, NOW
 first = NOW - 30 * DAY
 hist = {"note": "synthetic", "version": 2, "players": {}}
 def add(sid, ms, rank, pr, tier, v): hist["players"].setdefault(sid, []).append([iso(ms), rank, pr, tier, v, "M"])
-for sid, rk in [(a1, 20), (a2, 60), (b1, 15), (c1, 40), (e1, 50), (f1, 55), (g1, 70), (g2, 75), (g3, 80), (k1, 65), (k2, 66)]: add(sid, first, rk, 9, 3, 3000 - rk * 10)
+for sid, rk in [(a1, 20), (a2, 60), (b1, 15), (c1, 40), (e1, 50), (f1, 55), (g1, 70), (g2, 75), (g3, 80), (g4, 85), (k1, 65), (k2, 66)]: add(sid, first, rk, 9, 3, 3000 - rk * 10)
 add(a1, T_HIST - 2 * DAY, 18, 7, 2, 6100); add(a2, T_HIST - 2 * DAY, 58, 22, 4, 2400); add(b1, T_HIST - 2 * DAY, 12, 5, 2, 8500)
 add(b1, T_HIST + 3600e3, 30, 11, 3, 4000)   # published after the trade: must never count as "at the time"
 # d1 has no history: the partial trade
@@ -57,7 +58,7 @@ L1["tx"] = {2: [
      "adds": {b1: 1, a1: 2, a2: 2}, "drops": {b1: 2, a1: 1, a2: 1}, "draft_picks": [{"season": "2027", "round": 1, "roster_id": 1, "owner_id": 2, "previous_owner_id": 1}],
      "waiver_budget": [{"sender": 2, "receiver": 1, "amount": 15}]},
     {"transaction_id": "th3", "type": "trade", "status": "complete", "roster_ids": [7, 8, 9], "leg": 2, "status_updated": T_3,
-     "adds": {g1: 8, g2: 9, g3: 7}, "drops": {g1: 7, g2: 8, g3: 9}, "draft_picks": [], "waiver_budget": []},
+     "adds": {g1: 8, g2: 9, g3: 7, g4: 9}, "drops": {g1: 7, g2: 8, g3: 9, g4: 7}, "draft_picks": [], "waiver_budget": []},
     {"transaction_id": "thk", "type": "trade", "status": "complete", "roster_ids": [10, 11], "leg": 2, "status_updated": T_3 + 3600e3,
      "adds": {k1: 11, k2: 10, UNV: 10}, "drops": {k1: 10, k2: 11, UNV: 11}, "draft_picks": [], "waiver_budget": []}],
   1: [{"transaction_id": "thp", "type": "trade", "status": "complete", "roster_ids": [3, 4], "leg": 1, "status_updated": T_PART,
@@ -147,6 +148,25 @@ with sync_playwright() as p:
             # 3-team
             c3 = txt("three")
             ok("THEN" in c3.upper() and c3.count("Team 7") >= 3 and ("+" in c3 and "−" in c3 or "Basically" in c3), "Three-team trade: each team's net in both snapshots")
+            # "From <team>" (Alan, Oct 27): every player on a three-team card names the team that sent him, from the
+            # trade record (drops), never today's owner; team 7 sends g1 to team 8 and g4 to team 9
+            want = {g1: (8, 7), g2: (9, 8), g3: (7, 9), g4: (9, 7)}   # sid: (receiving roster, sending roster)
+            ev3 = {x["sid"]: x for x in pg.evaluate("() => SPM.tradeEval('th3')")["items"]}
+            ok(all(ev3[s_]["to"] == to and ev3[s_]["from"] == f"Alpha League Team {fr}" for s_, (to, fr) in want.items()), f"Three-team trade: each player's sending team comes from the trade record {[(ev3[s_]['to'], ev3[s_]['from']) for s_ in want]}")
+            tc3 = cards.nth(I["three"])
+            shown = {}
+            for si in range(tc3.locator(".th-side").count()):
+                sd = tc3.locator(".th-side").nth(si)
+                to = int(re.search(r"Team (\d+)", sd.locator(".th-team b").inner_text()).group(1))
+                for li in range(sd.locator(".th-list li:not(.th-pick)").count()):
+                    row = sd.locator(".th-list li:not(.th-pick)").nth(li)
+                    nm = row.locator(".th-name").inner_text().strip()
+                    fr = row.locator(".th-from").inner_text().strip() if row.locator(".th-from").count() else ""
+                    shown[nm] = (to, fr)
+            names = {s_: ev3[s_]["name"] for s_ in want}
+            ok(len(shown) == 4 and all(shown.get(names[s_]) == (to, f"From Alpha League Team {fr}") for s_, (to, fr) in want.items()), f"Three-team card: a muted 'From <team>' under every player, under the team that received him {shown}")
+            ok(sum(1 for v in shown.values() if v[1] == "From Alpha League Team 7") == 2 and len({v[0] for v in shown.values() if v[1] == "From Alpha League Team 7"}) == 2, "Team 7 sending to both other teams shows on both cards")
+            ok(cards.nth(I["hist"]).locator(".th-from").count() == 0 and cards.nth(I["unv"]).locator(".th-from").count() == 0, "Two-team trades show no 'From' line")
             # partial and pre-AM
             cp, c0 = txt("part"), txt("pre")
             ok("Not every player had an AM value at the time" in cp and "NOW" in cp.upper() and cards.nth(I["part"]).locator(".th-verdict small").inner_text().upper() == "NOW", "Partial history: no at-the-time verdict")
@@ -168,10 +188,12 @@ with sync_playwright() as p:
             cards.nth(I["hist"]).scroll_into_view_if_needed()
             pg.screenshot(path=os.path.join(SHOTS, f"trade_history_{theme}.png"), full_page=False)
             cards.nth(I["hist"]).screenshot(path=os.path.join(SHOTS, f"card_{theme}_1440.png"))
+            cards.nth(I["three"]).screenshot(path=os.path.join(SHOTS, f"card3_{theme}_1440.png"))
             pg.set_viewport_size({"width": 390, "height": 900}); pg.wait_for_timeout(400)
             cards.nth(I["hist"]).scroll_into_view_if_needed()
             pg.screenshot(path=os.path.join(SHOTS, f"trade_history_{theme}_phone.png"), full_page=False)
             cards.nth(I["hist"]).screenshot(path=os.path.join(SHOTS, f"card_{theme}_390.png"))
+            cards.nth(I["three"]).scroll_into_view_if_needed(); cards.nth(I["three"]).screenshot(path=os.path.join(SHOTS, f"card3_{theme}_390.png"))
         pg.set_viewport_size({"width": 375, "height": 900}); pg.wait_for_timeout(400)
         if pg.locator(".th-age.then").count():
             tb, nb = (cards.nth(I["hist"]).locator(f".th-age.{k}").bounding_box() for k in ("then", "now"))
