@@ -29,6 +29,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, "tests", "fixtures", "sf-alignment")
 SRC = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
 CSV_RE = re.compile(r"(const RANKINGS_CSV = `\n)([\s\S]*?)(\n`;)")
+PPR_RE = re.compile(r"(const RANKINGS_CSV_PPR = `\n)([\s\S]*?)(\n`;)")
+PPR = open(os.path.join(FIX, "ppr.csv"), encoding="utf-8").read().rstrip("\n")   # AM PPR as published with the alignment (0aeb2e8), so a later AM PPR publish never moves the 1QB side
 BEFORE = open(os.path.join(FIX, "before.csv"), encoding="utf-8").read().rstrip("\n")
 AFTER = open(os.path.join(FIX, "after.csv"), encoding="utf-8").read().rstrip("\n")
 FORMATS = [dict(teams=t, qb=q, rec=r, tep=e) for t in (8, 10, 12, 14) for q in ("1", "sf", "2") for r in (0, 0.5, 1) for e in (0, 0.5, 1)]
@@ -66,8 +68,10 @@ BASE = f"http://127.0.0.1:{srv.server_address[1]}"
 errors = []
 
 def page_with(csv_block):
-    m = CSV_RE.search(SRC)
-    return SRC[:m.start(2)] + csv_block + SRC[m.end(2):]
+    m = PPR_RE.search(SRC)
+    src = SRC[:m.start(2)] + PPR + SRC[m.end(2):]
+    m = CSV_RE.search(src)
+    return src[:m.start(2)] + csv_block + src[m.end(2):]
 
 def run(br, html, fc=False):
     pg = br.new_page()
