@@ -268,7 +268,9 @@ with sync_playwright() as p:
     ok(not s["warn"], "Hole-filling trade: entered the right way round, no warning")
     ok(pg.evaluate("() => localStorage.getItem('spm_needs')") is None and not pg.locator("#needs-grid").count(), "Roster-needs sliders are gone and the old saved setting is cleared")
     gap_needs = s["gap"]
-    ok(s["title"] in ("Fair trade", "Basically even") and ("apart in value" in s["gap"] or "Raw asset value" in s["gap"]) and "fit" not in s["gap"].lower(),   # a 2-for-2 can carry a package adjustment since Oct 21 (rank-matched)
+    # the trade's players come from the live board, so the verdict's size moves with each rankings publish (Week 8: a slight
+    # edge); what matters is that it's a value verdict with no roster-fit wording (needs never change it: checked below)
+    ok(re.match(r"(Fair trade|Basically even|Slight edge to Team (Alpha|Beta))$", s["title"]) and ("apart in value" in s["gap"] or "Raw asset value" in s["gap"]) and not re.search(r"\bfit|need", s["gap"] + s["title"], re.I),   # a 2-for-2 can carry a package adjustment since Oct 21 (rank-matched)
        f"Hole-filling trade: the verdict is asset value only ({s['title']} | {s['gap'][:120]})")
     m = re.search(r"Team Alpha ([+−]\d+\.\d)% · Team Beta ([+−]\d+\.\d)% starting-lineup value", s["hint"])
     net = float(m.group(1).replace("−", "-")) if m else None
@@ -324,6 +326,11 @@ with sync_playwright() as p:
       valueRead({ a: 300, b: 65, rawA: 300, rawB: 65, adj: null }, 4000).gap]""")
     ok(k[0] == "split" and k[1] == "sensitive" and k[2]["kind"] == "widened" and abs(k[2]["gap"] - 4.1) < 0.1 and k[3] < 6,
        f"valueRead: split, package-sensitive, widened decided by the raw gap, materiality floor {k}")
+    # the headline on fixed numbers (independent of the live board): 1-for-1 trades at known gaps get their verdict tier
+    hv = pg.evaluate("""() => [[10000, 9950], [10000, 9800], [10000, 9500], [10000, 9100], [10000, 8500], [10000, 7000]].map(([x, y]) => {
+      const r = valueRead({ a: x, b: y, rawA: x, rawB: y, adj: null }); return [r.kind, Math.round(r.gap * 10) / 10, verdictTier(r.gap).title("A", "B")]; })""")
+    ok([h[2] for h in hv] == ["Basically even", "Fair trade", "Slight edge to A", "A wins the trade", "A clearly wins", "B is getting robbed"] and all(h[0] == "plain" for h in hv),
+       f"Verdict tiers on fixed values: 0.5% Basically even, 2% Fair, 5.3% Slight edge, 9.9% wins, 17.6% clearly wins, 43% robbed ({hv})")
     pg.close()
     # 5. the same trade from the league's transaction log: a simple log, a busy one, and one with a move missing
     def open_past(mode):
