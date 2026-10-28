@@ -3260,6 +3260,8 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .th-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; font-size: 0.84rem; }
 .th-list li.th-pick { grid-template-columns: minmax(0, 1fr) auto; padding-left: 2px; }
 .th-name { font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.th-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.th-from { font-size: 0.7rem; font-weight: 500; line-height: 1.25; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .th-list .pos { min-width: 36px; height: 19px; font-size: 0.62rem; padding: 0 5px; }
 .th-v { min-width: 44px; font-size: 0.74rem; font-weight: 550; color: var(--text-muted); font-variant-numeric: tabular-nums; text-align: right; }
 .th-pick .th-v { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -13652,7 +13654,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       s.items = s.get.map(sid => {
         const e = rosterEntry(sid, map), p = map.get(sid), h = then.get(sid) || null;
         const thenV = h ? (thenAdj ? thenAdj.bySid.get(sid) ?? h.v : h.v) : null, now = p ? (adjusted ? adjOf(p) : p.value) : (h ? 0 : null);
-        return { sid, e, p, then: h, thenV, thenBase: h ? h.v : null, now, nowBase: p ? p.value : (h ? 0 : null),
+        // the team that sent him, from Sleeper's own record of this trade (drops: player → roster that gave him up),
+        // never today's owner (Alan, Oct 27: three-team cards show "From <team>")
+        const fr = t.drops[sid], from = fr == null ? null : (partOf(fr) || { team: LG.teams.find(x => String(x.rosterId) === String(fr)) || { name: `Team ${fr}` } }).team;
+        return { sid, e, p, then: h, thenV, thenBase: h ? h.v : null, now, nowBase: p ? p.value : (h ? 0 : null), from,
           posThen: h && h.pr ? e.pos + h.pr : null, v: thenAll ? (h ? thenV : 0) : (now || 0) };   // an unvalued player (K, DEF, off the board) counts 0 then too
       }).sort((a, b) => b.v - a.v);
       s.total = s.items.reduce((a, x) => a + x.v, 0);
@@ -13769,7 +13774,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : `<span class="th-verdict"><small>${P.length}-team trade · Now</small>${main.fair ? "Basically even" : `${esc(P[main.ahead].team.name)} got the most`}</span>`;
     const side = s => `<div class="th-side">
         <div class="th-team">${teamFace(s.team, "sm")}<div><b>${esc(s.team.name)}</b><span>receives</span></div></div>
-        <ul class="th-list">${s.items.map(x => `<li>${face(x.sid, x.e.name, "xs")}<span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.sid, x.e.name, "th-name") : `<span class="th-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span>
+        <ul class="th-list">${s.items.map(x => `<li>${face(x.sid, x.e.name, "xs")}<span class="th-who"><span class="pl-head">${EDIT_POS.includes(x.e.pos) ? nameLink(x.sid, x.e.name, "th-name") : `<span class="th-name">${esc(x.e.name)}</span>`}${nflTag(x.e.team)}</span>${P.length > 2 && x.from ? `<small class="th-from">From ${esc(x.from.name)}</small>` : ""}</span>
             <span class="pos ${esc(x.e.pos)}">${esc(r.then ? (x.posThen || x.e.pos || "") : (x.p ? x.p.posRank : x.e.pos || ""))}</span><span class="th-v">${x.p || x.then ? fmt(x.v) : "–"}</span></li>`).join("")}
           ${s.picks.map(pk => `<li class="th-pick"><span class="th-name">${esc(pickText(pk, P))}</span><span class="th-v">pick</span></li>`).join("")}
           ${s.faab ? `<li class="th-pick"><span class="th-name">$${s.faab} FAAB</span><span class="th-v"></span></li>` : ""}
@@ -19561,7 +19566,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   if (window.__SPM_TEST_HOOKS === true) SPM.tradeEval = id => {   // a Transactions trade's Then / Now values per player (tests)
     const d = activeData(), t = d && (d.tx || []).find(x => x.id === String(id)); if (!t) return null;
     const r = evalTrade(t), adj = new Map((LG.board === ACTIVE_BOARD ? players : boardPlayers(LG.board)).map(q => [q.sleeperId, LG.adj.get(q.id)]));
-    return { board: (LG.board || leagueBoard()).id, adjusted: r.adjusted, thenAll: r.thenAll, items: r.parts.flatMap(s => s.items.map(x => ({ sid: x.sid, pos: x.e.pos, thenV: x.thenV, thenBase: x.thenBase, now: x.now, nowBase: x.nowBase, adj: adj.get(x.sid) ?? null }))),
+    return { board: (LG.board || leagueBoard()).id, adjusted: r.adjusted, thenAll: r.thenAll, items: r.parts.flatMap(s => s.items.map(x => ({ sid: x.sid, name: x.e.name, pos: x.e.pos, to: s.rid, from: x.from ? x.from.name : null, thenV: x.thenV, thenBase: x.thenBase, now: x.now, nowBase: x.nowBase, adj: adj.get(x.sid) ?? null }))),
       thenDiff: r.then && r.then.diff, nowDiff: r.now && r.now.diff, thenPct: r.then && r.then.more, nowPct: r.now && r.now.more };
   };
   if (window.__SPM_TEST_HOOKS === true) SPM.leagueSidValues = () => Object.fromEntries((LG.board === ACTIVE_BOARD ? players : boardPlayers(LG.board)).filter(q => q.sleeperId && LG.adj.has(q.id)).map(q => [q.sleeperId, LG.adj.get(q.id)]));
