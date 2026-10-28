@@ -90,6 +90,7 @@ with sync_playwright() as p:
     br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
     before, _, _ = run(br, page_with(BEFORE))
     after, nat, chk = run(br, page_with(AFTER), fc=True)
+    live, _, _ = run(br, SRC)   # today's two boards as published, for the advisory section at the end (never checked)
     br.close()
 
 sf = [f for f in FORMATS if f["qb"] != "1"]
@@ -125,6 +126,17 @@ for label, res in (("before", before), ("after", after)):
     q1, q2 = trade_pct(res, dict(teams=12, qb="1", rec=1, tep=0.5)), trade_pct(res, dict(teams=12, qb="sf", rec=1, tep=0.5))
     print(f"     {label}: Bowers + Concepcion + Jones for Nabers + Burden + Kincaid, raw 1QB {q1:+.1f}% · Superflex {q2:+.1f}%")
     if label == "after": ok(abs(q1 - q2) <= 1, f"Named trade: 1QB and Superflex raw % within 1 point ({q1:+.1f}% vs {q2:+.1f}%)")
+# Advisory (Alan, Oct 28): the checks above freeze both boards as they were at the alignment; this tracks how today's boards
+# compare, so a later publish that moves them apart stays visible. Information only: it never fails a run or blocks a publish.
+lq1, lq2 = trade_pct(live, dict(teams=12, qb="1", rec=1, tep=0.5)), trade_pct(live, dict(teams=12, qb="sf", rec=1, tep=0.5))
+lm, lo = gaps(live)
+print(f"INFO Current boards (advisory): named trade raw 1QB {lq1:+.1f}% · Superflex {lq2:+.1f}% (at the alignment {q1:+.1f}% · {q2:+.1f}%); "
+      f"same-spot median gap {lm:.1f}% (at the alignment {ma:.1f}%), {lo:.0f}% of spots over 20%")
+_f1, _f2 = key(dict(teams=12, qb="1", rec=1, tep=0.5)), key(dict(teams=12, qb="sf", rec=1, tep=0.5))
+_x = {(r["pos"], r["pn"]): r for r in live[_f1].values()}; _y = {(r["pos"], r["pn"]): r for r in live[_f2].values()}
+_w = sorted(((math.log(_x[k]["adj"] / _y[k]["adj"]), k) for k in _x if k in _y and k[0] != "QB" and min(_x[k]["adj"], _y[k]["adj"]) >= 1000), key=lambda t: -abs(t[0]))
+for g, k in _w[:5]:
+    print(f"     {k[0]}{k[1]}: 1QB {_x[k]['name']} {_x[k]['adj']:,} · Superflex {_y[k]['name']} {_y[k]['adj']:,} ({100 * (math.exp(g) - 1):+.1f}%)")
 for c in chk:
     if c.get("info"): print(f"     {c['check']}: {'; '.join(map(str, c.get('values') or []))}")
 bad = [c["check"] + ": " + "; ".join(map(str, c.get("values") or []))[:160] for c in chk if not c.get("pass")]
