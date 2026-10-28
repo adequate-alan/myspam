@@ -19454,8 +19454,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     /* One documented exception (Alan, Oct 21, PR #78): in 8-team, 0 PPR, no TE premium leagues, Kincaid (TE9) → Kelce (TE10)
        drops ~31% (531 → 368) where AM PPR has them 1.8% apart. The Week 7 sheet makes them the only two TEs in Tier 8, and the
        league layer prices each tier as a block and eases the two players at each edge, so a two-TE tier in a format where TE9+
-       are bench players opens this gap. Exact pair, spots and format only; a bigger drop, or the same gap anywhere else, fails. */
-    const CLIFF_OK = [{ teams: 8, rec: 0, tep: 0, pos: "TE", a: "10236", c: "1466", at: 9, max: 0.33 }];
+       are bench players opens this gap. Exact pair, spots and format only; a bigger drop, or the same gap anywhere else, fails.
+       A second one (Alan, Oct 28, PR #102): in 8-team, 0 PPR, TE premium +1.0 leagues, DJ Moore (WR21, first of Week 8's
+       Tier 7) → A.J. Brown (WR22) drops ~26% (614 → 451) where AM PPR has them 2.3% apart: tier-edge easing lifts the first
+       player of a tier toward the tier above more than the second. Same rule: that pair, those spots, that format only, up to 30%. */
+    const CLIFF_OK = [{ teams: 8, rec: 0, tep: 0, pos: "TE", a: "10236", c: "1466", at: 9, max: 0.33 },
+      { teams: 8, rec: 0, tep: 1, pos: "WR", a: "4983", c: "5859", at: 21, max: 0.30 }];
     const cliffs = [], tolerated = [];
     for (const f of fams.filter(f => f.qb === "1")) {
       const vl = lg(f), m = adjMapFor(vl, ppr), T = modelTable(curvesFor(vl.scoring_settings), lineupOf(vl));
@@ -19473,7 +19477,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
     }
     check("AM PPR's overall tiers create no format cliffs in 36 1QB formats", cliffs.slice(0, 5), !cliffs.length);
-    if (tolerated.length) check("Documented format-cliff exception still within its recorded size (8-team Standard TE9 → TE10)", tolerated, true);
+    if (tolerated.length) check("Documented format-cliff exceptions still within their recorded size (8-team Standard Kincaid → Kelce, 8-team Standard TEP+1.0 DJ Moore → A.J. Brown)", tolerated, true);
     const prov = boardPlayers(ppr).filter(p => p.source === "auto"), provOk = prov.every(p => provisionalOn(byId.get(p.id), ppr)) && !players.some(p => provisionalOn(p, sf));
     check(`AM PPR's ${prov.length} Auto players are marked provisional (AM SF PPR TE+ has none)`, [prov.length], prov.length > 0 && provOk);
     const after = { sf: snap(players), lists: BOARDS.map(b => snap(boardPlayers(b))) };
