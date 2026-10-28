@@ -326,6 +326,11 @@ with sync_playwright() as p:
       valueRead({ a: 300, b: 65, rawA: 300, rawB: 65, adj: null }, 4000).gap]""")
     ok(k[0] == "split" and k[1] == "sensitive" and k[2]["kind"] == "widened" and abs(k[2]["gap"] - 4.1) < 0.1 and k[3] < 6,
        f"valueRead: split, package-sensitive, widened decided by the raw gap, materiality floor {k}")
+    # the headline on fixed numbers (independent of the live board): 1-for-1 trades at known gaps get their verdict tier
+    hv = pg.evaluate("""() => [[10000, 9950], [10000, 9800], [10000, 9500], [10000, 9100], [10000, 8500], [10000, 7000]].map(([x, y]) => {
+      const r = valueRead({ a: x, b: y, rawA: x, rawB: y, adj: null }); return [r.kind, Math.round(r.gap * 10) / 10, verdictTier(r.gap).title("A", "B")]; })""")
+    ok([h[2] for h in hv] == ["Basically even", "Fair trade", "Slight edge to A", "A wins the trade", "A clearly wins", "B is getting robbed"] and all(h[0] == "plain" for h in hv),
+       f"Verdict tiers on fixed values: 0.5% Basically even, 2% Fair, 5.3% Slight edge, 9.9% wins, 17.6% clearly wins, 43% robbed ({hv})")
     pg.close()
     # 5. the same trade from the league's transaction log: a simple log, a busy one, and one with a move missing
     def open_past(mode):
