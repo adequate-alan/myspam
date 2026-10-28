@@ -50,15 +50,22 @@ h, ppr = rows_of(PPR_RE.search(SRC)[2])
 col = {k: h.index(k) for k in ("player", "pos", "pos_rank", "tier", "source", "sleeper_id")}
 prov = {(r[col["pos"]], r[col["tier"]]) for r in ppr if r[col["source"]] == "auto" and int(r[col["tier"]]) < 90}
 in_prov = lambda r: (r[col["pos"]], r[col["tier"]]) in prov
-ok(any(r[col["source"]] == "manual" and in_prov(r) for r in ppr), "The live AM PPR board has Manual players inside a Provisional tier (the case under test)")
-# seven more Manual players spread over the tier: first, middle and last Auto player at QB, plus one RB, WR, TE
+# the live board may or may not have Manual players inside a Provisional tier (it depends on Alan's latest list; Oct 28:
+# none), so the case under test is built below ("more Manual") and the live count is information only
+print(f"INFO Manual players inside a Provisional tier on the live board: {sum(1 for r in ppr if r[col['source']] == 'manual' and in_prov(r))}")
+# seven more Manual players spread over the tier: first, middle and last Auto player at QB, plus one RB, WR, TE; only from a
+# position's Provisional tier that keeps Auto players after the picks (a tier left with no Auto player at his position is an
+# ordinary Manual tier, priced as one, by design: provTierSet is per position and tier)
+from collections import Counter
+autos = Counter((r[col["pos"]], r[col["tier"]]) for r in ppr if r[col["source"]] == "auto" and in_prov(r))
 pick = set()
 by_pos = {}
 for r in sorted(ppr, key=lambda r: (r[col["pos"]], int(r[col["pos_rank"]]))):
-    if r[col["source"]] == "auto" and in_prov(r): by_pos.setdefault(r[col["pos"]], []).append(r[col["sleeper_id"]])
+    if r[col["source"]] == "auto" and in_prov(r) and autos[(r[col["pos"]], r[col["tier"]])] >= 4: by_pos.setdefault(r[col["pos"]], []).append(r[col["sleeper_id"]])
 q = by_pos["QB"]; pick |= {q[0], q[len(q) // 2], q[-1]}
 for pos in ("RB", "WR", "TE"):
     if by_pos.get(pos): pick |= {by_pos[pos][0], by_pos[pos][len(by_pos[pos]) // 2]}
+ok(len(pick) >= 7 and any(r[col["sleeper_id"]] in pick for r in ppr), f"The case under test: {len(pick)} Auto players made Manual inside Provisional tiers that keep Auto players")
 VARIANTS = {
     "live": SRC,
     "all Auto": with_sources(PPR_RE, lambda h_, r: "auto" if in_prov(r) else r[col["source"]]),
