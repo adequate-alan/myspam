@@ -15211,17 +15211,30 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      update prompt appeared). When the tab comes back or every 15 minutes, ask for the file's ETag / Last-Modified and offer a
      refresh once it changed. */
   const fileTag = r => r.headers.get("etag") || r.headers.get("last-modified") || "";
-  let statsCheckAt = 0;
+  /* Nov 1 (site audit #3): GitHub Pages gives every file a new ETag on every deploy (deploy time + size), so the tag alone
+     offered "New stats" after each code push or rankings publish with no new stats. The tag is now only a cheap hint: when
+     it changed, the file is read and the prompt appears only if its content changed (the stats run's `updated`, which a run
+     that finds nothing new never rewrites, and the practice report's source time and day). */
+  const statsSig = d => d ? [d.updated, d.through_week, d.injuries && d.injuries.source_updated, d.injuries && d.injuries.day].join("|") : "";
+  let statsCheckAt = 0, statsPeek = null;   // statsPeek: the last tag read and its content signature
   async function checkStatsFresh() {
-    const season = STATS_SEASONS[0], had = statsTag[season];
-    if (!had || document.hidden || Date.now() - statsCheckAt < 5 * 60e3) return;
+    const season = STATS_SEASONS[0], had = statsTag[season], mine = statsSig(statsCache[season]);
+    if (!had || !mine || document.hidden || Date.now() - statsCheckAt < 5 * 60e3) return;
     statsCheckAt = Date.now();
     try {
       const r = await fetch(`data/stats/${season}.json`, { method: "HEAD", cache: "no-cache" });
       const now = r.ok ? fileTag(r) : "";
+      if (!now || now === had) return;
+      let sig = statsPeek && statsPeek.tag === now ? statsPeek.sig : null;
+      if (sig == null) {
+        const g = await fetch(`data/stats/${season}.json`, { cache: "no-cache" });
+        if (!g.ok) return;
+        sig = statsSig(await g.json()); statsPeek = { tag: fileTag(g) || now, sig };
+      }
+      if (!sig || sig === mine) { statsTag[season] = now; return; }   // a redeploy of the same stats: nothing to offer
       let seen = ""; try { seen = sessionStorage.getItem("spm_stats_seen") || ""; } catch (e) {}
-      if (now && now !== had && now !== seen && !(editor.on && changedRows().length))
-        showUpdate("New stats and practice reports are available.", { quiet: true, onDismiss: () => { try { sessionStorage.setItem("spm_stats_seen", now); } catch (e) {} } });
+      if (sig !== seen && !(editor.on && changedRows().length))
+        showUpdate("New stats and practice reports are available.", { quiet: true, onDismiss: () => { try { sessionStorage.setItem("spm_stats_seen", sig); } catch (e) {} } });
     } catch (e) {}
   }
   setInterval(checkStatsFresh, 15 * 60e3);

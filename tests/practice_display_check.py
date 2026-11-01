@@ -50,6 +50,8 @@ def stats(inj):   # the real stats file with Week 7 unplayed (the Thursday game 
     d["injuries"] = inj
     return json.dumps(d)
 BODY = {k: stats(v) for k, v in INJ.items()}
+BODY["thu2"] = BODY["thu"].replace('"updated": "', '"updated": "2099', 1)   # a later stats run: same report, new `updated`
+assert BODY["thu2"] != BODY["thu"]
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -204,6 +206,10 @@ with sync_playwright() as p:
         ok(bar is None, f"D. {label}: unchanged file, no refresh offer")
         bar = visible_again(pg)
         ok(bar is None, f"D. {label}: still unchanged on the next look, still nothing")
+        serve["etag"] = '"wed-redeploy"'   # Nov 1 (site audit #3): a deploy gives every file a new ETag, the stats unchanged
+        bar = visible_again(pg)
+        ok(bar is None, f"D. {label}: a redeploy (new ETag, same stats) offers nothing")
+        ok(visible_again(pg) is None, f"D. {label}: and still nothing on the next look")
         serve.update(key="thu", etag='"thu"')
         bar = visible_again(pg)
         ok(bar is not None and "New stats and practice reports" in bar.inner_text(), f"D. {label}: changed file, the open tab offers a refresh ({bar and bar.inner_text()!r})")
@@ -214,8 +220,10 @@ with sync_playwright() as p:
             pg.click("#update-bar [data-ub-close]"); pg.wait_for_timeout(200)
             ok(pg.query_selector("#update-bar") is None, f"D. {label}: × dismisses it")
             ok(visible_again(pg) is None and visible_again(pg) is None, f"D. {label}: the same file version never offers again after ×")
-            serve["etag"] = '"thu2"'
-            ok(visible_again(pg) is not None, f"D. {label}: a newer file version offers again")
+            serve["etag"] = '"thu-redeploy"'
+            ok(visible_again(pg) is None, f"D. {label}: a redeploy of the same version doesn't offer it again after ×")
+            serve.update(key="thu2", etag='"thu2"')
+            ok(visible_again(pg) is not None, f"D. {label}: a newer stats run offers again")
         pg.click("#update-bar [data-ub-refresh]"); pg.wait_for_load_state(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(3000)
         st1 = pg.evaluate(STATE)
         ok(st1["hash"] == st0["hash"] and st1["league"] == LID, f"D. {label}: after Refresh the same tab and league ({st1['hash']}, {st1['league']})")
