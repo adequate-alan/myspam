@@ -3766,6 +3766,20 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .gl-table.inj-table td.pr-day, .gl-table.inj-table th.pr-day { text-align: center; width: 64px; }
 .pr-player .st-badge { margin-left: 8px; }
 .pr-inj { color: var(--ink-2); }
+.pr-inj-sub { display: none; }
+/* Narrow panels (phones, the desktop drawer): all three practice days stay on screen (Alan, Nov 1; Friday's final report
+   matters most), so the day columns go compact and the injury moves under the name instead of a column off to the right */
+@container pm (max-width: 560px) {
+  .gl-table.inj-table th.pr-inj, .gl-table.inj-table td.pr-inj { display: none; }
+  .gl-table.inj-table td.pr-player { position: relative; white-space: normal; padding-left: 40px; padding-right: 6px; }
+  .gl-table.inj-table td.pr-player .inj-pos { position: absolute; left: 10px; top: 12px; min-width: 0; }
+  .gl-table.inj-table td.pr-player .pl-name { white-space: normal; }   /* long names wrap between words, never mid-word */
+  .pr-player .st-badge { margin-left: 6px; vertical-align: 1px; }
+  .pr-inj-sub { display: block; margin-top: 2px; font-size: 0.72rem; font-weight: 500; line-height: 1.3; color: var(--text-muted); }
+  .gl-table.inj-table td.pr-day, .gl-table.inj-table th.pr-day { width: 44px; padding-left: 2px; padding-right: 2px; }
+  .inj-table .st-blk { min-width: 36px; padding: 0 4px; }
+  .inj-table .st-blk.pr-pend { padding: 0 2px; letter-spacing: 0; }
+}
 /* Status colours, the same everywhere */
 :root, :root[data-theme="dark"] { --st-dnp-text: #E2625D; --st-out-text: #E8706A; --st-fp: #2F8550; --st-fp-text: #4FB877; --st-lp: #D8901E; --st-dnp: #C9373F; --st-out: #93202A; --st-q: #D9A520; --st-d: #D85A2B; --st-ir: #8F4A4F; --st-ink: #FFFFFF; --st-ink-amber: #1A1314; }
 :root[data-theme="light"] { --st-dnp-text: var(--st-dnp); --st-out-text: var(--st-out); --st-fp: #2F8550; --st-fp-text: #23703F; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
@@ -16292,10 +16306,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const posted = cur && rep.day ? days.indexOf(rep.day) : 2;
       const cell = (r, k) => days.indexOf(k) > posted ? `<span class="st-blk none pr-pend" title="${DAY_NAME[k]}'s report isn't out yet">Pending</span>`
         : r[k] ? stBlock(r[k]) : `<span class="st-blk none" title="Not on ${DAY_NAME[k]}'s report">–</span>`;
-      const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}</td>
+      const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}${r.injury ? `<span class="pr-inj-sub">${esc(r.injury)}</span>` : ""}</td>
           ${days ? days.map(k => `<td class="pr-day">${cell(r, k)}</td>`).join("") : `<td class="pr-day">${stBlock(r.practice)}</td>`}<td class="pr-inj">${esc(r.injury || "")}</td></tr>`;
       return `<section class="pr-sec${old ? " prior" : ""}">${head}${old ? pending : ""}<div class="table-scroll"><table class="gl-table inj-table">
-        <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day"${rep.undated ? ` title="nflverse doesn't say which practice day this report is from"` : ""}>${rep.undated ? "Latest" : "Practice"}</th>`}<th scope="col">Injury</th></tr></thead>
+        <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day"${rep.undated ? ` title="nflverse doesn't say which practice day this report is from"` : ""}>${rep.undated ? "Latest" : "Practice"}</th>`}<th scope="col" class="pr-inj">Injury</th></tr></thead>
         <tbody>${groups.map(([label, g]) => `<tr class="pr-group"><td colspan="${days ? 5 : 3}">${esc(label)}</td></tr>` + g.map(row).join("")).join("")}</tbody></table></div></section>`;
     };
     const me = `<div class="pr-me">${statusChip(info) || `<span class="muted">No ${reportWeek(info.team) ? `Week ${reportWeek(info.team)} ` : ""}practice report yet.</span>`}${R && !full ? `<span class="pr-scope">Showing what matters for ${esc(info.name)}: ${esc(info.team)} ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)} ${esc(relevantLabel(R.opp))}` : ""}</span>` : ""}</div>`;
