@@ -260,10 +260,10 @@ ok(cm["run"].index("weekly_due.py") < cm["run"].index("git commit") and "origin/
    and "catch-up" in cm["run"] and "Recovery" in cm["run"],
    "A catch-up re-checks main just before committing and commits nothing if a weekly refresh landed meanwhile; recovery is reported")
 fr = jobs.get("freshness", {})
-ok(fr.get("permissions") == {"contents": "read"} and "exit 1" in str(fr.get("steps")) and "overdue" in str(fr.get("steps"))
+ok(fr.get("permissions") == {"contents": "read"} and "pipeline/data_freshness.py --online --github" in str(fr.get("steps"))
    and evaluate(fr.get("if", "False"), {"result": {"refresh": "skipped"}, "outputs": {}, "event": "schedule", "schedule": NIGHTLY})
    and not evaluate(fr.get("if", "False"), {"result": {}, "outputs": {}, "event": "push"}) and not evaluate(fr.get("if", "False"), {"result": {}, "outputs": {}, "event": "pull_request"}),
-   "Missed-run alarm: every scheduled run (the nightly included) fails, read-only, once this week's refresh is overdue; never on pushes or PRs")
+   "Missed-run alarm: every scheduled run (the nightly included) fails, read-only, once a data source is overdue (data_freshness.py, tests/data_freshness_check.py); never on pushes or PRs")
 ok(not evaluate(jobs["plan"]["if"], {"result": {"refresh": "success"}, "outputs": {"refresh": {"skip": "true"}}, "event": "schedule"})
    and evaluate(jobs["plan"]["if"], {"result": {"refresh": "skipped"}, "outputs": {}, "event": "push"}),
    "A refresh that did nothing doesn't plan, verify or redeploy main")
