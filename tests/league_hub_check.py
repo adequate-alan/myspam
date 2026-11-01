@@ -325,6 +325,8 @@ with sync_playwright() as p:
     nums = [100.0 if o == ">99%" else 0.5 if o == "<1%" else float(o.rstrip("%")) for o in odds if o.endswith("%")]
     ok(len(nums) == 12 and abs(sum(nums) - 600) < 25, f"Playoff odds for all 12 teams add up to ~6 spots: {odds}")
     tip = pg.locator(".st-table td.st-odds").first.get_attribute("title") or ""
+    ok("odds model average" in tip and "pts/week" in tip and "K/DEF" in tip and "expected lineup PPG" in tip and "expected 1" not in tip,
+       f"Standings: the odds tooltip names its weekly score as the odds model's, distinct from Power Rankings' expected lineup PPG (Nov 1) ({tip[-260:]})")
     ok("projected" in tip and "remaining schedule" in tip, f"Odds tooltip: projected wins and remaining schedule ({tip[:90]})")
     po = pg.evaluate("""() => { const r = {}; document.querySelectorAll('.st-table tr.st-row').forEach(tr => { r[tr.dataset.standingTeam] = (tr.querySelector('.st-odds b') || {}).textContent; }); return r; }""")
     pg.click("[data-st-view=league]"); pg.wait_for_timeout(300)
