@@ -2474,6 +2474,16 @@ dialog.signin label.signin-remember { margin: 10px 0 0; text-transform: none; le
   .pr-row .pr-stars { justify-content: flex-start; align-items: center; gap: 10px; }
   .pr-row .pr-star-names { display: block; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 }
+/* 761–899px (site audit Nov 1, P1-6): the eight columns need ~812px, so the Top players faces were cut off at the
+   card's edge at 768. They step aside here (the expanded team shows its whole roster board); phones keep them
+   beside the team name. */
+@media (min-width: 761px) and (max-width: 899px) {
+  .pr-head, .pr-row { grid-template-columns: 30px minmax(170px, 1.7fr) 52px 92px minmax(110px, 1fr) 132px 14px; }
+  .pr-head span:nth-child(7), .pr-row .pr-stars { display: none; }
+  .pr-row .pr-name { white-space: normal; line-height: 1.25; }   /* long team names wrap instead of ending in "…" */
+}
+/* the lens (Overall · QB · RB · WR · TE · Depth) fits 320px: it needed 355px */
+@media (max-width: 430px) { .pb-modes .vt-btn { padding-inline: 8px; } .pb-modes { max-width: 100%; overflow-x: auto; scrollbar-width: none; } }
 /* My Team: strength in one row, roster beside a slim side panel on wide screens */
 @media (min-width: 1024px) { .mt-strength { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 .mt-dash { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -4601,6 +4611,29 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
      audit Oct 13): the format text truncates with an ellipsis, the full text stays in the chip's tooltip */
   .mast-right { flex: 0 1 auto; min-width: 0; }
   .fmt-chip { min-width: 0; }
+  /* Scrolling tab row (site audit Nov 1, P1-4): the 36px fade was too faint, so phones showed half a "Trade" with no
+     cue that more tabs follow. A quiet chevron now sits on the side that has more tabs, on a short fade to the
+     header color; it's visual only (a swipe scrolls, a tap reaches the tab under it). keepTabInView keeps the open
+     tab clear of it. */
+  .masthead .tabs { --tabs-pad: 0px; padding-inline: var(--tabs-pad); }
+  .masthead .tabs.scroll-hint { -webkit-mask-image: none; mask-image: none; }
+  .masthead .tabs::before, .masthead .tabs::after {
+    content: "\203A"; position: sticky; z-index: 1; flex: none; box-sizing: border-box; width: 34px; display: flex; align-items: center; justify-content: flex-end;
+    padding-inline: 2px; font-size: 1.3rem; line-height: 1; color: var(--text-secondary); pointer-events: none;
+    opacity: 0; visibility: hidden; transition: opacity .16s var(--ease), visibility .16s;
+    background: linear-gradient(to right, color-mix(in srgb, var(--nav-bg) 0%, transparent), var(--nav-bg) 60%);
+  }
+  .masthead .tabs::after { right: calc(-1 * var(--tabs-pad)); margin-left: -36px; }   /* sticky insets sit inside the padding; -36 = width + the 2px gap, so it takes no room */
+  .masthead .tabs::before { content: "\2039"; order: -1; left: calc(-1 * var(--tabs-pad)); margin-right: -36px; justify-content: flex-start;
+    background: linear-gradient(to left, color-mix(in srgb, var(--nav-bg) 0%, transparent), var(--nav-bg) 60%); }
+  .masthead .tabs.more-r::after, .masthead .tabs.more-l::before { opacity: 1; visibility: visible; }
+}
+/* phones: tighter tabs so all five fit from 360px (they needed 412px), the first one in line with the logo */
+@media (max-width: 760px) { .masthead .tabs { --tabs-pad: 16px; } }
+@media (max-width: 430px) {
+  .masthead .tabs { --tabs-pad: 4px; }
+  .masthead .tab { padding-inline: 8px; }
+  .masthead .tab::after { left: 8px; right: 8px; }
 }
 
 /* ---- editor bar: a slim utility strip, not a card. Quiet while everything is saved; Save turns red only with
@@ -6518,10 +6551,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!el || el._hints) return; el._hints = true; el.classList.add("scroll-hint");
     const set = () => { el.classList.toggle("more-l", el.scrollLeft > 4); el.classList.toggle("more-r", el.scrollLeft + el.clientWidth < el.scrollWidth - 4); };
     el.addEventListener("scroll", set, { passive: true }); window.addEventListener("resize", set); set(); el._setHints = set;
+    // items shown or hidden later (My Team, League and Trade Finder appear once a league connects) change what's
+    // off screen without resizing the strip or scrolling it, so watch the items too
+    if (typeof ResizeObserver === "function") { const ro = new ResizeObserver(() => keepTabInView(el)); ro.observe(el); for (const c of el.children) ro.observe(c); }
   }
+  // the selected item stays fully in view and clear of the scroll hint on either side (36px: the fade / chevron)
   function keepTabInView(el) {
     if (!el) return; const on = el.querySelector('[aria-selected="true"], [aria-pressed="true"]');
-    if (on && el.scrollWidth > el.clientWidth) { const x = on.offsetLeft - el.offsetLeft; if (x < el.scrollLeft || x + on.offsetWidth > el.scrollLeft + el.clientWidth) el.scrollLeft = x - 24; }
+    if (on && el.scrollWidth > el.clientWidth) {
+      const x = on.getBoundingClientRect().left - el.getBoundingClientRect().left + el.scrollLeft, end = x + on.offsetWidth, pad = 36;
+      if (x - pad < el.scrollLeft) el.scrollLeft = Math.max(0, x - pad);
+      else if (end + pad > el.scrollLeft + el.clientWidth) el.scrollLeft = end + pad - el.clientWidth;
+    }
     if (el._setHints) el._setHints();
   }
   scrollHints(document.querySelector(".tabs"));
