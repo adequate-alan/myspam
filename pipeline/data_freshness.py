@@ -155,13 +155,19 @@ def result(source, state, updated, detail):
 
 def late(source, updated, due, now, up, sched, waiting_msg, unknown_ceiling=True):
     """Data the provider should have had by `due` is missing. `up` = (provider has it: True / False / None unknown,
-    when it was published)."""
+    when it was published). Once the provider has it, every scheduled refresh that should have finished since
+    (start + GRACE) is a missed chance: none yet = pending, one = behind (a warning: one dropped run is tolerated),
+    two or more = overdue (the run fails)."""
     has, when = up
     if has:
-        d = sched.due_after(when, "stats")
-        if d and now < d:
+        missed = [r for r in sched.runs("stats", when, now) if r + GRACE <= now]
+        if not missed:
             return result(source, "pending", updated, f"{waiting_msg}; nflverse published it {fmt(when)}, the next refresh picks it up")
-        return result(source, "overdue", updated, f"{waiting_msg}, but nflverse published it {fmt(when)} and the refresh runs since haven't picked it up")
+        if len(missed) == 1:
+            return result(source, "behind", updated, f"{waiting_msg}; nflverse published it {fmt(when)} and the refresh "
+                                                     f"scheduled {fmt(missed[0])} didn't pick it up (overdue after one more)")
+        return result(source, "overdue", updated, f"{waiting_msg}, but nflverse published it {fmt(when)} and the "
+                                                  f"{len(missed)} refreshes scheduled since ({fmt(missed[0])} on) haven't picked it up")
     if has is None and not unknown_ceiling:
         return result(source, "waiting", updated, waiting_msg + " (couldn't ask nflverse)")
     if now >= due + CEILING:
@@ -218,20 +224,22 @@ def check_practice(stats, now, sched, upstream):
         if dd and now >= dd: want, due = d, dd
     have_week, have_day = inj.get("week"), inj.get("day")
     have = f"Week {have_week} {have_day or 'undated'} report"
-    if want is None:
-        return result("practice", "current", upd, f"{have}; Week {week}'s Wednesday report isn't due yet")
-    if (have_week or 0) > week or (have_week == week and have_day in DAYS and DAYS.index(have_day) >= DAYS.index(want)):
-        return result("practice", "current", upd, f"{have} (Week {week} {want} report due)")
+    has = lambda d: (have_week or 0) > week or (have_week == week and have_day in DAYS and DAYS.index(have_day) >= DAYS.index(d))
     up_t = upstream("injuries")
     week_start = dt.datetime(sun.year, sun.month, sun.day, tzinfo=ET).astimezone(UTC) - dt.timedelta(days=5)
-    if up_t is None: up = (None, None)
-    else:
-        fresh = up_t > week_start and (upd is None or up_t > upd) and report_day(up_t) in DAYS and DAYS.index(report_day(up_t)) >= DAYS.index(want)
-        up = (True, up_t) if fresh else (False, up_t)
-    # nflverse not posting a report isn't ours to fix and the site honestly shows it as Pending: never escalated
-    r = late("practice", upd, due, now, up, sched, f"Week {week} {want.title()} report not in yet (have the {have})", unknown_ceiling=True)
-    if up[0] is False and r["state"] == "overdue":
-        r["state"] = "waiting"
+    up_day = report_day(up_t) if up_t and up_t > week_start and (upd is None or up_t > upd) else None
+    if up_day in DAYS and not has(up_day):
+        # nflverse has a report we don't: from here on every refresh that misses it counts (late), due or not
+        return late("practice", upd, due, now, (True, up_t), sched, f"Week {week} {up_day.title()} report not in yet (have the {have})")
+    if want is None:
+        return result("practice", "current", upd, f"{have}; Week {week}'s Wednesday report isn't due yet")
+    if has(want):
+        return result("practice", "current", upd, f"{have} (Week {week} {want} report due)")
+    # due but nflverse hasn't posted it (or couldn't be asked): not ours to fix, and the site honestly shows it as
+    # Pending, so a warning, never a failure
+    r = late("practice", upd, due, now, (None if up_t is None else False, up_t), sched,
+             f"Week {week} {want.title()} report not in yet (have the {have})", unknown_ceiling=True)
+    if r["state"] == "overdue": r["state"] = "waiting"
     return r
 
 
@@ -289,7 +297,7 @@ def check_all(root, now, upstream, workflow=None):
     ]
 
 
-LABEL = {"current": "Current", "pending": "Picked up next run", "waiting": "Waiting on provider", "overdue": "Overdue", "off": "Not checked"}
+LABEL = {"current": "Current", "pending": "Picked up next run", "behind": "Missed one refresh", "waiting": "Waiting on provider", "overdue": "Overdue", "off": "Not checked"}
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -314,6 +322,7 @@ if __name__ == "__main__":
     if a.github:
         for r in res:
             if r["state"] == "overdue": print(f"::error title=Stale data: {r['source']}::{r['detail']}")
+            elif r["state"] == "behind": print(f"::warning title=Missed one refresh: {r['source']}::{r['detail']}")
             elif r["state"] == "waiting": print(f"::warning title=Waiting on provider: {r['source']}::{r['detail']}")
         if os.environ.get("GITHUB_STEP_SUMMARY"):
             with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:

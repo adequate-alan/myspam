@@ -1,7 +1,8 @@
 """Data freshness, source by source (Alan, Nov 1: site audit P1-1, "source-specific schedules and alerts"). No browser.
 
 pipeline/data_freshness.py decides, for each source the scheduled jobs refresh, whether the site's copy is current,
-will be picked up by the next run, is waiting on its provider (a warning) or is overdue (fails the freshness job).
+will be picked up by the next run, has missed one refresh (a warning), is waiting on its provider (a warning) or is
+overdue (fails the freshness job).
 Synthetic data on the real workflow's schedule, with nflverse's rebuild times given instead of asked for:
 
   A. The schedule is read from the workflow: Eastern-time crons follow daylight saving, the 8-hourly market runs,
@@ -11,9 +12,10 @@ Synthetic data on the real workflow's schedule, with nflverse's rebuild times gi
      within the grace isn't.
   D. Market: two missed syncs overdue; FantasyCalc failing while our runs ran = waiting, overdue after 48 h.
   E. Stats: a game's lines before they're due = current; due and nflverse hasn't published = waiting; nflverse
-     published and two of our runs since = overdue; published but no run since yet = pending; unknown for 48 h = overdue.
-  F. Practice reports: Wed / Thu / Fri due times for Sunday teams; nflverse holding the report while we don't =
-     overdue; nflverse not posting = waiting, never overdue (the site honestly shows it as Pending); no games = off.
+     published and no run since yet = pending, one run since = behind (warning), two = overdue; unknown for 48 h = overdue.
+  F. Practice reports (Alan's table, Nov 1): nflverse not posting = waiting, a warning, never a failure (the site
+     honestly shows it as Pending); nflverse posted it and no refresh since = pending, one refresh missed = behind
+     (warning), two missed = overdue (fails); caught up = current. Wed / Thu / Fri due times; no games = off.
   G. Projections follow weekly_due.py unchanged.
   H. report_day matches build_stats.report_day (when pandas is installed).
   I. The command line: --github prints ::error:: / ::warning::, writes the summary table and exits 1 only when overdue.
@@ -103,6 +105,15 @@ ok(r1["roles"]["state"] == "overdue" and r1["depth charts"]["state"] == "overdue
 ok(r2["roles"]["state"] == "current" and r3["roles"]["state"] == "current",
    "C. One dropped run is tolerated, and a run still inside its 8-hour grace isn't missed yet")
 
+# Alan, Nov 1: a run that succeeded with nothing new must never read as a missed refresh. Both builders stamp
+# `updated` with the run's own time on every successful write, whatever the content, and the check reads only that.
+src = {f: open(os.path.join(ROOT, "pipeline", f)).read() for f in ("build_roles.py", "build_depth_charts.py")}
+ok(all('"updated": datetime.now(timezone.utc)' in t for t in src.values()),
+   "C. build_roles.py and build_depth_charts.py stamp `updated` = now on every run, unchanged content included")
+same = run(root(roles="2026-11-02T06:10Z", depth="2026-11-02T06:10Z", name="c"), "2026-11-02T17:00")
+ok(same["roles"]["state"] == same["depth charts"]["state"] == "current",
+   "C. Identical depth charts / roles from a successful run = current (only the stamp is read, never a content diff)")
+
 # D. market
 mk_ok = lambda up, att=None, okk=True, err="": {"updated": up, "sync": {"attempted": att or up, "ok": okk, "error": err}}
 d1 = run(root(market=mk_ok("2026-11-02T00:40Z"), name="d"), "2026-11-02T18:00")   # runs 05:00, 08:20, 08:30 since: last two due 08:20 / 08:30
@@ -126,8 +137,10 @@ w = run(e_none, "2026-11-03T01:00", {"stats": U("2026-10-30T09:00")})["stats"]
 ok(w["state"] == "waiting" and "Week 8" in w["detail"] and "NYJ" in w["detail"], f"E. Due, nflverse hasn't rebuilt since the game = waiting ({w['detail']})")
 o = run(e_none, "2026-11-03T01:00", {"stats": U("2026-11-02T06:00")})["stats"]
 ok(o["state"] == "overdue" and "nflverse published" in o["detail"], "E. nflverse rebuilt after the game and two of our runs have passed since = overdue")
-p = run(e_none, "2026-11-03T01:00", {"stats": U("2026-11-02T14:00")})["stats"]
-ok(p["state"] == "pending", "E. nflverse rebuilt after the game but only one run since = picked up next run, no alarm")
+p = run(e_none, "2026-11-03T01:00", {"stats": U("2026-11-02T16:00")})["stats"]
+ok(p["state"] == "pending", "E. nflverse rebuilt after the game, no run has had its 8 h since = picked up next run, no annotation")
+b = run(e_none, "2026-11-03T01:00", {"stats": U("2026-11-02T14:00")})["stats"]
+ok(b["state"] == "behind" and "Mon Nov 02 15:00" in b["detail"], f"E. ...one run (Mon 15:00) has had its 8 h and missed it = behind, a warning ({b['detail']})")
 ok(run(e_none, "2026-11-03T01:00")["stats"]["state"] == "waiting" and run(e_none, "2026-11-05T00:00")["stats"]["state"] == "overdue",
    "E. nflverse can't be asked: a warning first, overdue 48 h past due")
 half = root(stats_file(lines=thu + [("NYJ", 8)], scores=thu + [("NYJ", 8), ("LV", 8)]), name="e")
@@ -158,6 +171,16 @@ ok(prac(9, "thu", "2026-11-06T13:10Z", "2026-11-08T06:00", U("2026-11-07T15:00")
    "F. Sunday 06:00: Friday's final report is due (overdue when nflverse had it, current once it's here)")
 f4 = prac(9, "thu", "2026-11-06T13:10Z", "2026-11-08T06:00", U("2026-11-08T03:00"))
 ok(f4["state"] == "pending", "F. nflverse posted Friday's report late: picked up by the next run, no alarm yet")
+# alan's four states (Nov 1) on Thursday's Week 9 report, nflverse posting it Fri Nov 6 13:10 UTC (runs after it:
+# Fri 15:00, Fri 22:00, Sat 14:17 ET-cron, ...; each counts once its 8 h have passed)
+th = lambda now, up: prac(9, "wed", "2026-11-05T13:00Z", now, up)
+s1, s2, s3 = th("2026-11-06T20:00", U("2026-11-06T13:10")), th("2026-11-07T02:00", U("2026-11-06T13:10")), th("2026-11-07T07:00", U("2026-11-06T13:10"))
+ok(th("2026-11-07T23:00", U("2026-11-05T13:00"))["state"] == "waiting", "F. Alan's table: nflverse hasn't published Thursday's report = warning only")
+ok(s1["state"] == "pending" and s2["state"] == "behind" and s3["state"] == "overdue",
+   f"F. Alan's table: published, no refresh due yet = pending; one refresh missed = warning; two missed = failure ({s2['detail']} | {s3['detail']})")
+ok(prac(9, "thu", "2026-11-06T13:10Z", "2026-11-07T07:00", U("2026-11-06T13:10"))["state"] == "current", "F. Alan's table: source updated and Adequate caught up = healthy")
+ok(th("2026-11-07T02:00", U("2026-11-06T13:10"))["state"] == "behind" and prac(9, "wed", "2026-11-05T13:00Z", "2026-11-07T02:00")["state"] == "current",
+   "F. Before Thursday's report is due by the clock, only nflverse's own publish time can raise it (offline it stays current)")
 ok(prac(9, "fri", "2026-11-07T15:00Z", "2026-11-10T12:00")["state"] in ("current", "off"), "F. After the week's games, last week's final report is fine")
 off = stats_file(lines=thu, scores=thu); [r.__setitem__(3, "2026-09-13") for rows in off["schedule"].values() for r in rows]
 ok(run(root(off, name="f"), "2026-11-04T12:00")["practice"]["state"] == "off", "F. No Sunday games ahead (off-season) = not checked")
@@ -190,6 +213,10 @@ rc, out, summ = cli(root(stats_file(lines=thu, scores=thu), roles="2026-11-02T20
                     "2026-11-03T01:00Z", "stats=2026-10-30T09:00Z,injuries=none")
 ok(rc == 0 and "::warning title=Waiting on provider: stats::" in out and "::error" not in out and "| stats | Waiting on provider |" in summ,
    "I. A provider that hasn't published only warns: exit 0")
+rc, out, summ = cli(root(stats_file(lines=thu, scores=thu), roles="2026-11-02T20:00Z", depth="2026-11-02T20:00Z", market=mk_ok("2026-11-02T20:00Z"), name="i"),
+                    "2026-11-03T01:00Z", "stats=2026-11-02T14:00Z,injuries=none")
+ok(rc == 0 and "::warning title=Missed one refresh: stats::" in out and "::error" not in out and "| stats | Missed one refresh |" in summ,
+   "I. One missed refresh after nflverse published: ::warning::, exit 0")
 rc, out, summ = cli(root(stats_file(lines=thu, scores=thu), market=mk_ok("2026-11-01T17:00Z"), name="i"), "2026-11-01T20:00Z", "stats=none,injuries=none")
 ok(rc == 0 and "::error" not in out and "::warning" not in out, "I. Everything current: exit 0, no annotation")
 
