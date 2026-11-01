@@ -26,8 +26,12 @@ import csv, functools, http.server, io, json, os, re, socketserver, sys, threadi
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
-rows = list(csv.DictReader(io.StringIO(re.search(r"RANKINGS_CSV\s*=\s*`(.*?)`", src, re.S).group(1).strip())))
+sys.path.insert(0, os.path.join(ROOT, "tests"))
+import fixture_board as FB
+# Nov 1 (site audit #2): the trades here are checked against fixed verdict wording ("Fair trade", "Slight edge"), so they
+# run on the frozen test board, never the live one: each AM PPR / SF publish moved the hole-filling trade's gap (Oct 30-31
+# nightly runs read "Team Alpha wins the trade" at +8.5% raw) and failed a check whose code hadn't changed
+rows = FB.rows()
 sid = {r["player"]: r["sleeper_id"] for r in rows if r["sleeper_id"]}
 ALPHA = ["Dak Prescott", "Daniel Jones", "Fernando Mendoza", "Chase Brown", "Chuba Hubbard", "Jacorey Croskey-Merritt", "Chris Olave",
          "Tetairoa McMillan", "Malik Nabers", "Chris Bell", "Dalton Kincaid", "Tyler Higbee"]
@@ -120,6 +124,7 @@ with sync_playwright() as p:
                     "/state/nfl": {"season": "2026", "week": 5, "season_type": "regular"}}.get(path, [])
             route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
         pg = br.new_page(viewport={"width": 1400, "height": 1000})
+        FB.route(pg, f"http://127.0.0.1:{srv.server_address[1]}")
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
@@ -234,7 +239,7 @@ with sync_playwright() as p:
     # 3c. 3-team verdicts follow the 2-team rules (Oct 14 valuation audit): each team's read of what it receives against
     # what it sends uses the raw and the package-adjusted totals, the small-value floor, split and package-sensitive,
     # so the package adjustment never creates or reverses a team's win on its own
-    pg = br.new_page(); pg.add_init_script("window.__SPM_TEST_HOOKS = true;")
+    pg = br.new_page(); pg.add_init_script("window.__SPM_TEST_HOOKS = true;"); FB.route(pg, f"http://127.0.0.1:{srv.server_address[1]}")
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
     pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/#trade"); pg.wait_for_timeout(2500)
     R = lambda recv, sent, floor=None: pg.evaluate("([r, s, f]) => SPM.threeRead(r, s, f)", [recv, sent, floor])
