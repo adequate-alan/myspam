@@ -232,6 +232,36 @@ with sync_playwright() as p:
         ok(pg.evaluate(VALS) == vals0, f"D. {label}: board ranks and values identical before and after the refresh")
         pg.close()
 
+    # E. every practice day on screen (Alan, Nov 1; site audit P1-7: at 390px Thu / Fri sat off to the right of an unmarked
+    #    sideways scroll): on phones and in the desktop drawer, Wed / Thu / Fri all inside the table's box with no sideways
+    #    scroll, and the injury under the player's name instead of a column off screen
+    FIT = """() => [...document.querySelectorAll('#player-body section.pr-sec')].map(s => { const box = s.querySelector('.table-scroll'); if (!box) return null;
+      const b = box.getBoundingClientRect(), vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.left >= b.left - 1 && r.right <= b.right + 1; };
+      const rows = [...s.querySelectorAll('tbody tr:not(.pr-group)')];
+      return { team: s.querySelector('.pr-team b').textContent, over: box.scrollWidth - box.clientWidth,
+        heads: [...s.querySelectorAll('thead th.pr-day')].filter(vis).map(th => th.textContent.trim()),
+        days: rows.every(tr => [...tr.querySelectorAll('td.pr-day')].every(vis)),
+        injCol: [...s.querySelectorAll('th.pr-inj, td.pr-inj')].some(e => e.getBoundingClientRect().width > 0),
+        inj: rows.filter(tr => tr.querySelector('td.pr-inj').textContent.trim()).every(tr => { const u = tr.querySelector('.pr-inj-sub');
+          return !!u && u.getBoundingClientRect().width > 0 && vis(u) && u.textContent === tr.querySelector('td.pr-inj').textContent; }) }; }).filter(Boolean)"""
+    for w in (320, 375, 390, 430, 1280, 1440):
+        pg = page_at(FRIDAY, "thu", w)
+        practice(pg, BIJAN)
+        secs = pg.evaluate(FIT)
+        atl = next((x for x in secs if x["team"] == "Atlanta Falcons"), None)
+        ok(atl and atl["heads"] == ["Wed", "Thu", "Fri"] and atl["days"], f"E. {w}px: Wed / Thu / Fri headers and every day cell on screen ({atl and atl['heads']})")
+        ok(secs and all(x["over"] <= 1 for x in secs), f"E. {w}px: no sideways scroll in any practice table ({[(x['team'], x['over']) for x in secs]})")
+        ok(secs and all(x["inj"] and not x["injCol"] for x in secs), f"E. {w}px: injury shown under the name, no injury column off screen")
+        rob = pg.evaluate("() => { const tr = [...document.querySelectorAll('#player-body tbody tr')].find(t => (t.querySelector('.pl-name') || {}).textContent === 'Brian Robinson'); return tr && [...tr.querySelectorAll('td.pr-day')].map(td => td.textContent.trim()).concat(tr.querySelector('.pr-inj-sub').textContent); }")
+        ok(rob and rob[:3] == ["LP", "DNP", "Pending"] and rob[3], f"E. {w}px: Robinson LP / DNP / Pending with his injury under his name ({rob})")
+        pg.close()
+    pg = page_at(THURSDAY, "wed", 320)
+    practice(pg, MONANGAI)
+    secs = pg.evaluate(FIT)
+    chi = next((x for x in secs if x["team"] == "Chicago Bears"), None)
+    ok(chi and chi["heads"] == ["Latest"] and chi["over"] <= 1 and chi["inj"], f"E. 320px: Chicago's Latest table fits with the injury under the name ({chi})")
+    pg.close()
+
     # phone: Pending fits its column
     pg = page_at(THURSDAY, "wed", 390)
     practice(pg, BIJAN)
