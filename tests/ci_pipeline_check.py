@@ -180,6 +180,15 @@ for kw in (dict(event="schedule", schedule=NIGHTLY), dict(event="workflow_dispat
     _, res = run(**kw)
     ok(res["refresh"] == "skipped" and res["full"] == "success" and res["build"] == "skipped", f"Gate: nightly / manual full CI runs the full suite, refreshes nothing and never builds: {res}")
 _, res = run(event="schedule", schedule="0 15 * * 1"); ok(res["refresh"] == "success", "Gate: the other schedules still run the data refresh")
+# nightly alarm (Nov 1): only the nightly schedule reports, whether the suite passed (closes the issue) or failed
+na = jobs["nightly-alarm"]
+nac = lambda full, **c: evaluate(na["if"], {"result": {"plan": "success", "full": full}, "outputs": {}, **c})
+ok(nac("failure", event="schedule", schedule=NIGHTLY) and nac("success", event="schedule", schedule=NIGHTLY)
+   and not nac("failure", event="push") and not nac("failure", event="pull_request") and not nac("failure", event="schedule", schedule="0 15 * * 1")
+   and not nac("failure", event="schedule", schedule=NIGHTLY, cancelled=True) and not nac("failure", event="workflow_dispatch", full_ci=True),
+   "Nightly alarm: runs after every nightly full suite (pass or fail), never for pushes, PRs, data refreshes, manual runs or a cancelled run")
+ok(na.get("permissions") == {"issues": "write"} and "full" in need("nightly-alarm") and "label nightly-ci" in str(na["steps"]) and "gh issue close" in str(na["steps"]),
+   "Nightly alarm: issues-only permission, opens / comments on one nightly-ci issue and closes it once green")
 bc = jobs["build"]["if"]
 for lane, job in (("targeted", "targeted"), ("full", "full")):
     ok(not evaluate(bc, {"result": {"plan": "success", "verify": "success", job: "skipped"}, "outputs": {"plan": {"lane": lane, "deploy": "true"}}, "event": "push"}),
