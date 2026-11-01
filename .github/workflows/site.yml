@@ -512,10 +512,13 @@ jobs:
           fi
           echo "::error::Nightly full suite: $RESULT (issue opened or updated)"
 
-  # Missed-run alarm (Alan, Oct 13): GitHub's scheduler can drop the catch-up runs too. Every scheduled or manual run
-  # (stats, market, nightly full CI…) checks whether this week's projections refresh is on main. Past the catch-up
-  # window (Thursday 00:00 UTC) with it still missing, this job fails, so the run turns red and GitHub sends its failure
-  # notice; inside the window it only warns. Never changes anything.
+  # Missed-run alarm (Alan, Oct 13; per source since Nov 1, site audit P1-1): GitHub's scheduler drops and delays runs.
+  # Every scheduled or manual run (stats, market, nightly full CI…) checks main's data source by source against the
+  # workflow's own schedule (pipeline/data_freshness.py): stats after each game, Sunday teams' Wed / Thu / Fri practice
+  # reports, this week's projections refresh, roles, depth charts and the FantasyCalc sync. A source whose last two
+  # scheduled refreshes both left no trace (or that nflverse published while our runs missed it) fails this job, so the
+  # run turns red and GitHub sends its failure notice; a provider that hasn't published yet only warns. Never changes
+  # anything.
   freshness:
     needs: refresh
     if: "!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')"
@@ -528,12 +531,6 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - name: Weekly projections refresh is on main
-        run: |
-          python3 pipeline/weekly_due.py --github-output
-          case "$(grep '^state=' "$GITHUB_OUTPUT" | tail -1)" in
-            state=overdue) echo "::error::Weekly projections refresh missed: $(python3 pipeline/weekly_due.py). Run the workflow manually (Run workflow, stats_only off)."
-                           echo "**Missed:** $(python3 pipeline/weekly_due.py). Run the workflow manually with stats_only off." >> "$GITHUB_STEP_SUMMARY"; exit 1 ;;
-            state=due)     echo "::warning::Weekly projections refresh still missing: $(python3 pipeline/weekly_due.py). A catch-up run will do it before Thursday 00:00 UTC." ;;
-            *)             echo "$(python3 pipeline/weekly_due.py)" >> "$GITHUB_STEP_SUMMARY" ;;
-          esac
+      - name: Data sources are current
+        # exits 1 when a source is overdue; ::error:: / ::warning:: lines and a table in the step summary say which
+        run: python3 pipeline/data_freshness.py --online --github

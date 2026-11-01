@@ -2474,6 +2474,16 @@ dialog.signin label.signin-remember { margin: 10px 0 0; text-transform: none; le
   .pr-row .pr-stars { justify-content: flex-start; align-items: center; gap: 10px; }
   .pr-row .pr-star-names { display: block; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 }
+/* 761–899px (site audit Nov 1, P1-6): the eight columns need ~812px, so the Top players faces were cut off at the
+   card's edge at 768. They step aside here (the expanded team shows its whole roster board); phones keep them
+   beside the team name. */
+@media (min-width: 761px) and (max-width: 899px) {
+  .pr-head, .pr-row { grid-template-columns: 30px minmax(170px, 1.7fr) 52px 92px minmax(110px, 1fr) 132px 14px; }
+  .pr-head span:nth-child(7), .pr-row .pr-stars { display: none; }
+  .pr-row .pr-name { white-space: normal; line-height: 1.25; }   /* long team names wrap instead of ending in "…" */
+}
+/* the lens (Overall · QB · RB · WR · TE · Depth) fits 320px: it needed 355px */
+@media (max-width: 430px) { .pb-modes .vt-btn { padding-inline: 8px; } .pb-modes { max-width: 100%; overflow-x: auto; scrollbar-width: none; } }
 /* My Team: strength in one row, roster beside a slim side panel on wide screens */
 @media (min-width: 1024px) { .mt-strength { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 .mt-dash { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
@@ -3766,6 +3776,20 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .gl-table.inj-table td.pr-day, .gl-table.inj-table th.pr-day { text-align: center; width: 64px; }
 .pr-player .st-badge { margin-left: 8px; }
 .pr-inj { color: var(--ink-2); }
+.pr-inj-sub { display: none; }
+/* Narrow panels (phones, the desktop drawer): all three practice days stay on screen (Alan, Nov 1; Friday's final report
+   matters most), so the day columns go compact and the injury moves under the name instead of a column off to the right */
+@container pm (max-width: 560px) {
+  .gl-table.inj-table th.pr-inj, .gl-table.inj-table td.pr-inj { display: none; }
+  .gl-table.inj-table td.pr-player { position: relative; white-space: normal; padding-left: 40px; padding-right: 6px; }
+  .gl-table.inj-table td.pr-player .inj-pos { position: absolute; left: 10px; top: 12px; min-width: 0; }
+  .gl-table.inj-table td.pr-player .pl-name { white-space: normal; }   /* long names wrap between words, never mid-word */
+  .pr-player .st-badge { margin-left: 6px; vertical-align: 1px; }
+  .pr-inj-sub { display: block; margin-top: 2px; font-size: 0.72rem; font-weight: 500; line-height: 1.3; color: var(--text-muted); }
+  .gl-table.inj-table td.pr-day, .gl-table.inj-table th.pr-day { width: 44px; padding-left: 2px; padding-right: 2px; }
+  .inj-table .st-blk { min-width: 36px; padding: 0 4px; }
+  .inj-table .st-blk.pr-pend { padding: 0 2px; letter-spacing: 0; }
+}
 /* Status colours, the same everywhere */
 :root, :root[data-theme="dark"] { --st-dnp-text: #E2625D; --st-out-text: #E8706A; --st-fp: #2F8550; --st-fp-text: #4FB877; --st-lp: #D8901E; --st-dnp: #C9373F; --st-out: #93202A; --st-q: #D9A520; --st-d: #D85A2B; --st-ir: #8F4A4F; --st-ink: #FFFFFF; --st-ink-amber: #1A1314; }
 :root[data-theme="light"] { --st-dnp-text: var(--st-dnp); --st-out-text: var(--st-out); --st-fp: #2F8550; --st-fp-text: #23703F; --st-lp: #C27E12; --st-dnp: #B92D35; --st-out: #85161F; --st-q: #C99412; --st-d: #C44D20; --st-ir: #8A4247; }
@@ -4587,6 +4611,29 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
      audit Oct 13): the format text truncates with an ellipsis, the full text stays in the chip's tooltip */
   .mast-right { flex: 0 1 auto; min-width: 0; }
   .fmt-chip { min-width: 0; }
+  /* Scrolling tab row (site audit Nov 1, P1-4): the 36px fade was too faint, so phones showed half a "Trade" with no
+     cue that more tabs follow. A quiet chevron now sits on the side that has more tabs, on a short fade to the
+     header color; it's visual only (a swipe scrolls, a tap reaches the tab under it). keepTabInView keeps the open
+     tab clear of it. */
+  .masthead .tabs { --tabs-pad: 0px; padding-inline: var(--tabs-pad); }
+  .masthead .tabs.scroll-hint { -webkit-mask-image: none; mask-image: none; }
+  .masthead .tabs::before, .masthead .tabs::after {
+    content: "\203A"; position: sticky; z-index: 1; flex: none; box-sizing: border-box; width: 34px; display: flex; align-items: center; justify-content: flex-end;
+    padding-inline: 2px; font-size: 1.3rem; line-height: 1; color: var(--text-secondary); pointer-events: none;
+    opacity: 0; visibility: hidden; transition: opacity .16s var(--ease), visibility .16s;
+    background: linear-gradient(to right, color-mix(in srgb, var(--nav-bg) 0%, transparent), var(--nav-bg) 60%);
+  }
+  .masthead .tabs::after { right: calc(-1 * var(--tabs-pad)); margin-left: -36px; }   /* sticky insets sit inside the padding; -36 = width + the 2px gap, so it takes no room */
+  .masthead .tabs::before { content: "\2039"; order: -1; left: calc(-1 * var(--tabs-pad)); margin-right: -36px; justify-content: flex-start;
+    background: linear-gradient(to left, color-mix(in srgb, var(--nav-bg) 0%, transparent), var(--nav-bg) 60%); }
+  .masthead .tabs.more-r::after, .masthead .tabs.more-l::before { opacity: 1; visibility: visible; }
+}
+/* phones: tighter tabs so all five fit from 360px (they needed 412px), the first one in line with the logo */
+@media (max-width: 760px) { .masthead .tabs { --tabs-pad: 16px; } }
+@media (max-width: 430px) {
+  .masthead .tabs { --tabs-pad: 4px; }
+  .masthead .tab { padding-inline: 8px; }
+  .masthead .tab::after { left: 8px; right: 8px; }
 }
 
 /* ---- editor bar: a slim utility strip, not a card. Quiet while everything is saved; Save turns red only with
@@ -6504,10 +6551,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (!el || el._hints) return; el._hints = true; el.classList.add("scroll-hint");
     const set = () => { el.classList.toggle("more-l", el.scrollLeft > 4); el.classList.toggle("more-r", el.scrollLeft + el.clientWidth < el.scrollWidth - 4); };
     el.addEventListener("scroll", set, { passive: true }); window.addEventListener("resize", set); set(); el._setHints = set;
+    // items shown or hidden later (My Team, League and Trade Finder appear once a league connects) change what's
+    // off screen without resizing the strip or scrolling it, so watch the items too
+    if (typeof ResizeObserver === "function") { const ro = new ResizeObserver(() => keepTabInView(el)); ro.observe(el); for (const c of el.children) ro.observe(c); }
   }
+  // the selected item stays fully in view and clear of the scroll hint on either side (36px: the fade / chevron)
   function keepTabInView(el) {
     if (!el) return; const on = el.querySelector('[aria-selected="true"], [aria-pressed="true"]');
-    if (on && el.scrollWidth > el.clientWidth) { const x = on.offsetLeft - el.offsetLeft; if (x < el.scrollLeft || x + on.offsetWidth > el.scrollLeft + el.clientWidth) el.scrollLeft = x - 24; }
+    if (on && el.scrollWidth > el.clientWidth) {
+      const x = on.getBoundingClientRect().left - el.getBoundingClientRect().left + el.scrollLeft, end = x + on.offsetWidth, pad = 36;
+      if (x - pad < el.scrollLeft) el.scrollLeft = Math.max(0, x - pad);
+      else if (end + pad > el.scrollLeft + el.clientWidth) el.scrollLeft = end + pad - el.clientWidth;
+    }
     if (el._setHints) el._setHints();
   }
   scrollHints(document.querySelector(".tabs"));
@@ -13183,7 +13238,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <span class="pr-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(t.name !== t.manager ? t.manager : "")}${mode ? `${t.name !== t.manager ? " · " : ""}Power #${x.power}` : ""}</span></span></span>
           <span class="pr-rec">${esc(recordText(st) || "–")}</span>
           <span class="pr-pf">${st.pf ? pts(st.pf) : "–"}<small>${st.pa ? pts(st.pa) : ""}</small></span>
-          <span class="pr-strength" data-hc="pw:${esc(rid)}"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}${!mode && pwrClose(ev, x) ? `<span class="pr-close" title="Within ${pwrClosePct()} of the roster value of the team above or below: their order could easily flip">Close</span>` : ""}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : `<span class="pr-gap"><span class="pr-ppg" title="Expected points per week for the rest of the regular season: the best available lineup each week with byes and typical absences">${fp(x.ppg)} expected PPG</span>${pwrGapText(ev, x) ? `<span class="pr-gap-d"> · ${pwrGapText(ev, x)}</span>` : ""}</span>`}</span>
+          <span class="pr-strength" data-hc="pw:${esc(rid)}"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}${!mode && pwrClose(ev, x) ? `<span class="pr-close" title="Within ${pwrClosePct()} of the roster value of the team above or below: their order could easily flip">Close</span>` : ""}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : `<span class="pr-gap"><span class="pr-ppg" title="Expected lineup PPG: an AM-implied estimate (AM values converted to points), not the weekly projections, of what the playable QB/RB/WR/TE lineup scores per week for the rest of the regular season, with byes and typical absences. A different measure from roster value (bench in full) and from the odds model average in Standings">${fp(x.ppg)} expected lineup PPG</span>${pwrGapText(ev, x) ? `<span class="pr-gap-d"> · ${pwrGapText(ev, x)}</span>` : ""}</span>`}</span>
           <span class="pr-pos">${posLink(x.best[0], x.best[1], rid, "Best")}
             ${posLink(x.worst[0], x.worst[1], rid, "Weakest")}</span>
           <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${names}</span></span>
@@ -13201,7 +13256,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const note = mode
       ? (mode === "DEPTH" ? "Teams ranked by bench depth: the best bench players by AM value (injured reserve counts, taxi doesn't)."
         : `Teams ranked by ${label} room: a team's best ${label}s count in full (the position's starting slots plus one flex option), and depth counts with less weight for each extra player. Each room is its own comparison: the flex option counts in every room it's open to, so rooms don't add up to team strength.`)
-      : `Power rankings order teams by roster value: the league-adjusted AM values of every player on the active roster added up, starters and bench alike (injured reserve and taxi squads not counted). Under it, expected PPG is the points per week the team can expect to field for the rest of the regular season (the best available lineup each week, with byes and typical absences; injured reserve counted as healthy there).${pwrUnvalued(d.league)} A team within ${pwrClosePct()} of the roster value of the team above or below is marked Close: their order could easily flip.`;
+      : `Power rankings order teams by roster value: the league-adjusted AM values of every player on the active roster added up, starters and bench alike (injured reserve and taxi squads not counted). Under it, expected lineup PPG is an AM-implied estimate of what the playable QB/RB/WR/TE lineup scores per week for the rest of the regular season (byes and typical absences; injured reserve counted as healthy there), so it can rank teams differently. Playoff odds use their own simulation.${pwrUnvalued(d.league)} A team within ${pwrClosePct()} of the roster value of the team above or below is marked Close: their order could easily flip.`;
     return `<div class="lg-toolbar">
         <p class="method-note">${note}</p>
         <label class="lg-keep"><input type="checkbox" id="lg-keep"${LT.keep ? " checked" : ""}> Keep teams open to compare</label>
@@ -13260,7 +13315,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : `${me ? `<button class="btn primary" type="button" data-trade-with="${t.rosterId}">Trade with ${esc(t.name)}</button><button class="btn" type="button" data-find-with="${t.rosterId}">Find trades</button>` : ""}`;
     return `<div class="tx-head">
         <div class="tx-title"><span class="tx-rank${LT.pb ? " lens" : ""}"${LT.pb ? ` title="Overall power rank (the row shows the ${LT.pb.pos === "DEPTH" ? "depth" : LT.pb.pos + " room"} rank)"` : ""}>${LT.pb ? `<small>Overall</small>` : ""}#${x.power}</span><div><b>${esc(t.name)}</b>
-          <span>Power rank ${ordinal(x.power)} of ${n} · ${fmt(pwrRV(x))} roster value · ${fp(x.ppg)} expected PPG · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
+          <span>Power rank ${ordinal(x.power)} of ${n} · ${fmt(pwrRV(x))} roster value · ${fp(x.ppg)} expected lineup PPG · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
         <div class="tx-actions">${actions}</div>
       </div>
       <div class="tx-summary">${summary}</div>
@@ -13420,7 +13475,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const pct = 100 * o.p, txt = !po.gamesLeft ? (o.p >= 0.5 ? "In" : "Out") : pct >= 99.5 ? ">99%" : pct > 0 && pct < 0.5 ? "<1%" : pct === 0 ? "0%" : Math.round(pct) + "%";
     const tone = pct >= 75 ? "hi" : pct >= 35 ? "mid" : "lo";
     const tip = !po.gamesLeft ? "Regular season over" : `${Math.round(pct * 10) / 10}% of ${PO_SIMS.toLocaleString("en-US")} simulated seasons · projected ${o.projW.toFixed(1)} wins · ${o.left} game${o.left === 1 ? "" : "s"} left`
-      + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · expected ${o.mu.toFixed(1)} pts/week`;
+      + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · odds model average ${o.mu.toFixed(1)} pts/week (the playoff model blends points scored so far, K/DEF included where the league starts them, with its own team-strength estimate: a different model from Power Rankings' expected lineup PPG)`;
     return `<td class="num st-odds ${tone}" title="${esc(tip)}"><b>${txt}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
   }
   // the league's playoff rule in words: e.g. "the 3 division winners, then the next 3 best records (6 teams)"
@@ -16292,10 +16347,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const posted = cur && rep.day ? days.indexOf(rep.day) : 2;
       const cell = (r, k) => days.indexOf(k) > posted ? `<span class="st-blk none pr-pend" title="${DAY_NAME[k]}'s report isn't out yet">Pending</span>`
         : r[k] ? stBlock(r[k]) : `<span class="st-blk none" title="Not on ${DAY_NAME[k]}'s report">–</span>`;
-      const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}</td>
+      const row = r => `<tr class="${isMe(r) ? "inj-me" : ""}"><td class="pr-player"><span class="inj-pos">${esc(r.pos)}</span>${r.sid && EDIT_POS.includes(r.pos) ? nameLink(String(r.sid), r.name) : `<span class="pl-name">${esc(r.name)}</span>`}${r.status ? stBadge(r.status, r.status) : ""}${r.injury ? `<span class="pr-inj-sub">${esc(r.injury)}</span>` : ""}</td>
           ${days ? days.map(k => `<td class="pr-day">${cell(r, k)}</td>`).join("") : `<td class="pr-day">${stBlock(r.practice)}</td>`}<td class="pr-inj">${esc(r.injury || "")}</td></tr>`;
       return `<section class="pr-sec${old ? " prior" : ""}">${head}${old ? pending : ""}<div class="table-scroll"><table class="gl-table inj-table">
-        <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day"${rep.undated ? ` title="nflverse doesn't say which practice day this report is from"` : ""}>${rep.undated ? "Latest" : "Practice"}</th>`}<th scope="col">Injury</th></tr></thead>
+        <thead><tr><th scope="col">Player</th>${days ? `<th scope="col" class="pr-day">Wed</th><th scope="col" class="pr-day">Thu</th><th scope="col" class="pr-day">Fri</th>` : `<th scope="col" class="pr-day"${rep.undated ? ` title="nflverse doesn't say which practice day this report is from"` : ""}>${rep.undated ? "Latest" : "Practice"}</th>`}<th scope="col" class="pr-inj">Injury</th></tr></thead>
         <tbody>${groups.map(([label, g]) => `<tr class="pr-group"><td colspan="${days ? 5 : 3}">${esc(label)}</td></tr>` + g.map(row).join("")).join("")}</tbody></table></div></section>`;
     };
     const me = `<div class="pr-me">${statusChip(info) || `<span class="muted">No ${reportWeek(info.team) ? `Week ${reportWeek(info.team)} ` : ""}practice report yet.</span>`}${R && !full ? `<span class="pr-scope">Showing what matters for ${esc(info.name)}: ${esc(info.team)} ${esc(relevantLabel(R.own))}${ng ? ` · ${esc(ng.opp)} ${esc(relevantLabel(R.opp))}` : ""}</span>` : ""}</div>`;
@@ -19947,7 +20002,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       (g ? hcRow(g.ahead ? "Lead" : "Gap", fmt(g.d), `${g.ahead ? "ahead of #2" : `behind #${g.rank}`}${pwrClose(ev, x) ? ` · close: within ${pwrClosePct()} of a neighbour, the order could easily flip` : ""}`) : "") +
       hcRow("Starters", fmt(x.activeStart), "· best starting lineup") +
       hcRow("Bench", fmt(x.total - x.activeStart), "· every other active player, in full") +
-      hcRow("Expected PPG", `<b>${fp(x.ppg)}</b>`, `· ${ordinal(rankOf(y => y.ppg))} of ${n} · rest of the regular season`) +
+      hcRow("Expected lineup PPG", `<b>${fp(x.ppg)}</b>`, `· ${ordinal(rankOf(y => y.ppg))} of ${n} · rest of the regular season`) +
       hcRow("Starting lineup", `${fp(x.ppgLineup)} PPG`, "· its regular starters, when they play") +
       hcRow("Depth adds", `${fp(x.ppgDepth)} PPG`, `· bench filling byes and absences · ${ordinal(rankOf(y => y.ppgDepth))} of ${n}`) +
       hcRow("Full strength", `${fp(x.ppgIdeal)} PPG`, "· nobody missing");
@@ -19959,7 +20014,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < ns ? "Full" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
     }
     return head + hcSec("", body) + hcSec("Position rooms", rooms) + lens +
-      hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: roster value = the league-adjusted AM values of every active player added up (injured reserve and taxi not counted); expected PPG = points per week for the rest of the regular season, from AM values converted to points, with byes and typical absences (injured reserve counted as healthy). Position rooms are AM values. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
+      hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: roster value = the league-adjusted AM values of every active player added up (injured reserve and taxi not counted); expected lineup PPG = an AM-implied estimate, not the weekly projections, of what the playable QB/RB/WR/TE lineup scores per week for the rest of the regular season, from AM values converted to points, with byes and typical absences (injured reserve counted as healthy). The playoff odds in Standings use a separate simulation, so their weekly score differs. Position rooms are AM values. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
   };
 
   // Start-up: restore a saved connection
