@@ -443,7 +443,7 @@ with sync_playwright() as p:
             pg.evaluate(f"() => {{ const s = document.getElementById('tf-player'); s.value = '{v}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(300)
             for c in pg.locator(".tf-card:not(.tf3)").all():
                 seen += 1
-                vt, df = c.locator(".tf-verdict-big").inner_text().upper(), float(c.locator(".tf-diff").inner_text().split("%")[0])
+                vt, df = c.locator(".tf-verdict-big").inner_text().upper(), float(re.search(r"(\d+\.\d)%", c.locator(".tf-diff .tf-dec").inner_text()).group(1))
                 good = good and vt.startswith(word) and "STEAL" not in vt and lo - 0.05 <= df <= hi + 0.05
         ok(seen > 0 and good, f"Trade goal '{goal}': {seen} ideas, all {lo}-{hi}% in your favor and labelled '{word.title()}'")
     pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
@@ -457,6 +457,16 @@ with sync_playwright() as p:
             d, size = c.locator(".tf-diff").inner_text(), c.locator(".tf-size").get_attribute("title")
             if "package adjustment" in d or "package-adjusted" in d:
                 named += 1
+                dec = c.locator(".tf-dec").inner_text()
+                # the reading that decides comes first and in bold; when the readings favor different sides it names its side
+                if not (dec.startswith("Verdict uses") or dec.startswith("Split")) or ("for " in d.split("(")[-1] and not dec.startswith("Split") and " for " not in dec): bare.append((size, d[:60]))
+                # and it's the reading valueRead picks: same side, the smaller one; opposite sides, package-adjusted when
+                # it's under the 3% fair line, else raw
+                if dec.startswith("Verdict uses"):
+                    dn = float(re.search(r"(\d+\.\d)%", dec).group(1)); on = float(re.search(r"\((?:raw )?(\d+\.\d)%", d).group(1))
+                    adj_dec = "after package adjustment" in dec
+                    want = (adj_dec == ((on if not adj_dec else dn) < 3)) if " for " in dec else dn <= on + 0.05
+                    if not want: bare.append(("wrong reading", d[:90]))
                 if probe is None: probe = (v, i, d)
             elif not d.split(" · ")[0].endswith("% value difference") or size.split("-for-")[0] != size.split("-for-")[1]: bare.append((size, d[:60]))
     ok(named > 0 and not bare, f"Finder cards name raw vs package-adjusted ({named} with both readings; unnamed uneven: {bare[:2]})")
@@ -465,7 +475,7 @@ with sync_playwright() as p:
         pg.evaluate(f"() => {{ const s = document.getElementById('tf-player'); s.value = '{v}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(300)
         pg.locator(".tf-card:not(.tf3)").nth(i).locator("[data-tf-open]").click(); pg.wait_for_timeout(1200)
         gap = pg.inner_text("#verdict-gap")
-        nums = re.findall(r"(\d+\.\d)%", d.split(" · lineup")[0].split(" lineup")[0])[:2]
+        nums = re.findall(r"(\d+\.\d)%", d.split(" · your lineup")[0].split(" · their lineup")[0])[:2]
         ok(len(nums) == 2 and all(n + "%" in gap for n in nums), f"Finder card's two readings match the calculator ({nums} in '{gap[:90]}')")
         pg.click("#tab-finder"); pg.wait_for_timeout(800)
     pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
