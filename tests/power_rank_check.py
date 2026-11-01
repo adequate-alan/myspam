@@ -107,7 +107,7 @@ with sync_playwright() as p:
        "6. The main number is each team's roster value, in rank order")
     ok(all(abs(fnum(i["gap"]) - byrid[i["rid"]]["ppg"]) <= 0.051 and "expected lineup PPG" in i["gap"] for i in items), "6. Expected PPG sits under it, secondary")
     tipp = pg.evaluate("() => document.querySelector('.pr-ppg').getAttribute('title')")
-    ok("QB/RB/WR/TE lineup" in tipp and "roster value" in tipp and "playoff simulation" in tipp,
+    ok("QB/RB/WR/TE lineup" in tipp and "AM-implied" in tipp and "not the weekly projections" in tipp and "roster value" in tipp and "odds model average" in tipp,
        f"6. The PPG label's tooltip says what it measures and that roster value and the playoff simulation are different measures (Nov 1) ({tipp})")
     near = lambda hi, lo: hi - lo <= 0.02 * max(1, hi)
     want = [(i > 0 and near(T[i - 1]["total"], T[i]["total"])) or (i < 11 and near(T[i]["total"], T[i + 1]["total"])) for i in range(12)]
