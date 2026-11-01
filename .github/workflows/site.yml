@@ -490,7 +490,8 @@ jobs:
           RESULT: ${{ needs.plan.result == 'success' && needs.full.result || needs.plan.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          open=$(gh issue list --label nightly-ci --state open --json number --jq '.[0].number // empty')
+          # only the issue this job opened itself (label nightly-ci, opened by github-actions), never one a person filed
+          open=$(gh issue list --label nightly-ci --author app/github-actions --state open --json number --jq '.[0].number // empty')
           if [ "$RESULT" = "success" ]; then
             [ -n "$open" ] && gh issue close "$open" --comment "The nightly full suite passed again: $RUN_URL"
             echo "Nightly full suite passed." >> "$GITHUB_STEP_SUMMARY"; exit 0

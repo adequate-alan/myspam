@@ -187,8 +187,8 @@ ok(nac("failure", event="schedule", schedule=NIGHTLY) and nac("success", event="
    and not nac("failure", event="push") and not nac("failure", event="pull_request") and not nac("failure", event="schedule", schedule="0 15 * * 1")
    and not nac("failure", event="schedule", schedule=NIGHTLY, cancelled=True) and not nac("failure", event="workflow_dispatch", full_ci=True),
    "Nightly alarm: runs after every nightly full suite (pass or fail), never for pushes, PRs, data refreshes, manual runs or a cancelled run")
-ok(na.get("permissions") == {"issues": "write"} and "full" in need("nightly-alarm") and "label nightly-ci" in str(na["steps"]) and "gh issue close" in str(na["steps"]),
-   "Nightly alarm: issues-only permission, opens / comments on one nightly-ci issue and closes it once green")
+ok(na.get("permissions") == {"issues": "write"} and "full" in need("nightly-alarm") and "label nightly-ci --author app/github-actions" in str(na["steps"]) and "gh issue close" in str(na["steps"]),
+   "Nightly alarm: issues-only permission, opens / comments on one nightly-ci issue and closes only its own issue once green")
 bc = jobs["build"]["if"]
 for lane, job in (("targeted", "targeted"), ("full", "full")):
     ok(not evaluate(bc, {"result": {"plan": "success", "verify": "success", job: "skipped"}, "outputs": {"plan": {"lane": lane, "deploy": "true"}}, "event": "push"}),
