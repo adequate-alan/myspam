@@ -2026,7 +2026,8 @@ button.rs-card:focus-visible { outline: 2px solid var(--focus-ring); outline-off
 #panel-finder .tf-vline { flex-direction: column; align-items: flex-start; gap: 2px; }
 #panel-finder .tf-verdict-big { font-size: 1.28rem; letter-spacing: -0.005em; }
 #panel-finder .tf-verdict-big.fair { color: var(--text-strong); }
-#panel-finder .tf-diff { font-size: 0.66rem; color: color-mix(in srgb, var(--muted) 75%, transparent); letter-spacing: 0.01em; }
+#panel-finder .tf-diff { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.01em; }
+#panel-finder .tf-diff .tf-dec { color: var(--text-secondary); font-weight: 600; }   /* the reading that decides the verdict (P1-8) */
 #panel-finder .tf-card.good-fit { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--rb) 70%, transparent), 0 6px 18px -14px var(--shadow-color); }
 #panel-finder .tf-card.bad-fit { background: var(--surface); box-shadow: none; }
 /* dimmed, still readable (contrast pass, Oct 13): photos and badges fade, names and values take the secondary gray; full on hover / focus */
@@ -17261,6 +17262,31 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return { label: (L[i] || L[L.length - 1])(), fair: i <= 1 };
   };
   // Verdict for the starting team S against partner T (S may be you or any team)
+  /* The Finder card's value number, naming which reading it is (site audit Nov 1, P1-8: the card said "5.2% value
+     difference" where the calculator showed raw +28.1% and package-adjusted +5.2% for the same trade). Text only: the
+     reading that decides the verdict (valueRead's gap, it.more) comes first in bold, the other follows in brackets, and
+     when the two readings favor different sides each names the side it favors (Alan, Nov 1: "Even" next to "raw +3.5% for
+     you" has to say the +0.1% package-adjusted reading is the one that decides). rawDecides is valueRead's own choice; a split has no deciding reading. Returns { html, text, tip }. */
+  function tfGapText(it, S, T) {
+    const vr = it.vr, g = it.more.toFixed(1) + "%", f = v => Math.abs(v).toFixed(1) + "%";
+    const out = (lead, rest, tip) => ({ html: `<b class="tf-dec">${esc(lead)}</b>${rest ? " " + esc(rest) : ""}`, text: lead + (rest ? " " + rest : ""), tip });
+    if (!vr || !(it.m && it.m.adj && it.m.adj.swing) || vr.kind === "plain")
+      return out(`${g} value difference`, "", "Value difference: league-adjusted values added up (equal player counts, so no package adjustment applies).");
+    const who = v => (v > 0 ? (S.mine ? "you" : S.name) : T.name);
+    const pkgTip = "The package adjustment counts an extra or smaller piece for less next to the best player in the deal. It can narrow a verdict, never create or reverse a winner, so when it only widens the gap the raw number decides (the same rule as the Trade Calculator).";
+    const opposite = vr.raw * vr.adj < 0 && Math.abs(vr.raw) >= 0.05 && Math.abs(vr.adj) >= 0.05;
+    if (vr.kind === "split")
+      return out("Split: neither reading decides", `(raw +${f(vr.raw)} for ${who(vr.raw)} · package-adjusted +${f(vr.adj)} for ${who(vr.adj)})`, "Both value readings clear the 3% fair line but favor different sides: more total value for one team, the better package for the other. Raw = league-adjusted values added up. " + pkgTip);
+    // exactly valueRead's choice: same side, the smaller reading decides (widened = raw); opposite sides, the adjusted
+    // reading when it's under the fair line, else the raw one
+    const rawDecides = opposite ? Math.abs(vr.adj) >= VALUE_FAIR : vr.kind === "widened" || (vr.kind === "sensitive" && Math.abs(vr.adj) > Math.abs(vr.raw));
+    const dec = rawDecides ? vr.raw : vr.adj, oth = rawDecides ? vr.adj : vr.raw;
+    const side = v => (opposite ? " for " + who(v) : "");
+    const why = vr.kind === "evened" || vr.kind === "sensitive" ? `Decides: the ${rawDecides ? "raw" : "package-adjusted"} reading is under the 3% fair line. ` : rawDecides ? "Decides: the raw gap, since the package adjustment only widens it. " : "Decides: the package-adjusted gap, since the adjustment narrows the raw gap. ";
+    return rawDecides
+      ? out(`Verdict uses ${g} raw${side(dec)}`, `(${f(oth)}${side(oth)} after package adjustment)`, why + "Raw = league-adjusted values added up. " + pkgTip)
+      : out(`Verdict uses ${g} after package adjustment${side(dec)}`, `(raw ${f(oth)}${side(oth)})`, why + "Raw = league-adjusted values added up. " + pkgTip);
+  }
   function finderVerdict(more, sAhead, S, T) {
     if (S.mine) return youVerdict(more, sAhead, T.name);
     const i = Math.max(0, TRADE_VERDICTS.findIndex(t => more < t.upTo)), tier = TRADE_VERDICTS[i] || TRADE_VERDICTS[TRADE_VERDICTS.length - 1];
@@ -19115,11 +19141,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (mlOn && it.mk) return mlCard(it, i, MK);
       if (tgt) return targetCard(it, i, TK, X);
       const sAhead = it.sAhead, v = it.vr && it.vr.kind === "split" ? { label: "Split verdict", fair: true } : it.vr && it.vr.kind === "sensitive" ? { label: "Package-sensitive", fair: true } : finderVerdict(it.more, sAhead, S, it.team);
-      const full = TF.openFull.has(i), fw = fullWhy(it);
+      const full = TF.openFull.has(i), fw = fullWhy(it), gt = tfGapText(it, S, it.team);
       const badFit = hurts(it.fS) || hurts(it.fT), goodFit = !badFit && helps(it.fS) && helps(it.fT);
       return `<article class="tf-card${badFit ? " bad-fit" : goodFit ? " good-fit" : ""}">
         <header class="tf-head">${teamFace(it.team)}<div class="tf-team"><span class="tf-with">Trade with</span><b>${esc(it.team.name)}</b></div><span class="tf-size" title="${esc(it.give.length + "-for-" + it.get.length)}">Send ${it.give.length} · Get ${it.get.length}</span></header>
-        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}" title="${esc(fitBadge0(it, v))}">${esc(fitBadge(it, v))}</span><span class="tf-diff" title="Value difference: league-adjusted values with the package adjustment. Lineup: each team's best lineup score (starters + bench depth) before → after.">${it.more.toFixed(1)}% value difference · ${esc(S.mine ? "your" : possOf(S))} lineup ${fmtNet(it.fS.u)} · their lineup ${fmtNet(it.fT.u)}</span></div>
+        <div class="tf-vline"><span class="tf-verdict-big${v.fair ? " fair" : sAhead ? " you" : " them"}" title="${esc(fitBadge0(it, v))}">${esc(fitBadge(it, v))}</span><span class="tf-diff" title="${esc(gt.tip + " Lineup: each team's best lineup score (starters + bench depth) before → after.")}">${gt.html} · ${esc(S.mine ? "your" : possOf(S))} lineup ${fmtNet(it.fS.u)} · their lineup ${fmtNet(it.fT.u)}</span></div>
         <div class="tf-sides">
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "give" : "gives"}</h4><ul>${it.give.map(p => crow(p, "")).join("")}</ul></div>
           <div class="tf-side"><h4>${esc(sLabel)} ${you ? "get" : "gets"}</h4><ul>${it.get.map(p => { const fe = it.fS.inc.find(e => e.p === p); return crow(p, fe && fe.starts ? "starts at " + fe.role : ""); }).join("")}</ul></div>
