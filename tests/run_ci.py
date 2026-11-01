@@ -211,6 +211,8 @@ def main():
     md.append(f"\n{len(rows)} suites · {sum(r[4] for r in rows):.0f}s of suite time in {wall:.0f}s" + (f" ({jobs} at a time)" if jobs > 1 else ""))
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         open(os.environ["GITHUB_STEP_SUMMARY"], "a").write("\n".join(md) + "\n")
+    # the same table in the logs directory, so the nightly alarm (site.yml, nightly-alarm) can quote it in its issue
+    if a.logs: open(os.path.join(a.logs, "summary.md"), "w").write("\n".join(md) + "\n")
     say(f"\n{len(rows)} suites · {sum(r[4] for r in rows):.0f}s of suite time in {wall:.0f}s wall" + (f" ({jobs} at a time)" if jobs > 1 else ""))
     flaked = [r[0] for r in rows if r[9]]
     say(f"{blocking} suite(s) with new failures." if blocking else "No new failures." + (f" {len(flaked)} suite(s) passed only after a retry (flaky): {', '.join(flaked)}" if flaked else ""))

@@ -466,6 +466,52 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
+  # Nightly alarm (Alan, Nov 1 site audit: the nightly full suite was red 4 of 5 nights and nobody saw it). A nightly
+  # failure opens one GitHub issue labelled nightly-ci (or comments on the open one) with the failing checks and the
+  # run link, so GitHub notifies the repo owner; the first green night closes it. Only the nightly schedule, never a
+  # push, PR or data refresh. Touches issues only.
+  nightly-alarm:
+    needs: [plan, full]
+    if: "!cancelled() && github.event_name == 'schedule' && github.event.schedule == '15 7 * * *'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: ci-logs-full-*
+          path: logs
+      - name: Open, update or close the nightly-failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.plan.result == 'success' && needs.full.result || needs.plan.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # only the issue this job opened itself (label nightly-ci, opened by github-actions), never one a person filed
+          open=$(gh issue list --label nightly-ci --author app/github-actions --state open --json number --jq '.[0].number // empty')
+          if [ "$RESULT" = "success" ]; then
+            [ -n "$open" ] && gh issue close "$open" --comment "The nightly full suite passed again: $RUN_URL"
+            echo "Nightly full suite passed." >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          {
+            echo "The nightly full suite ended **$RESULT** on $(date -u +'%b %-d, %Y') ($RUN_URL)."
+            echo
+            fails=$(cat logs/*/summary.md 2>/dev/null | grep -E '^- \*\*.*(new failure|crash|timed out)' || true)
+            if [ -n "$fails" ]; then echo "$fails"; else echo "No suite summary was found: open the run for the logs."; fi
+            echo
+            echo "Main's releases aren't blocked by this (they run their own lane). Fix it in its own PR (CLAUDE.md §13)."
+          } > body.md
+          cat body.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$open" ]; then gh issue comment "$open" --body-file body.md
+          else
+            gh label create nightly-ci --color B60205 --description "The nightly full test suite is failing" 2>/dev/null || true
+            gh issue create --title "Nightly full suite failing" --label nightly-ci --body-file body.md
+          fi
+          echo "::error::Nightly full suite: $RESULT (issue opened or updated)"
+
   # Missed-run alarm (Alan, Oct 13; per source since Nov 1, site audit P1-1): GitHub's scheduler drops and delays runs.
   # Every scheduled or manual run (stats, market, nightly full CI…) checks main's data source by source against the
   # workflow's own schedule (pipeline/data_freshness.py): stats after each game, Sunday teams' Wed / Thu / Fri practice
