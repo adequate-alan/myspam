@@ -447,6 +447,28 @@ with sync_playwright() as p:
                 good = good and vt.startswith(word) and "STEAL" not in vt and lo - 0.05 <= df <= hi + 0.05
         ok(seen > 0 and good, f"Trade goal '{goal}': {seen} ideas, all {lo}-{hi}% in your favor and labelled '{word.title()}'")
     pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
+    # The card's value number names its reading (site audit Nov 1, P1-8): with a package adjustment in play it says raw or
+    # "after package adjustment" and gives the other reading too, and both are the numbers the calculator shows for that trade
+    pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'any'; s.dispatchEvent(new Event('change', {bubbles:true})); }"); pg.wait_for_timeout(300)
+    named, bare, probe = 0, [], None
+    for v in pv:
+        pg.evaluate(f"() => {{ const s = document.getElementById('tf-player'); s.value = '{v}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(300)
+        for i, c in enumerate(pg.locator(".tf-card:not(.tf3)").all()):
+            d, size = c.locator(".tf-diff").inner_text(), c.locator(".tf-size").get_attribute("title")
+            if "package adjustment" in d or "package-adjusted" in d:
+                named += 1
+                if probe is None: probe = (v, i, d)
+            elif not d.split(" · ")[0].endswith("% value difference") or size.split("-for-")[0] != size.split("-for-")[1]: bare.append((size, d[:60]))
+    ok(named > 0 and not bare, f"Finder cards name raw vs package-adjusted ({named} with both readings; unnamed uneven: {bare[:2]})")
+    if probe:
+        v, i, d = probe
+        pg.evaluate(f"() => {{ const s = document.getElementById('tf-player'); s.value = '{v}'; s.dispatchEvent(new Event('change', {{bubbles:true}})); }}"); pg.wait_for_timeout(300)
+        pg.locator(".tf-card:not(.tf3)").nth(i).locator("[data-tf-open]").click(); pg.wait_for_timeout(1200)
+        gap = pg.inner_text("#verdict-gap")
+        nums = re.findall(r"(\d+\.\d)%", d.split(" · lineup")[0].split(" lineup")[0])[:2]
+        ok(len(nums) == 2 and all(n + "%" in gap for n in nums), f"Finder card's two readings match the calculator ({nums} in '{gap[:90]}')")
+        pg.click("#tab-finder"); pg.wait_for_timeout(800)
+    pg.evaluate("() => { const s = document.getElementById('tf-goal'); s.value = 'fair'; s.dispatchEvent(new Event('change', {bubbles:true})); }")
     # Package filter (Alan, Oct 10): You send / You receive counts, always directional (from the starting team's side);
     # Any · Any is the default search (1-2 players a side); 1→3, 3→1, 2→4 and 4→2 only when picked; no grouped buckets
     ok(pg.locator("#tf-size").count() == 0 and pg.inner_text("#tf-pkg").strip() == "Any package", "Package filter replaces the trade-type tab row: 'Any package'")
