@@ -274,6 +274,29 @@ with sync_playwright() as p:
     ok("DEPTH SCORE" in pg.inner_text(".pr-head").upper(), "Depth lens")
     pg.click("[data-pb-pos=OVERALL]"); pg.wait_for_timeout(300)
     ok(pg.locator(".pb-ctx").count() == 0 and "ROSTER VALUE" in pg.inner_text(".pr-head").upper(), "Overall restores the normal Power Rankings (roster value)")
+    # Widths from the Nov 1 site audit (P1-4, P1-6): the page never scrolls sideways, the lens fits, nothing in a row
+    # sticks out of its card; the header's tab row says when more tabs are off screen and keeps the open tab in view
+    fit = """() => ({doc: document.documentElement.scrollWidth - innerWidth,
+        lens: [...document.querySelectorAll('.pb-modes .vt-btn')].filter(b => b.getBoundingClientRect().right > innerWidth + 1).map(b => b.textContent),
+        cut: [...document.querySelectorAll('.pr-item > .pr-row *')].filter(e => { const r = e.getBoundingClientRect(), c = e.closest('.pr-item').getBoundingClientRect();
+            return r.width && (r.right > c.right + 1 || r.left < c.left - 1); }).map(e => e.className).slice(0, 5)})"""
+    nav = """() => { const n = document.querySelector('nav.tabs'), nr = n.getBoundingClientRect(), on = n.querySelector('[aria-selected=true]').getBoundingClientRect();
+        const more = n.scrollLeft + n.clientWidth < n.scrollWidth - 4, chev = getComputedStyle(n, '::after');
+        return {more, hint: n.classList.contains('more-r'), chev: chev.visibility === 'visible' && chev.opacity === '1', inView: on.left >= nr.left - 1 && on.right <= nr.right + 1}; }"""
+    for w in (320, 375, 390, 430, 768, 1024):
+        pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(350)
+        f = pg.evaluate(fit)
+        ok(f["doc"] <= 0 and not f["lens"] and not f["cut"], f"Power Rankings at {w}px: no sideways scroll, lens fits, rows fit their cards ({f})")
+        nv = pg.evaluate(nav)
+        ok(nv["inView"] and nv["hint"] == nv["more"] and nv["chev"] == nv["more"], f"Header tabs at {w}px: open tab in view, chevron only when more tabs are off screen ({nv})")
+    pg.set_viewport_size({"width": 375, "height": 900}); pg.wait_for_timeout(300)
+    ok(not pg.evaluate(nav)["more"], "At 375px all five header tabs fit")
+    pg.set_viewport_size({"width": 320, "height": 900}); pg.wait_for_timeout(300)
+    pg.evaluate("document.getElementById('tab-trade').click()"); pg.wait_for_timeout(300)
+    nv = pg.evaluate(nav)
+    ok(nv["inView"] and pg.evaluate("document.querySelector('nav.tabs').classList.contains('more-l')"), f"At 320px the Trade tab scrolls into view with a hint that tabs sit to its left ({nv})")
+    pg.evaluate("document.getElementById('tab-league').click()"); pg.wait_for_timeout(300)
+    pg.set_viewport_size({"width": 1440, "height": 1000}); pg.wait_for_timeout(300)
     # Switching lens never scrolls by itself (Alan, Oct 5): same scroll position, no focus on the team row
     pg.set_viewport_size({"width": 1280, "height": 500})
     pg.evaluate("window.scrollTo(0, document.querySelector('.pb-modes').getBoundingClientRect().top + window.scrollY - 120)")

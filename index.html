@@ -4603,13 +4603,13 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
   .masthead .tabs { --tabs-pad: 0px; padding-inline: var(--tabs-pad); }
   .masthead .tabs.scroll-hint { -webkit-mask-image: none; mask-image: none; }
   .masthead .tabs::before, .masthead .tabs::after {
-    content: "\203A"; position: sticky; z-index: 1; flex: none; width: 34px; display: flex; align-items: center; justify-content: flex-end;
+    content: "\203A"; position: sticky; z-index: 1; flex: none; box-sizing: border-box; width: 34px; display: flex; align-items: center; justify-content: flex-end;
     padding-inline: 2px; font-size: 1.3rem; line-height: 1; color: var(--text-secondary); pointer-events: none;
     opacity: 0; visibility: hidden; transition: opacity .16s var(--ease), visibility .16s;
     background: linear-gradient(to right, color-mix(in srgb, var(--nav-bg) 0%, transparent), var(--nav-bg) 60%);
   }
-  .masthead .tabs::after { right: calc(-1 * var(--tabs-pad)); margin-left: -34px; }   /* sticky insets sit inside the padding */
-  .masthead .tabs::before { content: "\2039"; order: -1; left: calc(-1 * var(--tabs-pad)); margin-right: -34px; justify-content: flex-start;
+  .masthead .tabs::after { right: calc(-1 * var(--tabs-pad)); margin-left: -36px; }   /* sticky insets sit inside the padding; -36 = width + the 2px gap, so it takes no room */
+  .masthead .tabs::before { content: "\2039"; order: -1; left: calc(-1 * var(--tabs-pad)); margin-right: -36px; justify-content: flex-start;
     background: linear-gradient(to left, color-mix(in srgb, var(--nav-bg) 0%, transparent), var(--nav-bg) 60%); }
   .masthead .tabs.more-r::after, .masthead .tabs.more-l::before { opacity: 1; visibility: visible; }
 }
