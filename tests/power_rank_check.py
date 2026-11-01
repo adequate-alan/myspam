@@ -105,7 +105,10 @@ with sync_playwright() as p:
     byrid = {t["rid"]: t for t in P["teams"]}
     ok([i["rank"] for i in items] == list(range(1, 13)) and all(abs(fnum(i["score"]) - byrid[i["rid"]]["total"]) <= 0.51 for i in items) and "PPG" not in "".join(i["score"] for i in items),
        "6. The main number is each team's roster value, in rank order")
-    ok(all(abs(fnum(i["gap"]) - byrid[i["rid"]]["ppg"]) <= 0.051 and "expected PPG" in i["gap"] for i in items), "6. Expected PPG sits under it, secondary")
+    ok(all(abs(fnum(i["gap"]) - byrid[i["rid"]]["ppg"]) <= 0.051 and "expected lineup PPG" in i["gap"] for i in items), "6. Expected PPG sits under it, secondary")
+    tipp = pg.evaluate("() => document.querySelector('.pr-ppg').getAttribute('title')")
+    ok("QB/RB/WR/TE lineup" in tipp and "roster value" in tipp and "playoff simulation" in tipp,
+       f"6. The PPG label's tooltip says what it measures and that roster value and the playoff simulation are different measures (Nov 1) ({tipp})")
     near = lambda hi, lo: hi - lo <= 0.02 * max(1, hi)
     want = [(i > 0 and near(T[i - 1]["total"], T[i]["total"])) or (i < 11 and near(T[i]["total"], T[i + 1]["total"])) for i in range(12)]
     ok([i["close"] for i in items] == want, f"6. Close marks exactly the teams within 2% of a neighbour's roster value ({sum(want)} of 12)")
@@ -121,7 +124,7 @@ with sync_playwright() as p:
     # hover card
     pg.locator(".pr-item .pr-strength").first.hover(); pg.wait_for_timeout(700)
     hc = pg.inner_text("#hc") if pg.locator("#hc").is_visible() else ""
-    ok("roster value" in hc and "Bench" in hc and "Bench share" not in hc and "Expected PPG" in hc and "Depth adds" in hc, f"The strength card explains roster value, then lineup and depth in PPG ({hc[:80]!r})")
+    ok("roster value" in hc and "Bench" in hc and "Bench share" not in hc and "Expected lineup PPG" in hc and "Depth adds" in hc, f"The strength card explains roster value, then lineup and depth in PPG ({hc[:80]!r})")
     if SHOTS: pg.screenshot(path=f"{SHOTS}/power_card.png")
     pg.mouse.move(5, 5); pg.wait_for_timeout(300)
 

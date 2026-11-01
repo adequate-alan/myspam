@@ -13182,7 +13182,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <span class="pr-team">${teamFace(t)}<span class="pr-text"><span class="pr-name">${esc(t.name)}${t.mine ? `<span class="owner mine">You</span>` : ""}</span><span class="pr-meta">${esc(t.name !== t.manager ? t.manager : "")}${mode ? `${t.name !== t.manager ? " · " : ""}Power #${x.power}` : ""}</span></span></span>
           <span class="pr-rec">${esc(recordText(st) || "–")}</span>
           <span class="pr-pf">${st.pf ? pts(st.pf) : "–"}<small>${st.pa ? pts(st.pa) : ""}</small></span>
-          <span class="pr-strength" data-hc="pw:${esc(rid)}"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}${!mode && pwrClose(ev, x) ? `<span class="pr-close" title="Within ${pwrClosePct()} of the roster value of the team above or below: their order could easily flip">Close</span>` : ""}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : `<span class="pr-gap"><span class="pr-ppg" title="Expected points per week for the rest of the regular season: the best available lineup each week with byes and typical absences">${fp(x.ppg)} expected PPG</span>${pwrGapText(ev, x) ? `<span class="pr-gap-d"> · ${pwrGapText(ev, x)}</span>` : ""}</span>`}</span>
+          <span class="pr-strength" data-hc="pw:${esc(rid)}"${mode ? ` style="--pb: ${mode === "DEPTH" ? "var(--cream)" : `var(--${mode.toLowerCase()})`}"` : ""}><span class="pr-score">${fmt(r.score)}${!mode && pwrClose(ev, x) ? `<span class="pr-close" title="Within ${pwrClosePct()} of the roster value of the team above or below: their order could easily flip">Close</span>` : ""}</span><span class="pr-bar"><span style="width:${(100 * r.score / top).toFixed(1)}%"></span></span>${mode ? `<span class="pr-vs ${r.diff >= 0 ? "up" : "down"}">${sign(r.diff)} vs avg</span>` : `<span class="pr-gap"><span class="pr-ppg" title="Expected lineup PPG: modeled weekly scoring from the playable QB/RB/WR/TE lineup for the rest of the regular season, with byes and typical absences. A different measure from roster value (bench in full) and from the playoff simulation's weekly score in Standings">${fp(x.ppg)} expected lineup PPG</span>${pwrGapText(ev, x) ? `<span class="pr-gap-d"> · ${pwrGapText(ev, x)}</span>` : ""}</span>`}</span>
           <span class="pr-pos">${posLink(x.best[0], x.best[1], rid, "Best")}
             ${posLink(x.worst[0], x.worst[1], rid, "Weakest")}</span>
           <span class="pr-stars"><span class="pr-star-faces">${stars.map(p => face(p.sleeperId, p.name, "sm").replace('<span class="face', `<span title="${esc(p.name)}" class="face`)).join("")}</span><span class="pr-star-names">${names}</span></span>
@@ -13200,7 +13200,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const note = mode
       ? (mode === "DEPTH" ? "Teams ranked by bench depth: the best bench players by AM value (injured reserve counts, taxi doesn't)."
         : `Teams ranked by ${label} room: a team's best ${label}s count in full (the position's starting slots plus one flex option), and depth counts with less weight for each extra player. Each room is its own comparison: the flex option counts in every room it's open to, so rooms don't add up to team strength.`)
-      : `Power rankings order teams by roster value: the league-adjusted AM values of every player on the active roster added up, starters and bench alike (injured reserve and taxi squads not counted). Under it, expected PPG is the points per week the team can expect to field for the rest of the regular season (the best available lineup each week, with byes and typical absences; injured reserve counted as healthy there).${pwrUnvalued(d.league)} A team within ${pwrClosePct()} of the roster value of the team above or below is marked Close: their order could easily flip.`;
+      : `Power rankings order teams by roster value: the league-adjusted AM values of every player on the active roster added up, starters and bench alike (injured reserve and taxi squads not counted). Under it, expected lineup PPG is what the playable QB/RB/WR/TE lineup should score per week for the rest of the regular season (byes and typical absences; injured reserve counted as healthy there), so it can rank teams differently. Playoff odds use their own simulation.${pwrUnvalued(d.league)} A team within ${pwrClosePct()} of the roster value of the team above or below is marked Close: their order could easily flip.`;
     return `<div class="lg-toolbar">
         <p class="method-note">${note}</p>
         <label class="lg-keep"><input type="checkbox" id="lg-keep"${LT.keep ? " checked" : ""}> Keep teams open to compare</label>
@@ -13259,7 +13259,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : `${me ? `<button class="btn primary" type="button" data-trade-with="${t.rosterId}">Trade with ${esc(t.name)}</button><button class="btn" type="button" data-find-with="${t.rosterId}">Find trades</button>` : ""}`;
     return `<div class="tx-head">
         <div class="tx-title"><span class="tx-rank${LT.pb ? " lens" : ""}"${LT.pb ? ` title="Overall power rank (the row shows the ${LT.pb.pos === "DEPTH" ? "depth" : LT.pb.pos + " room"} rank)"` : ""}>${LT.pb ? `<small>Overall</small>` : ""}#${x.power}</span><div><b>${esc(t.name)}</b>
-          <span>Power rank ${ordinal(x.power)} of ${n} · ${fmt(pwrRV(x))} roster value · ${fp(x.ppg)} expected PPG · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
+          <span>Power rank ${ordinal(x.power)} of ${n} · ${fmt(pwrRV(x))} roster value · ${fp(x.ppg)} expected lineup PPG · Best ${best[0]} (${ordinal(best[1])}), weakest ${worst[0]} (${ordinal(worst[1])})</span></div></div>
         <div class="tx-actions">${actions}</div>
       </div>
       <div class="tx-summary">${summary}</div>
@@ -13419,7 +13419,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const pct = 100 * o.p, txt = !po.gamesLeft ? (o.p >= 0.5 ? "In" : "Out") : pct >= 99.5 ? ">99%" : pct > 0 && pct < 0.5 ? "<1%" : pct === 0 ? "0%" : Math.round(pct) + "%";
     const tone = pct >= 75 ? "hi" : pct >= 35 ? "mid" : "lo";
     const tip = !po.gamesLeft ? "Regular season over" : `${Math.round(pct * 10) / 10}% of ${PO_SIMS.toLocaleString("en-US")} simulated seasons · projected ${o.projW.toFixed(1)} wins · ${o.left} game${o.left === 1 ? "" : "s"} left`
-      + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · expected ${o.mu.toFixed(1)} pts/week`;
+      + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · simulation average ${o.mu.toFixed(1)} pts/week (the playoff model blends points scored so far, K/DEF included where the league starts them, with its own team-strength estimate: a different model from Power Rankings' expected lineup PPG)`;
     return `<td class="num st-odds ${tone}" title="${esc(tip)}"><b>${txt}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
   }
   // the league's playoff rule in words: e.g. "the 3 division winners, then the next 3 best records (6 teams)"
@@ -19921,7 +19921,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       (g ? hcRow(g.ahead ? "Lead" : "Gap", fmt(g.d), `${g.ahead ? "ahead of #2" : `behind #${g.rank}`}${pwrClose(ev, x) ? ` · close: within ${pwrClosePct()} of a neighbour, the order could easily flip` : ""}`) : "") +
       hcRow("Starters", fmt(x.activeStart), "· best starting lineup") +
       hcRow("Bench", fmt(x.total - x.activeStart), "· every other active player, in full") +
-      hcRow("Expected PPG", `<b>${fp(x.ppg)}</b>`, `· ${ordinal(rankOf(y => y.ppg))} of ${n} · rest of the regular season`) +
+      hcRow("Expected lineup PPG", `<b>${fp(x.ppg)}</b>`, `· ${ordinal(rankOf(y => y.ppg))} of ${n} · rest of the regular season`) +
       hcRow("Starting lineup", `${fp(x.ppgLineup)} PPG`, "· its regular starters, when they play") +
       hcRow("Depth adds", `${fp(x.ppgDepth)} PPG`, `· bench filling byes and absences · ${ordinal(rankOf(y => y.ppgDepth))} of ${n}`) +
       hcRow("Full strength", `${fp(x.ppgIdeal)} PPG`, "· nobody missing");
@@ -19933,7 +19933,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       lens = hcSec(`${mode} room`, list.map((p, i) => hcRow(i < ns ? "Full" : "Depth", `${esc(p.name)} <span class="hc-note">${esc(posLabel(p))}</span>`, fmt(dv(p)))).join(""));
     }
     return head + hcSec("", body) + hcSec("Position rooms", rooms) + lens +
-      hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: roster value = the league-adjusted AM values of every active player added up (injured reserve and taxi not counted); expected PPG = points per week for the rest of the regular season, from AM values converted to points, with byes and typical absences (injured reserve counted as healthy). Position rooms are AM values. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
+      hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: roster value = the league-adjusted AM values of every active player added up (injured reserve and taxi not counted); expected lineup PPG = what the playable QB/RB/WR/TE lineup should score per week for the rest of the regular season, from AM values converted to points, with byes and typical absences (injured reserve counted as healthy). The playoff odds in Standings use a separate simulation, so their weekly score differs. Position rooms are AM values. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
   };
 
   // Start-up: restore a saved connection
