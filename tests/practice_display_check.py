@@ -50,8 +50,17 @@ def stats(inj):   # the real stats file with Week 7 unplayed (the Thursday game 
     d["injuries"] = inj
     return json.dumps(d)
 BODY = {k: stats(v) for k, v in INJ.items()}
-BODY["thu2"] = BODY["thu"].replace('"updated": "', '"updated": "2099', 1)   # a later stats run: same report, new `updated`
-assert BODY["thu2"] != BODY["thu"]
+def restamp(body):   # a later stats run with identical stats and report: only the run's timestamps differ (Alan, Nov 1)
+    d = json.loads(body); d["updated"] = "2099-01-01T00:00:00Z"
+    if isinstance(d.get("injuries"), dict): d["injuries"]["source_updated"] = "2099-01-01T00:00:00Z"
+    return json.dumps(d)
+def regrade(body):   # a later stats run that really changed a stat line (a stat correction for an earlier week)
+    d = json.loads(body); pid = next(k for k, v in d["players"].items() if v["g"])
+    g = d["players"][pid]["g"][0]; g[18] = (g[18] or 0) + 7   # rec_yd
+    return json.dumps(d)
+BODY["thu2"] = restamp(BODY["thu"])
+BODY["thu3"] = regrade(BODY["thu"])
+assert BODY["thu2"] != BODY["thu"] and BODY["thu3"] != BODY["thu"]
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -223,7 +232,9 @@ with sync_playwright() as p:
             serve["etag"] = '"thu-redeploy"'
             ok(visible_again(pg) is None, f"D. {label}: a redeploy of the same version doesn't offer it again after ×")
             serve.update(key="thu2", etag='"thu2"')
-            ok(visible_again(pg) is not None, f"D. {label}: a newer stats run offers again")
+            ok(visible_again(pg) is None and visible_again(pg) is None, f"D. {label}: a later run with new timestamps but the same stats and report offers nothing")
+            serve.update(key="thu3", etag='"thu3"')
+            ok(visible_again(pg) is not None, f"D. {label}: a later run that changed the stats offers again")
         pg.click("#update-bar [data-ub-refresh]"); pg.wait_for_load_state(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(3000)
         st1 = pg.evaluate(STATE)
         ok(st1["hash"] == st0["hash"] and st1["league"] == LID, f"D. {label}: after Refresh the same tab and league ({st1['hash']}, {st1['league']})")
