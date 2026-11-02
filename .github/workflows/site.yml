@@ -96,7 +96,7 @@ jobs:
   refresh:
     timeout-minutes: 45
     if: (github.event_name == 'schedule' && github.event.schedule != '15 7 * * *') || (github.event_name == 'workflow_dispatch' && !inputs.full_ci)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     outputs:
@@ -222,7 +222,7 @@ jobs:
   plan:
     needs: refresh
     if: "!cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') && needs.refresh.outputs.skip != 'true'"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -279,7 +279,7 @@ jobs:
   verify:
     needs: plan
     if: "!cancelled() && needs.plan.result == 'success'"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -318,7 +318,7 @@ jobs:
   targeted:
     needs: plan
     if: "!cancelled() && needs.plan.result == 'success' && needs.plan.outputs.lane == 'targeted'"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -352,7 +352,7 @@ jobs:
   full:
     needs: plan
     if: "!cancelled() && needs.plan.result == 'success' && needs.plan.outputs.lane == 'full'"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -388,7 +388,7 @@ jobs:
   mark-verified:
     needs: [plan, verify, targeted, full]
     if: "!cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.plan.result == 'success' && needs.verify.result == 'success' && (needs.plan.outputs.lane == 'fast' || (needs.plan.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.plan.outputs.lane == 'full' && needs.full.result == 'success'))"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       # an existing record is restored instead (that counts as use, so code that only changes nightly or by rankings
@@ -412,7 +412,7 @@ jobs:
     # deploy only after the fast checks and the lane's own checks passed: fast = verify; targeted = verify + its suites;
     # full = verify + the whole suite. A lane whose check job was skipped for any other reason never deploys.
     if: "!cancelled() && needs.plan.outputs.deploy == 'true' && needs.plan.result == 'success' && needs.verify.result == 'success' && (needs.plan.outputs.lane == 'fast' || (needs.plan.outputs.lane == 'targeted' && needs.targeted.result == 'success') || (needs.plan.outputs.lane == 'full' && needs.full.result == 'success'))"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       current: ${{ steps.head.outputs.current }}
@@ -451,7 +451,7 @@ jobs:
   deploy:
     needs: build
     if: "!cancelled() && needs.build.result == 'success' && needs.build.outputs.current == 'true'"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
       group: pages-deploy
@@ -473,7 +473,7 @@ jobs:
   nightly-alarm:
     needs: [plan, full]
     if: "!cancelled() && github.event_name == 'schedule' && github.event.schedule == '15 7 * * *'"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       issues: write
@@ -522,7 +522,7 @@ jobs:
   freshness:
     needs: refresh
     if: "!cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
