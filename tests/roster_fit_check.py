@@ -421,7 +421,11 @@ with sync_playwright() as p:
         for n in b: add(pg, "B", n)
         check_say(pg, f"league · {a[0]} for {b[0]}", {"Team Alpha": "Team Alpha's side", "Team Beta": "Team Beta's side"})
     pg.evaluate("""() => { const s = document.getElementById('tc-league'); s.value = 'none'; s.dispatchEvent(new Event('change', { bubbles: true })); }"""); pg.wait_for_timeout(800)
-    top = [r["player"] for r in sorted(rows, key=lambda r: int(r["rank"]))]
+    # the wording checks need a market read, so they use players today's market file prices in every format (FantasyCalc
+    # dropped Lamar Jackson, Out for season, on Nov 3; a missing value is named instead, which the Oct 14 rule covers elsewhere)
+    MK = json.load(open(os.path.join(ROOT, "data", "market", "redraft.json")))["formats"].values()
+    priced = lambda r: r["sleeper_id"] and all(r["sleeper_id"] in f for f in MK)
+    top = [r["player"] for r in sorted(rows, key=lambda r: int(r["rank"])) if priced(r)]
     for a, b in (([top[0]], [top[15]]), ([top[30]], [top[2]]), ([top[10]], [top[11]]), ([top[3]], [top[20], top[21]])):
         clear(pg)
         for n in a: add(pg, "A", n)

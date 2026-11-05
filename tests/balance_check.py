@@ -94,6 +94,9 @@ BIG = ("wins the trade", "win the trade", "clearly win", "steal", "robb")
 def winner(title):
     """the side a headline names as ahead: A = Team Alpha / you, B = Team Beta / them"""
     t = title.lower()
+    # the robbery headline names the side that's behind ("Team Beta is getting robbed" = Team Alpha ahead)
+    if t.startswith("team beta is getting robbed"): return "A"
+    if t.startswith("team alpha is getting robbed"): return "B"
     if t.startswith("team alpha") or "to team alpha" in t or t.startswith(("you win", "you clearly", "you're robbing")) or "to you" in t or "you're getting a steal" in t: return "A"
     if t.startswith("team beta") or "to team beta" in t or t.startswith(("they", "you're getting robbed")) or "to them" in t: return "B"
     return None
