@@ -116,6 +116,7 @@ with sync_playwright() as p:
     # 2. Flock import (synthetic CSV). Two separate lists (Oct 14): the confirmed format picks the list, and a 1QB
     # (Regular PPR) list is never used in a Superflex format, not even at a reduced weight
     pg.click("[data-mk-flock]"); pg.wait_for_timeout(300)
+    pg.evaluate("() => { const s = document.getElementById('mk-fl-teams'); s.value = ''; s.dispatchEvent(new Event('change', { bubbles: true })); }")   # presets fill the form (Nov 5); a cleared field still refuses
     pg.set_input_files("#mk-file", csv_path); pg.wait_for_timeout(1000)
     ok("Confirm the list's format first" in pg.inner_text("#mk-bar") and pg.evaluate("() => localStorage.getItem('spm_flock:sf') === null && localStorage.getItem('spm_flock:ppr') === null"),
        "An import without a confirmed format is refused: nothing assumed, nothing saved")

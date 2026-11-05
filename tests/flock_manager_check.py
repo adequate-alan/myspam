@@ -129,16 +129,16 @@ with sync_playwright() as p:
 
     pg = page()
     snap0 = pg.evaluate("() => SPM.rankingSnapshot()")
-    # 0. TE premium starts at "No TE premium" on both lists (Alan, Nov 5); the other three still start unconfirmed
+    # 0. import presets (Alan, Nov 5): each list's own QB format, 12 teams, no TE premium, Full PPR
     pre, first = {}, pg.evaluate("() => document.querySelector(\"[data-fm-set][aria-pressed='true']\").dataset.fmSet")
     for ls in ("flock-sf", "flock-ppr"):
         click(pg, f"[data-fm-set='{ls}']")
         pre[ls] = pg.evaluate("() => ['mk-fl-qb', 'mk-fl-teams', 'mk-fl-tep', 'mk-fl-rec'].map(id => { const s = document.getElementById(id); return [s.value, s.options[s.selectedIndex].text]; })")
-    ok(all(v[2] == ["0", "No TE premium"] and [x[0] for x in (v[0], v[1], v[3])] == ["", "", ""] for v in pre.values()),
-       f"TE premium preset to No TE premium on Flock Superflex and Flock Regular PPR, the rest unconfirmed ({pre})")
+    ok([x[0] for x in pre["flock-sf"]] == ["sf", "12", "0", "1"] and [x[0] for x in pre["flock-ppr"]] == ["1qb", "12", "0", "1"],
+       f"Import presets: the list's own QB format (Superflex / 1QB), 12 teams, No TE premium, Full PPR ({pre})")
     click(pg, f"[data-fm-set='{first}']")
-    # 1. the format has to be confirmed; the QB format must be the list's own
-    upload(pg, CSV_REAL)
+    # 1. the format has to be confirmed (a field cleared back to its placeholder refuses); the QB format must be the list's own
+    fmt(pg, "sf", teams=""); upload(pg, CSV_REAL)
     ok("Confirm the list's format first" in msg(pg) and pg.locator("[data-fm-save]").count() == 0 and store(pg, "spm_flock:sf") is None,
        f"No format confirmed: refused, no preview, nothing saved ({msg(pg)[:60]!r})")
     fmt(pg, "1qb"); upload(pg, CSV_REAL)
