@@ -11586,7 +11586,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const rec = [0, 0.5, 1].map(x => val({ ...one, tep: 0, rec: x }, at("WR", 1)));
     check(`${at("WR", 1).name} (WR1) rises with points per catch 0 → 0.5 → 1`, rec, rec[0] < rec[1] && rec[1] < rec[2]);
     // Superflex keeps the QB premium: the same QBs in 1QB vs Superflex, 12 and 10 teams (QB20 = a low-end SF starter)
-    const qbs = [find("Josh Allen"), find("Lamar Jackson"), find("Brock Purdy"), at("QB", 20)].filter(Boolean);
+    // (a QB at 0 on the board, e.g. Out for season, is 0 in every format by rule, §9, so he can't show a premium)
+    const qbs = [find("Josh Allen"), find("Lamar Jackson"), find("Brock Purdy"), at("QB", 20)].filter(q => q && q.value > 0);
     for (const t of [12, 10]) {
       const one1 = qbs.map(q => val({ teams: t, qb: "1", tep: 0 }, q)), sf = qbs.map(q => val({ teams: t, qb: "sf", tep: 0 }, q));
       check(`${t}-team 1QB → Superflex: ${qbs.map(q => q.name).join(", ")}`, qbs.map((q, i) => `${one1[i]} → ${sf[i]}`),

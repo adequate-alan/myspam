@@ -266,7 +266,10 @@ with sync_playwright() as p:
     pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))
     FB.route(pg, f"http://127.0.0.1:{port}")
     pg.goto(f"http://127.0.0.1:{port}/?fmt=t10_qb1_rec1_tep0#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(2500)
-    mk_ids = [r["sleeper_id"] for r in board[:30]]
+    # the 1QB format reads today's AM PPR board, not the frozen SF fixture: a player at 0 there (Out for season, e.g. Lamar
+    # Jackson since Nov 3) changes nothing in a package (CLAUDE.md §10, package adjustment), so only valued players are picked
+    lg_vals = pg.evaluate("() => SPM.leagueSidValues()")
+    mk_ids = [r["sleeper_id"] for r in board if (lg_vals.get(r["sleeper_id"]) or 0) > 0][:30]
     a1, b2 = [mk_ids[2]], [mk_ids[6], mk_ids[10]]   # a 1-for-2 so the package adjustment applies
     x = pg.evaluate("([a, b]) => SPM.marketReads(a, b)", [a1, b2])
     ok(x["all"] and x["lgDepth"] != 1, f"Market read test runs in a format with league depth {x['lgDepth']} (not 1) and full market data")
