@@ -18556,7 +18556,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
          the published list it started from: a list published elsewhere since then stops the publish until you confirm.
      A draft is this browser's market list for its format (flockNow) until it's published or discarded. Nothing here
      touches the AM boards, the AM editor, rankings publishing or ranking history. */
-  var FM = { set: "", work: null, fmt: { qb: "", teams: "", tep: "", rec: "" }, paste: "", q: "", n: 50, msg: "", err: false, busy: false, pick: -1, pq: "", mv: -1, force: "", known: null };
+  var FM = { set: "", work: null, fmt: { qb: "", teams: "12", tep: "0", rec: "1" }, // import presets (Alan, Nov 5): the list's own QB format ("" = follow the list), 12 teams, Full PPR, no TE premium
+     paste: "", q: "", n: 50, msg: "", err: false, busy: false, pick: -1, pq: "", mv: -1, force: "", known: null };
   var FL_OLD = "saved by an older version of this page, which didn't record how the player was matched: not priced until you re-import the list or pick the player";
   function fmSet() { return MARKET_SETS.find(m => m.id === FM.set) || flockSetFor(mkFmt()); }
   // one row of a list: { fid (Flock's player_id), name, pos, team, tier, er (expert rank), sid, how (id | name | manual, or "" when
@@ -18677,7 +18678,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (pu.length && !W) h += `<details class="fm-sec"><summary>Unmatched in the published list (${pu.length})</summary>${unmTable(pu)}</details>`;
     if (W) h += fmWorkHtml(W, m, pub);
     else {
-      const sel = (id, lab, k, opts) => `<select class="select" id="${id}" aria-label="${lab}">${opts.map(([v, t]) => `<option value="${v}"${String(FM.fmt[k]) === v ? " selected" : ""}>${t}</option>`).join("")}</select>`;
+      const fv = k => k === "qb" && !FM.fmt.qb ? (m.qb === "sf" ? "sf" : "1qb") : String(FM.fmt[k]);
+      const sel = (id, lab, k, opts) => `<select class="select" id="${id}" aria-label="${lab}">${opts.map(([v, t]) => `<option value="${v}"${fv(k) === v ? " selected" : ""}>${t}</option>`).join("")}</select>`;
       h += `<div class="fm-actions">${D ? `<button class="btn" type="button" data-fm-edit="draft">Edit draft</button><button class="btn primary" type="button" data-fm-publish${FM.busy ? " disabled" : ""}>${FM.busy ? "Publishing…" : FM.force === m.id ? "Publish over it" : "Publish draft"}</button><button class="btn" type="button" data-mk-clear>Discard draft</button>` : pub ? `<button class="btn" type="button" data-fm-edit="pub">Edit the published list</button>` : ""}</div>
         <div class="fm-imp"><p class="fm-k">Import a new version of ${esc(m.label)}</p>
         <p class="pp-note">A Flock CSV export (player_id, Rank, Name, Team, Position, Tier) or a pasted ranked list. Confirm the list's format first: ${m.qb === "sf" ? "this list takes Superflex / 2QB exports only" : "this list takes 1QB exports only"}. You'll see a preview before anything is saved.</p>
@@ -18859,7 +18861,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   function fmClick(e) {
     const t = sel => e.target.closest(sel), W = FM.work, m = fmSet();
     let b;
-    if ((b = t("[data-fm-set]"))) { FM.set = b.dataset.fmSet; FM.msg = ""; FM.pick = FM.mv = -1; return fmRender(); }
+    if ((b = t("[data-fm-set]"))) { FM.set = b.dataset.fmSet; FM.fmt.qb = ""; FM.msg = ""; FM.pick = FM.mv = -1; return fmRender(); }
     if (t("[data-mk-import]")) { const ta = $("mk-paste"); if (ta) FM.paste = ta.value; return mkImport(FM.paste, ""); }
     if (t("[data-mk-clear]")) {
       flockClear(m); FM.force = "";
