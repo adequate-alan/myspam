@@ -129,6 +129,14 @@ with sync_playwright() as p:
 
     pg = page()
     snap0 = pg.evaluate("() => SPM.rankingSnapshot()")
+    # 0. TE premium starts at "No TE premium" on both lists (Alan, Nov 5); the other three still start unconfirmed
+    pre, first = {}, pg.evaluate("() => document.querySelector(\"[data-fm-set][aria-pressed='true']\").dataset.fmSet")
+    for ls in ("flock-sf", "flock-ppr"):
+        click(pg, f"[data-fm-set='{ls}']")
+        pre[ls] = pg.evaluate("() => ['mk-fl-qb', 'mk-fl-teams', 'mk-fl-tep', 'mk-fl-rec'].map(id => { const s = document.getElementById(id); return [s.value, s.options[s.selectedIndex].text]; })")
+    ok(all(v[2] == ["0", "No TE premium"] and [x[0] for x in (v[0], v[1], v[3])] == ["", "", ""] for v in pre.values()),
+       f"TE premium preset to No TE premium on Flock Superflex and Flock Regular PPR, the rest unconfirmed ({pre})")
+    click(pg, f"[data-fm-set='{first}']")
     # 1. the format has to be confirmed; the QB format must be the list's own
     upload(pg, CSV_REAL)
     ok("Confirm the list's format first" in msg(pg) and pg.locator("[data-fm-save]").count() == 0 and store(pg, "spm_flock:sf") is None,
