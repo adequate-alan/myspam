@@ -128,9 +128,12 @@ edit_ppr(set_cell(psid, "rank", "1"))
 ok(any("RANKINGS_CSV_PPR" in l for l in frozen()), "A rank change in RANKINGS_CSV_PPR fails --frozen-rankings")
 g("checkout", "-q", "index.html")
 
-# 3. snapshot_history.py
+# 3. snapshot_history.py, at the current time: a fixed date in the past sat before later publishes (the Nov 3 one), so the
+# job compared today's board with an older snapshot and "nothing changed" recorded one (nightly, Nov 3)
+import datetime
+TS = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"); MONTH = TS[:7]
 def snap(*args):
-    r = subprocess.run([sys.executable, "snapshot_history.py", "--root", work, "--ts", "2026-10-20T14:30:00.000Z", *args], cwd=os.path.join(work, "pipeline"),
+    r = subprocess.run([sys.executable, "snapshot_history.py", "--root", work, "--ts", TS, *args], cwd=os.path.join(work, "pipeline"),
                        capture_output=True, text=True, timeout=400)
     return r.returncode, (r.stdout + r.stderr).strip()
 data = os.path.join(work, "data"); before = tree_hash(data)
@@ -145,9 +148,9 @@ after = tree_hash(data)
 ok(rc == 0 and {k: v for k, v in after.items() if not k.startswith("boards")} == sf_files, "The AM SF PPR TE+ history and snapshots are byte-identical")
 hist = json.load(open(os.path.join(data, "boards/ppr/rank_history.json")))
 ev = hist["events"][-1]
-ok(ev["ts"] == "2026-10-20T14:30:00.000Z" and ev["src"] == "S" and ev.get("snap") == "2026-10", f"One scheduled event in the AM PPR history: {ev.get('ts')} {ev.get('src')} {ev.get('snap')}")
+ok(ev["ts"] == TS and ev["src"] == "S" and ev.get("snap") == MONTH, f"One scheduled event in the AM PPR history: {ev.get('ts')} {ev.get('src')} {ev.get('snap')}")
 ok(ev.get("repriced") == 1, f"The event counts exactly one changed value (a 1-point change is under the visible-entry threshold): {ev.get('repriced')}")
-s = json.load(open(os.path.join(data, "boards/ppr/rank_snapshots/2026-10.json")))["snapshots"][-1]
+s = json.load(open(os.path.join(data, f"boards/ppr/rank_snapshots/{MONTH}.json")))["snapshots"][-1]
 _, npp2 = table(blk(open(idx, encoding="utf-8").read(), "RANKINGS_CSV_PPR"))
 exp = {k: [int(r[ph.index("rank")]), int(r[ph.index("pos_rank")]), int(r[ph.index("tier")]), int(r[ph.index("value")])] for k, r in npp2.items()}
 ok(s["ts"] == ev["ts"] and s["players"] == exp, f"The new snapshot is the AM PPR board exactly ({len(s['players'])} players)")
