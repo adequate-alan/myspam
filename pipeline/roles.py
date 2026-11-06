@@ -171,6 +171,7 @@ def team_roles(stats, depth, prior_stats=None):
                 hurt = [r for r in order_q if r["status"] in SHORT_TERM and score.get(r["sid"], 0) > score.get(order_q[0]["sid"], 0)]
                 if hurt:
                     best = max(hurt, key=lambda r: score.get(r["sid"], 0))
+                    best["restored"] = True   # internal (not written to roles.json): listed lower only because he's hurt
                     order_q = [best] + [r for r in order_q if r is not best]
                 cascade(order_q, "avail", "s", "n")
                 cascade(order_q, "avail_l", "sl", "l")
