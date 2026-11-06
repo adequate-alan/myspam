@@ -158,7 +158,14 @@ print(f"INFO Current boards (advisory): {len(_tn)} tier boundary change(s) betwe
 for t in _tn: print(f"     {t}")
 for c in chk:
     if c.get("info"): print(f"     {c['check']}: {'; '.join(map(str, c.get('values') or []))}")
-bad = [c["check"] + ": " + "; ".join(map(str, c.get("values") or []))[:160] for c in chk if not c.get("pass")]
+# the FantasyCalc comparison reads today's market file, so it moves with every market refresh: advisory here as in
+# format_check and league_hub_check (ci_policy.json, Alan, Oct 21); format_check runs it blocking on fixed data
+# (Nov 5: a refresh moved TE7–TE20 to 1.43 / 1.19 on these unchanged fixtures)
+LIVE_MKT = "TE7–TE12 near FantasyCalc"
+for c in chk:
+    if c["check"].startswith(LIVE_MKT) and not c.get("pass"):
+        print(f"INVESTIGATE live market deviation (advisory, not blocking): {c['check']}: {'; '.join(map(str, c.get('values') or []))}")
+bad = [c["check"] + ": " + "; ".join(map(str, c.get("values") or []))[:160] for c in chk if not c.get("pass") and not c["check"].startswith(LIVE_MKT)]
 ok(not bad, f"SPM.formatCheck() passes on the after board ({len(chk)} checks)" + (f"; failing: {bad}" if bad else ""))
 # the published history event is the alignment itself (Alan, Oct 21: reconcile 139 recorded vs 138 rank moves): its ranking
 # changes are exactly the players whose overall rank, position rank or tier differ between the fixtures, its value edits
