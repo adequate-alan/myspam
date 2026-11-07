@@ -140,7 +140,12 @@ ok(not shadow, f"Real data: beside a confirmed starter, no other quarterback is 
 amb_txt = lambda rs: " / ".join(f"QB{r['depth']} {r['s']:.2f}" for r in rs if r["s"] >= 0.25)
 amb = [f"{t} ({amb_txt(rs)})" for t, rs in by.items() if not conf[t] and any(r["s"] > 0 for r in rs)]
 print("INFO ambiguous starting quarterback (no one above 50%): " + (", ".join(amb) if amb else "none"))
-third = [f"{r['team']} QB{r['depth']}" for rs in by.values() for r in rs if r["depth"] >= 3 and r["n"] >= 0.5 and not all(x["avail"] < 0.5 for x in rs if x["depth"] < r["depth"])]
+# The established starter Sleeper moved down the chart while hurt (more starts than the listed QB1, a short-term
+# designation) goes back on top by design (§10 Roles; Nov 6: PHI's Tanner McKee, Weeks 6-8 starter, listed QB3 behind
+# Joe Milton while Questionable); his listed depth isn't his place in the room, so he isn't a third-stringer here.
+third = [f"{r['team']} QB{r['depth']}" for rs in by.values() for r in rs if r["depth"] >= 3 and not r.get("restored") and r["n"] >= 0.5 and not all(x["avail"] < 0.5 for x in rs if x["depth"] < r["depth"])]
+restored = [f"{r['team']} {r['name']} (listed QB{r['depth']}, start {r['s']:.2f})" for rs in by.values() for r in rs if r.get("restored")]
+print("INFO established starter restored above his listed depth: " + (", ".join(restored) if restored else "none"))
 ok(not third, f"Real data: no third-string or deeper QB expected to start while someone ahead of him is likely available{' · ' + ', '.join(third) if third else ''}")
 
 # ---------------------------------------------------------------- B. ros_model.py: relief games and backup priors
