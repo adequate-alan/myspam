@@ -7416,11 +7416,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const sid = String(p.sleeperId), pl = d.players[sid], a = pl && pl.g.find(r => r[0] === week);
     let g = null;
     if (a) { g = {}; d.cols.forEach((c, i) => { g[c] = a[i]; }); }
-    const team = (g && g.tm) || p.team;
+    const team = (g && g.tm) || (p.team === "FA" ? "" : p.team);   // the board's "FA" is no NFL team, never a schedule to project
     if (g && enteredGame(g)) {
       const st = nflGameState(team, week), live = week >= (cur ?? Infinity) && st.kind === "live";
       return { grp: "act", kind: live ? "live" : "final", v: gamePoints(g, p.pos, sc), g, short: shortMap(d, sid).get(week) || null };
     }
+    if (!team) return { grp: "none", kind: "none", status: "—", tip: "Not on an NFL team" };
     const o = weekOutlook({ sid, pos: p.pos, team, p, name: p.name }, week, { sc, pts: slPts && slPts.has(sid) ? slPts.get(sid) : undefined });
     if (o.kind === "bye") return { grp: "none", kind: "bye", status: "Bye", tip: `${team || "His team"} had a bye in Week ${week}` };
     if (o.kind === "final") {
