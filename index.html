@@ -11416,11 +11416,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       // their position, and stay under everyone ranked above them there
       for (const pos of EDIT_POS) {
         const g = players.filter(p => p.pos === pos && p.posNum != null).sort((a, b) => a.posNum - b.posNum);
-        let r = 1, cap = Infinity;
+        // each one stays 1% under everyone ahead of him at his position, or the board's own step when that is smaller,
+        // so the board's native format gives back every saved value (AM PPR Nov 10: Watson 215 -> Herbert 214)
+        let r = 1, low = Infinity, prevB = null;
         g.forEach(p => {
-          if (!isAutoP(p)) { r = p.value > 0 ? raw.get(p.id) / p.value : r; cap = Math.min(cap, raw.get(p.id) * 0.99); return; }
-          const v = Math.min(p.value * r * (LG.factor.get(p.id) || 1), cap);
-          raw.set(p.id, v); cap = Math.min(cap, v * 0.99);
+          const step = prevB > 0 && p.value > 0 && p.value < prevB ? Math.max(0.99, p.value / prevB) : 0.99;
+          prevB = p.value;
+          if (!isAutoP(p)) { r = p.value > 0 ? raw.get(p.id) / p.value : r; low = Math.min(low, raw.get(p.id)); return; }
+          const v = Math.min(p.value * r * (LG.factor.get(p.id) || 1), low * step);
+          raw.set(p.id, v); low = Math.min(low, v);
         });
         // one of your players ranked below an Auto player at his position stays below him, as on the board
         let prev = Infinity;
