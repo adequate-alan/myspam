@@ -4,11 +4,14 @@ Synthetic 12-team leagues only (the visitor u1 owns roster 11 in L1), mocked Sle
   1. Divisions (L1, 6 teams, 3 divisions): seeds = division winners first in record order, then the best records,
      ties on points for; a 4-5 division winner is the 3 seed above 5-4 wild cards; seeds 1 and 2 have a Bye;
      first-round games 4 vs 5 and 3 vs 6 follow Sleeper's own bracket (mocked /winners_bracket); semifinals read
-     "Winner of 4 vs 5" / "Winner of 3 vs 6"; the 3rd and 5th place games; weeks from playoff_week_start;
+     "Winner of 4 vs 5" / "Winner of 3 vs 6"; Sleeper's 3rd and 5th place games; weeks from playoff_week_start;
      "tiebreak on PF" only on seeds decided on points for; the cards: first team out (with its points-for rank),
      notable (the low division winner), your team (games behind); the seeding rule line and "Updated after Week 9"
   2. No divisions and no Sleeper bracket (L2): the standard bracket built from the seeds (4, 6 and 8 teams: byes,
-     pairings 1 vs lowest, 3rd place; 5th place only with two first-round games); "Table / Bracket" toggle
+     pairings 1 vs lowest) with no invented 3rd or 5th place game; "Table / Bracket" toggle
+  2b. Multi-week rounds: playoff_round_type 2 (two weeks every round) and 1 (two-week final only)
+  2c. Switching leagues (L1 with divisions and Sleeper's bracket → L2 without either) rebuilds the bracket from
+     L2's own settings, with nothing carried over (no divisions, no Sleeper pairings or placement games)
   3. Playoffs underway: Sleeper's results mark winners and losers and the title reads "Playoff bracket"
   4. a team opens in Power Rankings; the table views still work; both themes at 1440 and 390 with no sideways
      scroll; no page errors
@@ -33,7 +36,7 @@ L1_BRACKET = [{"m": 1, "r": 1, "t1": 3, "t2": 4}, {"m": 2, "r": 1, "t1": 5, "t2"
 for m in L1_BRACKET:
     for k in ("t1", "t2", "w", "l"): m.setdefault(k, None)
 
-def league(lid, rec, divs=None, spots=6, start=15):
+def league(lid, rec, divs=None, spots=6, start=15, rt=0):
     rosters = [{"roster_id": i, "owner_id": "u1" if (lid == "L1" and i == 11) or (lid == "L2" and i == 2) else f"o{i}", "co_owners": [], "players": [], "starters": [],
                 "reserve": [], "taxi": [], "settings": {"wins": w, "losses": l, "ties": 0, "fpts": int(pf), "fpts_decimal": round(pf % 1 * 100),
                 "fpts_against": 1100, "division": dv if divs else None}} for i, (w, l, pf, dv) in rec.items()]
@@ -42,7 +45,7 @@ def league(lid, rec, divs=None, spots=6, start=15):
     lg = {"league_id": lid, "name": f"League {lid}", "season": "2026", "status": "in_season", "total_rosters": 12, "metadata": meta,
           "roster_positions": ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "SUPER_FLEX"] + ["BN"] * 6,
           "scoring_settings": {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "rush_yd": 0.1, "rec_yd": 0.1, "rush_td": 6, "rec_td": 6},
-          "settings": {"num_teams": 12, "type": 0, "playoff_teams": spots, "playoff_week_start": start, "playoff_round_type": 0,
+          "settings": {"num_teams": 12, "type": 0, "playoff_teams": spots, "playoff_week_start": start, "playoff_round_type": rt,
                        "divisions": len(divs) if divs else 0, "leg": 10}}
     return [lg, users, rosters]
 
@@ -61,21 +64,25 @@ with sync_playwright() as p:
     kw = {"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}
     br = p.chromium.launch(**kw); errs = []
 
-    def page(data, bracket=None, theme="dark", width=1440):
+    def page(data, bracket=None, theme="dark", width=1440, extra=None):
         lg, us, ro = data; lid = lg["league_id"]
+        all_ = {lid: (data, bracket)}
+        if extra: all_[extra[0][0]["league_id"]] = extra
         SL = {"source": "sleeper", "username": "u1", "userId": "u1", "displayName": "u1", "season": "2026",
-              "leagues": [{"id": lid, "name": lg["name"], "season": "2026", "status": "in_season", "format": ""}],
-              "activeId": lid, "data": {lid: {"league": lg, "users": us, "rosters": ro}}, "view": "league"}
+              "leagues": [{"id": k, "name": v[0][0]["name"], "season": "2026", "status": "in_season", "format": ""} for k, v in all_.items()],
+              "activeId": lid, "data": {k: {"league": v[0][0], "users": v[0][1], "rosters": v[0][2]} for k, v in all_.items()}, "view": "league"}
         def sleeper(route):
             path = route.request.url.split("/v1", 1)[-1].split("?")[0]
             body = []
             m = re.match(r"/league/(L\d)(/users|/rosters|/winners_bracket)?$", path)
+            if m and m.group(1) not in all_: m = None
             if m and m.group(2) == "/winners_bracket":
-                if bracket is None: return route.fulfill(status=404, body="null")
-                body = bracket
-            elif m: body = data[{None: 0, "/users": 1, "/rosters": 2}[m.group(2)]]
+                bk = all_[m.group(1)][1]
+                if bk is None: return route.fulfill(status=404, body="null")
+                body = bk
+            elif m: body = all_[m.group(1)][0][{None: 0, "/users": 1, "/rosters": 2}[m.group(2)]]
             elif path == "/state/nfl": body = {"season": "2026", "week": 10, "display_week": 10, "season_type": "regular"}
-            elif path == "/user/u1/leagues/nfl/2026": body = [lg]
+            elif path == "/user/u1/leagues/nfl/2026": body = [v[0][0] for v in all_.values()]
             route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
         pg = br.new_page(viewport={"width": width, "height": 900})
         pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -95,7 +102,7 @@ with sync_playwright() as p:
             place: [...document.querySelectorAll('.br-place-g')].map(g => ({ h: t(g.querySelector('.br-h')), sides: [...g.querySelectorAll('.br-team')].map(side) })),
             third: t(document.querySelector('.br-last .br-sub')),
             cards: [...document.querySelectorAll('.br-card')].map(c => [t(c.querySelector('.br-k')), t(c.querySelector('p'))]),
-            title: t(document.querySelector('.br-title')), rule: t(document.querySelector('.br-rule')), stamp: t(document.querySelector('.br-stamp')),
+            title: t(document.querySelector('.br-title')), lede: t(document.querySelector('.br-lede')), rule: t(document.querySelector('.br-rule')), stamp: t(document.querySelector('.br-stamp')),
             src: t(document.querySelector('.br-src')), sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
         }""")
 
@@ -105,7 +112,7 @@ with sync_playwright() as p:
     seeds = {s["rid"]: s["seed"] for c in B["cols"] for g in c["games"] for s in g if s["rid"]}
     ok([int(seeds[str(r)]) for r in L1_SEEDS] == [1, 2, 3, 4, 5, 6], f"seeds: division winners 1–3 in record order, then the best records on PF ({seeds})")
     ok(len(seeds) == 6, "exactly the six playoff teams appear")
-    ok(B["title"] == "If the playoffs started today", f"title ({B['title']!r})")
+    ok(B["title"] == "If the playoffs started today" and B["lede"].startswith("Hypothetical: projected from the current standings"), f"title and hypothetical lede ({B['title']!r}, {B['lede']!r})")
     ok("division winners seeded 1–3 · wild cards seeded by record, ties by points for" in B["rule"] and "top 2 seeds on a bye" in B["rule"], f"seeding rule line ({B['rule']!r})")
     ok(B["stamp"] == "Updated after Week 9 games", f"stamp ({B['stamp']!r})")
     r1 = B["cols"][0]
@@ -149,11 +156,16 @@ with sync_playwright() as p:
         if w == 390:
             ov = pg.evaluate("() => [...document.querySelectorAll('.br-team')].filter(e => e.scrollWidth > e.clientWidth + 1).length")
             ok(ov == 0, f"{theme} {w}: no team row overflows ({ov})")
+            geo = pg.evaluate("() => [...document.querySelectorAll('.br-col')].map(c => { const r = c.getBoundingClientRect(), h = c.querySelector('.br-h').getBoundingClientRect(); return [r.left, r.right, r.top, h.height]; })")
+            ok(all(g[0] >= 0 and g[1] <= w + 0.5 and g[3] > 0 for g in geo) and all(geo[i][2] < geo[i + 1][2] for i in range(len(geo) - 1)),
+               f"{theme} {w}: rounds stack top to bottom, each with its heading, inside the screen ({geo})")
+            clip = pg.evaluate("() => [...document.querySelectorAll('.br-match, .br-card')].filter(e => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth + 0.5; }).length")
+            ok(clip == 0, f"{theme} {w}: no game or card clipped ({clip})")
         if SHOTS: pg.screenshot(path=os.path.join(SHOTS, f"bracket-{theme}-{w}.png"), full_page=True)
         pg.close()
 
     # 2: no divisions, no Sleeper bracket: the standard bracket from the seeds
-    for spots, exp_r1, exp_byes, fifth in ((6, [[3, 6], [4, 5]], [1, 2], True), (4, [[1, 4], [2, 3]], [], False), (8, [[1, 8], [2, 7], [3, 6], [4, 5]], [], False)):
+    for spots, exp_r1, exp_byes in ((6, [[3, 6], [4, 5]], [1, 2]), (4, [[1, 4], [2, 3]], []), (8, [[1, 8], [2, 7], [3, 6], [4, 5]], [])):
         pg = page(league("L2", L2_REC, None, spots), None)
         B = read(pg)
         r1 = B["cols"][0]
@@ -163,8 +175,8 @@ with sync_playwright() as p:
         seeds = {s["rid"]: int(s["seed"]) for c in B["cols"] for g in c["games"] for s in g if s["rid"]}
         ok(all(seeds[str(i)] == i for i in range(1, min(spots, 4) + 1)), f"{spots} teams: seeded by record, ties on PF")
         ok(len(B["cols"]) == {4: 2, 6: 3, 8: 3}[spots], f"{spots} teams: {len(B['cols'])} rounds")
-        ok("3rd place" in B["third"], f"{spots} teams: 3rd place game")
-        ok(bool(B["place"]) == fifth, f"{spots} teams: 5th place game {'shown' if fifth else 'not generated'}")
+        ok(not B["third"] and not B["place"], f"{spots} teams: no 3rd or 5th place game invented without Sleeper's bracket ({B['third']!r}, {B['place']})")
+        ok(B["title"] == "If the playoffs started today" and B["lede"].startswith("Hypothetical"), f"{spots} teams: labelled hypothetical ({B['lede']!r})")
         ok(B["rule"].endswith("seeded by record, ties by points for"), f"{spots} teams: rule without divisions ({B['rule']!r})")
         ok("Standard bracket" in B["src"], f"{spots} teams: source line names the standard bracket")
         ok(pg.locator('[data-st-view]').all_text_contents() == ["Table", "Bracket"], "no divisions: Table / Bracket toggle")
@@ -172,6 +184,33 @@ with sync_playwright() as p:
             cards = dict(B["cards"])
             ok(cards.get("Your team", "").find("Out today") < 0 and "seed" in cards.get("Your team", ""), f"a playoff team's card names his seed ({cards.get('Your team')!r})")
         pg.close()
+
+    # 2b: multi-week rounds (Sleeper: 0 one week, 1 two-week final, 2 two weeks every round)
+    for rt, exp in ((2, ["Weeks 15–16", "Weeks 17–18", "Weeks 19–20"]), (1, ["Week 15", "Week 16", "Weeks 17–18"])):
+        pg = page(league("L2", L2_REC, None, 6, 15, rt), None)
+        B = read(pg)
+        hs = [c["h"] for c in B["cols"]]
+        ok(all(e in h for e, h in zip(exp, hs)) and len(hs) == 3, f"playoff_round_type {rt}: {hs}")
+        pg.close()
+
+    # 2c: switching leagues rebuilds the bracket from the new league's own settings
+    pg = page(league("L1", L1_REC, DIVS), L1_BRACKET, extra=(league("L2", L2_REC, None, 4, 16), None))
+    B1 = read(pg)
+    pg.evaluate("() => { const b = document.querySelector('#league-menu [data-league=\"L2\"]') || (() => { const x = document.createElement('button'); x.dataset.league = 'L2'; document.getElementById('league-menu').append(x); return x; })(); b.click(); }")
+    pg.wait_for_timeout(1500)
+    if not pg.locator(".br-wrap").count():
+        pg.click('[data-lsub="standings"]'); pg.wait_for_timeout(300); pg.click('[data-st-view="bracket"]'); pg.wait_for_timeout(900)
+    B2 = read(pg)
+    hs = [c["h"] for c in B2["cols"]]
+    ok("division winners" in B1["rule"] and "Sleeper's bracket" in B1["src"], "switch: L1 starts with its divisions and Sleeper's bracket")
+    ok(B2["rule"].startswith("4 teams") and "division" not in B2["rule"] and "Standard bracket" in B2["src"], f"switch: L2's own 4-team rule and standard bracket ({B2['rule']!r}, {B2['src']!r})")
+    ok(len(hs) == 2 and "Week 16" in hs[0] and "Week 17" in hs[1], f"switch: L2's playoff weeks and rounds ({hs})")
+    ok(not B2["third"] and not B2["place"], "switch: no placement games carried over from L1's Sleeper bracket")
+    seeds2 = sorted(int(s["seed"]) for c in B2["cols"] for g in c["games"] for s in g if s["rid"])
+    ok(seeds2 == [1, 2, 3, 4], f"switch: L2's four seeds only ({seeds2})")
+    ok(pg.locator('[data-st-view]').all_text_contents() == ["Table", "Bracket"], "switch: no By division toggle in L2")
+    ok("My Team L2-2" in dict(B2["cards"]).get("Your team", ""), "switch: your team is L2's")
+    pg.close()
 
     # 3: playoffs underway (Sleeper results)
     done = [dict(m) for m in L1_BRACKET]

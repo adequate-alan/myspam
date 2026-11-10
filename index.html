@@ -13543,7 +13543,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      the playoff picture if the season ended today, from the current standings and the league's own playoff settings
      (playoff_teams, divisions: division winners take the top seeds, then the best records; ties on points for).
      A Sleeper league uses Sleeper's own bracket (/winners_bracket: pairings, byes, placement games, results once
-     played; memory only); any other league, or when Sleeper has none, gets the standard bracket built from the seeds.
+     played; memory only); any other league, or when Sleeper has none, gets the standard bracket built from the seeds
+     (no placement games: only Sleeper's bracket says whether the league plays them).
      Read-only: never touches rankings, values or the playoff odds. */
   const BR_TTL = 10 * 60 * 1000;
   function loadBracket(d) {
@@ -13595,7 +13596,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const a = bySeed(order[i]), b = bySeed(order[i + 1]);
       if (a && b) { const m = { id: id++, r: 1, p: null, a, b }; ms.push(m); prev.push({ m }); } else prev.push({ t: a || b });
     }
-    let r = 2, r1Games = ms.slice();
+    let r = 2;
     while (prev.length > 1) {
       const next = [];
       for (let i = 0; i < prev.length; i += 2) {
@@ -13605,9 +13606,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       if (prev.length === 2) break;
       prev = next; r++;
     }
-    const title = ms[ms.length - 1], semis = ms.filter(m => m.r === title.r - 1 && m.p == null);
-    if (semis.length === 2) ms.push({ id: id++, r: title.r, p: 3, a: { from: "l", m: semis[0].id }, b: { from: "l", m: semis[1].id } });
-    if (r1Games.length === 2 && title.r >= 3) ms.push({ id: id++, r: 2, p: 5, a: { from: "l", m: r1Games[0].id }, b: { from: "l", m: r1Games[1].id } });
+    // no placement games here: only Sleeper's own bracket says whether a league plays a 3rd or 5th place game
     return ms;
   }
   function bracketHtml(ev, d) {
@@ -13701,7 +13700,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const src = brc && brc.list ? "Pairings from Sleeper's bracket for this league" : slSource() === "sleeper" && brc && brc.loading ? "Loading Sleeper's bracket…" : "Standard bracket built from the seeds";
     return `<div class="br-wrap">
       <div class="br-head"><div><h2 class="br-title">${seasonOver ? "Playoff bracket" : "If the playoffs started today"}</h2>
-        <p class="br-lede">${seasonOver ? "The league's playoff bracket from Sleeper, with each round's results." : "Projected from the current standings and this league's playoff settings."}</p>
+        <p class="br-lede">${!seasonOver ? "Hypothetical: projected from the current standings and this league's playoff settings. Pairings change as the standings do." : brc && brc.list ? "The league's playoff bracket from Sleeper, with each round's results." : slSource() === "sleeper" ? "Seeded from the final regular-season standings. Results appear once Sleeper's bracket loads." : "Seeded from the final regular-season standings. Results aren't available for this league."}</p>
         <p class="br-rule">${P.spots} teams · ${byes.length ? `${byes.length === 1 ? "top seed" : `top ${byes.length} seeds`} on a bye · ` : ""}${rule}</p></div>
         <span class="br-stamp">${played ? `Updated after Week ${played} games` : "No games played yet"}</span></div>
       <div class="br-grid" style="--br-cols:${R}">${cols.join("")}</div>${place}
