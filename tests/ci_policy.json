@@ -93,7 +93,8 @@
       "board_pipeline_check",
       "provisional_pricing_check",
       "zero_value_check",
-      "sf_alignment_check"
+      "sf_alignment_check",
+      "auto_step_check"
     ],
     "weights": {
       "inflight_check": 395,
@@ -150,7 +151,8 @@
       "tc_team1_check": 40,
       "waiver_upgrades_check": 40,
       "bracket_check": 30,
-      "playoff_odds_check": 25
+      "playoff_odds_check": 25,
+      "auto_step_check": 70
     },
     "exclusive": [
       "drag_check",
