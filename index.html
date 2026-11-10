@@ -13454,9 +13454,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const S = d.league.settings || {}, id = d.league.league_id, last = regularWeeks(d);
     const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
     const cur = mxCurrentWeek(d);
-    // weeks still to decide: Sleeper's records include every finished week; the current week counts once it's over
+    // Which games are already in the records (Alan, Nov 10): never Sleeper's current week, which lags a day behind the
+    // records after a week is processed. Each team's record counts its first g scheduled games in week order (a bye
+    // week has no game), so a game is already counted once both teams' records reach it; every other game, a game in
+    // progress or a finished game the records don't include yet included, is still to decide.
     const weeks = [];
-    for (let w = Math.max(1, cur); w <= last; w++) weeks.push(w);
+    for (let w = 1; w <= last; w++) weeks.push(w);
     const missing = weeks.filter(w => !LT.mx[mxKey(id, w)]);
     if (missing.length) return LT.schedLoading === id || !LT.schedTried[id] ? { loading: true } : { none: "Sleeper didn't return the rest of the schedule." };
     const divs = stDivs(d);
@@ -13475,15 +13478,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     });
     const byRid = new Map(teams.map(x => [x.rid, x]));
     // the remaining games (pairs of roster ids); the current week starts from the points already scored
-    const games = [];
+    const games = [], nth = new Map(teams.map(x => [x.rid, 0]));
     weeks.forEach(w => {
       const list = LT.mx[mxKey(id, w)].list, groups = new Map();
       list.forEach(m => { if (m.matchup_id == null || !byRid.has(m.roster_id)) return; if (!groups.has(m.matchup_id)) groups.set(m.matchup_id, []); groups.get(m.matchup_id).push(m); });
       groups.forEach(ms => {
         if (ms.length !== 2) return;
+        const [ka, kb] = ms.map(m => { const k = nth.get(m.roster_id) + 1; nth.set(m.roster_id, k); return k; });
+        if (ka <= byRid.get(ms[0].roster_id).g && kb <= byRid.get(ms[1].roster_id).g) return;   // already in both records
         const side = m => {
           const x = byRid.get(m.roster_id), sp = Number(m.custom_points ?? m.points ?? 0);
-          if (w !== cur || !sp) return { rid: m.roster_id, base: 0, left: 1 };
+          // points already scored count as they stand; the share of starters still to play is simulated
+          if (!sp) return { rid: m.roster_id, base: 0, left: 1 };
           // in progress: points so far + the team's expected scoring for the share of its starters still to play
           const starters = (m.starters || []).map(String).filter(sid => sid && sid !== "0");
           const map = bySleeper(), left = starters.length ? starters.reduce((a, sid) => { const e = rosterEntry(sid, map), k = nflGameState(e.team, w).kind; return a + (k === "upcoming" ? 1 : k === "live" ? 0.5 : 0); }, 0) / starters.length : 0;

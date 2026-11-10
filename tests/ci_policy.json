@@ -62,6 +62,7 @@
       "tc_team1_check",
       "waiver_upgrades_check",
       "bracket_check",
+      "playoff_odds_check",
       "trade_history_check",
       "power_rank_check",
       "trade_target_check",
@@ -150,6 +151,7 @@
       "tc_team1_check": 40,
       "waiver_upgrades_check": 40,
       "bracket_check": 30,
+      "playoff_odds_check": 25,
       "auto_step_check": 70
     },
     "exclusive": [
