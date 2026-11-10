@@ -3303,10 +3303,36 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .br-card p { margin: 4px 0 0; font-size: 0.84rem; line-height: 1.45; color: var(--text-secondary); }
 .br-card p b { color: var(--heading); font-weight: 700; }
 .br-src { margin: 14px 0 0; font-size: 0.74rem; color: var(--muted); }
+.br-team.divwin .br-seed { background: var(--fill-2, rgba(255,255,255,.08)); border: 1px solid var(--text-secondary); border-radius: 4px; color: var(--heading); line-height: 20px; width: 22px; }
+.br-dw { display: inline-flex; align-items: center; gap: 4px; color: var(--heading); font-weight: 600; }
+.br-crown { flex: none; color: var(--text-secondary); }
+.br-hunt { margin-top: 28px; }
+.br-hunt-h { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--heading); letter-spacing: 0; }
+.br-hunt-sub { margin: 2px 0 10px; font-size: 0.8rem; color: var(--muted); }
+.bh-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-sm, 8px); }
+.bh-table th { font: 600 var(--micro-fs, 0.62rem)/1.4 var(--font-body); letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--muted); text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); }
+.bh-table th.num { text-align: right; }
+.bh-table td { padding: 8px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.bh-table tbody tr:last-child td { border-bottom: 0; }
+.bh-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--heading); white-space: nowrap; }
+.bh-table td.bh-pf small { display: block; font-size: 0.68rem; font-weight: 500; color: var(--muted); }
+.bh-table td.bh-div { color: var(--text-secondary); font-size: 0.84rem; }
+.bh-table td.st-odds { min-width: 92px; }
+.bh-table .pl-name { white-space: normal; }
+.bh-table tr.mine td:first-child { box-shadow: inset 3px 0 0 var(--mine-accent); }
+.bh-table tr.elim .pl-name, .bh-table tr.elim td.num { color: var(--muted); }
+.bh-sub { display: none; font-size: 0.68rem; font-weight: 500; color: var(--muted); margin-top: 2px; }
+.br-tag-out { margin-left: 8px; vertical-align: 1px; font-size: 0.56rem; color: var(--text-secondary); background: none; white-space: nowrap; }
+.br-hunt-note { margin: 8px 0 0; font-size: 0.74rem; color: var(--muted); }
 @media (max-width: 760px) {
   .br-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .br-games { justify-content: flex-start; gap: 10px; }
   .br-place-g { flex: 1 1 100%; min-width: 0; }
+  .bh-table .bh-div, .bh-table .bh-pf { display: none; }
+  .bh-sub { display: block; }
+  .br-tag-out { display: table; margin: 3px 0 1px; }
+  .bh-table td, .bh-table th { padding-inline: 8px; }
+  .bh-table .pl-cell .face { display: none; }
   .br-team { padding: 8px 10px; gap: 8px; }
 }
 /* trade history */
@@ -13569,6 +13595,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       .catch(() => { LT.br[id] = { at: Date.now(), list: c ? c.list : null }; })
       .then(() => { const a = activeData(); if (LT.sub === "standings" && LT.stView === "bracket" && a && a.league.league_id === id) renderLeague(); });
   }
+  // division winners (Alan, Nov 10): a small outline crown before "<division> winner" and a filled seed, so the reason a
+  // weaker record is seeded higher reads at a glance; neutral, never the your-team red or the title game's border
+  const BR_CROWN = `<svg class="br-crown" viewBox="0 0 16 12" width="13" height="10" aria-hidden="true"><path d="M2 10.2h12M2.4 8.2 1.4 2.6l3.7 2.8L8 1.2l2.9 4.2 3.7-2.8-1 5.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   const brTied = (a, b) => a && b && winPct(a) === winPct(b) && (a.wins || 0) === (b.wins || 0);
   // seeds from today's standings: division winners first (in record order), then the best records; ties on PF
   function poSeeds(d) {
@@ -13643,8 +13672,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const teamRow = (rid, m, extra = "") => {
       const r = rowOf.get(rid); if (!r) return `<div class="br-team tbd"><span class="br-seed">–</span><span class="br-nm"><b>Unknown team</b></span></div>`;
       const sd = seedOf.get(rid), res = m && m.w ? (m.w === rid ? " won" : " lost") : "";
-      const why = sd ? (sd.divWin ? `${esc(sd.divWin.name)} winner` : "Wild card") + (sd.pfTie ? " · tiebreak on PF" : "") : "";
-      return `<div class="br-team${r.t.mine ? " mine" : ""}${res}${extra}" data-standing-team="${esc(rid)}" tabindex="0" title="Open ${esc(r.t.name)} in Power Rankings">
+      const why = sd ? (sd.divWin ? `<span class="br-dw">${BR_CROWN}${esc(sd.divWin.name)} winner</span>` : "Wild card") + (sd.pfTie ? " · tiebreak on PF" : "") : "";
+      return `<div class="br-team${r.t.mine ? " mine" : ""}${sd && sd.divWin ? " divwin" : ""}${res}${extra}" data-standing-team="${esc(rid)}" tabindex="0" title="Open ${esc(r.t.name)} in Power Rankings">
         <span class="br-seed">${sd ? sd.seed : ""}</span>${teamFace(r.t, "sm")}
         <span class="br-nm"><b>${esc(r.t.name)}</b><small>${why}${r.t.mine ? `${why ? " · " : ""}<span class="br-you">You</span>` : ""}</small></span>
         <span class="br-rec"><b>${esc(recordText(r.st) || "0-0")}</b><small>PF ${r.st.pf ? pts(r.st.pf) : "–"}</small></span></div>`;
@@ -13686,10 +13715,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const pfRank = new Map(P.rows.slice().sort((a, b) => (b.st.pf || 0) - (a.st.pf || 0)).map((r, i) => [r.rid, i + 1]));
     const info = [];
     const first = P.out[0];
-    if (first && !seasonOver) {
-      const pr = pfRank.get(first.rid);
-      info.push(["First team out", `<b>${esc(first.t.name)}</b> · ${esc(recordText(first.st) || "0-0")} · PF ${pts(first.st.pf) || "–"}${pr <= 3 ? ` <span class="muted">(${ordinal(pr)}-most points)</span>` : ""}`]);
-    }
+    const hunt = !seasonOver && P.out.length ? huntHtml(ev, d, P, pfRank) : "";
     let note = "";
     const lowWin = P.seeds.filter(r => r.divWin).find(r => P.seeds.some(x => !x.divWin && winPct(x.st) > winPct(r.st)));
     if (lowWin) { const k = P.seeds.filter(x => !x.divWin && winPct(x.st) > winPct(lowWin.st)).length;
@@ -13714,9 +13740,39 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <p class="br-lede">${!seasonOver ? "Hypothetical: projected from the current standings and this league's playoff settings. Pairings change as the standings do." : brc && brc.list ? "The league's playoff bracket from Sleeper, with each round's results." : slSource() === "sleeper" ? "Seeded from the final regular-season standings. Results appear once Sleeper's bracket loads." : "Seeded from the final regular-season standings. Results aren't available for this league."}</p>
         <p class="br-rule">${P.spots} teams · ${byes.length ? `${byes.length === 1 ? "top seed" : `top ${byes.length} seeds`} on a bye · ` : ""}${rule}</p></div>
         <span class="br-stamp">${played ? `Updated after Week ${played} games` : "No games played yet"}</span></div>
-      <div class="br-grid" style="--br-cols:${R}">${cols.join("")}</div>${place}
+      <div class="br-grid" style="--br-cols:${R}">${cols.join("")}</div>${place}${hunt}
       ${info.length ? `<div class="br-info">${info.map(([k, v]) => `<div class="br-card"><span class="br-k">${k}</span><p>${v}</p></div>`).join("")}</div>` : ""}
       <p class="br-src">${src} · Tap a team to open it in Power Rankings.</p></div>`;
+  }
+  /* In the Hunt (Alan, Nov 10): every team outside today's playoff field, under the bracket, sorted by the same playoff
+     odds as the Standings table (`playoffOdds`, never a second calculation); the first team out by today's seeding is
+     tagged on its own (not necessarily the best odds). "Eliminated" only when it's certain from the records: even
+     winning every game left, the team can't pass the teams that already hold the playoff spots or its division leader. */
+  function huntHtml(ev, d, P, pfRank) {
+    const po = playoffOdds(ev, d), ok = po && po.byRid, last = regularWeeks(d);
+    const divName = r => { const dv = P.divs && P.divs.find(x => x.id === (r.st.division || 0)); return dv ? dv.name : ""; };
+    const W = st => (st.wins || 0) + 0.5 * (st.ties || 0), G = st => (st.wins || 0) + (st.losses || 0) + (st.ties || 0);
+    const out = (r) => {
+      const left = Math.max(0, last - G(r.st)), max = W(r.st) + left;
+      const ahead = P.rows.filter(x => x !== r && W(x.st) > max).length;
+      const lead = P.divs ? P.seeds.find(x => x.divWin && x.divWin.id === (r.st.division || 0)) : null;
+      return ahead >= P.spots && (!lead || W(lead.st) > max);
+    };
+    const list = P.out.map((r, i) => ({ r, i, p: ok && po.byRid.get(r.t.rosterId) ? po.byRid.get(r.t.rosterId).p : null, elim: out(r) }))
+      .sort((a, b) => (a.elim - b.elim) || ((b.p ?? -1) - (a.p ?? -1)) || (a.i - b.i));
+    const oddsTd = x => x.elim ? `<td class="num st-odds lo"><b>Eliminated</b></td>` : oddsCell(po, x.r.t.rosterId);
+    const hasDiv = !!P.divs;
+    const row = x => { const r = x.r, dn = divName(r), pr = pfRank.get(r.rid);
+      const tag = x.i === 0 ? `<span class="br-tag br-tag-out">First team out</span>` : "";
+      return `<tr class="st-row${r.t.mine ? " mine" : ""}${x.elim ? " elim" : ""}" data-standing-team="${esc(r.rid)}" tabindex="0" title="Open ${esc(r.t.name)} in Power Rankings">
+        <td><div class="pl-cell">${teamFace(r.t, "sm")}<div class="pl-text"><span class="pl-name">${esc(r.t.name)}${tag}</span>${r.t.mine ? `<span class="owner mine">You</span>` : ""}<span class="bh-sub">${hasDiv && dn ? `${esc(dn)} · ` : ""}PF ${r.st.pf ? pts(r.st.pf) : "–"}</span></div></div></td>
+        ${hasDiv ? `<td class="bh-div">${esc(dn) || "–"}</td>` : ""}<td class="num">${esc(recordText(r.st) || "0-0")}</td>
+        <td class="num bh-pf">${r.st.pf ? pts(r.st.pf) : "–"}${pr <= 3 ? `<small>${ordinal(pr)}-most</small>` : ""}</td>${oddsTd(x)}</tr>`; };
+    const note = po && po.none ? po.none : `Playoff odds: the chance of finishing in the top ${P.spots} by the end of the regular season (Week ${last}), from the same simulation as the Standings table. The bracket above is today's standings only.`;
+    return `<section class="br-hunt"><h3 class="br-hunt-h">In the hunt</h3>
+      <p class="br-hunt-sub">${P.out.length === 1 ? "The team" : `The ${P.out.length} teams`} outside today's playoff field, by playoff odds</p>
+      <div class="table-scroll"><table class="bh-table"><thead><tr><th>Team</th>${hasDiv ? `<th class="bh-div">Division</th>` : ""}<th class="num">Record</th><th class="num bh-pf">PF</th><th class="num st-odds-h">Playoff odds</th></tr></thead>
+      <tbody>${list.map(row).join("")}</tbody></table></div><p class="br-hunt-note">${esc(note)}</p></section>`;
   }
   function standingsHtml(ev, d) {
     const divsV = stDivs(d), view = LT.stView === "bracket" ? "bracket" : divsV && LT.stView !== "league" ? "div" : "league";

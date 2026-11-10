@@ -12,6 +12,8 @@ Synthetic 12-team leagues only (the visitor u1 owns roster 11 in L1), mocked Sle
   2b. Multi-week rounds: playoff_round_type 2 (two weeks every round) and 1 (two-week final only)
   2c. Switching leagues (L1 with divisions and Sleeper's bracket → L2 without either) rebuilds the bracket from
      L2's own settings, with nothing carried over (no divisions, no Sleeper pairings or placement games)
+  2d. In the hunt: every team outside the field, sorted by the Standings odds, first team out tagged, Eliminated only
+     when certain, no Division column without divisions; division winners carry the crown and filled seed
   3. Playoffs underway: Sleeper's results mark winners and losers and the title reads "Playoff bracket"
   4. a team opens in Power Rankings; the table views still work; both themes at 1440 and 390 with no sideways
      scroll; no page errors
@@ -74,9 +76,17 @@ with sync_playwright() as p:
         def sleeper(route):
             path = route.request.url.split("/v1", 1)[-1].split("?")[0]
             body = []
+            mw = re.match(r"/league/(L\d)/matchups/(\d+)$", path)
             m = re.match(r"/league/(L\d)(/users|/rosters|/winners_bracket)?$", path)
             if m and m.group(1) not in all_: m = None
-            if m and m.group(2) == "/winners_bracket":
+            if mw and mw.group(1) in all_:
+                # a round-robin schedule for the whole regular season, no points (records come from the rosters)
+                w = int(mw.group(2)); ids = [r["roster_id"] for r in all_[mw.group(1)][0][2]]
+                if w >= 1 and len(ids) % 2 == 0:
+                    rot = [ids[0]] + (ids[1:][-(w % (len(ids) - 1)):] + ids[1:][:-(w % (len(ids) - 1))] if w % (len(ids) - 1) else ids[1:])
+                    half = len(rot) // 2
+                    body = [{"roster_id": rid, "matchup_id": k + 1, "points": 0, "starters": []} for k in range(half) for rid in (rot[k], rot[-1 - k])]
+            elif m and m.group(2) == "/winners_bracket":
                 bk = all_[m.group(1)][1]
                 if bk is None: return route.fulfill(status=404, body="null")
                 body = bk
@@ -101,6 +111,10 @@ with sync_playwright() as p:
           return { cols: [...document.querySelectorAll('.br-col')].map(c => ({ h: t(c.querySelector('.br-h')), games: [...c.querySelectorAll('.br-match')].map(m => [...m.querySelectorAll('.br-team')].map(side)) })),
             place: [...document.querySelectorAll('.br-place-g')].map(g => ({ h: t(g.querySelector('.br-h')), sides: [...g.querySelectorAll('.br-team')].map(side) })),
             third: t(document.querySelector('.br-last .br-sub')),
+            hunt: [...document.querySelectorAll('.bh-table tbody tr')].map(r => ({ rid: r.dataset.standingTeam, tag: t(r.querySelector('.br-tag-out')), odds: t(r.querySelector('.st-odds b')), elim: r.classList.contains('elim'), cells: r.cells.length })),
+            huntCols: [...document.querySelectorAll('.bh-table thead th')].map(t),
+            divwin: [...document.querySelectorAll('.br-col:first-child .br-team.divwin')].map(x => x.dataset.standingTeam).sort(),
+            crowns: [...document.querySelectorAll('.br-col:first-child .br-team')].filter(x => x.querySelector('.br-crown')).map(x => x.dataset.standingTeam).sort(),
             cards: [...document.querySelectorAll('.br-card')].map(c => [t(c.querySelector('.br-k')), t(c.querySelector('p'))]),
             title: t(document.querySelector('.br-title')), lede: t(document.querySelector('.br-lede')), rule: t(document.querySelector('.br-rule')), stamp: t(document.querySelector('.br-stamp')),
             src: t(document.querySelector('.br-src')), sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
@@ -131,7 +145,17 @@ with sync_playwright() as p:
     ok("East winner" in sub["1"] and "tiebreak" not in sub["1"], f"a clear division winner has no tiebreak note ({sub['1']!r})")
     ok("Wild card · tiebreak on PF" in sub["3"] and "Wild card · tiebreak on PF" in sub["4"] and "tiebreak" not in sub["5"], f"wild cards: 4 and 5 seeds on PF, the 6 seed clear of the first team out ({sub['3']!r}, {sub['5']!r})")
     cards = dict(B["cards"])
-    ok("Team L1-6" in cards.get("First team out", "") and "4-5" in cards["First team out"] and "PF 1,252.6" in cards["First team out"] and "(2nd-most points)" in cards["First team out"], f"first team out card ({cards.get('First team out')!r})")
+    ok("First team out" not in cards, "no separate First team out card: In the hunt tags the team instead")
+    ok(B["divwin"] == ["1", "2", "7"] and B["crowns"] == ["1", "2", "7"], f"division winners (and only they) get the crown and the filled seed ({B['divwin']}, {B['crowns']})")
+    # In the hunt: the six teams outside, by the Standings table's own odds
+    H = B["hunt"]
+    pct = lambda o: 100 if o.startswith(">") else 0.5 if o.startswith("<") else float(o.rstrip("%")) if o.endswith("%") else -1
+    ok(sorted(h["rid"] for h in H) == sorted(str(r) for r in L1_REC if r not in L1_SEEDS), f"In the hunt lists every team outside the field ({[h['rid'] for h in H]})")
+    ok(all(h["odds"].endswith("%") for h in H) and [pct(h["odds"]) for h in H] == sorted((pct(h["odds"]) for h in H), reverse=True), f"In the hunt is sorted by playoff odds ({[h['odds'] for h in H]})")
+    ok([h["rid"] for h in H if h["tag"]] == ["6"] and H[[h["rid"] for h in H].index("6")]["tag"] == "First team out", "the first team out by today's seeding is tagged")
+    ok(B["huntCols"] == ["Team", "Division", "Record", "PF", "Playoff odds"], f"In the hunt columns ({B['huntCols']})")
+    ok(not any(h["elim"] for h in H), "nobody is eliminated with five weeks left")
+    hunt_odds = {h["rid"]: h["odds"] for h in H}
     ok("Team L1-7 is the 3 seed at 4-5 by winning the Swamp, ahead of 3 wild cards with a better record." == cards.get("Notable"), f"notable card ({cards.get('Notable')!r})")
     ok("My Team L1-11" in cards.get("Your team", "") and "Out today" in cards["Your team"] and "11th in the standings" in cards["Your team"] and "2 games behind the last spot" in cards["Your team"] and "1 behind the Swamp lead" in cards["Your team"], f"your team card ({cards.get('Your team')!r})")
     ok("Sleeper's bracket" in B["src"], f"source line ({B['src']!r})")
@@ -146,6 +170,8 @@ with sync_playwright() as p:
     ok(pg.locator(".st-table tr.st-div").count() == 3 and pg.locator(".br-wrap").count() == 0, "By division brings the table back")
     pg.click('[data-st-view="league"]'); pg.wait_for_timeout(300)
     ok(pg.locator(".st-table tr.st-row").count() == 12, "League shows the full table")
+    tbl = pg.evaluate("() => Object.fromEntries([...document.querySelectorAll('.st-table tr.st-row')].map(r => [r.dataset.standingTeam, r.querySelector('.st-odds b').textContent.trim()]))")
+    ok(all(tbl.get(k) == v for k, v in hunt_odds.items()), f"In the hunt shows the Standings table's odds ({hunt_odds} vs {tbl})")
     pg.close()
 
     # 1b: both themes, phone
@@ -159,7 +185,7 @@ with sync_playwright() as p:
             geo = pg.evaluate("() => [...document.querySelectorAll('.br-col')].map(c => { const r = c.getBoundingClientRect(), h = c.querySelector('.br-h').getBoundingClientRect(); return [r.left, r.right, r.top, h.height]; })")
             ok(all(g[0] >= 0 and g[1] <= w + 0.5 and g[3] > 0 for g in geo) and all(geo[i][2] < geo[i + 1][2] for i in range(len(geo) - 1)),
                f"{theme} {w}: rounds stack top to bottom, each with its heading, inside the screen ({geo})")
-            clip = pg.evaluate("() => [...document.querySelectorAll('.br-match, .br-card')].filter(e => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth + 0.5; }).length")
+            clip = pg.evaluate("() => [...document.querySelectorAll('.br-match, .br-card, .bh-table')].filter(e => { const r = e.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth + 0.5; }).length")
             ok(clip == 0, f"{theme} {w}: no game or card clipped ({clip})")
         if SHOTS: pg.screenshot(path=os.path.join(SHOTS, f"bracket-{theme}-{w}.png"), full_page=True)
         pg.close()
@@ -180,6 +206,7 @@ with sync_playwright() as p:
         ok(B["rule"].endswith("seeded by record, ties by points for"), f"{spots} teams: rule without divisions ({B['rule']!r})")
         ok("Standard bracket" in B["src"], f"{spots} teams: source line names the standard bracket")
         ok(pg.locator('[data-st-view]').all_text_contents() == ["Table", "Bracket"], "no divisions: Table / Bracket toggle")
+        ok(B["huntCols"] == ["Team", "Record", "PF", "Playoff odds"] and len(B["hunt"]) == 12 - spots, f"{spots} teams: In the hunt without a Division column, {len(B['hunt'])} teams ({B['huntCols']})")
         if spots == 6:
             cards = dict(B["cards"])
             ok(cards.get("Your team", "").find("Out today") < 0 and "seed" in cards.get("Your team", ""), f"a playoff team's card names his seed ({cards.get('Your team')!r})")
@@ -212,6 +239,16 @@ with sync_playwright() as p:
     ok("My Team L2-2" in dict(B2["cards"]).get("Your team", ""), "switch: your team is L2's")
     pg.close()
 
+    # 2d: Eliminated only when certain: 13 of 14 games played, 4 spots; roster 5 (8-5) can still reach 9 wins, past
+    # all but three teams; rosters 6–12 can't catch four teams even winning out
+    rec3 = {i: (13 - i, i, 1300 - 10 * i, 0) for i in range(1, 13)}
+    pg = page(league("L2", rec3, None, 4), None)
+    H = read(pg)["hunt"]
+    el = sorted(int(h["rid"]) for h in H if h["elim"])
+    ok(el == [6, 7, 8, 9, 10, 11, 12] and all(h["odds"] == "Eliminated" for h in H if h["elim"]) and H[0]["rid"] == "5" and H[0]["tag"] == "First team out",
+       f"eliminated teams labelled and listed last, the live first team out on top ({[(h['rid'], h['odds']) for h in H]})")
+    pg.close()
+
     # 3: playoffs underway (Sleeper results)
     done = [dict(m) for m in L1_BRACKET]
     done[0].update(w=3, l=4); done[1].update(w=7, l=5); done[2].update(t2=3); done[3].update(t2=7)
@@ -224,6 +261,7 @@ with sync_playwright() as p:
     ok(won == ["3", "7"] and lost == ["4", "5"], f"results: winners and losers marked ({won}, {lost})")
     semi = sorted(sorted(s["rid"] for s in g) for g in B["cols"][1]["games"])
     ok(semi == [["1", "3"], ["2", "7"]], f"semifinals fill from the results ({semi})")
+    ok(not B["hunt"], "after the regular season: no In the hunt section")
     ok(B["title"] == "Playoff bracket" and not any(k in ("First team out", "Notable") for k, _ in B["cards"]), f"after the regular season: Playoff bracket, no projection cards ({B['title']!r})")
     pg.close()
     br.close()
