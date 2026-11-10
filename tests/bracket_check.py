@@ -12,7 +12,8 @@ Synthetic 12-team leagues only (the visitor u1 owns roster 11 in L1), mocked Sle
   2b. Multi-week rounds: playoff_round_type 2 (two weeks every round) and 1 (two-week final only)
   2c. Switching leagues (L1 with divisions and Sleeper's bracket → L2 without either) rebuilds the bracket from
      L2's own settings, with nothing carried over (no divisions, no Sleeper pairings or placement games)
-  2d. In the hunt: every team outside the field, sorted by the Standings odds, first team out tagged, Eliminated only
+  2d. In the hunt: every team outside the field, sorted by the Standings odds, first team out tagged, each team's path in games
+      (behind the last spot, behind its division leader, games left), Eliminated only
      when certain, no Division column without divisions; division winners carry the crown and filled seed
   3. Playoffs underway: Sleeper's results mark winners and losers and the title reads "Playoff bracket"
   4. a team opens in Power Rankings; the table views still work; both themes at 1440 and 390 with no sideways
@@ -111,7 +112,7 @@ with sync_playwright() as p:
           return { cols: [...document.querySelectorAll('.br-col')].map(c => ({ h: t(c.querySelector('.br-h')), games: [...c.querySelectorAll('.br-match')].map(m => [...m.querySelectorAll('.br-team')].map(side)) })),
             place: [...document.querySelectorAll('.br-place-g')].map(g => ({ h: t(g.querySelector('.br-h')), sides: [...g.querySelectorAll('.br-team')].map(side) })),
             third: t(document.querySelector('.br-last .br-sub')),
-            hunt: [...document.querySelectorAll('.bh-table tbody tr')].map(r => ({ rid: r.dataset.standingTeam, tag: t(r.querySelector('.br-tag-out')), odds: t(r.querySelector('.st-odds b')), elim: r.classList.contains('elim'), cells: r.cells.length })),
+            hunt: [...document.querySelectorAll('.bh-table tbody tr')].map(r => ({ rid: r.dataset.standingTeam, tag: t(r.querySelector('.br-tag-out')), odds: t(r.querySelector('.st-odds b')), elim: r.classList.contains('elim'), cells: r.cells.length, path: t(r.querySelector('td.bh-path')), pathSub: t(r.querySelector('.bh-path-sub')) })),
             huntCols: [...document.querySelectorAll('.bh-table thead th')].map(t),
             divwin: [...document.querySelectorAll('.br-col:first-child .br-team.divwin')].map(x => x.dataset.standingTeam).sort(),
             crowns: [...document.querySelectorAll('.br-col:first-child .br-team')].filter(x => x.querySelector('.br-crown')).map(x => x.dataset.standingTeam).sort(),
@@ -153,7 +154,14 @@ with sync_playwright() as p:
     ok(sorted(h["rid"] for h in H) == sorted(str(r) for r in L1_REC if r not in L1_SEEDS), f"In the hunt lists every team outside the field ({[h['rid'] for h in H]})")
     ok(all(h["odds"].endswith("%") for h in H) and [pct(h["odds"]) for h in H] == sorted((pct(h["odds"]) for h in H), reverse=True), f"In the hunt is sorted by playoff odds ({[h['odds'] for h in H]})")
     ok([h["rid"] for h in H if h["tag"]] == ["6"] and H[[h["rid"] for h in H].index("6")]["tag"] == "First team out", "the first team out by today's seeding is tagged")
-    ok(B["huntCols"] == ["Team", "Division", "Record", "PF", "Playoff odds"], f"In the hunt columns ({B['huntCols']})")
+    ok(B["huntCols"] == ["Team", "Division", "Record", "PF", "Path to a spot", "Playoff odds"], f"In the hunt columns ({B['huntCols']})")
+    # the path in games, from the records: the last spot is the 6 seed (5-4, the last wild card), each team's own division leader
+    hp = {h["rid"]: h["path"] for h in H}
+    want = {"11": "2 games behind the last spot · 1 game behind the Swamp leader · 5 games left",
+            "6": "1 game behind the last spot · 3 games behind the East leader · 5 games left",
+            "9": "1 game behind the last spot · level with the Swamp leader, behind on points for · 5 games left"}
+    ok(all(hp.get(k) == v for k, v in want.items()), f"each team's path to a spot in games ({ {k: hp.get(k) for k in want} })")
+    ok(all(h["pathSub"] == h["path"] for h in H), "the same path is in the team cell for phones")
     ok(not any(h["elim"] for h in H), "nobody is eliminated with five weeks left")
     hunt_odds = {h["rid"]: h["odds"] for h in H}
     ok("Team L1-7 is the 3 seed at 4-5 by winning the Swamp, ahead of 3 wild cards with a better record." == cards.get("Notable"), f"notable card ({cards.get('Notable')!r})")
@@ -206,7 +214,7 @@ with sync_playwright() as p:
         ok(B["rule"].endswith("seeded by record, ties by points for"), f"{spots} teams: rule without divisions ({B['rule']!r})")
         ok("Standard bracket" in B["src"], f"{spots} teams: source line names the standard bracket")
         ok(pg.locator('[data-st-view]').all_text_contents() == ["Table", "Bracket"], "no divisions: Table / Bracket toggle")
-        ok(B["huntCols"] == ["Team", "Record", "PF", "Playoff odds"] and len(B["hunt"]) == 12 - spots, f"{spots} teams: In the hunt without a Division column, {len(B['hunt'])} teams ({B['huntCols']})")
+        ok(B["huntCols"] == ["Team", "Record", "PF", "Path to a spot", "Playoff odds"] and len(B["hunt"]) == 12 - spots, f"{spots} teams: In the hunt without a Division column, {len(B['hunt'])} teams ({B['huntCols']})")
         if spots == 6:
             cards = dict(B["cards"])
             ok(cards.get("Your team", "").find("Out today") < 0 and "seed" in cards.get("Your team", ""), f"a playoff team's card names his seed ({cards.get('Your team')!r})")
@@ -247,6 +255,8 @@ with sync_playwright() as p:
     el = sorted(int(h["rid"]) for h in H if h["elim"])
     ok(el == [6, 7, 8, 9, 10, 11, 12] and all(h["odds"] == "Eliminated" for h in H if h["elim"]) and H[0]["rid"] == "5" and H[0]["tag"] == "First team out",
        f"eliminated teams labelled and listed last, the live first team out on top ({[(h['rid'], h['odds']) for h in H]})")
+    ok(H[0]["path"] == "1 game behind the last spot · 1 game left" and all(h["path"] == "Can't reach a spot" for h in H if h["elim"]),
+       f"without divisions the path is the last spot only; eliminated teams can't reach one ({H[0]['path']!r})")
     pg.close()
 
     # 3: playoffs underway (Sleeper results)
