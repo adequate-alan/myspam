@@ -3257,6 +3257,58 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .st-odds-bar span { display: block; height: 100%; background: var(--muted); }
 .st-odds.hi .st-odds-bar span { background: var(--rb); }
 .st-odds.mid .st-odds-bar span { background: var(--ink-2); }   /* Oct 11: mid odds are a statistic, not a selection; brand red stays for identity and selection */
+/* Standings → Bracket (Nov 10): the playoff picture today */
+.br-top { justify-content: flex-end; }
+.br-wrap { max-width: 1240px; }
+.br-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.br-title { margin: 0; font-size: 1.3rem; font-weight: 700; color: var(--heading); letter-spacing: 0; }
+.br-lede { margin: 4px 0 0; color: var(--text-secondary); font-size: 0.86rem; }
+.br-rule { margin: 6px 0 0; color: var(--muted); font-size: 0.8rem; }
+.br-stamp { font: 600 var(--micro-fs, 0.62rem)/1.4 var(--font-body); letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--muted); padding-top: 6px; white-space: nowrap; }
+.br-grid { display: grid; grid-template-columns: repeat(var(--br-cols), minmax(0, 1fr)); gap: 28px; align-items: stretch; }
+.br-col { display: flex; flex-direction: column; min-width: 0; }
+.br-games { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 16px; }
+.br-h { margin: 0 0 10px; font: 600 var(--micro-fs, 0.62rem)/1.4 var(--font-body); letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--text-secondary); }
+.br-h span { color: var(--muted); margin-left: 6px; }
+.br-sub { margin: 10px 0 6px; }
+.br-last .br-games { justify-content: center; gap: 28px; }
+.br-match { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-sm, 8px); overflow: hidden; }
+.br-team { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 8px 12px; cursor: pointer; }
+.br-team + .br-team { border-top: 1px solid var(--line-soft); }
+.br-team:hover { background: var(--surface-hover); }
+.br-team.tbd, .br-team.br-bye { cursor: default; }
+.br-team.tbd:hover, .br-team.br-bye:hover { background: none; }
+.br-team.mine { box-shadow: inset 3px 0 0 var(--mine-accent); }
+.br-team.lost .br-nm b, .br-team.lost .br-rec b { color: var(--muted); font-weight: 600; }
+.br-team.won .br-nm b::after { content: " ✓"; color: var(--rb-text); }
+.br-seed { width: 18px; flex: none; text-align: center; font-weight: 700; font-size: 0.86rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.br-nm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.br-nm b { font-size: 0.9rem; font-weight: 700; color: var(--heading); overflow-wrap: anywhere; line-height: 1.25; }
+.br-nm small, .br-rec small { font-size: 0.72rem; font-weight: 500; color: var(--muted); margin-top: 1px; }
+.br-team.tbd .br-nm b { color: var(--muted); font-weight: 500; font-size: 0.84rem; }
+.br-you { color: var(--mine-text); font-weight: 600; }
+.br-rec { text-align: right; display: flex; flex-direction: column; flex: none; font-variant-numeric: tabular-nums; }
+.br-rec b { font-size: 0.9rem; font-weight: 700; color: var(--heading); }
+.br-team.br-bye { background: var(--surface-2); }
+.br-team.br-bye .br-nm { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
+.br-tag { border-radius: 999px; padding: var(--tag-pad, 2px 8px); font-size: var(--tag-fs-caps, 0.6rem); font-weight: 700; letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--heading); background: var(--fill-2, rgba(255,255,255,.08)); border: 1px solid var(--line); }
+.br-final { border-color: var(--text-secondary); border-width: 1.5px; }
+.br-final .br-team { min-height: 64px; }
+.br-minor .br-team { min-height: 46px; }
+.br-place { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 18px; }
+.br-place-g { flex: 0 1 calc((100% - 28px * (var(--br-cols, 3) - 1)) / var(--br-cols, 3)); min-width: 260px; }
+.br-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 24px; }
+.br-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-sm, 8px); padding: 12px 14px; }
+.br-k { font: 600 var(--micro-fs, 0.62rem)/1.4 var(--font-body); letter-spacing: var(--tag-ls-caps, .07em); text-transform: uppercase; color: var(--muted); }
+.br-card p { margin: 4px 0 0; font-size: 0.84rem; line-height: 1.45; color: var(--text-secondary); }
+.br-card p b { color: var(--heading); font-weight: 700; }
+.br-src { margin: 14px 0 0; font-size: 0.74rem; color: var(--muted); }
+@media (max-width: 760px) {
+  .br-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .br-games { justify-content: flex-start; gap: 10px; }
+  .br-place-g { flex: 1 1 100%; min-width: 0; }
+  .br-team { padding: 8px 10px; gap: 8px; }
+}
 /* trade history */
 .th-feed { display: flex; flex-direction: column; gap: 14px; }
 .th-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 14px 18px 12px; }
@@ -7364,11 +7416,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const sid = String(p.sleeperId), pl = d.players[sid], a = pl && pl.g.find(r => r[0] === week);
     let g = null;
     if (a) { g = {}; d.cols.forEach((c, i) => { g[c] = a[i]; }); }
-    const team = (g && g.tm) || p.team;
+    const team = (g && g.tm) || (p.team === "FA" ? "" : p.team);   // the board's "FA" is no NFL team, never a schedule to project
     if (g && enteredGame(g)) {
       const st = nflGameState(team, week), live = week >= (cur ?? Infinity) && st.kind === "live";
       return { grp: "act", kind: live ? "live" : "final", v: gamePoints(g, p.pos, sc), g, short: shortMap(d, sid).get(week) || null };
     }
+    if (!team) return { grp: "none", kind: "none", status: "—", tip: "Not on an NFL team" };
     const o = weekOutlook({ sid, pos: p.pos, team, p, name: p.name }, week, { sc, pts: slPts && slPts.has(sid) ? slPts.get(sid) : undefined });
     if (o.kind === "bye") return { grp: "none", kind: "bye", status: "Bye", tip: `${team || "His team"} had a bye in Week ${week}` };
     if (o.kind === "final") {
@@ -11154,8 +11207,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const trimLeague = l => ({
     league_id: l.league_id, name: l.name, season: l.season, status: l.status, total_rosters: l.total_rosters,
     roster_positions: l.roster_positions || [], scoring_settings: l.scoring_settings || {},
-    settings: (({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg, divisions, playoff_teams, playoff_seed_type }) =>
-      ({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg, divisions, playoff_teams, playoff_seed_type }))(l.settings || {}),
+    settings: (({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg, divisions, playoff_teams, playoff_seed_type, playoff_round_type }) =>
+      ({ num_teams, reserve_slots, taxi_slots, type, playoff_week_start, trade_deadline, waiver_type, waiver_clear_days, waiver_budget, best_ball, leg, divisions, playoff_teams, playoff_seed_type, playoff_round_type }))(l.settings || {}),
     // division names (and avatars) as the league set them on Sleeper: metadata.division_1, division_1_avatar, ...
     divisions: Array.from({ length: Math.min(12, Number((l.settings || {}).divisions) || 0) }, (_, i) => {
       const m = l.metadata || {}, av = String(m[`division_${i + 1}_avatar`] || "");
@@ -13487,7 +13540,178 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const poRule = (divs, spots) => divs && divs.length <= spots
     ? `the ${divs.length} division winners, then the next ${spots - divs.length} best record${spots - divs.length === 1 ? "" : "s"} (${spots} teams)`
     : `the ${spots} best record${spots === 1 ? "" : "s"}`;
+  /* Playoff bracket (Alan, Nov 10; Standings → Bracket, `bracketHtml`, `poSeeds`, `bracketModel`, `loadBracket`):
+     the playoff picture if the season ended today, from the current standings and the league's own playoff settings
+     (playoff_teams, divisions: division winners take the top seeds, then the best records; ties on points for).
+     A Sleeper league uses Sleeper's own bracket (/winners_bracket: pairings, byes, placement games, results once
+     played; memory only); any other league, or when Sleeper has none, gets the standard bracket built from the seeds
+     (no placement games: only Sleeper's bracket says whether the league plays them).
+     Read-only: never touches rankings, values or the playoff odds. */
+  const BR_TTL = 10 * 60 * 1000;
+  function loadBracket(d) {
+    const id = d.league.league_id;
+    if (slSource() !== "sleeper") return;
+    LT.br = LT.br || {};
+    const c = LT.br[id];
+    if (c && (c.loading || Date.now() - c.at < BR_TTL)) return;
+    LT.br[id] = { at: Date.now(), loading: true, list: c ? c.list : null };
+    slGetTimed(`/league/${id}/winners_bracket`).then(list => { LT.br[id] = { at: Date.now(), list: Array.isArray(list) && list.length ? list : null }; })
+      .catch(() => { LT.br[id] = { at: Date.now(), list: c ? c.list : null }; })
+      .then(() => { const a = activeData(); if (LT.sub === "standings" && LT.stView === "bracket" && a && a.league.league_id === id) renderLeague(); });
+  }
+  const brTied = (a, b) => a && b && winPct(a) === winPct(b) && (a.wins || 0) === (b.wins || 0);
+  // seeds from today's standings: division winners first (in record order), then the best records; ties on PF
+  function poSeeds(d) {
+    const S = d.league.settings || {}, divs = stDivs(d);
+    const rows = LG.teams.map(t => ({ t, rid: String(t.rosterId), st: t.roster.settings || {} })).sort((a, b) => stOrder(a.st, b.st));
+    const spots = Math.max(1, Math.min(rows.length, Number(S.playoff_teams) || 6));
+    let winners = [];
+    if (divs && divs.length <= spots) winners = divs.map(dv => { const r = rows.find(x => (x.st.division || 0) === dv.id); if (r) { r.divWin = dv; r.divRunner = rows.find(x => x !== r && (x.st.division || 0) === dv.id); } return r; }).filter(Boolean).sort((a, b) => stOrder(a.st, b.st));
+    const wild = rows.filter(r => !winners.includes(r));
+    const seeds = winners.concat(wild.slice(0, spots - winners.length));
+    seeds.forEach((r, i) => { r.seed = i + 1; });
+    const out = wild.slice(spots - winners.length);
+    // a seed decided on points for: tied with the team right behind it in the same race
+    seeds.forEach((r, i) => {
+      if (r.divWin) r.pfTie = brTied(r.st, r.divRunner && r.divRunner.st);
+      else { const next = i + 1 < seeds.length ? seeds[i + 1] : out[0]; r.pfTie = !!(next && !next.divWin && brTied(r.st, next.st)); }
+    });
+    return { seeds, out, rows, spots, divs: winners.length ? divs : null, nWin: winners.length };
+  }
+  // the bracket as matches: { id, r, p (1 = title, 3 = 3rd place …; null on the way to the title), a, b, w, l }
+  // a side is { rid } or { from: "w" | "l", m }
+  function bracketModel(P, sleeperList) {
+    if (sleeperList) {
+      const ok = new Set(P.rows.map(r => r.rid));
+      const side = (t, f) => (t != null && ok.has(String(t)) ? { rid: String(t) } : f && (f.w != null || f.l != null) ? { from: f.w != null ? "w" : "l", m: f.w != null ? f.w : f.l } : null);
+      const ms = sleeperList.map(m => ({ id: m.m, r: m.r, p: m.p != null ? m.p : null, a: side(m.t1, m.t1_from), b: side(m.t2, m.t2_from), w: m.w != null ? String(m.w) : null, l: m.l != null ? String(m.l) : null }));
+      if (ms.length && ms.every(m => m.r > 0)) return ms;
+    }
+    // standard single elimination: byes to the top seeds, 1 vs lowest, never re-seeded
+    const n = P.seeds.length; if (n < 2) return [];
+    let size = 1; while (size < n) size *= 2;
+    const order = [1]; for (let s = 2; s <= size; s *= 2) { const cur = order.splice(0); cur.forEach(x => order.push(x, s + 1 - x)); }
+    const bySeed = k => (k <= n ? { rid: P.seeds[k - 1].rid } : null);
+    const ms = []; let id = 1, prev = [];
+    for (let i = 0; i < order.length; i += 2) {
+      const a = bySeed(order[i]), b = bySeed(order[i + 1]);
+      if (a && b) { const m = { id: id++, r: 1, p: null, a, b }; ms.push(m); prev.push({ m }); } else prev.push({ t: a || b });
+    }
+    let r = 2;
+    while (prev.length > 1) {
+      const next = [];
+      for (let i = 0; i < prev.length; i += 2) {
+        const s = x => (x.t ? x.t : { from: "w", m: x.m.id });
+        const m = { id: id++, r, p: prev.length === 2 ? 1 : null, a: s(prev[i]), b: s(prev[i + 1]) }; ms.push(m); next.push({ m });
+      }
+      if (prev.length === 2) break;
+      prev = next; r++;
+    }
+    // no placement games here: only Sleeper's own bracket says whether a league plays a 3rd or 5th place game
+    return ms;
+  }
+  function bracketHtml(ev, d) {
+    loadBracket(d);
+    const P = poSeeds(d), S = d.league.settings || {};
+    if (P.seeds.length < 2) return `<p class="method-note">This league doesn't have enough teams for a playoff bracket.</p>`;
+    const id = d.league.league_id, brc = LT.br && LT.br[id];
+    const ms = bracketModel(P, brc && brc.list), byId = new Map(ms.map(m => [m.id, m]));
+    const seedOf = new Map(P.seeds.map(r => [r.rid, r])), rowOf = new Map(P.rows.map(r => [r.rid, r]));
+    const ps = Number(S.playoff_week_start) || regularWeeks(d) + 1, rt = Number(S.playoff_round_type) || 0;
+    const R = Math.max(...ms.filter(m => m.p == null || m.p === 1).map(m => m.r));
+    const weeksOf = r => { const two = rt === 2 || (rt === 1 && r === R); const w = ps + (rt === 2 ? 2 * (r - 1) : r - 1); return two ? `Weeks ${w}–${w + 1}` : `Week ${w}`; };
+    const played = Math.max(0, ...P.rows.map(r => (r.st.wins || 0) + (r.st.losses || 0) + (r.st.ties || 0)));
+    const live = ms.some(m => m.w), seasonOver = played >= regularWeeks(d) || live;
+    // who a "from" side stands for, in words: "Winner of 4 vs 5"
+    const seedTxt = s => (s && s.rid && seedOf.has(s.rid) ? seedOf.get(s.rid).seed : null);
+    const fromTxt = s => {
+      const m = byId.get(s.m); if (!m) return s.from === "w" ? "Winner" : "Loser";
+      const a = seedTxt(m.a), b = seedTxt(m.b), word = s.from === "w" ? "Winner" : "Loser";
+      return a && b ? `${word} of ${Math.min(a, b)} vs ${Math.max(a, b)}` : `${word} of ${m.p === 1 ? "the final" : m.r === R - 1 ? "a semifinal" : `a Round ${m.r} game`}`;
+    };
+    const resolve = s => { if (!s) return null; if (s.rid) return s.rid; const m = byId.get(s.m); return m && (s.from === "w" ? m.w : m.l) || null; };
+    const teamRow = (rid, m, extra = "") => {
+      const r = rowOf.get(rid); if (!r) return `<div class="br-team tbd"><span class="br-seed">–</span><span class="br-nm"><b>Unknown team</b></span></div>`;
+      const sd = seedOf.get(rid), res = m && m.w ? (m.w === rid ? " won" : " lost") : "";
+      const why = sd ? (sd.divWin ? `${esc(sd.divWin.name)} winner` : "Wild card") + (sd.pfTie ? " · tiebreak on PF" : "") : "";
+      return `<div class="br-team${r.t.mine ? " mine" : ""}${res}${extra}" data-standing-team="${esc(rid)}" tabindex="0" title="Open ${esc(r.t.name)} in Power Rankings">
+        <span class="br-seed">${sd ? sd.seed : ""}</span>${teamFace(r.t, "sm")}
+        <span class="br-nm"><b>${esc(r.t.name)}</b><small>${why}${r.t.mine ? `${why ? " · " : ""}<span class="br-you">You</span>` : ""}</small></span>
+        <span class="br-rec"><b>${esc(recordText(r.st) || "0-0")}</b><small>PF ${r.st.pf ? pts(r.st.pf) : "–"}</small></span></div>`;
+    };
+    const sideRow = (s, m) => { const rid = resolve(s); return rid ? teamRow(rid, m) : `<div class="br-team tbd"><span class="br-seed"></span><span class="br-nm"><b>${s ? esc(fromTxt(s)) : "To be decided"}</b></span></div>`; };
+    const card = (m, cls = "") => {   // the higher seed on top once both are known
+      const sa = seedTxt(resolve(m.a) ? { rid: resolve(m.a) } : null), sb = seedTxt(resolve(m.b) ? { rid: resolve(m.b) } : null);
+      const [x, y] = sa && sb && sb < sa ? [m.b, m.a] : [m.a, m.b];
+      return `<div class="br-match${cls}">${sideRow(x, m)}${sideRow(y, m)}</div>`;
+    };
+    const byeCard = rid => `<div class="br-match br-byem">${teamRow(rid, null)}<div class="br-team br-bye"><span class="br-seed"></span><span class="br-nm"><span class="br-tag">Bye</span><small>Straight to ${R === 2 ? "the final" : R - 1 === 2 ? "the semifinals" : "Round 2"}</small></span></div></div>`;
+    const main = ms.filter(m => m.p == null || m.p === 1);
+    // first-round byes: teams that enter after Round 1
+    const r1 = new Set(); main.filter(m => m.r === 1).forEach(m => [m.a, m.b].forEach(s => s && s.rid && r1.add(s.rid)));
+    const byes = P.seeds.filter(r => !r1.has(r.rid) && main.some(m => m.r > 1 && [m.a, m.b].some(s => s && s.rid === r.rid)));
+    const roundName = r => (r === R ? "Championship" : r === R - 1 ? "Semifinals" : r === R - 2 && R >= 4 ? "Quarterfinals" : r === 1 ? "First round" : `Round ${r}`);
+    const cols = [];
+    for (let r = 1; r <= R; r++) {
+      const games = main.filter(m => m.r === r).sort((a, b) => a.id - b.id);
+      let inner = "";
+      if (r === 1 && byes.length) {
+        // each bye sits with the game whose winner it meets next, so the column reads top to bottom
+        const used = new Set();
+        byes.forEach(b => {
+          const nx = main.find(m => m.r === 2 && [m.a, m.b].some(s => s && s.rid === b.rid));
+          const feed = nx && [nx.a, nx.b].find(s => s && s.from === "w");
+          const g = feed && games.find(x => x.id === feed.m);
+          inner += byeCard(b.rid); if (g && !used.has(g.id)) { inner += card(g); used.add(g.id); }
+        });
+        games.filter(g => !used.has(g.id)).forEach(g => { inner += card(g); });
+      } else inner = games.map(g => card(g, g.p === 1 ? " br-final" : "")).join("");
+      const third = r === R ? ms.filter(m => m.p === 3) : [];
+      cols.push(`<section class="br-col${r === R ? " br-last" : ""}"><h3 class="br-h">${roundName(r)} <span>${weeksOf(r)}</span></h3><div class="br-games">${inner}${third.map(m => `<div class="br-third"><h4 class="br-h br-sub">3rd place <span>${weeksOf(m.r)}</span></h4>${card(m, " br-minor")}</div>`).join("")}</div></section>`);
+    }
+    const others = ms.filter(m => m.p != null && m.p > 3).sort((a, b) => a.p - b.p);
+    const place = others.length ? `<div class="br-place">${others.map(m => `<div class="br-place-g"><h4 class="br-h br-sub">${ordinal(m.p)} place <span>${weeksOf(m.r)}</span></h4>${card(m, " br-minor")}</div>`).join("")}</div>` : "";
+    // context: the seeding rule, the first team out, the oddest fact, your team
+    const rule = P.nWin ? `division winners seeded 1–${P.nWin} · wild cards seeded by record, ties by points for` : `seeded by record, ties by points for`;
+    const pfRank = new Map(P.rows.slice().sort((a, b) => (b.st.pf || 0) - (a.st.pf || 0)).map((r, i) => [r.rid, i + 1]));
+    const info = [];
+    const first = P.out[0];
+    if (first && !seasonOver) {
+      const pr = pfRank.get(first.rid);
+      info.push(["First team out", `<b>${esc(first.t.name)}</b> · ${esc(recordText(first.st) || "0-0")} · PF ${pts(first.st.pf) || "–"}${pr <= 3 ? ` <span class="muted">(${ordinal(pr)}-most points)</span>` : ""}`]);
+    }
+    let note = "";
+    const lowWin = P.seeds.filter(r => r.divWin).find(r => P.seeds.some(x => !x.divWin && winPct(x.st) > winPct(r.st)));
+    if (lowWin) { const k = P.seeds.filter(x => !x.divWin && winPct(x.st) > winPct(lowWin.st)).length;
+      note = `${esc(lowWin.t.name)} is the ${lowWin.seed} seed at ${esc(recordText(lowWin.st))} by winning the ${esc(lowWin.divWin.name)}, ahead of ${k === 1 ? "a wild card" : `${k} wild cards`} with a better record.`; }
+    else if (first && pfRank.get(first.rid) <= 3) note = `${esc(first.t.name)} is the first team out despite the league's ${ordinal(pfRank.get(first.rid))}-most points for.`;
+    else { const lowPf = P.seeds.slice().sort((a, b) => pfRank.get(b.rid) - pfRank.get(a.rid))[0];
+      if (lowPf && pfRank.get(lowPf.rid) > P.spots) note = `${esc(lowPf.t.name)} makes it as the ${lowPf.seed} seed with only the league's ${ordinal(pfRank.get(lowPf.rid))}-most points for.`; }
+    if (note && !seasonOver) info.push(["Notable", note]);
+    const me = P.rows.find(r => r.t.mine);
+    if (me) {
+      const sd = seedOf.get(me.rid); let txt;
+      if (sd) txt = `<b>${sd.seed} seed</b>${byes.some(b => b.rid === me.rid) ? " with a first-round bye" : ""} · ${esc(recordText(me.st) || "0-0")} · PF ${pts(me.st.pf) || "–"}`;
+      else { const last = P.seeds[P.seeds.length - 1], gb = ((last.st.wins || 0) - (me.st.wins || 0) + (me.st.losses || 0) - (last.st.losses || 0)) / 2;
+        txt = `Out today · ${esc(recordText(me.st) || "0-0")} · ${ordinal(P.rows.indexOf(me) + 1)} in the standings` + (!seasonOver && gb > 0 ? ` · ${gb} game${gb === 1 ? "" : "s"} behind the last spot` : "");
+        if (P.divs && !seasonOver) { const dv = P.divs.find(x => x.id === (me.st.division || 0)), w = dv && P.seeds.find(x => x.divWin && x.divWin.id === dv.id);
+          if (w) { const g2 = ((w.st.wins || 0) - (me.st.wins || 0) + (me.st.losses || 0) - (w.st.losses || 0)) / 2; if (g2 > 0) txt += ` · ${g2} behind the ${esc(dv.name)} lead`; } } }
+      info.push(["Your team", `<b>${esc(me.t.name)}</b> · ${txt}`]);
+    }
+    const src = brc && brc.list ? "Pairings from Sleeper's bracket for this league" : slSource() === "sleeper" && brc && brc.loading ? "Loading Sleeper's bracket…" : "Standard bracket built from the seeds";
+    return `<div class="br-wrap">
+      <div class="br-head"><div><h2 class="br-title">${seasonOver ? "Playoff bracket" : "If the playoffs started today"}</h2>
+        <p class="br-lede">${!seasonOver ? "Hypothetical: projected from the current standings and this league's playoff settings. Pairings change as the standings do." : brc && brc.list ? "The league's playoff bracket from Sleeper, with each round's results." : slSource() === "sleeper" ? "Seeded from the final regular-season standings. Results appear once Sleeper's bracket loads." : "Seeded from the final regular-season standings. Results aren't available for this league."}</p>
+        <p class="br-rule">${P.spots} teams · ${byes.length ? `${byes.length === 1 ? "top seed" : `top ${byes.length} seeds`} on a bye · ` : ""}${rule}</p></div>
+        <span class="br-stamp">${played ? `Updated after Week ${played} games` : "No games played yet"}</span></div>
+      <div class="br-grid" style="--br-cols:${R}">${cols.join("")}</div>${place}
+      ${info.length ? `<div class="br-info">${info.map(([k, v]) => `<div class="br-card"><span class="br-k">${k}</span><p>${v}</p></div>`).join("")}</div>` : ""}
+      <p class="br-src">${src} · Tap a team to open it in Power Rankings.</p></div>`;
+  }
   function standingsHtml(ev, d) {
+    const divsV = stDivs(d), view = LT.stView === "bracket" ? "bracket" : divsV && LT.stView !== "league" ? "div" : "league";
+    const viewToggle = `<div class="view-toggle st-view" role="group" aria-label="Standings view">${divsV ? `<button class="vt-btn" type="button" data-st-view="div" aria-pressed="${view === "div"}">By division</button>` : ""}<button class="vt-btn" type="button" data-st-view="league" aria-pressed="${view === "league"}">${divsV ? "League" : "Table"}</button><button class="vt-btn" type="button" data-st-view="bracket" aria-pressed="${view === "bracket"}">Bracket</button></div>`;
+    if (view === "bracket") return `<div class="st-top-row br-top">${viewToggle}</div>` + bracketHtml(ev, d);
     const rows = LG.teams.map(t => ({ t, st: t.roster.settings || {}, x: ev.byRoster.get(String(t.rosterId)) })).filter(r => r.x);
     const games = r => (r.st.wins || 0) + (r.st.losses || 0) + (r.st.ties || 0);
     const played = rows.some(r => games(r) > 0);
@@ -13517,7 +13741,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       : rows.map(r => row(r, r.recRank)).join("");
     const spots = Math.max(1, Math.min(LG.teams.length, Number(S.playoff_teams) || 6));
     const oddsInfo = `Each team's chance to make the playoffs, from ${PO_SIMS.toLocaleString("en-US")} simulations of the rest of the regular season (through Week ${regularWeeks(d)}) on this league's real Sleeper schedule, so who is left to play (strength of schedule) counts. Weekly scores are drawn around each team's expected score: its AM team strength (best lineup and depth in this league's format), blended with its points per game so far as more games are played, with week-to-week swings. A game in progress starts from the points already scored. Then the league's playoff settings decide: ${poRule(divs, spots)}, ties broken on points for. Hover a team's odds for its projected wins and remaining schedule. Not a guarantee: injuries, trades and waiver moves change it.`;
-    const toggle = divs ? `<div class="view-toggle st-view" role="group" aria-label="Standings view"><button class="vt-btn" type="button" data-st-view="div" aria-pressed="${byDiv}">By division</button><button class="vt-btn" type="button" data-st-view="league" aria-pressed="${!byDiv}">League</button></div>` : "";
+    const toggle = viewToggle;
     return `<div class="st-top-row"><p class="method-note">Actual standings next to AM Power Rank (roster strength). Difference: “roster ahead” when the roster ranks higher than the record so far, “record ahead” when the record ranks higher than the roster.${played ? "" : " No games are in the books yet."} Playoffs: ${poRule(divs, spots)}.</p>${toggle}</div>
       <div class="table-scroll"><table class="st-table">
         <thead><tr><th scope="col">${byDiv ? "Div" : "Rk"}</th><th scope="col">Team</th><th scope="col" class="st-mgr">Manager</th><th scope="col">Record</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Streak</th><th scope="col">AM Power Rank</th><th scope="col">Difference</th><th scope="col" class="st-odds-h">Playoff odds ${infoIcon(oddsInfo, "How playoff odds work")}</th></tr></thead>
