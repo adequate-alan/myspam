@@ -11559,11 +11559,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           const touch = (a, b) => b.m[0].posNum === a.m[a.m.length - 1].posNum + 1;
           blocks.forEach((b, bi) => {
             const n = b.m.length, w = Math.min(EW, n / 2);
+            const up = bi > 0 && touch(blocks[bi - 1], b), dn = bi < blocks.length - 1 && touch(b, blocks[bi + 1]);
+            const tUp = j => (up && j + 0.5 < w ? 0.5 * (1 - (j + 0.5) / w) : 0), tDn = j => (dn && n - j - 0.5 < w ? 0.5 * (1 - (n - j - 0.5) / w) : 0);
+            // A two-player tier eases as one block (Alan, Nov 11): both take the pair's average pull from each side, so the two
+            // tiermates keep their own ratio. Eased one by one, the first was pulled up toward the tier above and the second down
+            // toward the tier below, and in shallow formats a few % on the board became 23-31% (AM PPR's overall tiers leave
+            // two-player runs at a position: Kincaid -> Kelce Week 7, Puka Nacua -> Jalen Coker Week 10). Tiers of 1 or 3+ unchanged.
             b.m.forEach((p, j) => {
-              let f = Math.log(fac(p));
-              const dUp = j + 0.5, dDn = n - j - 0.5;
-              if (bi > 0 && dUp < w && touch(blocks[bi - 1], b)) { const t = 0.5 * (1 - dUp / w); f = f * (1 - t) + Math.log(gm(blocks[bi - 1])) * t; }
-              if (bi < blocks.length - 1 && dDn < w && touch(b, blocks[bi + 1])) { const t = 0.5 * (1 - dDn / w); f = f * (1 - t) + Math.log(gm(blocks[bi + 1])) * t; }
+              const f0 = Math.log(fac(p)), tu = n === 2 ? (tUp(0) + tUp(1)) / 2 : tUp(j), td = n === 2 ? (tDn(0) + tDn(1)) / 2 : tDn(j);
+              let f = f0;
+              if (tu) f += (Math.log(gm(blocks[bi - 1])) - f0) * tu;
+              if (td) f += (Math.log(gm(blocks[bi + 1])) - f0) * td;
               eased.set(p.id, p.value * Math.exp(f));
             });
           });
@@ -19897,12 +19903,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
        are bench players opens this gap. Exact pair, spots and format only; a bigger drop, or the same gap anywhere else, fails.
        A second one (Alan, Oct 28, PR #102): in 8-team, 0 PPR, TE premium +1.0 leagues, DJ Moore (WR21, first of Week 8's
        Tier 7) → A.J. Brown (WR22) drops ~26% (614 → 451) where AM PPR has them 2.3% apart: tier-edge easing lifts the first
-       player of a tier toward the tier above more than the second. Same rule: that pair, those spots, that format only, up to 30%. */
+       player of a tier toward the tier above more than the second. Same rule: that pair, those spots, that format only, up to 30%.
+       Since Nov 11 a two-player tier eases as one block (adjustValues), which removes the cause of Kincaid → Kelce and of Week 10's
+       Puka Nacua → Jalen Coker (no exception needed); the DJ Moore entry was a four-WR tier on the ordinary easing ramp. */
     const CLIFF_OK = [{ teams: 8, rec: 0, tep: 0, pos: "TE", a: "10236", c: "1466", at: 9, max: 0.33 },
-      { teams: 8, rec: 0, tep: 1, pos: "WR", a: "4983", c: "5859", at: 21, max: 0.30 },
-      // Week 10 (Nov 11), TEMPORARY: Puka Nacua → Jalen Coker, the only two WRs in Tier 7 (4.3% apart on the board), −23 to −27% in 8-team 0 / 0.5 PPR;
-      // the follow-up formula PR (two-player tiers ease as one block, Alan's Nov 11 choice) removes it
-      ...[[0, 0], [0, 0.5], [0, 1], [0.5, 1]].map(([rec, tep]) => ({ teams: 8, rec, tep, pos: "WR", a: "9493", c: "11646", at: 22, max: 0.30 }))];
+      { teams: 8, rec: 0, tep: 1, pos: "WR", a: "4983", c: "5859", at: 21, max: 0.30 }];
     const cliffs = [], tolerated = [];
     for (const f of fams.filter(f => f.qb === "1")) {
       const vl = lg(f), m = adjMapFor(vl, ppr), T = modelTable(curvesFor(vl.scoring_settings), lineupOf(vl));
@@ -19920,7 +19925,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
     }
     check("AM PPR's overall tiers create no format cliffs in 36 1QB formats", cliffs.slice(0, 5), !cliffs.length);
-    if (tolerated.length) check("Documented format-cliff exceptions still within their recorded size (8-team Standard Kincaid → Kelce, 8-team Standard TEP+1.0 DJ Moore → A.J. Brown, 8-team 0 / 0.5 PPR Puka Nacua → Jalen Coker)", tolerated, true);
+    if (tolerated.length) check("Documented format-cliff exceptions still within their recorded size (8-team Standard Kincaid → Kelce, 8-team Standard TEP+1.0 DJ Moore → A.J. Brown)", tolerated, true);
     const prov = boardPlayers(ppr).filter(p => p.source === "auto"), provOk = prov.every(p => provisionalOn(byId.get(p.id), ppr)) && !players.some(p => provisionalOn(p, sf));
     check(`AM PPR's ${prov.length} Auto players are marked provisional (AM SF PPR TE+ has none)`, [prov.length], prov.length > 0 && provOk);
     const after = { sf: snap(players), lists: BOARDS.map(b => snap(boardPlayers(b))) };
