@@ -7,8 +7,11 @@ step when that is smaller; nothing else changed.
 
 Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/auto_step_check.py
 
+The board is AM PPR as published on Nov 10 (tests/fixtures/auto-step/ppr.csv, main at 51ca807), swapped into today's page,
+so a later rankings publish never moves the four QBs these variants edit (Week 10, Nov 11: they left #169-#172).
+
 Variants of AM PPR's tier-13 QBs (Brissett #169, Watson #170, Herbert #171, Mendoza #172, between Andrews 223 and Taylor 206):
-  live      the board as published
+  live      the frozen board as published
   a         Auto 218 · Manual 217 · Auto 216 · Manual 215   (Manual/Auto mixed, every gap under 1%)
   b         Manual 218 · Auto 217 · Auto 216 · Manual 215   (Auto behind Auto under 1%)
   c         Auto 218 · Manual 214 · Auto 210 · Manual 207   (every gap over 1%)
@@ -25,6 +28,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+FROZEN = open(os.path.join(ROOT, "tests", "fixtures", "auto-step", "ppr.csv"), encoding="utf-8").read().rstrip("\n")
 NEW = "Math.max(0.99, p.value / prevB)"
 FORMATS = [dict(teams=t, qb="1", rec=r, tep=e) for t in (8, 10, 12, 14) for r, e in ((0, 0), (1, 0), (1, 0.5))]
 NATIVE = dict(teams=12, qb="1", rec=1, tep=0)
@@ -40,6 +44,7 @@ def rows_of(text):
 def write(h, rows):
     out = io.StringIO(); w = csv.writer(out, lineterminator="\n"); w.writerow(h); w.writerows(rows); return out.getvalue().rstrip("\n")
 
+_m = PPR_RE.search(SRC); SRC = SRC[:_m.start(2)] + FROZEN + SRC[_m.end(2):]   # the frozen Nov 10 board
 h, live = rows_of(PPR_RE.search(SRC)[2])
 C = {k: h.index(k) for k in ("player", "pos", "rank", "tier", "value", "source", "sleeper_id")}
 NAMES = ["Jacoby Brissett", "Deshaun Watson", "Justin Herbert", "Fernando Mendoza"]
