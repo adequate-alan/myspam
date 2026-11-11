@@ -112,8 +112,9 @@ with sync_playwright() as p:
           return { cols: [...document.querySelectorAll('.br-col')].map(c => ({ h: t(c.querySelector('.br-h')), games: [...c.querySelectorAll('.br-match')].map(m => [...m.querySelectorAll('.br-team')].map(side)) })),
             place: [...document.querySelectorAll('.br-place-g')].map(g => ({ h: t(g.querySelector('.br-h')), sides: [...g.querySelectorAll('.br-team')].map(side) })),
             third: t(document.querySelector('.br-last .br-sub')),
-            hunt: [...document.querySelectorAll('.bh-table tbody tr')].map(r => ({ rid: r.dataset.standingTeam, tag: t(r.querySelector('.br-tag-out')), odds: t(r.querySelector('.st-odds b')), elim: r.classList.contains('elim'), cells: r.cells.length, path: t(r.querySelector('td.bh-path')), pathSub: t(r.querySelector('.bh-path-sub')) })),
+            hunt: [...document.querySelectorAll('.bh-table tbody tr')].map(r => ({ rid: r.dataset.standingTeam, tag: t(r.querySelector('.br-tag-out')), odds: t(r.querySelector('.st-odds b')), step: ((r.querySelector('.st-odds') || {}).className || '').split(' ').find(c => /^o[1-4]$/.test(c)) || '', elim: r.classList.contains('elim'), cells: r.cells.length, path: t(r.querySelector('td.bh-path')), pathSub: t(r.querySelector('.bh-path-sub')) })),
             huntCols: [...document.querySelectorAll('.bh-table thead th')].map(t),
+            huntSub: t(document.querySelector('.br-hunt-sub')), topEdge: [...document.querySelectorAll('.br-col:first-child .br-match')].filter(m => parseFloat(getComputedStyle(m).borderTopWidth) >= 2).map(m => m.querySelector('.br-team').dataset.standingTeam).sort(),
             divwin: [...document.querySelectorAll('.br-col:first-child .br-team.divwin')].map(x => x.dataset.standingTeam).sort(),
             crowns: [...document.querySelectorAll('.br-col:first-child .br-team')].filter(x => x.querySelector('.br-crown')).map(x => x.dataset.standingTeam).sort(),
             cards: [...document.querySelectorAll('.br-card')].map(c => [t(c.querySelector('.br-k')), t(c.querySelector('p'))]),
@@ -157,11 +158,15 @@ with sync_playwright() as p:
     ok(B["huntCols"] == ["Team", "Division", "Record", "PF", "Path to a spot", "Playoff odds"], f"In the hunt columns ({B['huntCols']})")
     # the path in games, from the records: the last spot is the 6 seed (5-4, the last wild card), each team's own division leader
     hp = {h["rid"]: h["path"] for h in H}
-    want = {"11": "2 games behind the last spot · 1 game behind the Swamp leader · 5 games left",
-            "6": "1 game behind the last spot · 3 games behind the East leader · 5 games left",
-            "9": "1 game behind the last spot · level with the Swamp leader, behind on points for · 5 games left"}
+    want = {"11": "2 games behind the last spot · 1 game behind the Swamp leader",
+            "6": "1 game behind the last spot · 3 games behind the East leader",
+            "9": "1 game behind the last spot · level with the Swamp leader, behind on points for"}
     ok(all(hp.get(k) == v for k, v in want.items()), f"each team's path to a spot in games ({ {k: hp.get(k) for k in want} })")
     ok(all(h["pathSub"] == h["path"] for h in H), "the same path is in the team cell for phones")
+    ok(B["huntSub"].endswith("· 5 games left for each"), f"games left is said once when every team has the same number ({B['huntSub']!r})")
+    stp = lambda v: "o1" if v >= 50 else "o2" if v >= 25 else "o3" if v >= 10 else "o4"
+    ok(all(h["step"] == stp(pct(h["odds"])) for h in H), f"each odds cell takes its color step ({[(h['odds'], h['step']) for h in H]})")
+    ok(B["topEdge"] == sorted(r for r in B["divwin"] if r in B["topEdge"]) and set(B["topEdge"]) <= set(B["divwin"]) and B["topEdge"], f"only cards led by a division winner get the gold top edge ({B['topEdge']})")
     ok(not any(h["elim"] for h in H), "nobody is eliminated with five weeks left")
     hunt_odds = {h["rid"]: h["odds"] for h in H}
     ok("Team L1-7 is the 3 seed at 4-5 by winning the Swamp, ahead of 3 wild cards with a better record." == cards.get("Notable"), f"notable card ({cards.get('Notable')!r})")
@@ -255,8 +260,20 @@ with sync_playwright() as p:
     el = sorted(int(h["rid"]) for h in H if h["elim"])
     ok(el == [6, 7, 8, 9, 10, 11, 12] and all(h["odds"] == "Eliminated" for h in H if h["elim"]) and H[0]["rid"] == "5" and H[0]["tag"] == "First team out",
        f"eliminated teams labelled and listed last, the live first team out on top ({[(h['rid'], h['odds']) for h in H]})")
-    ok(H[0]["path"] == "1 game behind the last spot · 1 game left" and all(h["path"] == "Can't reach a spot" for h in H if h["elim"]),
-       f"without divisions the path is the last spot only; eliminated teams can't reach one ({H[0]['path']!r})")
+    ok(H[0]["path"] == "1 game behind the last spot" and read(pg)["huntSub"].endswith("· 1 game left for each") and all(h["path"] == "Can't reach a spot" for h in H if h["elim"]),
+       f"without divisions the path is the last spot only (games left said once above); eliminated teams can't reach one ({H[0]['path']!r})")
+    pg.close()
+
+    # 2e: teams with different games left (one played a game fewer): each row says its own count, the subtitle doesn't
+    rec4 = {i: (8 - i // 2, i // 2, 1300 - 10 * i, 0) for i in range(1, 13)}
+    rec4[6] = (4, 3, 1240, 0)
+    pg = page(league("L2", rec4, None, 4), None)
+    B = read(pg); H = B["hunt"]
+    live = [h for h in H if not h["elim"]]
+    r6 = next((h for h in live if h["rid"] == "6"), None)
+    ok("left for each" not in B["huntSub"] and r6 is not None and r6["path"].endswith("7 games left")
+       and all(h["path"].endswith("6 games left") for h in live if h["rid"] != "6"),
+       f"uneven games left: each row has its own count, none in the subtitle ({B['huntSub']!r}, {[(h['rid'], h['path']) for h in live]})")
     pg.close()
 
     # 3: playoffs underway (Sleeper results)
