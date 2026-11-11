@@ -114,7 +114,7 @@ with sync_playwright() as p:
             third: t(document.querySelector('.br-last .br-sub')),
             hunt: [...document.querySelectorAll('.bh-table tbody tr')].map(r => ({ rid: r.dataset.standingTeam, tag: t(r.querySelector('.br-tag-out')), odds: t(r.querySelector('.st-odds b')), step: ((r.querySelector('.st-odds') || {}).className || '').split(' ').find(c => /^o[1-4]$/.test(c)) || '', elim: r.classList.contains('elim'), cells: r.cells.length, path: t(r.querySelector('td.bh-path')), pathSub: t(r.querySelector('.bh-path-sub')) })),
             huntCols: [...document.querySelectorAll('.bh-table thead th')].map(t),
-            huntSub: t(document.querySelector('.br-hunt-sub')), topEdge: [...document.querySelectorAll('.br-col:first-child .br-match')].filter(m => parseFloat(getComputedStyle(m).borderTopWidth) >= 2).map(m => m.querySelector('.br-team').dataset.standingTeam).sort(),
+            huntSub: t(document.querySelector('.br-hunt-sub')), wash: [...document.querySelectorAll('.br-team.divwin')].filter(x => getComputedStyle(x).backgroundImage !== 'none').length, topEdge: [...document.querySelectorAll('.br-col:first-child .br-match')].filter(m => parseFloat(getComputedStyle(m).borderTopWidth) >= 2).map(m => m.querySelector('.br-team').dataset.standingTeam).sort(),
             divwin: [...document.querySelectorAll('.br-col:first-child .br-team.divwin')].map(x => x.dataset.standingTeam).sort(),
             crowns: [...document.querySelectorAll('.br-col:first-child .br-team')].filter(x => x.querySelector('.br-crown')).map(x => x.dataset.standingTeam).sort(),
             cards: [...document.querySelectorAll('.br-card')].map(c => [t(c.querySelector('.br-k')), t(c.querySelector('p'))]),
@@ -166,7 +166,7 @@ with sync_playwright() as p:
     ok(B["huntSub"].endswith("· 5 games left for each"), f"games left is said once when every team has the same number ({B['huntSub']!r})")
     stp = lambda v: "o1" if v >= 50 else "o2" if v >= 25 else "o3" if v >= 10 else "o4"
     ok(all(h["step"] == stp(pct(h["odds"])) for h in H), f"each odds cell takes its color step ({[(h['odds'], h['step']) for h in H]})")
-    ok(B["topEdge"] == sorted(r for r in B["divwin"] if r in B["topEdge"]) and set(B["topEdge"]) <= set(B["divwin"]) and B["topEdge"], f"only cards led by a division winner get the gold top edge ({B['topEdge']})")
+    ok(B["topEdge"] == [] and B["wash"] == 0, f"division winners are marked by the crown, label and seed only: no card top edge, no row wash ({B['topEdge']}, {B['wash']})")
     ok(not any(h["elim"] for h in H), "nobody is eliminated with five weeks left")
     hunt_odds = {h["rid"]: h["odds"] for h in H}
     ok("Team L1-7 is the 3 seed at 4-5 by winning the Swamp, ahead of 3 wild cards with a better record." == cards.get("Notable"), f"notable card ({cards.get('Notable')!r})")
