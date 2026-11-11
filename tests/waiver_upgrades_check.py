@@ -15,15 +15,20 @@ owns roster 3. Every expected list is recomputed here in Python from the page's 
   5. values follow the league's own board (1QB → AM PPR) and the numbers shown are its league-adjusted values
   6. switching leagues and a Sleeper refresh that changes ownership recalculate the list and the count
   7. both themes at 1440 and 390 render with no sideways scroll; no page errors
+Runs on the frozen test board (tests/fixture_board.py; Nov 11: Michael Wilson going to Out for season on the live
+board reshuffled the synthetic rosters, so the summary scenario's precondition broke on unchanged code). The AM PPR
+block is the live one, as for every fixture suite.
 Screenshots go to SHOTS=dir when set. Run from the repo root:  python3 tests/waiver_upgrades_check.py
 """
 import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fixture_board as FB
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHOTS = os.environ.get("SHOTS")
-src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
-rows = [r for r in csv.DictReader(io.StringIO(re.search(r"RANKINGS_CSV\s*=\s*`(.*?)`", src, re.S).group(1).strip())) if r["sleeper_id"]]
+rows = [r for r in FB.rows() if r["sleeper_id"]]
 rows.sort(key=lambda r: int(r["rank"]))
 NAME = {r["sleeper_id"]: r["player"] for r in rows}
 ZERO = [r["sleeper_id"] for r in rows if r["value"] in ("0", "0.0")]
@@ -107,6 +112,7 @@ with sync_playwright() as p:
             route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
         pg = br.new_page(viewport={"width": width, "height": 900})
         pg.on("pageerror", lambda e: errs.append(str(e)))
+        FB.route(pg, f"http://127.0.0.1:{srv.server_address[1]}")
         pg.route("https://api.sleeper.app/**", sleeper)
         pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.com|api\.github\.com|fonts\..*|use\.typekit\.net)/.*"), lambda r: r.abort())
         pg.add_init_script(f"if (!sessionStorage.getItem('t')) {{ sessionStorage.setItem('t', '1'); localStorage.clear(); localStorage.setItem('spm_sleeper', {json.dumps(json.dumps(SL))}); localStorage.setItem('spm_theme', '{theme}'); }}")
