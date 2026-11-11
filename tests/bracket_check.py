@@ -264,6 +264,18 @@ with sync_playwright() as p:
        f"without divisions the path is the last spot only (games left said once above); eliminated teams can't reach one ({H[0]['path']!r})")
     pg.close()
 
+    # 2e: teams with different games left (one played a game fewer): each row says its own count, the subtitle doesn't
+    rec4 = {i: (8 - i // 2, i // 2, 1300 - 10 * i, 0) for i in range(1, 13)}
+    rec4[6] = (4, 3, 1240, 0)
+    pg = page(league("L2", rec4, None, 4), None)
+    B = read(pg); H = B["hunt"]
+    live = [h for h in H if not h["elim"]]
+    r6 = next((h for h in live if h["rid"] == "6"), None)
+    ok("left for each" not in B["huntSub"] and r6 is not None and r6["path"].endswith("7 games left")
+       and all(h["path"].endswith("6 games left") for h in live if h["rid"] != "6"),
+       f"uneven games left: each row has its own count, none in the subtitle ({B['huntSub']!r}, {[(h['rid'], h['path']) for h in live]})")
+    pg.close()
+
     # 3: playoffs underway (Sleeper results)
     done = [dict(m) for m in L1_BRACKET]
     done[0].update(w=3, l=4); done[1].update(w=7, l=5); done[2].update(t2=3); done[3].update(t2=7)
