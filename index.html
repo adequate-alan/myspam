@@ -3310,10 +3310,7 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .br-src { margin: 14px 0 0; font-size: 0.74rem; color: var(--muted); }
 /* division winners (Alan, Nov 10): a gold top edge on the card, a faint gold wash on the row, a gold-outlined seed and
    a gold crown + label; quieter than your team's red edge, which stays the identity signal */
-.br-team.divwin .br-seed { background: color-mix(in srgb, var(--div-win) 14%, transparent); border: 1px solid var(--div-win); border-radius: 4px; color: var(--div-win-text); line-height: 20px; width: 22px; }
-.br-team.divwin { background: linear-gradient(180deg, color-mix(in srgb, var(--div-win) 9%, transparent), transparent 85%); }
-.br-team.divwin:hover { background: var(--surface-hover); }
-.br-match:has(> .br-team.divwin:first-child) { border-top: 2px solid var(--div-win); }
+.br-team.divwin .br-seed { background: color-mix(in srgb, var(--div-win) 7%, transparent); border: 1px solid color-mix(in srgb, var(--div-win) 55%, var(--border)); border-radius: 4px; color: var(--div-win-text); line-height: 20px; width: 22px; }
 .br-dw { display: inline-flex; align-items: center; gap: 4px; color: var(--div-win-text); font-weight: 650; }
 .br-crown { flex: none; color: var(--div-win); }
 .br-hunt { margin-top: 28px; }
