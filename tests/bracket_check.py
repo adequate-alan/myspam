@@ -166,6 +166,13 @@ with sync_playwright() as p:
     ok(B["huntSub"].endswith("· 5 games left for each"), f"games left is said once when every team has the same number ({B['huntSub']!r})")
     stp = lambda v: "o1" if v >= 50 else "o2" if v >= 25 else "o3" if v >= 10 else "o4"
     ok(all(h["step"] == stp(pct(h["odds"])) for h in H), f"each odds cell takes its color step ({[(h['odds'], h['step']) for h in H]})")
+    # Standings and In the hunt draw each odds step in the same colors (number and bar)
+    hc = pg.evaluate("""() => { const m = {}; document.querySelectorAll('.bh-table td.st-odds').forEach(td => { const k = [...td.classList].find(c => /^o[1-4]$/.test(c)); const s = td.querySelector('.st-odds-bar span'); if (k) m[k] = [getComputedStyle(td.querySelector('b')).color, s ? getComputedStyle(s).backgroundColor : '']; }); return m; }""")
+    pg.click('[data-st-view="league"]'); pg.wait_for_timeout(400)
+    sc = pg.evaluate("""() => { const m = {}; document.querySelectorAll('.st-table td.st-odds').forEach(td => { const k = [...td.classList].find(c => /^o[1-4]$/.test(c)); const s = td.querySelector('.st-odds-bar span'); if (k) m[k] = [getComputedStyle(td.querySelector('b')).color, s ? getComputedStyle(s).backgroundColor : '']; }); return m; }""")
+    ok(hc and all(sc.get(k) == v for k, v in hc.items()), f"Standings odds cells use In the hunt's colors for each step (hunt {hc}, standings {sc})")
+    ok(len({v[0] for v in sc.values()}) == len(sc), f"each Standings odds step has its own number color ({sc})")
+    pg.click('[data-st-view="bracket"]'); pg.wait_for_timeout(600)
     ok(B["topEdge"] == [] and B["wash"] == 0, f"division winners are marked by the crown, label and seed only: no card top edge, no row wash ({B['topEdge']}, {B['wash']})")
     ok(not any(h["elim"] for h in H), "nobody is eliminated with five weeks left")
     hunt_odds = {h["rid"]: h["odds"] for h in H}
