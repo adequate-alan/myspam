@@ -3253,10 +3253,14 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .st-table td.st-odds { text-align: right; min-width: 92px; }
 .st-odds b { display: block; font-size: 0.92rem; font-weight: 750; color: var(--heading); }
 .st-odds.lo b { color: var(--muted); }
-.st-odds-bar { display: block; margin: 4px 0 0 auto; width: 64px; height: 4px; border-radius: 2px; background: var(--line-soft); overflow: hidden; }
+/* odds color (Alan, Nov 10): the number and its bar share one step of the scale, ≥50% · 25–50% · 10–25% · under 10% */
+.st-odds-bar { display: block; margin: 5px 0 0 auto; width: 64px; height: 5px; border-radius: 3px; background: var(--fill-2, var(--line-soft)); overflow: hidden; }
 .st-odds-bar span { display: block; height: 100%; background: var(--muted); }
 .st-odds.hi .st-odds-bar span { background: var(--rb); }
 .st-odds.mid .st-odds-bar span { background: var(--ink-2); }   /* Oct 11: mid odds are a statistic, not a selection; brand red stays for identity and selection */
+.st-odds.o1 b { color: var(--odds-1-text); } .st-odds.o2 b { color: var(--odds-2-text); } .st-odds.o3 b { color: var(--odds-3-text); } .st-odds.o4 b { color: var(--odds-4-text); }
+.st-odds.o1 .st-odds-bar span { background: var(--odds-1); } .st-odds.o2 .st-odds-bar span { background: var(--odds-2); }
+.st-odds.o3 .st-odds-bar span { background: var(--odds-3); } .st-odds.o4 .st-odds-bar span { background: var(--odds-4); }
 /* Standings → Bracket (Nov 10): the playoff picture today */
 .br-top { justify-content: flex-end; }
 .br-wrap { max-width: 1240px; }
@@ -3303,9 +3307,14 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .br-card p { margin: 4px 0 0; font-size: 0.84rem; line-height: 1.45; color: var(--text-secondary); }
 .br-card p b { color: var(--heading); font-weight: 700; }
 .br-src { margin: 14px 0 0; font-size: 0.74rem; color: var(--muted); }
-.br-team.divwin .br-seed { background: var(--fill-2, rgba(255,255,255,.08)); border: 1px solid var(--text-secondary); border-radius: 4px; color: var(--heading); line-height: 20px; width: 22px; }
-.br-dw { display: inline-flex; align-items: center; gap: 4px; color: var(--heading); font-weight: 600; }
-.br-crown { flex: none; color: var(--text-secondary); }
+/* division winners (Alan, Nov 10): a gold top edge on the card, a faint gold wash on the row, a gold-outlined seed and
+   a gold crown + label; quieter than your team's red edge, which stays the identity signal */
+.br-team.divwin .br-seed { background: color-mix(in srgb, var(--div-win) 14%, transparent); border: 1px solid var(--div-win); border-radius: 4px; color: var(--div-win-text); line-height: 20px; width: 22px; }
+.br-team.divwin { background: linear-gradient(180deg, color-mix(in srgb, var(--div-win) 9%, transparent), transparent 85%); }
+.br-team.divwin:hover { background: var(--surface-hover); }
+.br-match:has(> .br-team.divwin:first-child) { border-top: 2px solid var(--div-win); }
+.br-dw { display: inline-flex; align-items: center; gap: 4px; color: var(--div-win-text); font-weight: 650; }
+.br-crown { flex: none; color: var(--div-win); }
 .br-hunt { margin-top: 28px; }
 .br-hunt-h { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--heading); letter-spacing: 0; }
 .br-hunt-sub { margin: 2px 0 10px; font-size: 0.8rem; color: var(--muted); }
@@ -4454,6 +4463,9 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   --vt-bg: rgba(255, 255, 255, 0.04); --vt-ink: #A7ABB3; --vt-line: transparent; --vt-on: rgba(255, 255, 255, 0.09); --vt-on-ink: #F6F7F9; --vt-on-line: transparent;
   --warn: #E0A030; --warn-text: #E0A030; --warn-tint: rgba(224, 160, 48, 0.10);
   --badge-a: 0.13; --badge-b: 0.42; --row-sel: color-mix(in srgb, var(--am-red) 7%, transparent);
+  /* playoffs (Alan, Nov 10): division winners in gold; playoff odds on a green → amber → orange → brick scale (fill / text) */
+  --div-win: #E3B341; --div-win-text: #E8BE57;
+  --odds-1: #3FBF7F; --odds-1-text: #55C98C; --odds-2: #E0A030; --odds-2-text: #E6AC45; --odds-3: #E07B3C; --odds-3-text: #EA8C52; --odds-4: #D9634F; --odds-4-text: #E8806F;
 }
 :root[data-theme="light"] {
   --navy: #101114; --navy-hi: #2A2D33; --navy-tint: rgba(16, 17, 20, 0.05); --navy-ink: #25272C; --red-tint: color-mix(in srgb, var(--am-red) 7%, transparent);
@@ -4463,6 +4475,8 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   --vt-bg: rgba(16, 17, 20, 0.045); --vt-ink: #62656C; --vt-line: transparent; --vt-on: #FFFFFF; --vt-on-ink: #101114; --vt-on-line: transparent;
   --warn: #B7791F; --warn-text: #7E5311; --warn-tint: rgba(183, 121, 31, 0.08);
   --badge-a: 0.09; --badge-b: 0.35; --row-sel: color-mix(in srgb, var(--am-red) 4.5%, transparent);
+  --div-win: #C9971E; --div-win-text: #7F5A0B;
+  --odds-1: #1E9A5C; --odds-1-text: #0F6E3E; --odds-2: #D08F1E; --odds-2-text: #7E5311; --odds-3: #D86A2A; --odds-3-text: #9C4212; --odds-4: #C8503C; --odds-4-text: #A63A2E;
 }
 /* focus and hover borders: navy, never red */
 .search:focus, .select:focus, .import-dialog textarea:focus, dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { border-color: var(--focus-line); }
@@ -13570,9 +13584,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const o = po.byRid.get(rid); if (!o) return `<td class="num st-odds"><span class="muted">—</span></td>`;
     const pct = 100 * o.p, txt = !po.gamesLeft ? (o.p >= 0.5 ? "In" : "Out") : pct >= 99.5 ? ">99%" : pct > 0 && pct < 0.5 ? "<1%" : pct === 0 ? "0%" : Math.round(pct) + "%";
     const tone = pct >= 75 ? "hi" : pct >= 35 ? "mid" : "lo";
+    const step = !po.gamesLeft ? (o.p >= 0.5 ? "o1" : "") : pct >= 50 ? "o1" : pct >= 25 ? "o2" : pct >= 10 ? "o3" : "o4";
     const tip = !po.gamesLeft ? "Regular season over" : `${Math.round(pct * 10) / 10}% of ${PO_SIMS.toLocaleString("en-US")} simulated seasons · projected ${o.projW.toFixed(1)} wins · ${o.left} game${o.left === 1 ? "" : "s"} left`
       + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · odds model average ${o.mu.toFixed(1)} pts/week (the playoff model blends points scored so far, K/DEF included where the league starts them, with its own team-strength estimate: a different model from Power Rankings' expected lineup PPG)`;
-    return `<td class="num st-odds ${tone}" title="${esc(tip)}"><b>${txt}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
+    return `<td class="num st-odds ${tone} ${step}" title="${esc(tip)}"><b>${txt}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
   }
   // the league's playoff rule in words: e.g. "the 3 division winners, then the next 3 best records (6 teams)"
   const poRule = (divs, spots) => divs && divs.length <= spots
@@ -13767,14 +13782,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const GB = (a, b) => (((a.wins || 0) - (b.wins || 0)) + ((b.losses || 0) - (a.losses || 0))) / 2;
     const wild = P.seeds.filter(x => !x.divWin), lastSpot = (P.divs && wild.length ? wild : P.seeds).slice(-1)[0];
     const gbTxt = g => (g === 0.5 ? "½ game" : `${String(g).replace(".5", "½")} game${g === 1 ? "" : "s"}`);
+    const leftOf = x => { const o = ok && po.byRid.get(x.r.t.rosterId); return o ? o.left : Math.max(0, last - G(x.r.st)); };
+    // games left (Alan, Nov 10): said once above the table when every team in the hunt has the same number, per row otherwise
+    const live = list.filter(x => !x.elim), sameLeft = live.length && live.every(x => leftOf(x) === leftOf(live[0])) ? leftOf(live[0]) : null;
     const path = x => {
       if (x.elim) return "";
-      const r = x.r, o = ok && po.byRid.get(r.t.rosterId), left = o ? o.left : Math.max(0, last - G(r.st)), parts = [];
+      const r = x.r, left = leftOf(x), parts = [];
       if (lastSpot) { const g = GB(lastSpot.st, r.st);
         parts.push(g > 0 ? `${gbTxt(g)} behind the last spot` : g === 0 ? "level with the last spot, behind on points for" : "ahead of the last spot on record"); }
       const dv = P.divs && P.divs.find(v => v.id === (r.st.division || 0)), lead = dv && P.seeds.find(v => v.divWin && v.divWin.id === dv.id);
       if (lead) { const g = GB(lead.st, r.st); parts.push(g > 0 ? `${gbTxt(g)} behind the ${dv.name} leader` : `level with the ${dv.name} leader, behind on points for`); }
-      parts.push(`${left} game${left === 1 ? "" : "s"} left`);
+      if (sameLeft == null) parts.push(`${left} game${left === 1 ? "" : "s"} left`);
       return parts.join(" · ");
     };
     const oddsTd = x => x.elim ? `<td class="num st-odds lo"><b>Eliminated</b></td>` : oddsCell(po, x.r.t.rosterId);
@@ -13787,7 +13805,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         <td class="num bh-pf">${r.st.pf ? pts(r.st.pf) : "–"}${pr <= 3 ? `<small>${ordinal(pr)}-most</small>` : ""}</td><td class="bh-path">${esc(path(x)) || `<span class="muted">Can't reach a spot</span>`}</td>${oddsTd(x)}</tr>`; };
     const note = po && po.none ? po.none : `Playoff odds: the chance of finishing in the top ${P.spots} by the end of the regular season (Week ${last}), from the same simulation as the Standings table. The bracket above is today's standings only.`;
     return `<section class="br-hunt"><h3 class="br-hunt-h">In the hunt</h3>
-      <p class="br-hunt-sub">${P.out.length === 1 ? "The team" : `The ${P.out.length} teams`} outside today's playoff field, by playoff odds</p>
+      <p class="br-hunt-sub">${P.out.length === 1 ? "The team" : `The ${P.out.length} teams`} outside today's playoff field, by playoff odds${sameLeft != null ? ` · ${sameLeft} game${sameLeft === 1 ? "" : "s"} left for each` : ""}</p>
       <div class="table-scroll"><table class="bh-table"><thead><tr><th>Team</th>${hasDiv ? `<th class="bh-div">Division</th>` : ""}<th class="num">Record</th><th class="num bh-pf">PF</th><th class="bh-path">Path to a spot</th><th class="num st-odds-h">Playoff odds</th></tr></thead>
       <tbody>${list.map(row).join("")}</tbody></table></div><p class="br-hunt-note">${esc(note)}</p></section>`;
   }
