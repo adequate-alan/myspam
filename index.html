@@ -3259,6 +3259,12 @@ td.ro-num:last-child, th.ro-num:last-child { padding-right: 14px; }
 .st-table td.st-odds { text-align: right; min-width: 92px; }
 .st-odds b { display: block; font-size: 0.92rem; font-weight: 750; color: var(--heading); }
 .st-odds.lo b { color: var(--muted); }
+/* the odds as a button (Alan, Nov 10): a click, tap or keyboard focus opens how the team gets in */
+.st-odds-btn { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer;
+  text-decoration: underline dotted color-mix(in srgb, var(--muted) 70%, transparent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.st-odds-btn:hover { text-decoration-color: currentColor; }
+.st-odds-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
+.hc .hc-r.po-self .hc-k, .hc .hc-r.po-self .hc-v { color: var(--heading); font-weight: 700; }
 /* odds color (Alan, Nov 10): the number and its bar share one step of the scale, ≥50% · 25–50% · 10–25% · under 10% */
 .st-odds-bar { display: block; margin: 5px 0 0 auto; width: 64px; height: 5px; border-radius: 3px; background: var(--fill-2, var(--line-soft)); overflow: hidden; }
 .st-odds-bar span { display: block; height: 100%; background: var(--muted); }
@@ -13556,7 +13562,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const key = [id, spots, divs ? 1 : 0, weeks.join(","), teams.map(x => [x.rid, x.st.wins, x.st.losses, x.st.ties, Math.round(x.st.pf || 0), Math.round(x.mu), x.div].join(":")).join("|"),
                  games.map(([a, b]) => `${a.rid}-${b.rid}-${Math.round(a.base)}-${Math.round(b.base)}`).join(",")].join("#");
     if (poCache.key === key) return poCache.res;
-    const n = teams.length, idx = new Map(teams.map((x, i) => [x.rid, i])), made = new Float64Array(n), wins = new Float64Array(n);
+    const n = teams.length, idx = new Map(teams.map((x, i) => [x.rid, i])), made = new Float64Array(n), wins = new Float64Array(n), divWon = new Float64Array(n);
     let seed = 0; for (const c of id) seed = (seed * 31 + c.charCodeAt(0)) | 0;
     const rnd = mulberry(seed), gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
     const W = new Float64Array(n), PF = new Float64Array(n), form = new Float64Array(n), order = teams.map((_, i) => i);
@@ -13575,7 +13581,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       }
       order.sort((p, q) => (W[q] - W[p]) || (PF[q] - PF[p]));
       const inSet = new Set();
-      if (divIds.length && divIds.length <= spots) divIds.forEach(dv_ => { const top = order.find(i => teams[i].div === dv_); if (top != null) inSet.add(top); });
+      if (divIds.length && divIds.length <= spots) divIds.forEach(dv_ => { const top = order.find(i => teams[i].div === dv_); if (top != null) { inSet.add(top); divWon[top]++; } });
       for (const i of order) { if (inSet.size >= spots) break; inSet.add(i); }
       inSet.forEach(i => { made[i]++; });
       for (let i = 0; i < n; i++) wins[i] += W[i];
@@ -13583,7 +13589,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const res = { spots, gamesLeft: games.length, divs: !!divIds.length, byRid: new Map() };
     const sosList = teams.map(x => ({ rid: x.rid, sos: opp.get(x.rid).length ? opp.get(x.rid).reduce((a, v) => a + v, 0) / opp.get(x.rid).length : null }));
     const sosRank = new Map(sosList.filter(x => x.sos != null).sort((a, b) => b.sos - a.sos).map((x, k) => [x.rid, k + 1]));
-    teams.forEach((x, i) => res.byRid.set(x.rid, { p: made[i] / PO_SIMS, projW: wins[i] / PO_SIMS, left: opp.get(x.rid).length, sos: sosRank.get(x.rid) || null, mu: x.mu }));
+    // how each team gets in (Alan, Nov 10): the same seasons split into two routes that never overlap, winning the division
+    // (pd) or a wild card without it (pw = p − pd), so the two always add up to the odds
+    teams.forEach((x, i) => res.byRid.set(x.rid, { p: made[i] / PO_SIMS, pd: divWon[i] / PO_SIMS, pw: (made[i] - divWon[i]) / PO_SIMS, div: x.div, projW: wins[i] / PO_SIMS, left: opp.get(x.rid).length, sos: sosRank.get(x.rid) || null, mu: x.mu }));
     res.sosN = sosRank.size;
     poCache = { key, res };
     return res;
@@ -13597,7 +13605,21 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const step = !po.gamesLeft ? (o.p >= 0.5 ? "o1" : "") : pct >= 50 ? "o1" : pct >= 25 ? "o2" : pct >= 10 ? "o3" : "o4";
     const tip = !po.gamesLeft ? "Regular season over" : `${Math.round(pct * 10) / 10}% of ${PO_SIMS.toLocaleString("en-US")} simulated seasons · projected ${o.projW.toFixed(1)} wins · ${o.left} game${o.left === 1 ? "" : "s"} left`
       + (o.sos ? ` · remaining schedule ${ordinal(o.sos)} hardest of ${po.sosN}` : "") + ` · odds model average ${o.mu.toFixed(1)} pts/week (the playoff model blends points scored so far, K/DEF included where the league starts them, with its own team-strength estimate: a different model from Power Rankings' expected lineup PPG)`;
-    return `<td class="num st-odds ${tone} ${step}" title="${esc(tip)}"><b>${txt}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
+    // with divisions and games left, the number opens how the team gets in (division title vs wild card)
+    const btn = po.divs && po.gamesLeft ? `<button type="button" class="st-odds-btn" data-hc="po:${esc(rid)}" data-po-route aria-label="${txt} playoff odds: how ${esc(teamName(rid))} gets in">${txt}</button>` : txt;
+    return `<td class="num st-odds ${tone} ${step}" title="${esc(tip)}"><b>${btn}</b><span class="st-odds-bar"><span style="width:${Math.max(pct > 0 ? 3 : 0, pct).toFixed(1)}%"></span></span></td>`;
+  }
+  // the odds as text: ">99%", "<1%", whole percents otherwise
+  const poPctTxt = pct => (pct >= 99.5 ? ">99%" : pct > 0 && pct < 0.5 ? "<1%" : Math.round(pct) + "%");
+  const teamName = rid => { const t = LG.teams.find(x => String(x.rosterId) === String(rid)); return t ? t.name : ""; };
+  // the two routes in whole percents that add up to the rounded total (largest remainder), "<1%" for a route that
+  // happens but rounds to 0
+  function poParts(o) {
+    const a = 100 * o.pd, b = 100 * o.pw, target = Math.round(100 * o.p);
+    let fa = Math.floor(a), fb = Math.floor(b), rem = target - fa - fb;
+    if (rem >= 2) { fa++; fb++; } else if (rem === 1) { if (a - fa >= b - fb) fa++; else fb++; }
+    const t = (n, raw) => (n === 0 && raw > 0 ? "<1%" : n + "%");
+    return { div: t(fa, a), wild: t(fb, b), total: poPctTxt(100 * o.p) };
   }
   // the league's playoff rule in words: e.g. "the 3 division winners, then the next 3 best records (6 teams)"
   const poRule = (divs, spots) => divs && divs.length <= spots
@@ -14790,6 +14812,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (an) { analyzeTrade(an.dataset.thAnalyze); return; }
     if (e.target.closest("[data-th-refresh]")) { const d = activeData(); if (d) LT.error[d.league.league_id] = ""; loadTrades(true); return; }
     if (e.target.closest("[data-lg-retry]")) { renderLeague(); return; }
+    const por = e.target.closest("[data-po-route]");   // the odds open how the team gets in, never the row's team page
+    if (por) { if (HC.trig === por && HC.sheet) hcClose(); else hcOpen(por, { sheet: !HC_FINE.matches }); return; }
     const st = e.target.closest("[data-standing-team]");
     if (st) { openTeam(st.dataset.standingTeam); return; }
     const pbl = e.target.closest("[data-pos-board]");
@@ -20382,6 +20406,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     }
     return head + hcSec("", body) + hcSec("Position rooms", rooms) + lens +
       hcFoot(`${esc(formatLabel(valueLeague() || activeData().league))}: roster value = the league-adjusted AM values of every active player added up (injured reserve and taxi not counted); expected lineup PPG = an AM-implied estimate, not the weekly projections, of what the playable QB/RB/WR/TE lineup scores per week for the rest of the regular season, from AM values converted to points, with byes and typical absences (injured reserve counted as healthy). The playoff odds in Standings use a separate simulation, so their weekly score differs. Position rooms are AM values. Earlier power ranks aren't stored, so changes since last week can't be shown.`);
+  };
+
+  /* How a team gets in (Alan, Nov 10): the playoff odds split into two routes that never overlap, from the same simulated
+     seasons as the odds (playoffOdds: pd = seasons it won its division, pw = in as a wild card without it), rounded so
+     the routes add up to the total; then every team's chance at that division title. Never a second simulation. */
+  HC_KINDS.po = rid => {
+    const res = poCache.res; if (!res || !res.byRid || !res.divs) return null;
+    const o = [...res.byRid.entries()].find(([k]) => String(k) === String(rid)); if (!o) return null;
+    const x = o[1], d = activeData(), divs = d && stDivs(d), dv = divs && divs.find(v => v.id === x.div);
+    const t = LG.teams.find(y => String(y.rosterId) === String(rid)); if (!t || !dv) return null;
+    const P = poParts(x);
+    const head = `<div class="hc-h">${teamFace(t, "xs")}<span class="hc-id"><span class="hc-n">${esc(t.name)}</span><span class="hc-sub">Playoff odds · how ${t.mine ? "you get" : "they get"} in</span></span></div>`;
+    const body = hcRow(`Win the ${esc(dv.name)}`, `<b>${P.div}</b>`) +
+      hcRow("Wild card", `<b>${P.wild}</b>`, "· in without winning the division") +
+      hcRow("Total", `<b>${P.total}</b>`, "· either route");
+    const mates = [...res.byRid.entries()].filter(([, y]) => y.div === x.div).sort((a, b) => b[1].pd - a[1].pd);
+    const title = mates.map(([k, y]) => `<div class="hc-r${String(k) === String(rid) ? " po-self" : ""}"><span class="hc-k">${esc(teamName(k))}</span><span class="hc-v">${poPctTxt(100 * y.pd)}</span></div>`).join("");
+    const season = hcRow("Projected wins", x.projW.toFixed(1)) + hcRow("Games left", String(x.left)) +
+      (x.sos ? hcRow("Remaining schedule", `${ordinal(x.sos)} hardest of ${res.sosN}`) : "");
+    return head + hcSec("", body) + hcSec(`${esc(dv.name)} title`, title) + hcSec("", season) +
+      hcFoot(`From the same ${PO_SIMS.toLocaleString("en-US")} simulated seasons as the odds: each season counts once, under the route the team got in by, so the two routes add up to the total (rounded to whole percents).`);
   };
 
   // Start-up: restore a saved connection

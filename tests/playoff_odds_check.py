@@ -14,6 +14,8 @@ round-robin schedule where the higher roster id always scores more. Scenarios:
   every scenario has a bye in Week 12 for rosters 3 and 4 (they and their Week 12 opponents have one game fewer left) and checks: each team's games left,
   the odds add up to the 6 spots, projected wins = wins so far + every game left exactly once, and the weakest
   division always sends a team (division winners get in automatically).
+  In A the odds also open how each team gets in (Alan, Nov 10): win the division + wild card = the total exactly
+  (whole percents), each division's title chances add up to 100%, and a click on the odds never opens the team.
 Run from the repo root:  python3 tests/playoff_odds_check.py
 """
 import functools, http.server, json, os, re, socketserver, threading
@@ -71,7 +73,7 @@ with sync_playwright() as p:
     kw = {"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}
     br = p.chromium.launch(**kw); errs = []
 
-    def odds(display_week, rec_through, pts_through, partial=None, byes=None):
+    def odds(display_week, rec_through, pts_through, partial=None, byes=None, cards=False):
         lg, users, rosters, mx, byes_ = build(rec_through, pts_through, partial, byes)
         SL = {"source": "sleeper", "username": "u1", "userId": "u1", "displayName": "u1", "season": "2026",
               "leagues": [{"id": "L1", "name": "League L1", "season": "2026", "status": "in_season", "format": ""}],
@@ -96,7 +98,20 @@ with sync_playwright() as p:
         pg.click('[data-lsub="standings"]'); pg.wait_for_timeout(300)
         pg.click('[data-st-view="league"]'); pg.wait_for_timeout(1500)
         rows = pg.evaluate("() => [...document.querySelectorAll('.st-table tr.st-row')].map(r => [r.dataset.standingTeam, (r.querySelector('.st-odds') || {}).title || ''])")
+        route = {}
+        if cards:
+            pg.wait_for_timeout(1500)
+            for rid, _ in rows:
+                b = pg.locator(f'.st-table tr[data-standing-team="{rid}"] .st-odds-btn')
+                if not b.count(): route[int(rid)] = None; continue
+                b.scroll_into_view_if_needed(); pg.wait_for_timeout(100)   # a scroll closes a hover card
+                b.click(); pg.wait_for_timeout(150)
+                route[int(rid)] = pg.evaluate("""() => { const c = document.getElementById('hc'); if (!c || c.hidden) return null;
+                  const rows = [...c.querySelectorAll('.hc-r')].map(r => [r.querySelector('.hc-k').innerText.trim(), r.querySelector('.hc-v').innerText.trim().split(' ')[0]]);
+                  return { rows, sub: c.querySelector('.hc-sub') ? c.querySelector('.hc-sub').innerText : '', still: !!document.querySelector('.st-table'), hash: location.hash }; }""")
+                pg.keyboard.press("Escape")
         pg.close()
+        if cards: return route
         out = {}
         for rid, tip in rows:
             m = re.match(r"([\d.]+)% of .* projected ([\d.]+) wins · (\d+) games? left", tip)
@@ -122,6 +137,24 @@ with sync_playwright() as p:
     five = games_left(10, {})
     ok(sorted(set(five.values())) == [4, 5], f"the Week 12 bye leaves four teams a game short ({five})")
     A, ro, _ = odds(9, 9, 9);                       check("A Tuesday, Sleeper still on Week 9", A, ro, five)
+    R = odds(9, 9, 9, cards=True)
+    ok(all(R.get(i) for i in IDS), f"A: every team's odds open how it gets in ({ {i: bool(R.get(i)) for i in IDS} })")
+    if all(R.get(i) for i in IDS):
+        n = lambda t: 0.0 if t == "<1%" else 100.0 if t == ">99%" else float(t.rstrip("%"))
+        sums, titles = [], {1: 0.0, 2: 0.0, 3: 0.0}
+        for i in IDS:
+            rows = dict(R[i]["rows"][:3]); k = list(rows)
+            d, wc, tot = (rows[x] for x in k)
+            sums.append((i, d, wc, tot))
+            ok(k[0].startswith("Win the ") and k[1] == "Wild card" and k[2] == "Total", f"A: team {i} card reads division, wild card, total ({k})")
+            ok(tot == (f"{int(100 * A[i][0] + 0.5 + 1e-9)}%" if 0.005 <= A[i][0] < 0.995 else tot), f"A: team {i} total {tot} matches the Standings odds {A[i][0]:.3f}")
+            if "<1%" not in (d, wc) and tot not in (">99%", "<1%"):
+                ok(n(d) + n(wc) == n(tot), f"A: team {i} routes add up: {d} + {wc} = {tot}")
+            ok(R[i]["still"] and R[i]["hash"] == "#league", f"A: team {i} a click on the odds keeps Standings open")
+        for dv in (1, 2, 3):
+            mates = [r for r in R[4 * dv - 3]["rows"] if r[0] in {f"Team {j}" for j in IDS if DIV[j] == dv}]
+            tsum = sum(n(v) for _, v in mates)
+            ok(len(mates) == 4 and abs(tsum - 100) <= 3, f"A: division {dv} title chances list its 4 teams and add up to ~100% ({tsum:.0f})")
     B, ro, _ = odds(10, 9, 9, partial=(10, [1, 5, 9, 12])); check("B Thursday, Week 10 under way", B, ro, five)
     C, ro, _ = odds(9, 8, 9, byes={9: (1, 2)})
     exp_c = games_left(9, {9: (1, 2)})
