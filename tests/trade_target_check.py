@@ -48,12 +48,15 @@ with sync_playwright() as p:
     # Target a player
     pg.click("#tf-src [data-src='target']"); pg.wait_for_timeout(400)
     ok(pg.eval_on_selector("#tf-goal", "s => s.value") == "edge", "Target a player defaults to Slight edge")
-    target_sid = L1["rosters"][3]["players"][0]   # team 4's best player
-    tname = name_of[target_sid]
-    pg.fill("#tf-q", tname.split()[-1]); pg.wait_for_timeout(400)
-    hits = pg.eval_on_selector_all("#tf-results [data-tf-pick]", "bs => bs.map(b => b.dataset.tfPick)")
-    ok(hits and not (set(hits) & mine), f"Search lists only other teams' players ({len(hits)} hits)")
-    pg.evaluate(f"() => document.querySelector('#tf-results [data-tf-pick=\"{target_sid}\"]').click()"); pg.wait_for_timeout(2500)
+    # team 4's best player with a slight-edge offer on today's board (which of them has one moves with rankings
+    # publishes: Nov 14, the SF tier alignment left none for its best player)
+    for n, target_sid in enumerate(L1["rosters"][3]["players"][:6]):
+        tname = name_of[target_sid]
+        pg.fill("#tf-q", tname.split()[-1]); pg.wait_for_timeout(400)
+        hits = pg.eval_on_selector_all("#tf-results [data-tf-pick]", "bs => bs.map(b => b.dataset.tfPick)")
+        if n == 0: ok(hits and not (set(hits) & mine), f"Search lists only other teams' players ({len(hits)} hits)")
+        pg.evaluate(f"() => document.querySelector('#tf-results [data-tf-pick=\"{target_sid}\"]').click()"); pg.wait_for_timeout(2500)
+        if pg.locator(".tf-tcard").count(): break
     intel = pg.inner_text(".tf-intel") if pg.locator(".tf-intel").count() else ""
     ok(all(k in intel.upper() for k in ("OWNED BY", "AM VALUE", "LEAGUE-ADJUSTED", "MARKET", "AM VS MARKET")) and "Alpha League Team 4" in intel, "Target header: owner, AM value, league-adjusted, market, AM vs market")
     ok(("for them" in intel or "bench" in intel.lower()) and "needs" in intel.lower() or "strong at" in intel.lower(), "Target header: his value to his owner and both teams' rooms")

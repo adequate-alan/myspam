@@ -96,6 +96,7 @@
       "sf_alignment_check",
       "sf_smoothing_check",
       "out_value_check",
+      "sf_tier_follow_check",
       "auto_step_check"
     ],
     "weights": {
@@ -131,6 +132,7 @@
       "sf_alignment_check": 15,
       "sf_smoothing_check": 15,
       "out_value_check": 2,
+      "sf_tier_follow_check": 15,
       "xss_check": 26,
       "board_edit_check": 26,
       "injury_check": 25,

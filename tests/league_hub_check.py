@@ -490,7 +490,9 @@ with sync_playwright() as p:
                 if dec.startswith("Verdict uses"):
                     dn = float(re.search(r"(\d+\.\d)%", dec).group(1)); on = float(re.search(r"\((?:raw )?(\d+\.\d)%", d).group(1))
                     adj_dec = "after package adjustment" in dec
-                    want = (adj_dec == ((on if not adj_dec else dn) < 3)) if " for " in dec else dn <= on + 0.05
+                    # the other reading showing 0.0% may sit a hair on the other side (no side is named under 0.05%): then the
+                    # package-adjusted reading decides while it's under the fair line, as in valueRead
+                    want = (adj_dec == ((on if not adj_dec else dn) < 3)) if " for " in dec else dn <= on + 0.05 or (adj_dec and on < 0.05 and dn < 3)
                     if not want: bare.append(("wrong reading", d[:90]))
                 if probe is None: probe = (v, i, d)
             elif not d.split(" · ")[0].endswith("% value difference") or size.split("-for-")[0] != size.split("-for-")[1]: bare.append((size, d[:60]))
@@ -665,7 +667,11 @@ with sync_playwright() as p:
     pg.evaluate("() => { const s = document.getElementById('fa-sort'); s.value = 'rank'; s.dispatchEvent(new Event('change', { bubbles: true })); }"); pg.wait_for_timeout(250)
     pg.locator("#fa-fitsort").check(force=True); pg.wait_for_timeout(300)
     ranks2 = [int(t) for t in pg.locator("#fa-body td.rk").all_inner_texts() if t.strip().isdigit()]
-    ok(sorted(ranks2) == sorted(ranks) and ranks2 != ranks and abs(ranks2.index(ranks[0])) <= 3, "My team fit nudges starters up without reshuffling the list")
+    # the nudge is rank x 0.85 for a would-be starter and x 1.1 for bench depth, so nobody can pass the top available
+    # player from further down than his rank x 1.1 / 0.85 (how many do depends on the board: Nov 14, seven starters
+    # sat within that range after the SF tier alignment, where the old "within 3 spots" assumed fewer)
+    top = ranks2.index(ranks[0])
+    ok(sorted(ranks2) == sorted(ranks) and ranks2 != ranks and all(r <= ranks[0] * 1.1 / 0.85 + 1 for r in ranks2[:top]), "My team fit nudges starters up without reshuffling the list")
     pg.locator("#fa-fitsort").uncheck(force=True); pg.wait_for_timeout(300)
     fits = pg.locator(".fa-fit-t").all_inner_texts()
     ok(not any(t.startswith("Your ") for t in fits) and any(t.startswith("Would be ") or t in ("Bench depth",) or t.startswith("Starts at") or t.endswith("upgrade") for t in fits), f"Fit reads 'Would be WR5' / Starts at / Bench depth: {sorted(set(fits))[:6]}")
