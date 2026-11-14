@@ -68,6 +68,8 @@ mov = {s for s in bs if bs[s]["rank"] != as_[s]["rank"]}
 ok(len(chg) == N_VALUES and len(mov) == N_RANKS, f"{len(chg)} values and {len(mov)} overall ranks differ (reviewed: {N_VALUES} and {N_RANKS})")
 v = [val(r) for r in sorted(A, key=lambda r: int(r["rank"]))]
 ok(all(x > y or x == y == 0 for x, y in zip(v, v[1:])), "Values strictly down the overall board (only 0s tie)")
+tight = [(x["player"], y["player"]) for x, y in zip(sorted(A, key=lambda r: int(r["rank"])), sorted(A, key=lambda r: int(r["rank"]))[1:]) if val(y) >= 400 and val(x) - val(y) < 2]
+ok(not tight, "No two neighbours worth 400+ sit one point apart (an editor move between them needs a whole number to land on)" + (f"; {tight}" if tight else ""))
 tiers = {}
 for r in sorted(A, key=lambda r: int(r["pos_rank"])): tiers.setdefault((r["pos"], int(r["tier"])), []).append(r)
 fixed = {k for k, g in tiers.items() if k[1] >= 90 or len(g) == 1 or any(r["source"] == "auto" for r in g) or any(val(r) == 0 for r in g) or k == ("TE", 6)}
