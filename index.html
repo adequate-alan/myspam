@@ -3784,6 +3784,24 @@ th.mk-col, td.mk-col { text-align: left; min-width: 0; }
 .scroll-hint.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
 .pp-tabs .chip-btn { flex: none; white-space: nowrap; }
 .pp-tabs .chip-btn::after { bottom: 0; }
+/* Drawer tab row (Alan, Nov 14): the row scrolls sideways with the mouse wheel, a mouse drag, a swipe, or the chevron
+   that sits on whichever side has more tabs past it (hidden when nothing is past that edge). The chevrons sit outside the tablist, so the tabs' own keyboard order is unchanged. */
+.pp-tabwrap { position: relative; margin-top: 18px; --pp-bleed: 0px; }
+.pp-tabwrap .pp-tabs { margin-top: 0; -webkit-user-select: none; user-select: none; }
+.pp-tabs.dragging, .pp-tabs.dragging .chip-btn { cursor: grabbing; }
+.pp-tabnav {
+  position: absolute; top: 0; bottom: 1px; z-index: 1; width: 40px; padding: 0 5px; border: 0; background: none; display: flex; align-items: center; color: var(--text-secondary); cursor: pointer;
+  opacity: 0; visibility: hidden; transition: opacity .16s var(--ease), visibility .16s, color .16s var(--ease);
+}
+.pp-tabnav.l { left: calc(-1 * var(--pp-bleed)); justify-content: flex-start; }
+.pp-tabnav.r { right: calc(-1 * var(--pp-bleed)); justify-content: flex-end; }
+/* the tabs fade out under the chevron (a mask, so it works on the header's gradient in both themes) */
+.pp-tabwrap > .pp-tabs.more-l { -webkit-mask-image: linear-gradient(to right, transparent 22px, #000 52px); mask-image: linear-gradient(to right, transparent 22px, #000 52px); }
+.pp-tabwrap > .pp-tabs.more-r { -webkit-mask-image: linear-gradient(to left, transparent 22px, #000 52px); mask-image: linear-gradient(to left, transparent 22px, #000 52px); }
+.pp-tabwrap > .pp-tabs.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent 22px, #000 52px, #000 calc(100% - 52px), transparent calc(100% - 22px)); mask-image: linear-gradient(to right, transparent 22px, #000 52px, #000 calc(100% - 52px), transparent calc(100% - 22px)); }
+.pp-tabnav:hover { color: var(--heading); }
+.pp-tabnav:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.pp-tabwrap.more-l .pp-tabnav.l, .pp-tabwrap.more-r .pp-tabnav.r { opacity: 1; visibility: visible; }
 /* Phones: three primary sections + More (bottom sheet). Rows are 44px tall for touch. */
 .pp-tabs.pp-tabs-phone { gap: 8px; justify-content: space-between; }
 .pp-tablist { display: contents; }
@@ -4395,6 +4413,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .pm-actions .btn:first-child { flex-basis: 100%; }
   .pm-actions .pp-hint { flex-basis: 100%; margin-left: 0; }
   .pm-head .pp-tabs { margin-inline: -16px; padding-inline: 16px; }
+  .pp-tabwrap { --pp-bleed: 16px; }
   .ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ov-cell { padding: 10px 12px; }
   .pp-three { grid-template-columns: 1fr; }
@@ -4452,6 +4471,7 @@ dialog.signin input:not([type="checkbox"]):not([type="radio"]):focus { outline: 
   .pm-actions .btn:first-child { flex-basis: 100%; }
   .pm-actions .pp-hint { flex-basis: 100%; margin-left: 0; }
   .pm-head .pp-tabs { margin-inline: -16px; padding-inline: 16px; }
+  .pp-tabwrap { --pp-bleed: 16px; }
   .ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ov-cell { padding: 10px 12px; }
   .pp-three { grid-template-columns: 1fr; }
@@ -16329,6 +16349,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const inTradeNow = p && inTrade(p.id);
     const findHint = !LG.active ? "Connect a league to find trades" : !p ? "Unranked players can't be valued yet" : own === "fa" ? "Free agent in your league" : "";
     const tabsList = PP_TABS.concat([["compare", "Compare"]]);   // Compare is always a tab (Alan, Oct 14)
+    const barWas = ppBar(), barLeft = barWas ? barWas.scrollLeft : 0;
     box.innerHTML = `
       <div class="pm-head tm" style="${teamStyle(info.team)}">
         ${closeBtn}
@@ -16358,12 +16379,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <div class="pm-body" role="tabpanel" id="pp-panel" aria-labelledby="pp-tab-${esc(ppTabVisible(PP.tab))}">${!loaded ? `<p class="empty-note">Loading stats…</p>` : ppSection(info)}${loaded ? statsStamp() : ""}</div>`;
     if (PP.moreFocus) { PP.moreFocus = false; const mb = box.querySelector("[data-pp-more]"); if (mb) mb.focus({ preventScroll: true }); }
     const bar = box.querySelector(".pp-tabs"), on = bar && bar.querySelector('[aria-pressed="true"]');
-    scrollHints(bar);
-    if (on) {   // keep the open section in view on phones
-      const x = on.getBoundingClientRect().left - bar.getBoundingClientRect().left;
-      if (x + on.offsetWidth > bar.clientWidth) bar.scrollLeft = x - 18;
+    if (ppBar()) {   // drawer: the row stays where it was scrolled to and moves only if the open section isn't fully in view
+      if (barLeft) bar.scrollLeft = barLeft;
+      ppTabReveal(on);
+    } else {
+      scrollHints(bar);
+      if (on) {   // keep the open section in view on phones
+        const x = on.getBoundingClientRect().left - bar.getBoundingClientRect().left;
+        if (x + on.offsetWidth > bar.clientWidth) bar.scrollLeft = x - 18;
+      }
+      if (bar && bar._setHints) bar._setHints();
     }
-    if (bar && bar._setHints) bar._setHints();
     if (PP.picking) { const inp = box.querySelector("#pm-pick"); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } }
     drawCharts();
   }
@@ -16374,9 +16400,37 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const PP_SHORT = { perf: "Fantasy", history: "History", value: "Value", depth: "Depth", practice: "Practice" };
   const ppPhoneTabs = () => !DRAWER_MQ.matches;
   const ppTabVisible = k => (ppPhoneTabs() && !PP_PRIMARY.includes(k) ? "more" : k);
+  /* The drawer's tab row (Alan, Nov 14). Ten sections never fit the drawer, and a regular mouse couldn't scroll the row:
+     the only way along was clicking the last visible tab. Now the wheel scrolls it sideways while the pointer is on it
+     (handed back to the page at either end, and never taken over mid-scroll from the page), a mouse drag pans it, a
+     chevron pages it from whichever side has more tabs, and swipes / trackpads stay native. Scrolling only reveals
+     tabs: it never selects one. The row keeps its scroll position across redraws and moves only as far as needed to
+     show the selected or focused tab clear of a chevron. */
+  const ppBar = () => $("player-body").querySelector(".pp-tabwrap > .pp-tabs");
+  function ppTabHints() {
+    const bar = ppBar(); if (!bar) return; const w = bar.parentElement;
+    const l = bar.scrollLeft > 4, r = bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 4;
+    for (const el of [w, bar]) { el.classList.toggle("more-l", l); el.classList.toggle("more-r", r); }
+  }
+  function ppTabReveal(tab) {
+    const bar = ppBar(); if (!bar) return;
+    const max = bar.scrollWidth - bar.clientWidth;
+    if (tab && max > 0) {
+      const x = tab.getBoundingClientRect().left - bar.getBoundingClientRect().left + bar.scrollLeft, end = x + tab.offsetWidth, pad = 54;   // clear of the chevron and the fade under it
+      let to = bar.scrollLeft;
+      if (x - pad < to) to = x - pad; else if (end + pad > to + bar.clientWidth) to = end + pad - bar.clientWidth;
+      to = Math.max(0, Math.min(max, Math.round(to)));
+      if (Math.abs(to - bar.scrollLeft) >= 1) bar.scrollLeft = to;
+    }
+    ppTabHints();
+  }
+  const PP_DRAG = { on: null, at: 0, pageWheel: 0, barWheel: 0 };
   function ppTabBar(tabsList) {
     const tab = ([k, label]) => `<button class="chip-btn" type="button" role="tab" id="pp-tab-${k}" data-pp-tab="${k}" aria-controls="pp-panel" aria-selected="${PP.tab === k}" aria-pressed="${PP.tab === k}" tabindex="${PP.tab === k ? 0 : -1}">${label}</button>`;
-    if (!ppPhoneTabs()) return `<div class="chips pp-tabs" role="tablist" aria-label="Player sections">${tabsList.map(tab).join("")}</div>`;
+    if (!ppPhoneTabs()) {
+      const nav = (d, label) => `<button class="pp-tabnav ${d < 0 ? "l" : "r"}" type="button" data-pp-nav="${d}" tabindex="-1" aria-label="${label}"><svg width="7" height="12" viewBox="0 0 7 12" aria-hidden="true"><path d="${d < 0 ? "M6 1L1 6l5 5" : "M1 1l5 5-5 5"}" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+      return `<div class="pp-tabwrap">${nav(-1, "Show earlier sections")}<div class="chips pp-tabs" role="tablist" aria-label="Player sections">${tabsList.map(tab).join("")}</div>${nav(1, "Show more sections")}</div>`;
+    }
     const rest = tabsList.filter(([k]) => !PP_PRIMARY.includes(k)), cur = rest.find(([k]) => k === PP.tab);
     const primary = tabsList.filter(([k]) => PP_PRIMARY.includes(k));
     const chev = `<svg class="pp-more-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -17592,6 +17646,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const t = e.target;
     if (t.closest("[data-pm-close]")) { closePlayer(); return; }
     if (t.closest("[data-pm-back]")) { const prev = PP.trail.pop(); if (prev) { PP.sid = prev; if (PP.tab === "compare") PP.tab = "overview"; renderPlayer(); } return; }
+    const nav = t.closest("[data-pp-nav]");
+    if (nav) {   // a chevron pages the row; it never changes the open section
+      const bar = ppBar();
+      if (bar) {
+        const max = bar.scrollWidth - bar.clientWidth; let to = bar.scrollLeft + Number(nav.dataset.ppNav) * Math.max(120, bar.clientWidth * 0.7);
+        to = to < 48 ? 0 : to > max - 48 ? max : to;   // a page that would stop just short of an end goes to the end
+        bar.scrollTo({ left: to, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      }
+      return;
+    }
     if (t.closest("[data-pp-more]")) { ppMore(true); return; }
     if (t.closest("[data-pp-more-close]")) { ppMore(false); return; }
     const tab = t.closest("[data-pp-tab]");
@@ -17599,7 +17663,10 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       PP.tab = tab.dataset.ppTab;
       if (tab.hasAttribute("data-pp-sheet")) PP.moreFocus = true;   // back to the More button, now named after the open section
       if (PP.tab === "compare" && !PP.compare && !PP.picking) { PP.picking = true; PP.pickQuery = ""; setCompareMode(canBoardPick()); }   // no Player B yet: open the search
-      renderPlayer(); return;
+      const hadFocus = document.activeElement === tab && tab.matches('[role="tab"]');
+      renderPlayer();
+      if (hadFocus && !PP.picking) { const now = $("player-body").querySelector('[role="tab"][aria-selected="true"]'); if (now) now.focus({ preventScroll: true }); }   // the redraw replaced the tab: the focus stays on it
+      return;
     }
     const se = t.closest("[data-pp-season]"); if (se) { PP.season = Number(se.dataset.ppSeason); renderPlayer(); return; }
     const pf = t.closest("[data-pp-perf]"); if (pf) { PP.perf = pf.dataset.ppPerf; renderPlayer(); return; }
@@ -17643,11 +17710,52 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (e.target.matches('[role="tab"][data-pp-tab]') && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {   // arrow keys move between tabs
       const all = [...e.target.closest('[role="tablist"]').querySelectorAll('[role="tab"]')], i = all.indexOf(e.target);
       const n = e.key === "Home" ? 0 : e.key === "End" ? all.length - 1 : (i + (e.key === "ArrowRight" ? 1 : -1) + all.length) % all.length;
-      e.preventDefault(); all[n].focus(); return;
+      e.preventDefault(); all[n].focus(); ppTabReveal(all[n]); return;
     }
     if (e.target.id === "pm-pick" && e.key === "Enter") { const first = $("player-body").querySelector("[data-pm-pick]"); if (first) first.click(); e.preventDefault(); }
     if (e.target.id === "pm-pick" && e.key === "Escape" && e.target.value) { e.preventDefault(); e.stopPropagation(); PP.pickQuery = ""; PP.picking = false; renderPlayer(); }
   });
+  // Drawer tab row: wheel, drag and scroll hints (see ppTabReveal)
+  $("player-body").addEventListener("wheel", e => {
+    const bar = e.target.closest(".pp-tabwrap") && ppBar();
+    if (!bar) { PP_DRAG.pageWheel = e.timeStamp; return; }
+    if (e.timeStamp - PP_DRAG.pageWheel < 250) { PP_DRAG.pageWheel = e.timeStamp; return; }   // the page was mid-scroll when the pointer met the row: keep scrolling the page
+    if (e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;   // pinch-zoom, sideways swipes and Shift + wheel stay native
+    const max = bar.scrollWidth - bar.clientWidth, d = e.deltaY * (e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? bar.clientWidth : 1);
+    if (max <= 0) return;
+    if (d < 0 ? bar.scrollLeft <= 0 : bar.scrollLeft >= max - 1) {   // nothing further that way: the page scrolls as usual,
+      if (e.timeStamp - PP_DRAG.barWheel < 400) { e.preventDefault(); PP_DRAG.barWheel = e.timeStamp; }   // but not in the same spin of the wheel that just reached the end
+      return;
+    }
+    e.preventDefault(); bar.scrollLeft += d; PP_DRAG.barWheel = e.timeStamp;
+  }, { passive: false });
+  $("player-body").addEventListener("scroll", e => { if (e.target.classList && e.target.classList.contains("pp-tabs")) ppTabHints(); }, true);
+  window.addEventListener("resize", () => { if (modalOpen()) ppTabHints(); });
+  $("player-body").addEventListener("pointerdown", e => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    const bar = e.target.closest(".pp-tabwrap > .pp-tabs");
+    PP_DRAG.on = bar && bar.scrollWidth > bar.clientWidth ? { bar, id: e.pointerId, x: e.clientX, left: bar.scrollLeft, moved: false } : null;
+  });
+  $("player-body").addEventListener("pointermove", e => {
+    const d = PP_DRAG.on; if (!d) return;
+    if (!e.buttons || !d.bar.isConnected) { ppDragEnd(); return; }
+    const dx = e.clientX - d.x;
+    if (!d.moved) {   // a press that moves under 5px is still a click
+      if (Math.abs(dx) < 5) return;
+      d.moved = true; d.bar.classList.add("dragging"); try { d.bar.setPointerCapture(d.id); } catch (err) {}
+    }
+    d.bar.scrollLeft = d.left - dx;
+  });
+  function ppDragEnd() {
+    const d = PP_DRAG.on; if (!d) return; PP_DRAG.on = null;
+    if (d.moved) { PP_DRAG.at = performance.now(); d.bar.classList.remove("dragging"); }
+  }
+  $("player-body").addEventListener("pointerup", ppDragEnd);
+  $("player-body").addEventListener("pointercancel", ppDragEnd);
+  $("player-body").addEventListener("click", e => {   // the click that ends a drag never selects the tab under it
+    const dragged = PP_DRAG.at && performance.now() - PP_DRAG.at < 400; PP_DRAG.at = 0;
+    if (dragged && e.target.closest(".pp-tabwrap")) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
   // chart points ([data-tip]) use the site's shared hover card (Oct 12); a tap on touch shows it too
 
   /* ---------- Trade finder ----------
