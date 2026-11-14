@@ -94,6 +94,7 @@
       "provisional_pricing_check",
       "zero_value_check",
       "sf_alignment_check",
+      "sf_smoothing_check",
       "auto_step_check"
     ],
     "weights": {
@@ -127,6 +128,7 @@
       "provisional_pricing_check": 60,
       "zero_value_check": 50,
       "sf_alignment_check": 15,
+      "sf_smoothing_check": 15,
       "xss_check": 26,
       "board_edit_check": 26,
       "injury_check": 25,
