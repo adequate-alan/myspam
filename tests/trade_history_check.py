@@ -71,6 +71,8 @@ L1["tx"] = {2: [
 _ps = json.load(open(os.path.join(ROOT, "data", "boards", "ppr", "rank_snapshots", "2026-10.json")))["snapshots"][0]
 _by = lambda pos, pr: next(sid for sid, a in _ps["players"].items() if a[1] == pr and pos == next((r_["pos"] for r_ in rows if r_["sleeper_id"] == sid), None))
 TE4, WRA, WRB = _by("TE", 4), _by("WR", 31), _by("WR", 43)
+# the month file holding AM PPR's current snapshot (its latest publish with a snapshot)
+NOW_SNAP = "data/boards/ppr/rank_snapshots/" + [e for e in json.load(open(os.path.join(ROOT, "data", "boards", "ppr", "rank_history.json")))["events"] if e.get("snap")][-1]["snap"] + ".json"
 T_TEP = int(datetime.fromisoformat(_ps["ts"].replace("Z", "+00:00")).timestamp() * 1000 + DAY)
 L3 = make_league("L3", "Gamma League", 12, ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX"] + ["BN"] * 6,
                  {"rec": 1, "pass_td": 4, "pass_yd": 0.04, "pass_int": -2, "rush_yd": 0.1, "rush_td": 6, "rec_yd": 0.1, "rec_td": 6, "fum_lost": -2, "bonus_rec_te": 0.5})
@@ -231,6 +233,8 @@ with sync_playwright() as p:
     errs = []
     pg = br.new_page(viewport={"width": 1440, "height": 1000})
     pg.on("pageerror", lambda e: errs.append(str(e)))
+    got = []   # finished responses, to know when a snapshot month file is in
+    pg.on("response", lambda r: got.append(r.url.split("?")[0]) if r.ok else None)
     pg.route("https://api.sleeper.app/**", sleeper)
     pg.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
     pg.add_init_script("window.__SPM_TEST_HOOKS = true;")
@@ -249,6 +253,16 @@ with sync_playwright() as p:
     ok(ev["board"] == "ppr" and ev["adjusted"] and ev["thenAll"], "The 1QB TE premium league reads AM PPR, in its own format, with values then")
     ok(all(x["now"] == x["adj"] for x in ev["items"]), "Now = each player's league-adjusted value (TE premium applied)")
     ok(V[TE4]["now"] > V[TE4]["nowBase"] * 1.05 and V[TE4]["thenV"] > V[TE4]["thenBase"] * 1.05, f"The TE is worth more with TE premium than on AM PPR itself (then {V[TE4]['thenBase']} → {V[TE4]['thenV']}, now {V[TE4]['nowBase']} → {V[TE4]['now']})")
+    # The board's current snapshot can sit in a month file no trade above needed. Until that file is in, the page reads
+    # each player's latest Ranking History entry instead, and history skips automatic repricings under 10 points (the
+    # Nov 13 publish that added three QBs moved 38 tail values by 3 points, in the snapshot only). The first call asks
+    # for the file; compare once it has loaded, and check the exact snapshot really is what's priced.
+    pg.evaluate("() => { SPM.adjAt(Date.now()); }")
+    for _ in range(100):
+        if any(u.endswith(NOW_SNAP) for u in got): break
+        pg.wait_for_timeout(100)
+    pg.wait_for_timeout(300)
+    ok(any(u.endswith(NOW_SNAP) for u in got), f"AM PPR's current snapshot file is loaded before it's compared ({NOW_SNAP})")
     same = pg.evaluate("() => SPM.adjAt(Date.now())")
     lv = pg.evaluate("() => SPM.leagueSidValues()")
     diff = [sid for sid, v in lv.items() if sid in same and same[sid] != v]
