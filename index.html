@@ -665,7 +665,8 @@ Michael Wilson,WR,ARI,271,104,99,0,10232,manual,Out for season
    creates or duplicates) are entries here; features read them through the registry.
    ===================================================================== */
 const BOARDS = [
-  // orderFrom (Alan, Oct 19): its QB / RB / WR / TE order follows AM PPR's published order ("spots stay": see syncOrder)
+  // orderFrom: the board its optional position order sync reads (Alan, Nov 14: a previewed action in the editor,
+  // never automatic and never a restriction; "spots stay": see syncOrder and SYNC)
   { id: "sf-tep", label: "AM SF PPR TE+", short: "SF PPR TE+", block: "RANKINGS_CSV", orderFrom: "ppr",
     fmt: { teams: 12, qb: "sf", sx: 1, rb: 2, wr: 3, te: 1, flex: 1, bench: 6, rec: 1, tep: 0.5, ptd: 4, pyd: 25, int: -2, fum: -2, fd: 0 },
     tierScope: "position", keySuffix: "", history: "data/rank_history.json", snaps: "data/rank_snapshots/", componentsBase: true },
@@ -4278,6 +4279,22 @@ dialog.signin {
   padding: 26px; width: min(460px, calc(100vw - 32px)); box-shadow: 0 30px 70px -24px var(--shadow-color);
 }
 dialog.signin::backdrop { background: var(--backdrop); }
+/* Position order sync preview (Nov 14): optional, before / after, nothing changes until it is published */
+dialog.sync-dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.sync-pos { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 12px; }
+dialog.signin .sync-pos label { display: inline-flex; align-items: center; gap: 7px; margin: 0; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.84rem; font-weight: 600; color: var(--ink); }
+dialog.signin .sync-pos label span { font-weight: 500; color: var(--muted); }
+dialog.signin .sync-pos input { width: 16px; height: 16px; padding: 0; }
+.sync-box { max-height: min(44vh, 380px); overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.sync-box:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.sync-box table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.sync-box th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600; font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.sync-box td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.sync-box tr:last-child td { border-bottom: 0; }
+.sync-box .sy-name { font-weight: 700; color: var(--ink); }
+.sync-box .sy-sub { display: block; color: var(--muted); font-size: 0.74rem; font-weight: 500; }
+.sync-box .sy-to { font-weight: 600; color: var(--ink); }
+.sync-box .sy-none { padding: 18px 12px; color: var(--muted); font-size: 0.86rem; }
 dialog.signin h2 { margin: 0 0 10px; font-weight: 850; font-stretch: 110%; font-size: 1.2rem; letter-spacing: 0; text-transform: uppercase; color: var(--heading); }
 dialog.signin p { margin: 0 0 10px; font-size: 0.88rem; color: var(--ink-2); }
 dialog.signin .hint { color: var(--muted); font-size: 0.82rem; }
@@ -4787,11 +4804,12 @@ td.rk, .valbar .num, .num-btn, .num-2, .pm-stat-val, .rail-v, .mx-score { font-w
 .eb-right .btn:disabled, .eb-right .btn.primary:disabled { background: none; border-color: transparent; color: var(--muted); opacity: .7; }
 .editor-bar.dirty #eb-cancel { background: var(--fill-1); color: var(--ink); }
 .eb-mid { display: flex; align-items: center; gap: 0; padding-left: 14px; border-left: 1px solid var(--eb-line); min-height: 22px; }
-.eb-mid:empty, .eb-mid:not(:has(#eb-who:not(:empty))):not(:has(#eb-vcheck:not([hidden]))):not(:has(#eb-mcheck:not([hidden]))) { display: none; }
+.eb-mid:empty, .eb-mid:not(:has(#eb-who:not(:empty))):not(:has(#eb-vcheck:not([hidden]))):not(:has(#eb-mcheck:not([hidden]))):not(:has(#eb-sync:not([hidden]))) { display: none; }
 .eb-mid #eb-who { font-size: 0.74rem; }
 .eb-mid > #eb-who:not(:empty) { padding-right: 12px; }
 .eb-stat { display: inline-flex; align-items: center; gap: 6px; padding: 2px 12px; margin: 0; border: 0; border-left: 1px solid var(--eb-line); background: none; color: var(--eb-ink); font: 500 0.74rem/1.4 var(--font-body); cursor: pointer; border-radius: 0; transition: color .15s var(--ease); white-space: nowrap; }
 .eb-mid > #eb-who:empty + .eb-stat { border-left: 0; padding-left: 0; }
+@media (max-width: 900px) { .eb-mid { flex-wrap: wrap; row-gap: 4px; min-width: 0; } .eb-mid .eb-stat { white-space: nowrap; } }
 .eb-stat:hover, .eb-stat[aria-expanded="true"] { color: var(--eb-strong); }
 .eb-stat:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 4px; }
 .eb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--eb-ink); opacity: .55; flex: none; }
@@ -5441,6 +5459,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <div class="eb-mid">
         <span id="eb-who"></span>
         <button class="eb-stat" id="eb-vcheck" type="button" hidden aria-expanded="false" aria-controls="rv-panel"></button>
+        <button class="eb-stat" id="eb-sync" type="button" hidden></button>
         <button class="eb-stat eb-audit" id="eb-mcheck" type="button" hidden aria-expanded="false" aria-controls="rv-panel"><svg class="eb-ico" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 10.5h9M3 8V5.5M6 8V2.5M9 8V4" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>Market audit</button>
       </div>
       <div class="eb-right">
@@ -5758,6 +5777,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       <button class="btn primary" id="signin-submit" type="submit">Sign in</button>
     </div>
   </form>
+</dialog>
+<dialog class="signin sync-dialog" id="sync-dialog" aria-labelledby="sync-title">
+  <h2 id="sync-title">Sync position order</h2>
+  <p id="sync-intro"></p>
+  <div class="sync-pos" id="sync-pos" role="group" aria-label="Positions to sync"></div>
+  <div class="sync-box" id="sync-box" tabindex="0" aria-label="Before and after"></div>
+  <p class="hint" id="sync-kept"></p>
+  <p class="signin-error" id="sync-error" role="alert"></p>
+  <div class="signin-actions">
+    <button class="btn" id="sync-cancel" type="button">Cancel</button>
+    <button class="btn primary" id="sync-apply" type="button">Publish sync</button>
+  </div>
 </dialog>
 <dialog class="signin sleeper-dialog" id="sleeper-dialog" aria-labelledby="sd-title">
   <div id="sd-step-user">
@@ -6288,15 +6319,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return Math.round((1 - w) * at(posNum) + w * (projRank >= 1 ? at(projRank) : 0));
   }
   const boardCsv = b => BOARD_BLOCKS[b.block];
-  /* Position order sync (Alan, Oct 19): a board with `orderFrom` takes its QB / RB / WR / TE order from that board's
-     published order. AM PPR decides who stands in each position spot; AM SF PPR TE+ keeps what each spot is worth (its
-     overall rank, value, tier and tier name). It runs inside an AM PPR publish (publishLive: one commit with both blocks
-     and both boards' history and snapshots), the SF editor refuses moves that reorder a position (writeOrder), and an SF
-     publish whose order no longer follows is stopped. Tests of the generic editor on a frozen board switch it off
-     (window.__SPM_ORDER_SYNC_OFF, set before the page loads; publishing still has static_check behind it). */
-  const ORDER_SYNC = !(typeof window !== "undefined" && window.__SPM_ORDER_SYNC_OFF === true);
-  const orderSource = b => (ORDER_SYNC && b && b.orderFrom ? boardById(b.orderFrom) : null);
-  const orderTargets = b => (ORDER_SYNC && b ? BOARDS.filter(t => t.orderFrom === b.id) : []);
+  /* Position order sync, optional (Alan, Nov 14; was automatic from Oct 19): a board with `orderFrom` can take its
+     QB / RB / WR / TE order from that board's published order, but only when the editor asks for it: "Sync order" in the
+     editor bar shows a before / after preview and nothing changes until it is approved (SYNC, publishOrderSync). Every
+     board is edited freely: no move is refused because of another board, and publishing one board never changes
+     another. (Oct 19 – Nov 14: the sync ran inside every AM PPR publish, the SF editor refused within-position moves
+     and an SF publish that reordered a position was stopped.) */
+  const orderSource = b => (b && b.orderFrom ? boardById(b.orderFrom) : null);
   /* rawValue on a board's own native curve (the league layer's tier pricing reads it): the points-over-replacement
      table of its own format from data/curve_components.json once that has loaded, its embedded model table before
      (the same numbers rounded), with the same projection blend as the first board */
@@ -9404,6 +9433,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("eb-publish").disabled = editor.saving || n > 0 || (local === 0 && !pending);
     $("eb-publish").title = n > 0 ? "Save or cancel your changes first" : pending && local === 0 ? "An earlier publish wasn't confirmed: click to check whether it landed" : "";
     $("eb-signout").hidden = !editor.token;
+    { const src = orderSource(ACTIVE_BOARD), b = $("eb-sync");
+      b.hidden = !src || !(editor.token || DIAG_DEBUG);   // a review tool: signed-in editors (or ?debug), like the warnings and the market audit
+      if (src) { b.textContent = `Sync order from ${src.label}`; b.title = `Optional: preview ${ACTIVE_BOARD.label} taking ${src.label}'s published order within each position. Nothing changes until you approve it.`; } }
     // published (no browser edits left): the editor bookkeeping saved with them goes too
     if (local === 0 && !editor.saving && SESSION_AT_SAVE) { SESSION_AT_SAVE = null; try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
   }
@@ -9571,22 +9603,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // Write an overall order: rank 1..N, every position rank re-derived, the position's tiers re-derived. The mover is
   // touched while his move stands: his value follows his new spot (stateValues); everyone who only shifted keeps his value.
-  /* AM SF PPR TE+ takes its position order from AM PPR (Oct 19): a move that would reorder players within a position is
-     refused (the next AM PPR publish would undo it). Values, tiers, Out for season and the order across positions stay
-     editable. Players whose status stays their own in the sync (a tag tier, a value of 0: see syncOrder) don't count. */
-  function reordersPosition(order, me, forceTier) {
-    const free = p => !isTagTier(p.tier) && p.value > 0 && !(p === me && ((forceTier != null && isTagTier(forceTier)) || isTagTier(me.tier) || !(me.value > 0)));
-    const seq = L => { const out = {}; L.forEach(p => { if (EDIT_POS.includes(p.pos) && free(p)) (out[p.pos] = out[p.pos] || []).push(p.id); }); return out; };
-    const a = seq(overallOrder()), b = seq(order);
-    return Object.keys(a).some(pos => (b[pos] || []).join() !== a[pos].join());
-  }
   function writeOrder(order, me, forceTier, opts) {
-    const lockFrom = orderSource(ACTIVE_BOARD);
-    if (lockFrom && reordersPosition(order, me, forceTier)) {
-      renderRankings();   // a drop already drew his row in the new spot (showDrop): draw the board as it is
-      toast(`${me.name} stays ${me.posRank}: ${ACTIVE_BOARD.label}'s order within each position comes from ${lockFrom.label}'s published rankings, so move ${me.pos}s there. Here you can change values, tiers and the order across positions.`, 9000);
-      return false;
-    }
     const iRank = colOf(draft, "rank"), iPos = colOf(draft, "pos_rank"), iTier = colOf(draft, "tier"), iN = colOf(draft, "tier_name");
     const S = editSession(), key = tierKeyOf(me), newPos = order.filter(p => inTier(p, key));   // his tier scope in the new order
     /* A tier he was dropped into is deliberate only when his new spot wouldn't give it to him anyway; dropped back where
@@ -10557,17 +10574,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      spots keep their overall rank, position rank, tier, tier name, value and source; the k-th player in the source's
      order (matched by Sleeper ID) fills the k-th spot. Status stays with the player, never with a spot: a player in a
      tag tier (Out for season …) on either board, at 0 on the destination, missing from the source or at another
-     position there keeps his own row, and the others are ordered around him. Nobody is added or dropped. Pure: returns
+     position there keeps his own row, and the others are ordered around him. Nobody is added or dropped. `only` (a list
+     of positions) leaves every other position exactly as it is. Pure: returns
      { csv, moved: [{ sid, name, pos, from, to }] (from / to = { rank, pos_rank, tier, value }), kept: [{ sid, name, pos, why }] }. */
   const SPOT_COLS = ["rank", "pos_rank", "tier", "tier_name", "value", "source"];
-  function syncOrder(srcCsv, dstCsv) {
+  function syncOrder(srcCsv, dstCsv, only) {
     const S = csvToTable(srcCsv), D = csvToTable(dstCsv);
     const ix = (t, c) => t.head.findIndex(h => h.toLowerCase() === c), sc = c => ix(S, c), dc = c => ix(D, c);
     const sidOf = (t, r) => String(r[ix(t, "sleeper_id")] ?? "").trim();
     const src = new Map(S.rows.map(r => [sidOf(S, r), r]).filter(([k]) => k));
     const spot = r => ({ rank: Number(r[dc("rank")]), pos_rank: Number(r[dc("pos_rank")]), tier: String(r[dc("tier")] ?? ""), value: Number(r[dc("value")]) });
     const moved = [], kept = [], byPos = {};
-    D.rows.forEach(r => { const p = String(r[dc("pos")] || "").toUpperCase(); if (EDIT_POS.includes(p)) (byPos[p] = byPos[p] || []).push(r); });
+    D.rows.forEach(r => { const p = String(r[dc("pos")] || "").toUpperCase(); if (EDIT_POS.includes(p) && (!only || only.includes(p))) (byPos[p] = byPos[p] || []).push(r); });
     for (const [pos, list] of Object.entries(byPos)) {
       list.sort((a, b) => Number(a[dc("rank")]) - Number(b[dc("rank")]));
       const spots = list.filter(r => {
@@ -11032,6 +11050,114 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     persistEdits();   // what's left is saved again, now against the board that landed
     return left;
   }
+  /* Position order sync, on request (Alan, Nov 14; SYNC, syncPlan, openSync, publishOrderSync). "Sync order from AM
+     PPR" in the editor bar of a board with `orderFrom` opens a preview: tick the positions (RB and WR by default: AM PPR
+     is the suggested starting point for those; QB and TE are there to tick), see every player who would change spot with
+     his rank, position rank, tier and value before and after, and nothing changes until "Publish sync". It then goes
+     live as one commit of this board alone (its block, its history with source O and its snapshot), read from and
+     checked against GitHub like any publish; the source board is never written. It is applied to the published board,
+     so unsaved or unpublished edits here are saved, published or discarded first; a preview that no longer matches what
+     is live (either board changed meanwhile) is stopped. "Spots stay" as before (syncOrder). */
+  const SYNC = { only: ["RB", "WR"], key: "" };
+  const syncKey = moved => moved.map(m => `${m.sid}:${m.from.rank}>${m.to.rank}`).join(",");
+  function syncPlan(only) {
+    const src = orderSource(ACTIVE_BOARD);
+    return src ? syncOrder(boardCsv(src), publishedCsv, only) : { moved: [], kept: [] };
+  }
+  function syncBlocked() {
+    if (savedCsv == null) return "The rankings are still loading.";
+    if (changedRows().length) return `Save or cancel your unsaved ${ACTIVE_BOARD.label} changes first: the sync is applied to the published board.`;
+    if (Object.keys(localEdits).length) return `Publish or discard this browser's ${ACTIVE_BOARD.label} edits first: the sync is applied to the published board.`;
+    if ((readPublish() || {}).commit) return "An earlier publish isn't confirmed yet. Click Publish to live site to settle it first.";
+    return editor.saving ? "A publish is in progress." : "";
+  }
+  function renderSync() {
+    const src = orderSource(ACTIVE_BOARD); if (!src) return;
+    const all = syncOrder(boardCsv(src), publishedCsv), per = {};
+    all.moved.forEach(m => { per[m.pos] = (per[m.pos] || 0) + 1; });
+    const plan = SYNC.only.length ? syncPlan(SYNC.only) : { moved: [], kept: [] }, n = plan.moved.length, blocked = syncBlocked();
+    SYNC.key = syncKey(plan.moved);
+    $("sync-title").textContent = `Sync position order from ${src.label}`;
+    $("sync-intro").textContent = `Optional. At the positions you tick, ${ACTIVE_BOARD.label}'s players take ${src.label}'s published order. Each spot on ${ACTIVE_BOARD.label} keeps its rank, tier and value, so a player who changes spot takes that spot's value. Nothing changes until you publish the sync, and ${src.label} is never changed.`;
+    $("sync-pos").innerHTML = EDIT_POS.map(pos => `<label><input type="checkbox" data-sync-pos="${pos}"${SYNC.only.includes(pos) ? " checked" : ""}> ${pos} <span>${per[pos] ? plural(per[pos], "player moves", "players move") : "in order"}</span></label>`).join("");
+    const spot = (x, pos) => `#${x.rank} · ${pos}${x.pos_rank}${x.tier !== "" ? ` · ${isTagTier(x.tier) ? esc(tierLabel(pos, x.tier)) : "T" + esc(x.tier)}` : ""} · ${fmt(x.value)}`;
+    $("sync-box").innerHTML = n
+      ? `<table><thead><tr><th>Player</th><th>Before</th><th>After</th></tr></thead><tbody>${plan.moved.map(m => `<tr><td><span class="sy-name">${esc(m.name)}</span><span class="sy-sub">${m.pos}${m.from.pos_rank} → ${m.pos}${m.to.pos_rank}</span></td><td>${spot(m.from, m.pos)}</td><td class="sy-to">${spot(m.to, m.pos)}</td></tr>`).join("")}</tbody></table>`
+      : `<p class="sy-none">${SYNC.only.length ? `${ACTIVE_BOARD.label} already has ${src.label}'s order at ${SYNC.only.join(", ")}. Nothing to sync.` : "Tick a position to preview its sync."}</p>`;
+    const kept = plan.kept.length;
+    $("sync-kept").textContent = kept ? `${plural(kept, "player keeps his", "players keep their")} own spot whatever ${src.label} says (Out for season, a value of 0, or not ranked at that position on both boards).` : "";
+    $("sync-error").textContent = n ? blocked : "";
+    $("sync-apply").textContent = n ? `Publish sync (${plural(n, "player", "players")})` : "Publish sync";
+    $("sync-apply").disabled = !n || !!blocked;
+  }
+  function openSync() {
+    if (!orderSource(ACTIVE_BOARD)) return;
+    const d = $("sync-dialog"); renderSync();
+    if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute("open", ""); }
+  }
+  $("eb-sync").addEventListener("click", openSync);
+  $("sync-cancel").addEventListener("click", () => $("sync-dialog").close());
+  $("sync-pos").addEventListener("change", e => {
+    const pos = e.target && e.target.dataset ? e.target.dataset.syncPos : null; if (!pos) return;
+    SYNC.only = EDIT_POS.filter(q => (q === pos ? e.target.checked : SYNC.only.includes(q)));
+    renderSync();
+    const again = $("sync-pos").querySelector(`[data-sync-pos="${pos}"]`); if (again) again.focus();
+  });
+  $("sync-apply").addEventListener("click", () => {
+    if ($("sync-apply").disabled) return;
+    if (!editor.token) { $("sync-dialog").close(); AFTER_SIGNIN = openSync; openSignin(); return; }   // sign in, then look at the preview again
+    publishOrderSync(SYNC.only.slice(), SYNC.key);
+  });
+  async function publishOrderSync(only, expect) {
+    const src = orderSource(ACTIVE_BOARD), blocked = syncBlocked();
+    if (!src || !editor.token) return false;
+    if (blocked) { $("sync-error").textContent = blocked; return false; }
+    editor.saving = true; updateEditorBar(); $("sync-apply").disabled = true; $("sync-cancel").disabled = true; $("sync-error").textContent = "Publishing…";
+    const startCsv = savedCsv;
+    let done = null, note = "";
+    try {
+      for (let attempt = 0; attempt < 3 && !done; attempt++) {
+        const base = await repoSnapshot([FILE, HISTORY_FILE]), index = base.files[FILE];
+        if (index.text == null) throw ghError("data", `${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
+        const cur = extractRankings(index.text).csv, sync = syncOrder(extractRankings(index.text, src).csv, cur, only);
+        // what goes live is exactly what was previewed: either board changing meanwhile stops it
+        if (syncKey(sync.moved) !== expect) throw ghError("data", `the live rankings changed since this preview was made, so nothing was changed. Reload the page and preview the sync again.`);
+        if (!sync.moved.length) { done = { csv: cur, none: true }; break; }
+        const tp = validateRankings(sync.csv, cur, new Set(sync.moved.map(m => `${m.name}|${m.pos}`.toLowerCase())));
+        if (tp.length) throw ghError("data", `the synced board didn't pass the pre-publish checks, so nothing was changed (${tp.slice(0, 3).join("; ")}${tp.length > 3 ? `; +${tp.length - 3} more` : ""}).`);
+        const ts = new Date().toISOString(), h = await historyUpdate(base, cur, sync.csv, ts, ACTIVE_BOARD, "O", new Map(), src.id);
+        const hp = checkPublication(h, ts);
+        if (hp.length) throw ghError("data", `the ranking history didn't pass the pre-publish checks, so nothing was changed (${hp.slice(0, 3).join("; ")}).`);
+        const changes = [{ path: FILE, text: replaceRankings(index.text, sync.csv) }];
+        if (h.histNew != null) changes.push({ path: HISTORY_FILE, text: h.histNew });
+        if (h.snapNew != null) changes.push({ path: h.path, text: h.snapNew });
+        const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+        const msg = `${ACTIVE_BOARD.label} position order synced from ${src.label}${editor.login ? " by @" + editor.login : ""}: ${plural(sync.moved.length, "player", "players")} (${only.join(", ")}; ${sync.moved.slice(0, 4).map(m => `${m.name} ${m.pos}${m.from.pos_rank} → ${m.pos}${m.to.pos_rank}`).join(", ")}${sync.moved.length > 4 ? ", …" : ""})` + (h.r.changed ? "\n\n" + historyMessage(h.r.ev) : "");
+        diag("publish", `order sync attempt ${attempt + 1} on ${base.head.slice(0, 7)}: ${changes.map(c => c.path).join(" + ")}`);
+        const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts, start: startCsv }));
+        if (res) done = { csv: sync.csv, h, n: sync.moved.length };
+        else diag("publish", "branch moved, re-reading");
+      }
+      if (!done) throw ghError("server", "the site kept changing while publishing. Nothing was changed; try again.");
+      writePublish(null);
+      editor.saving = false;
+      if (done.none) note = `${ACTIVE_BOARD.label} already has that order. Nothing was changed.`;
+      else {
+        adoptPublished(done.csv, { hist: done.h.hist, month: done.h.month, snapFile: done.h.r.snapshot ? done.h.snapFile : null }, startCsv);
+        note = `Published and confirmed: ${plural(done.n, "player", "players")} took ${src.label}'s position order. The live site updates in about a minute.`;
+      }
+      $("sync-dialog").close(); updateEditorBar(); toast(note);
+      return true;
+    } catch (err) {
+      if (err.kind === "auth") { editor.token = null; editor.login = ""; clearToken(); }
+      if (!["unconfirmed", "network", "server"].includes(err.kind)) writePublish(null);
+      editor.saving = false; updateEditorBar();
+      diag("publish", `order sync failed (${err.kind || err.name || "error"}): ${redact(err.message)}`);
+      $("sync-error").textContent = publishErrorText(err).replace(/ ?Your edits are still saved in this browser\./g, "");
+      return false;
+    } finally { $("sync-cancel").disabled = false; if ($("sync-dialog").open) renderSyncButtons(); }
+  }
+  function renderSyncButtons() { const keep = $("sync-error").textContent; renderSync(); if (keep) $("sync-error").textContent = keep; }
   async function publishLive() {
     if (editor.saving) return;
     const prev = readPublish();
@@ -11052,68 +11178,39 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           }
         }
       }
-      const count = Object.keys(localEdits).length, targets = orderTargets(ACTIVE_BOARD), follow = orderSource(ACTIVE_BOARD);
+      const count = Object.keys(localEdits).length;
       let done = null;
       for (let attempt = 0; attempt < 3 && !done; attempt++) {
-        const base = await repoSnapshot([FILE, HISTORY_FILE, ...targets.map(t => t.history).filter(f => f !== HISTORY_FILE)]), index = base.files[FILE];
+        const base = await repoSnapshot([FILE, HISTORY_FILE]), index = base.files[FILE];
         if (index.text == null) throw ghError("data", `${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
         const cur = extractRankings(index.text);
         const { csv, conflicts } = mergeInto(cur.csv);
         if (conflicts.length) throw conflictError(conflicts);
         const problems = validateRankings(csv, cur.csv, touchSaved);
         if (problems.length) throw ghError("data", `the rankings didn't pass the pre-publish checks, so nothing was changed (${problems.slice(0, 3).join("; ")}${problems.length > 3 ? `; +${problems.length - 3} more` : ""}). Your edits are still saved in this browser.`);
-        // a board whose position order follows another's (AM SF PPR TE+ ← AM PPR, Oct 19) never publishes an order of its own
-        if (follow) {
-          const off = syncOrder(extractRankings(index.text, follow).csv, csv).moved;
-          if (off.length) throw ghError("data", `${ACTIVE_BOARD.label}'s position order comes from ${follow.label}'s published order, and these rankings don't follow it (${off.slice(0, 3).map(m => `${m.name} ${m.pos}${m.from.pos_rank} → ${m.pos}${m.to.pos_rank}`).join(", ")}${off.length > 3 ? `, +${off.length - 3} more` : ""}), so nothing was changed. Move players within a position on ${follow.label}. Your edits are still saved in this browser.`);
-        }
         const ts = new Date().toISOString(), h = await historyUpdate(base, cur.csv, csv, ts);
         const hp = checkPublication(h, ts);
         if (hp.length) throw ghError("data", `the ranking history didn't pass the pre-publish checks, so nothing was changed (${hp.slice(0, 3).join("; ")}). Your edits are still saved in this browser.`);
-        /* The boards that follow this one's position order (AM PPR → AM SF PPR TE+, Alan, Oct 19): synced from the merged,
-           published board (never a draft), checked like any publish, and recorded in their own history and snapshots
-           (source O, the event names this board): all in the same commit, so neither board goes live without the other. */
-        const synced = [];
-        for (const t of targets) {
-          const tCur = extractRankings(index.text, t).csv, sync = syncOrder(csv, tCur);
-          if (!sync.moved.length) continue;
-          const tp = validateRankings(sync.csv, tCur, new Set(sync.moved.map(m => `${m.name}|${m.pos}`.toLowerCase())), t);
-          if (tp.length) throw ghError("data", `${t.label}'s position order couldn't follow this publish: the synced board didn't pass the pre-publish checks (${tp.slice(0, 3).join("; ")}), so nothing was changed. Your edits are still saved in this browser.`);
-          const th = await historyUpdate(base, tCur, sync.csv, ts, t, "O", new Map(), ACTIVE_BOARD.id);
-          const thp = checkPublication(th, ts);
-          if (thp.length) throw ghError("data", `${t.label}'s ranking history didn't pass the pre-publish checks, so nothing was changed (${thp.slice(0, 3).join("; ")}). Your edits are still saved in this browser.`);
-          synced.push({ t, sync, h: th });
-        }
         const same = csv === cur.csv;
-        if (same && !h.r.changed && !synced.length) { done = { csv, same, h, synced }; break; }   // already live (e.g. published from another tab)
+        if (same && !h.r.changed) { done = { csv, same, h }; break; }   // already live (e.g. published from another tab)
         const changes = [];
-        let text = same ? index.text : replaceRankings(index.text, csv);
-        synced.forEach(x => { text = replaceRankings(text, x.sync.csv, x.t); });
+        const text = same ? index.text : replaceRankings(index.text, csv);
         if (text !== index.text) changes.push({ path: FILE, text });
         if (h.histNew != null) changes.push({ path: HISTORY_FILE, text: h.histNew });
         if (h.snapNew != null) changes.push({ path: h.path, text: h.snapNew });
-        synced.forEach(x => {
-          if (x.h.histNew != null) changes.push({ path: x.t.history, text: x.h.histNew });
-          if (x.h.snapNew != null) changes.push({ path: x.h.path, text: x.h.snapNew });
-        });
         const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36), hl = h.r.changed ? historyMessage(h.r.ev) : "";
-        const syncMsg = synced.map(x => `${x.t.label} position order follows: ${plural(x.sync.moved.length, "player", "players")} (${x.sync.moved.slice(0, 4).map(m => `${m.name} ${m.pos}${m.from.pos_rank} → ${m.pos}${m.to.pos_rank}`).join(", ")}${x.sync.moved.length > 4 ? ", …" : ""})` + (x.h.r.changed ? "\n" + historyMessage(x.h.r.ev) : "")).join("\n\n");
-        const msg = (same ? hl : `${ACTIVE_BOARD === DEFAULT_BOARD ? "Rankings edit" : ACTIVE_BOARD.label + " rankings edit"}${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})` + (hl ? "\n\n" + hl : ""))
-          + (syncMsg ? (same && !hl ? "" : "\n\n") + syncMsg : "");
+        const msg = same ? hl : `${ACTIVE_BOARD === DEFAULT_BOARD ? "Rankings edit" : ACTIVE_BOARD.label + " rankings edit"}${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})` + (hl ? "\n\n" + hl : "");
         diag("publish", `attempt ${attempt + 1} on ${base.head.slice(0, 7)}: ${changes.map(c => c.path).join(" + ")}`);
         const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts, start: startCsv }));
-        if (res) done = { csv, same, h, synced };   // null: the branch moved underneath us, so read and merge again
+        if (res) done = { csv, same, h };   // null: the branch moved underneath us, so read and merge again
         else diag("publish", "branch moved, re-reading");
       }
       if (!done) throw ghError("server", "the site kept changing while publishing. Your edits are still saved in this browser; try again.");
       writePublish(null); writePending([]);
       // confirmed: the merged rankings are now the published ones. Unsaved changes made while publishing are kept on top.
       editor.saving = false;
-      // the boards that followed: this page prices them from the block just published
-      done.synced.forEach(x => { BOARD_BLOCKS[x.t.block] = x.sync.csv; BOARD_LISTS.delete(x.t.id); });
       const left = adoptPublished(done.csv, { hist: done.h.hist, month: done.h.month, snapFile: done.h.r.snapshot ? done.h.snapFile : null }, startCsv);
-      const s = done.h.r.changed && historySummary(done.h.r.ev), snapNote = (s ? ` Ranking history: ${s}.` : "")
-        + done.synced.map(x => ` ${x.t.label} follows the new position order (${plural(x.sync.moved.length, "player", "players")} moved).`).join("");
+      const s = done.h.r.changed && historySummary(done.h.r.ev), snapNote = s ? ` Ranking history: ${s}.` : "";
       const leftNote = left ? ` ${left} edit${left === 1 ? "" : "s"} made while publishing ${left === 1 ? "is" : "are"} still unsaved.` : "";
       toast(settledNote + (done.same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote + leftNote);
     } catch (err) {
@@ -11161,12 +11258,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   const dialog = $("signin-dialog");
   $("signin-repo").textContent = REPO;
+  let AFTER_SIGNIN = null;   // what signing in continues with (default: the publish that asked for it)
   function openSignin() {
     $("signin-error").textContent = ""; $("signin-token").value = ""; $("signin-remember").checked = false;
     if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
     $("signin-token").focus();
   }
-  $("signin-cancel").addEventListener("click", () => dialog.close());
+  $("signin-cancel").addEventListener("click", () => { AFTER_SIGNIN = null; dialog.close(); });
   $("signin-form").addEventListener("submit", async e => {
     e.preventDefault();
     const token = $("signin-token").value.trim();
@@ -11177,7 +11275,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       storeToken(token, $("signin-remember").checked);
       $("signin-token").value = "";
       dialog.close();
-      publishLive();
+      const next = AFTER_SIGNIN; AFTER_SIGNIN = null;
+      (next || publishLive)();
     } catch (err) {
       editor.token = null;
       $("signin-error").textContent = err.kind === "auth" ? "GitHub didn't recognize that token." : redact(err.message);
@@ -19976,7 +20075,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   const EDIT_API = { moveOverall, movePlayer, setValue, applyValue: (id, v) => applyValue(byId.get(id), v), sendOut: id => sendOut(byId.get(id)), recalcPlayer, recalcAuto, tierAction,
     touched: () => [...touchDraft.keys()], board: () => players.filter(p => p.pos !== "PICK" && p.rank != null).map(p => ({ id: p.id, sid: p.sleeperId, name: p.name, pos: p.pos, rank: p.rank, posNum: p.posNum, tier: String(p.tier), value: p.value, source: p.source, curve: p.curve, tail: p.tail })),
     save: () => saveLocal(), tierNotice: (id, oldTier, oldVal) => tierMoveNotice(byId.get(id), String(oldTier), oldVal, true), cancel: () => $("eb-cancel").click(), lastFit: () => LAST_FIT && { moved: LAST_FIT.moved } };
-  window.SPM = { formulaPreview, stateValues, scarcityIndex, rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, syncOrder, snapshotOf: (csv, bid) => rankingSnapshot(loadPlayers(csv, boardById(bid) || ACTIVE_BOARD)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
+  window.SPM = { syncPlan, formulaPreview, stateValues, scarcityIndex, rankingSnapshot, historyText, normalizeHistory, addSnapshot, recordPublish, boardSnapText, historyMessage, snapMonth, snapPath, valueAt, formatCheck, projectionCheck, scoringCheck, calculateFantasyPoints, valueCheck, extractRankings, replaceRankings, validateRankings, syncOrder, snapshotOf: (csv, bid) => rankingSnapshot(loadPlayers(csv, boardById(bid) || ACTIVE_BOARD)), diagnostics: () => DIAG.slice() };   // helpers for the scheduled snapshot and tests
   // Ranking sets, read only (tests and the console): the registry, the board loaded, the league's board, the Rankings board,
   // and the automatic pick for any Custom format fields (e.g. SPM.boards({ qb: "1", tep: 0 }))
   SPM.boards = f => ({ boards: BOARDS.map(b => ({ id: b.id, label: b.label, tierScope: b.tierScope, fmt: { ...b.fmt } })), active: ACTIVE_BOARD.id,

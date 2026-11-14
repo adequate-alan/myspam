@@ -474,13 +474,13 @@ try:
         a[ri], b[ri] = b[ri], a[ri]
         if a[qi] == b[qi]: a[pi], b[pi] = b[pi], a[pi]
         sw[i1], sw[i2] = ",".join(a), ",".join(b); return sw, a[qi] == b[qi]
-    # a swap across positions is a valid AM SF PPR TE+ edit; inside a position the order comes from AM PPR
+    # a swap across positions and a swap inside a position are both valid AM SF PPR TE+ edits (Nov 14: its order is its own)
     n = next(k for k in range(1, len(lines) - 1) if not swapped(k)[1])
     open(os.path.join(d, "index.html"), "w").write(with_csv(swapped(n)[0]))
     rc, o = static(d); ok(rc == 0, f"static_check: a valid rankings edit passes without --frozen-rankings (#{n} ↔ #{n + 1}){'' if rc == 0 else o[-400:]}")
     n2 = next(k for k in range(1, len(lines) - 1) if swapped(k)[1])
     open(os.path.join(d, "index.html"), "w").write(with_csv(swapped(n2)[0]))
-    rc, o = static(d); ok(rc == 1 and "follows AM PPR" in o, f"static_check: a reorder inside a position on AM SF PPR TE+ fails (#{n2} ↔ #{n2 + 1})")
+    rc, o = static(d); ok(rc == 0, f"static_check: a reorder inside a position on AM SF PPR TE+ passes, whatever AM PPR's order (#{n2} ↔ #{n2 + 1}){'' if rc == 0 else o[-400:]}")
     open(os.path.join(d, "index.html"), "w").write(with_csv(swapped(n)[0]))
     rc, o = static(d, "--base", "HEAD", "--frozen-rankings"); ok(rc == 1 and "No ranking field changed" in o, "static_check: the same edit fails for an automated job (--frozen-rankings)")
     shutil.copy(os.path.join(ROOT, "index.html"), os.path.join(d, "index.html"))
