@@ -129,7 +129,7 @@ def run(br, html, full=False):
     pg = br.new_page()
     pg.route(re.compile(r"https?://(?!127\.0\.0\.1).*"), lambda r: r.abort())
     pg.route(re.compile(re.escape(BASE) + r"/(index\.html)?([?#].*)?$"), lambda r: r.fulfill(status=200, content_type="text/html", body=html))
-    pg.add_init_script("window.__SPM_TEST_HOOKS = true; window.__SPM_ORDER_SYNC_OFF = true;")
+    pg.add_init_script("window.__SPM_TEST_HOOKS = true;")
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.goto(BASE + "/"); pg.wait_for_function("() => window.SPM && SPM.adjFor", timeout=60000)
     out = {key(f): {r["sid"]: r for r in pg.evaluate("([f, b]) => SPM.adjFor(f, b)", [f, board_of(f)])} for f in FORMATS}

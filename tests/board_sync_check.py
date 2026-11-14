@@ -1,28 +1,31 @@
-"""AM PPR → AM SF PPR TE+ position order sync (Alan, Oct 19: "AM PPR decides who stands in each position spot, the SF
-board decides what that spot is worth").
+"""Free editing on every board, with the AM PPR → AM SF PPR TE+ position order sync as an optional, previewed action
+(Alan, Nov 14: "complete manual editing freedom on both AM Boards"; the sync was automatic from Oct 19 to Nov 14).
 
-Part A runs the page's own syncOrder on small synthetic boards (the edge cases); parts B–D run the real editor and
+Part A runs the page's own syncOrder on small synthetic boards (the edge cases); parts B–G run the real editor and
 publishing code against an in-memory GitHub repository (tests/gh_mock.py) holding this checkout's index.html and both
 boards' history and snapshot files. Nothing touches GitHub or the files on disk.
 
-Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/board_sync_check.py   (REPORT=file.md for a before /
-after table of the published example)
+Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/board_sync_check.py
 
 Checks:
 A. syncOrder ("spots stay"): a reorder moves players, never spots (overall rank, position rank, tier, tier name, value and
    source stay put); other positions untouched; Out for season on either board, a value of 0 on SF, a player missing from
    AM PPR or at another position there keeps his own row and the others are ordered around him; a player only on AM PPR
-   is never added; a second run changes nothing.
-B. The boards in this checkout already follow each other (the first activation was applied), Achane and Dart kept as
-   Out for season on both.
-C. Unpublished: an AM PPR move saved in a browser without a token changes nothing on GitHub (either block).
-D. Published: an AM PPR move RB8 → RB5 publishes ONE commit with both blocks, AM PPR's history and snapshot and AM SF
-   PPR TE+'s (source O, from "ppr", the same timestamp); on SF he takes RB5's rank, value and tier, RB5–RB7 shift down a
-   spot, nobody else changes; the code outside the blocks is byte-identical; the commit message names the sync.
-E. Atomic: a commit GitHub refuses leaves both boards and every history file as they were.
-F. The SF editor: a move inside a position is refused (board unchanged, the toast says why); a move across positions,
-   a same-rank tier move, a value edit and Out for season still work; an SF publish whose order doesn't follow AM PPR is
-   stopped with nothing written. No page errors.
+   is never added; a second run changes nothing; `only` leaves every other position exactly as it is.
+B. Unpublished: an AM PPR move saved in a browser without a token changes nothing on GitHub (either block).
+C. An AM PPR publish (RB8 → RB5) is ONE commit with AM PPR's block, history and snapshot only: the SF block, its history
+   and its snapshots are byte-identical. A commit GitHub refuses leaves everything as it was.
+D. The SF editor is free: a move inside a position (Move to rank through the popover, the last QB to QB25), an arrow, an
+   overall move past players of his own position, a same-rank tier move, a value edit and Out for season all work and
+   change AM PPR nowhere; only the mover's value changes on a move; Save keeps them across a reload; the publish is one
+   commit with the SF block, history and snapshot only.
+E. A later AM PPR publish leaves SF's own order exactly as published.
+F. The optional sync: the editor bar offers it on SF only; the preview lists every player who would change spot, before
+   and after, for the ticked positions (RB and WR by default); Cancel changes nothing; unsaved changes block it; without
+   a token it asks to sign in; a preview that no longer matches what is live is stopped with nothing written; "Publish
+   sync" is ONE commit with the SF block, history (source O, from "ppr") and snapshot, AM PPR untouched; a position left
+   unticked keeps SF's own order.
+G. Phone and dark theme: the preview fits the screen. No page errors.
 """
 import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
@@ -132,131 +135,252 @@ with sync_playwright() as p:
     r = sync(pg, mk(P), mk(SF))
     ok(not r["moved"] and any(k["name"] == "Cal" and "listed as WR" in k["why"] for k in r["kept"]), "A player at another position on AM PPR keeps his spot")
 
-    # B. the boards in this checkout already follow each other
+    r = sync(pg, mk(ppr(["3", "2", "1", "4", "5", "6"])), mk(SF)); r1 = pg.evaluate("([s, d]) => SPM.syncOrder(s, d, ['WR', 'QB'])", [mk(ppr(["3", "2", "1", "4", "5", "6"])), mk(SF)])
+    ok(len(r["moved"]) == 2 and not r1["moved"] and r1["csv"] == mk(SF), "`only`: a position that isn't asked for is left exactly as it is")
     live = repo.read("index.html")
     r = sync(pg, block(live, PPR_RE), block(live, SF_RE))
-    ok(not r["moved"], f"AM SF PPR TE+ follows AM PPR's published position order in this checkout ({len(r['moved'])} differences)")
-    # whoever is Out on either board today (live data: names change with Alan's publishes)
-    ok(r["kept"] and all("tag tier" in k["why"] or "valued 0" in k["why"] for k in r["kept"]), f"…with only Out for season / value 0 players kept in place: {[k['name'] + ' (' + k['why'] + ')' for k in r['kept']]}")
+    print(f"INFO this checkout: AM SF PPR TE+ differs from AM PPR's position order at {len(r['moved'])} players (information only: the boards are edited independently)")
     pg.close()
 
-    # C. an unpublished AM PPR move never reaches either block on GitHub
-    pg = page(token=False, board="ppr")
-    ok(pg.evaluate("() => SPM.boards().active") == "ppr", "AM PPR is the edited board")
-    rb = pg.evaluate("() => SPM.edit.board().filter(p => p.pos === 'RB').sort((a, b) => a.posNum - b.posNum).map(p => [p.id, String(p.sid), p.name])")
-    head0, n0 = repo.head, len(repo.log())
-    pg.evaluate("id => SPM.edit.movePlayer(id, 5)", rb[7][0]); pg.wait_for_timeout(500)
-    pg.evaluate("() => SPM.edit.save()"); pg.wait_for_timeout(1500)
-    ok(repo.head == head0 and len(repo.log()) == n0, "A saved, unpublished AM PPR move (no token) commits nothing: neither block changes on GitHub")
-    ok(pg.evaluate("() => (localStorage.getItem('spm_local_edits:ppr') || '{}') !== '{}'"), "…it stays a draft in this browser")
-    pg.context.close()
-
-    # E. atomic: GitHub refuses the commit → nothing changes anywhere
-    pg = page(token=True, board="ppr")
-    rb = pg.evaluate("() => SPM.edit.board().filter(p => p.pos === 'RB').sort((a, b) => a.posNum - b.posNum).map(p => [p.id, String(p.sid), p.name])")
-    def save():
+    def save(pg):
         pg.evaluate("() => { const t = document.getElementById('toast'); t.textContent = ''; t.hidden = true; }")
         pg.click("#eb-publish" if pg.is_disabled("#eb-save") else "#eb-save")
         pg.wait_for_function("() => /Publish|Already live|Nothing to publish|Saved/.test(document.getElementById('toast').textContent)", timeout=30000)
         pg.wait_for_timeout(300); return pg.inner_text("#toast")
+    SF_FILES = [f for f in FILES if f.startswith("data/rank_")]
+    PPR_FILES = [f for f in FILES if f.startswith("data/boards/ppr/")]
+    def ppr_files(): return {f: repo.read(f) for f in PPR_FILES}
+    POS = lambda pg, pos: pg.evaluate("pos => SPM.edit.board().filter(p => p.pos === pos).sort((a, b) => a.posNum - b.posNum).map(p => [p.id, String(p.sid), p.name, p.rank, Math.round(p.value), String(p.tier)])", pos)
+
+    # B. an unpublished AM PPR move never reaches either block on GitHub
+    pg = page(token=False, board="ppr")
+    ok(pg.evaluate("() => SPM.boards().active") == "ppr", "AM PPR is the edited board")
+    ok(pg.locator("#eb-sync").is_hidden(), "AM PPR's editor bar offers no sync (it is nobody's follower)")
+    rb = POS(pg, "RB")
+    head0, n0 = repo.head, len(repo.log())
+    pg.evaluate("id => SPM.edit.movePlayer(id, 5)", rb[7][0]); pg.wait_for_timeout(500)
+    pg.evaluate("() => SPM.edit.save()"); pg.wait_for_timeout(1500)
+    ok(repo.head == head0 and len(repo.log()) == n0, "A saved, unpublished AM PPR move (no token) commits nothing: neither block changes on GitHub")
+    pg.context.close()
+
+    # C. an AM PPR publish is AM PPR's alone
+    pg = page(token=True, board="ppr")
+    rb = POS(pg, "RB")
     pg.evaluate("id => SPM.edit.movePlayer(id, 5)", rb[7][0]); pg.wait_for_timeout(500)
     snap0 = {f: repo.read(f) for f in FILES}; head0 = repo.head
     repo.faults["patch"] = 500
-    msg = save(); repo.faults.clear()
+    msg = save(pg); repo.faults.clear()
     ok("Publish failed" in msg and repo.head == head0 and all(repo.read(f) == snap0[f] for f in FILES), f"A refused commit leaves both blocks and every history and snapshot file unchanged ({msg[:70]!r})")
-
-    # D. the published move reaches SF in the same commit
-    sf0, ppr0 = table(block(repo.read("index.html"), SF_RE)), table(block(repo.read("index.html"), PPR_RE))
-    rbs0 = sorted((v for v in sf0.values() if v["pos"] == "RB"), key=lambda v: int(v["rank"]))
-    before = repo.read("index.html"); n0 = len(repo.log()); head0 = repo.head
-    msg = save()
+    before = repo.read("index.html"); n0 = len(repo.log()); sfh0 = {f: repo.read(f) for f in SF_FILES}
+    msg = save(pg)
     after = repo.read("index.html"); new = repo.log()[n0:]
-    ok("Published and confirmed" in msg and len(new) == 1, f"One commit ({[m.splitlines()[0] for m in new]}; {msg[:110]!r})")
-    ok("AM SF PPR TE+ follows the new position order" in msg, "The toast says the SF board followed")
-    ok(new and new[0].startswith("AM PPR rankings edit by @tester") and "AM SF PPR TE+ position order follows: 4 players" in new[0], f"The commit message names the sync: {new[0][:300] if new else ''!r}")
-    ok(outside(before, SF_RE, PPR_RE) == outside(after, SF_RE, PPR_RE), "index.html outside the two blocks is byte-identical")
-    sf1, ppr1 = table(block(after, SF_RE)), table(block(after, PPR_RE))
-    sid = rb[7][1]
-    ok(ppr1[sid]["pos_rank"] == "5", f"AM PPR: {rb[7][2]} RB8 → RB{ppr1[sid]['pos_rank']}")
-    spotf = lambda v: (v["rank"], v["pos_rank"], v["tier"], v.get("tier_name", ""), v["value"], v["source"])
-    ok(spotf(sf1[sid]) == spotf(rbs0[4]), f"AM SF PPR TE+: {rb[7][2]} takes RB5's spot: #{sf1[sid]['rank']} · RB{sf1[sid]['pos_rank']} · T{sf1[sid]['tier']} · {sf1[sid]['value']} (was #{sf0[sid]['rank']} · RB{sf0[sid]['pos_rank']} · {sf0[sid]['value']})")
-    ok(all(spotf(sf1[rbs0[k]["sleeper_id"]]) == spotf(rbs0[k + 1]) for k in (4, 5, 6)), "RB5–RB7 each move down one spot and take that spot's rank, value and tier")
-    changed = sorted(s for s in sf0 if sf0[s] != sf1[s])
-    ok(len(changed) == 4, f"Nobody else on SF changes ({len(changed)} rows changed)")
-    ok(sorted(int(v["value"]) for v in sf0.values()) == sorted(int(v["value"]) for v in sf1.values()) and {v["rank"] for v in sf0.values()} == {v["rank"] for v in sf1.values()},
-       "SF's value ladder and overall rank slots are exactly the same set")
-    ok(sf1[sid]["value"] != ppr1[sid]["value"], f"RB5 on both boards, different values: AM PPR {ppr1[sid]['value']}, AM SF PPR TE+ {sf1[sid]['value']}")
-    hs, hp = json.loads(repo.read("data/rank_history.json")), json.loads(repo.read("data/boards/ppr/rank_history.json"))
-    hs0, hp0 = json.loads(repo.read("data/rank_history.json", head0)), json.loads(repo.read("data/boards/ppr/rank_history.json", head0))
-    es, ep = hs["events"][-1], hp["events"][-1]
-    ok(len(hs["events"]) == len(hs0["events"]) + 1 and len(hp["events"]) == len(hp0["events"]) + 1 and es["ts"] == ep["ts"], "Each board's history gets one event, at the same timestamp")
-    ok(es["src"] == "O" and es.get("from") == "ppr" and es["by"] == "tester" and sorted(x[0] for x in es["ranking"]) == changed,
-       f"The SF event says it came from the AM PPR publish (src {es['src']}, from {es.get('from')}) and lists the {len(es['ranking'])} players")
-    ok(all(hs["players"][s][-1][5] == "O" and hs["players"][s][-1][0] == es["ts"] for s in changed), "Each SF player's entry is marked O (position order from AM PPR)")
-    ok(all(hs["players"].get(s, [])[:len(l)] == l for s, l in hs0["players"].items()) and hs["events"][:-1] == hs0["events"], "Every earlier SF history entry and event kept")
-    snap = lambda path: json.loads(repo.read(path))["snapshots"][-1]
-    ss, sp = snap(f"data/rank_snapshots/{es['ts'][:7]}.json"), snap(f"data/boards/ppr/rank_snapshots/{ep['ts'][:7]}.json")
-    ok(ss["ts"] == es["ts"] and all(ss["players"][s] == [int(v["rank"]), int(v["pos_rank"]), int(v["tier"]), int(v["value"])] for s, v in sf1.items() if s),
-       "The SF snapshot is the synced SF board")
-    ok(sp["ts"] == ep["ts"] and sp["players"][sid][1] == 5, "The AM PPR snapshot is the published AM PPR board")
-    ok(not pg.evaluate("([p, s]) => SPM.syncOrder(p, s).moved.length", [block(after, PPR_RE), block(after, SF_RE)]), "After the publish SF follows AM PPR exactly")
-    pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
-    ok(pg.evaluate("() => SPM.boards().active") == "ppr" and pg.inner_text("#eb-count").strip() == "All saved", "A reload shows the published board with nothing pending")
-    if os.environ.get("REPORT"):
-        lines = ["| Player | SF before | SF after | AM PPR after |", "|---|---|---|---|"]
-        for s in [sid] + [rbs0[k]["sleeper_id"] for k in (4, 5, 6)]:
-            a, b, c = sf0[s], sf1[s], ppr1[s]
-            lines.append(f"| {a['player']} | RB{a['pos_rank']} · #{a['rank']} · T{a['tier']} · {int(a['value']):,} | RB{b['pos_rank']} · #{b['rank']} · T{b['tier']} · {int(b['value']):,} | RB{c['pos_rank']} · #{c['rank']} · {int(c['value']):,} |")
-        open(os.environ["REPORT"], "w").write("\n".join(lines) + "\n")
+    ok("Published and confirmed" in msg and len(new) == 1 and new[0].startswith("AM PPR rankings edit by @tester"), f"The AM PPR publish is one commit ({[m.splitlines()[0] for m in new]})")
+    ok("AM SF PPR TE+" not in msg and "AM SF PPR TE+" not in new[0], "Neither the toast nor the commit message mentions AM SF PPR TE+")
+    ok(block(after, SF_RE) == block(before, SF_RE) and outside(before, PPR_RE) == outside(after, PPR_RE), "The SF block and everything outside the AM PPR block are byte-identical")
+    ok(all(repo.read(f) == sfh0[f] for f in SF_FILES), "SF's history and snapshots are byte-identical")
+    ok(table(block(after, PPR_RE))[rb[7][1]]["pos_rank"] == "5", f"AM PPR: {rb[7][2]} RB8 → RB5 is live")
+    ppr_moved = rb[7]
     pg.context.close()
 
-    # F. the SF editor
+    # D. the SF editor is free
     pg = page(token=True, board="sf-tep")
     ok(pg.evaluate("() => SPM.boards().active") == "sf-tep", "AM SF PPR TE+ is the edited board")
-    B = lambda: pg.evaluate("() => SPM.edit.board().map(p => [String(p.sid), p.rank, p.posNum, String(p.tier), Math.round(p.value)]).sort()")
-    start = B()
-    wr = pg.evaluate("() => SPM.edit.board().filter(p => p.pos === 'WR').sort((a, b) => a.posNum - b.posNum).map(p => [p.id, p.name, p.rank])")
-    pg.evaluate("() => { const t = document.getElementById('toast'); t.textContent = ''; }")
+    B = lambda: pg.evaluate("() => SPM.edit.board().map(p => [String(p.sid), p.rank, p.posNum, String(p.tier), Math.round(p.value), p.source]).sort()")
+    start = B(); ppr_block0 = block(repo.read("index.html"), PPR_RE)
+    def diff(a, b): return [x[0] for x, y in zip(a, b) if x != y]
+    wr = POS(pg, "WR")
     pg.evaluate("id => SPM.edit.movePlayer(id, 2)", wr[5][0]); pg.wait_for_timeout(400)
-    ok(B() == start and "order within each position comes from AM PPR" in pg.inner_text("#toast"), f"WR6 → WR2 on SF is refused, board unchanged ({pg.inner_text('#toast')[:80]!r})")
-    pg.evaluate("([id, r]) => SPM.edit.moveOverall(id, r)", [wr[5][0], wr[4][2]]); pg.wait_for_timeout(400)
-    ok(B() == start, "An overall move past a WR is refused too")
-    ov = pg.evaluate("() => SPM.edit.board().sort((a, b) => a.rank - b.rank).map(p => [p.id, p.pos, p.name, p.rank])")
-    k = next(i for i in range(60, 120) if ov[i][1] != ov[i - 1][1])
-    pg.evaluate("([id, r]) => SPM.edit.moveOverall(id, r)", [ov[k][0], ov[k][3] - 1]); pg.wait_for_timeout(400)
-    now = {r[0]: r for r in B()}
-    sid_k = pg.evaluate("id => String(SPM.edit.board().find(p => p.id === id).sid)", ov[k][0])
-    ok(now[sid_k][1] == ov[k][3] - 1, f"A move across positions still works ({ov[k][2]} #{ov[k][3]} → #{now[sid_k][1]})")
+    now = POS(pg, "WR")
+    ok(now[1][0] == wr[5][0] and "AM PPR" not in pg.inner_text("#toast"), f"WR6 → WR2 on SF works ({wr[5][2]} is now WR2)")
+    vals0 = {r[0]: r[4] for r in start}; vals1 = {r[0]: r[4] for r in B()}
+    chg = [s_ for s_ in vals0 if vals0[s_] != vals1[s_]]
+    ok(set(chg) <= {wr[5][1]} or all(abs(vals0[s_] - vals1[s_]) <= 1 for s_ in chg if s_ != wr[5][1]), f"Only the mover's value changes; nobody takes another player's value ({len(chg)} values changed)")
+    src0 = {r[0]: r[5] for r in start}; src1 = {r[0]: r[5] for r in B()}
+    ok(all(src0[s_] == src1[s_] for s_ in src0 if s_ != wr[5][1]), "Everyone else keeps his Manual / Auto status")
     pg.evaluate("() => SPM.edit.cancel()"); pg.wait_for_timeout(400)
-    ok(B() == start, "Cancel restores the board")
-    edge = pg.evaluate("""() => { const b = SPM.edit.board().filter(p => p.pos === 'QB').sort((a, b) => a.posNum - b.posNum);
+    ok(B() == start, "Cancel restores the board exactly")
+    pg.evaluate("([id, r]) => SPM.edit.moveOverall(id, r)", [wr[5][0], wr[3][3]]); pg.wait_for_timeout(400)
+    ok(POS(pg, "WR")[3][0] == wr[5][0], f"An overall move past two WRs works too ({wr[5][2]} → #{wr[3][3]}, WR4)")
+    pg.evaluate("() => SPM.edit.cancel()"); pg.wait_for_timeout(400)
+    # an arrow on the RB tab
+    pg.click('.chip-btn[data-pos="RB"]') if pg.locator('.chip-btn[data-pos="RB"]').count() else pg.evaluate("() => [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'RB').click()")
+    pg.wait_for_timeout(400)
+    rbs = POS(pg, "RB"); row = pg.locator(f'#rank-body tr.player[data-id="{rbs[9][0]}"]'); row.hover(); row.locator(".arrow[data-dir='-1']").click(); pg.wait_for_timeout(500)
+    ok(POS(pg, "RB")[8][0] == rbs[9][0], f"The ▲ arrow moves {rbs[9][2]} RB10 → RB9 on SF")
+    pg.evaluate("() => SPM.edit.cancel()"); pg.wait_for_timeout(400)
+    # Move to rank through the popover: the last ranked QB to QB25 (Alan's Carson Beck example)
+    pg.evaluate("() => [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'QB').click()"); pg.wait_for_timeout(400)
+    qbs = [q for q in POS(pg, "QB") if int(q[5]) < 90 and q[4] > 0]; last = qbs[-1]
+    row = pg.locator(f'#rank-body tr.player[data-id="{last[0]}"]'); row.scroll_into_view_if_needed(); row.hover(); row.locator(".rk-btn").click(); pg.wait_for_timeout(250)
+    pg.fill("#mv-input", "25"); pg.wait_for_timeout(150); pg.keyboard.press("Enter"); pg.wait_for_timeout(600)
+    qb1 = POS(pg, "QB")
+    ok(qb1[24][0] == last[0] and qb1[23][4] > qb1[24][4] > qb1[25][4], f"Move to rank: {last[2]} QB{len(qbs)} → QB25 on SF, valued between his new neighbours ({qb1[23][4]:,} > {qb1[24][4]:,} > {qb1[25][4]:,})")
+    ok([q[0] for q in qb1 if q[0] != last[0]] == [q[0] for q in POS(pg, "QB") if q[0] != last[0]] and [q[0] for q in qb1 if q[0] != last[0]][:len(qbs) - 1] == [q[0] for q in qbs[:-1]], "The other QBs keep their order")
+    # a same-rank tier move and a value edit on top
+    edge = pg.evaluate("""() => { const b = SPM.edit.board().filter(p => p.pos === 'TE').sort((a, b) => a.posNum - b.posNum);
         for (let i = 1; i < b.length; i++) if (b[i].tier !== b[i - 1].tier && Number(b[i].tier) < 90 && b.filter(p => p.tier === b[i - 1].tier).length > 1) return [b[i - 1].id, b[i].tier, b[i - 1].name, b[i - 1].rank];
         return null; }""")
     pg.evaluate("([id, t]) => SPM.edit.movePlayer(id, SPM.edit.board().find(p => p.id === id).posNum, t)", edge); pg.wait_for_timeout(400)
-    now = {r[0]: r for r in B()}
     me = pg.evaluate("id => { const p = SPM.edit.board().find(p => p.id === id); return [String(p.sid), p.rank, String(p.tier)]; }", edge[0])
-    ok(me[1] == edge[3] and me[2] == str(edge[1]), f"A same-rank tier move still works ({edge[2]} → Tier {me[2]} at #{me[1]})")
-    pg.evaluate("() => SPM.edit.cancel()"); pg.wait_for_timeout(300)
-    out_p = pg.evaluate("() => SPM.edit.board().filter(p => p.pos === 'TE' && Number(p.tier) < 90).sort((a, b) => a.posNum - b.posNum)[10]")
-    pg.evaluate("id => SPM.edit.sendOut(id)", out_p["id"]); pg.wait_for_timeout(400)
-    o = pg.evaluate("id => SPM.edit.board().find(p => p.id === id)", out_p["id"])
-    ok(o["tier"] == "99" and o["value"] == 0, f"Out for season still works on SF ({out_p['name']}: Tier {o['tier']}, value {o['value']})")
-    pg.evaluate("() => SPM.edit.cancel()"); pg.wait_for_timeout(300)
-    ok(B() == start, "Cancel restores the board")
-    # an SF publish whose order doesn't follow AM PPR (edits saved by another page, an old browser) is stopped
-    sfb = block(repo.read("index.html"), SF_RE); T = list(csv.reader(io.StringIO(sfb))); H = T[0]
-    w = sorted((r for r in T[1:] if r[H.index("pos")] == "WR"), key=lambda r: int(r[H.index("rank")]))[2:4]
-    key = lambda r: (r[H.index("player")] + "|" + r[H.index("pos")]).lower()
-    edits = {key(w[0]): {c: w[1][H.index(c)] for c in ("rank", "pos_rank", "tier", "value", "tier_name")},
-             key(w[1]): {c: w[0][H.index(c)] for c in ("rank", "pos_rank", "tier", "value", "tier_name")}}
-    pg.evaluate("e => localStorage.setItem('spm_local_edits', JSON.stringify(e))", edits)
+    ok(me[1] == edge[3] and me[2] == str(edge[1]), f"A same-rank tier move works ({edge[2]} → Tier {me[2]} at #{me[1]})")
+    ov = pg.evaluate("() => SPM.edit.board().sort((a, b) => a.rank - b.rank).map(p => [p.id, Math.round(p.value), p.name, String(p.sid)])")
+    v_new = ov[40][1] - 1 if ov[40][1] - 1 > ov[41][1] else None
+    if v_new: pg.evaluate("([id, v]) => SPM.edit.setValue(id, v)", [ov[40][0], v_new]); pg.wait_for_timeout(400)
+    ok(v_new is None or pg.evaluate("id => Math.round(SPM.edit.board().find(p => p.id === id).value)", ov[40][0]) == v_new, f"A value edit works ({ov[40][2]} {ov[40][1]:,} → {v_new})")
+    pg.evaluate("() => SPM.edit.cancel()"); pg.wait_for_timeout(400)
+    ok(B() == start, "Cancel restores the published board exactly")
+    pg.context.close()
+
+    pg = page(token=False, board="sf-tep")
+    qbs = [q for q in POS(pg, "QB") if int(q[5]) < 90 and q[4] > 0]; last = qbs[-1]
+    pg.evaluate("id => SPM.edit.movePlayer(id, 25)", last[0]); pg.wait_for_timeout(400)
+    pg.evaluate("id => SPM.edit.movePlayer(id, 2)", wr[5][0]); pg.wait_for_timeout(400)
+    want = B(); head0 = repo.head
+    pg.evaluate("() => SPM.edit.save()"); pg.wait_for_timeout(1500)
     pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
+    ok(B() == want and repo.head == head0, "Saved without a token: the SF order is kept across a reload, nothing on GitHub")
+    ok(POS(pg, "QB")[24][0] == last[0] and POS(pg, "WR")[1][0] == wr[5][0], f"…{last[2]} is QB25 and {wr[5][2]} WR2 after the reload")
+    # sign in and publish: SF only
+    pg.evaluate("() => { sessionStorage.setItem('spm_editor_token', 'test-token'); }")
+    pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1800)
+    before = repo.read("index.html"); n0 = len(repo.log()); pf0 = ppr_files(); hs0 = json.loads(repo.read("data/rank_history.json"))
+    msg = save(pg)
+    after = repo.read("index.html"); new = repo.log()[n0:]
+    ok("Published and confirmed" in msg and len(new) == 1 and new[0].startswith("Rankings edit by @tester"), f"The SF publish is one commit ({[m.splitlines()[0] for m in new]}; {msg[:90]!r})")
+    ok(block(after, PPR_RE) == ppr_block0 and outside(before, SF_RE) == outside(after, SF_RE) and ppr_files() == pf0, "AM PPR's block, history and snapshots are byte-identical; nothing outside the SF block changed")
+    sf1 = table(block(after, SF_RE))
+    ok(sf1[last[1]]["pos_rank"] == "25" and sf1[wr[5][1]]["pos_rank"] == "2", f"Live on SF: {last[2]} QB25, {wr[5][2]} WR2")
+    hs = json.loads(repo.read("data/rank_history.json")); es = hs["events"][-1]
+    ok(len(hs["events"]) == len(hs0["events"]) + 1 and es["src"] == "M" and hs["events"][:-1] == hs0["events"] and all(hs["players"].get(s_, [])[:len(l)] == l for s_, l in hs0["players"].items()),
+       "SF's history gets one Manual event; every earlier entry and event is kept")
+    snap = lambda path: json.loads(repo.read(path))["snapshots"][-1]
+    ss = snap(f"data/rank_snapshots/{es['ts'][:7]}.json")
+    ok(ss["ts"] == es["ts"] and all(ss["players"][s_] == [int(v["rank"]), int(v["pos_rank"]), int(v["tier"]), int(v["value"])] for s_, v in sf1.items() if s_), "The SF snapshot is the published SF board")
+    ok({s_ for s_ in sf1} == {r[0] for r in start}, "Same players as before (identity kept)")
+    pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
+    ok(pg.inner_text("#eb-count").strip() == "All saved" and POS(pg, "QB")[24][0] == last[0], "A reload shows the published SF board with nothing pending")
+    sf_own = block(repo.read("index.html"), SF_RE)
+    pg.context.close()
+
+    # E. a later AM PPR publish never touches SF's own order
+    pg = page(token=True, board="ppr")
+    wrp = POS(pg, "WR")
+    pg.evaluate("id => SPM.edit.movePlayer(id, 3)", wrp[8][0]); pg.wait_for_timeout(500)
+    sfh0 = {f: repo.read(f) for f in SF_FILES}; n0 = len(repo.log())
+    msg = save(pg)
+    ok("Published and confirmed" in msg and len(repo.log()) == n0 + 1 and block(repo.read("index.html"), SF_RE) == sf_own and all(repo.read(f) == sfh0[f] for f in SF_FILES),
+       "After another AM PPR publish (WR9 → WR3) the SF block, history and snapshots are byte-identical: SF's manual order stands")
+    pg.context.close()
+
+    # F. the optional sync
+    def open_sync(pg):
+        pg.click("#eb-sync"); pg.wait_for_selector("#sync-dialog[open]"); pg.wait_for_timeout(200)
+    def ticked(pg): return pg.evaluate("() => [...document.querySelectorAll('#sync-pos input')].filter(i => i.checked).map(i => i.dataset.syncPos)")
+    def rows(pg): return pg.evaluate("() => [...document.querySelectorAll('#sync-box tbody tr')].map(tr => [...tr.cells].map(c => c.innerText.replace(/\\s+/g, ' ').trim()))")
+    pg = page(token=True, board="sf-tep")
+    ok(pg.locator("#eb-sync").is_visible() and "AM PPR" in pg.inner_text("#eb-sync"), f"The SF editor bar offers the sync ({pg.inner_text('#eb-sync')!r})")
+    live = repo.read("index.html"); sf0 = table(block(live, SF_RE)); ppr_now = block(live, PPR_RE)
+    plan = pg.evaluate("([s, d]) => SPM.syncOrder(s, d, ['RB', 'WR'])", [ppr_now, block(live, SF_RE)])
+    plan_all = pg.evaluate("([s, d]) => SPM.syncOrder(s, d)", [ppr_now, block(live, SF_RE)])
+    ok(any(m["pos"] == "QB" for m in plan_all["moved"]) and any(m["pos"] == "RB" for m in plan["moved"]) and any(m["pos"] == "WR" for m in plan["moved"]),
+       f"The boards now differ at QB, RB and WR ({len(plan_all['moved'])} players)")
     head0 = repo.head
-    pg.evaluate("() => { const t = document.getElementById('toast'); t.textContent = ''; t.hidden = true; }")
-    pg.click("#eb-publish" if pg.is_disabled("#eb-save") else "#eb-save")   # loaded as unsaved: Save publishes (a token is saved)
-    pg.wait_for_function("() => /Publish/.test(document.getElementById('toast').textContent)", timeout=30000)
-    msg = pg.inner_text("#toast")
-    ok(repo.head == head0 and "position order comes from AM PPR" in msg, f"An SF publish that reorders WRs is stopped, nothing written ({msg[:110]!r})")
+    open_sync(pg)
+    ok(ticked(pg) == ["RB", "WR"], f"RB and WR are ticked by default, QB and TE are not ({ticked(pg)})")
+    rws = rows(pg)
+    ok(len(rws) == len(plan["moved"]) and [r_[0].split(" RB")[0].split(" WR")[0] for r_ in rws] == [m["name"] for m in plan["moved"]], f"The preview lists exactly the {len(plan['moved'])} RBs and WRs who would change spot")
+    m0 = plan["moved"][0]
+    ok(f"#{m0['from']['rank']} " in rws[0][1] and f"{m0['from']['value']:,}" in rws[0][1] and f"#{m0['to']['rank']} " in rws[0][2] and f"{m0['to']['value']:,}" in rws[0][2],
+       f"…each with his rank, position rank, tier and value before and after ({rws[0]})")
+    ok(f"({len(plan['moved'])} players)" in pg.inner_text("#sync-apply") and pg.is_enabled("#sync-apply"), f"The button says what it publishes ({pg.inner_text('#sync-apply')!r})")
+    pg.check('#sync-pos input[data-sync-pos="QB"]'); pg.wait_for_timeout(200)
+    ok(len(rows(pg)) == len(plan_all["moved"]) - sum(m["pos"] == "TE" for m in plan_all["moved"]), "Ticking QB adds the QBs to the preview")
+    pg.uncheck('#sync-pos input[data-sync-pos="QB"]'); pg.wait_for_timeout(200)
+    pg.click("#sync-cancel"); pg.wait_for_timeout(300)
+    ok(not pg.evaluate("() => document.getElementById('sync-dialog').open") and repo.head == head0 and pg.inner_text("#eb-count").strip() == "All saved",
+       "Cancel closes the preview: nothing committed, nothing unsaved")
+    # unsaved changes block it
+    te = POS(pg, "TE"); pg.evaluate("id => SPM.edit.movePlayer(id, 3)", te[4][0]); pg.wait_for_timeout(400)
+    open_sync(pg)
+    ok(pg.is_disabled("#sync-apply") and "unsaved" in pg.inner_text("#sync-error"), f"With unsaved SF changes the sync can't be published ({pg.inner_text('#sync-error')[:70]!r})")
+    pg.click("#sync-cancel"); pg.evaluate("() => SPM.edit.cancel()"); pg.wait_for_timeout(400)
+    # a preview that no longer matches what is live is stopped
+    open_sync(pg)
+    T = list(csv.reader(io.StringIO(ppr_now))); H = T[0]
+    rbl = sorted((r_ for r_ in T[1:] if r_[H.index("pos")] == "RB"), key=lambda r_: int(r_[H.index("rank")]))
+    a_, b_ = rbl[1], rbl[2]
+    for c in ("rank", "pos_rank", "tier", "value", "tier_name", "source"):
+        if c in H: a_[H.index(c)], b_[H.index(c)] = b_[H.index(c)], a_[H.index(c)]
+    out_io = io.StringIO(); csv.writer(out_io, lineterminator="\n").writerows(T)
+    stale = PPR_RE.sub(lambda m: m[1] + out_io.getvalue().rstrip("\n").encode() + m[3], live, count=1)
+    repo.commit_file("index.html", stale, "AM PPR changed elsewhere")
+    changed_elsewhere = repo.read("index.html") == stale
+    if changed_elsewhere:
+        head1 = repo.head
+        pg.click("#sync-apply"); pg.wait_for_function("() => /changed since/.test(document.getElementById('sync-error').textContent)", timeout=30000)
+        ok(repo.head == head1 and block(repo.read("index.html"), SF_RE) == block(live, SF_RE), f"AM PPR changed since the preview: the sync is stopped, nothing written ({pg.inner_text('#sync-error')[:80]!r})")
+        pg.click("#sync-cancel")
+        pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1800)
+    else:
+        ok(False, "The mock repository can take a commit from outside (needed for the stale-preview check)")
+    # no token: it asks to sign in, and nothing is written
+    pg.evaluate("() => { localStorage.removeItem('spm_editor_token'); sessionStorage.removeItem('spm_editor_token'); }")
+    pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
+    ok(pg.locator("#eb-sync").is_hidden(), "Signed out, the editor bar doesn't offer the sync (a tool for signed-in editors, like the warnings)")
+    pg.route(re.compile(re.escape(BASE) + r"/\?debug$"), lambda r: r.fulfill(status=200, content_type="text/html; charset=utf-8", body=repo.read("index.html")))
+    pg.goto(BASE + "/?debug#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
+    head1 = repo.head
+    open_sync(pg); pg.click("#sync-apply"); pg.wait_for_timeout(400)
+    ok(pg.evaluate("() => document.getElementById('signin-dialog').open && !document.getElementById('sync-dialog').open") and repo.head == head1, "Without a token, Publish sync asks to sign in first; nothing is written")
+    pg.fill("#signin-token", "test-token"); pg.click("#signin-submit"); pg.wait_for_selector("#sync-dialog[open]", timeout=15000); pg.wait_for_timeout(300)
+    ok(repo.head == head1 and pg.is_enabled("#sync-apply"), "After signing in the preview is shown again (signing in is not the approval)")
+    # publish the sync
+    live = repo.read("index.html"); sf0 = table(block(live, SF_RE)); ppr_now = block(live, PPR_RE)
+    plan = pg.evaluate("([s, d]) => SPM.syncOrder(s, d, ['RB', 'WR'])", [ppr_now, block(live, SF_RE)])
+    n0 = len(repo.log()); pf0 = ppr_files(); hs0 = json.loads(repo.read("data/rank_history.json"))
+    pg.evaluate("() => { const t = document.getElementById('toast'); t.textContent = ''; }")
+    pg.click("#sync-apply"); pg.wait_for_function("() => /Published and confirmed/.test(document.getElementById('toast').textContent)", timeout=30000); pg.wait_for_timeout(400)
+    after = repo.read("index.html"); new = repo.log()[n0:]; sf1 = table(block(after, SF_RE))
+    ok(len(new) == 1 and new[0].startswith("AM SF PPR TE+ position order synced from AM PPR by @tester") and f"{len(plan['moved'])} players" in new[0], f"One commit, named for what it is ({new[0].splitlines()[0][:150] if new else ''!r})")
+    ok(block(after, PPR_RE) == ppr_now and outside(live, SF_RE) == outside(after, SF_RE) and ppr_files() == pf0, "AM PPR's block, history and snapshots are byte-identical; nothing outside the SF block changed")
+    spotf = lambda v: (v["rank"], v["pos_rank"], v["tier"], v.get("tier_name", ""), v["value"], v["source"])
+    by_rank = {v["rank"]: v for v in sf0.values()}
+    ok(all(spotf(sf1[m["sid"]]) == spotf(by_rank[str(m["to"]["rank"])]) for m in plan["moved"]), "Every moved player holds exactly the spot the preview showed (rank, position rank, tier, tier name, value)")
+    changed = sorted(s_ for s_ in sf0 if sf0[s_] != sf1[s_])
+    ok(changed == sorted(m["sid"] for m in plan["moved"]), f"Nobody outside the preview changed ({len(changed)} rows)")
+    ok(sorted(int(v["value"]) for v in sf0.values()) == sorted(int(v["value"]) for v in sf1.values()), "SF's value ladder is exactly the same set")
+    ok(not pg.evaluate("([s, d]) => SPM.syncOrder(s, d, ['RB', 'WR']).moved.length", [ppr_now, block(after, SF_RE)]), "SF's RBs and WRs now stand in AM PPR's order")
+    ok(sf1[last[1]]["pos_rank"] == "25" and [v["sleeper_id"] for v in sorted(sf1.values(), key=lambda v: int(v["rank"])) if v["pos"] == "QB"] == [v["sleeper_id"] for v in sorted(sf0.values(), key=lambda v: int(v["rank"])) if v["pos"] == "QB"],
+       f"QB wasn't ticked: SF's own QB order stands ({last[2]} still QB25)")
+    hs = json.loads(repo.read("data/rank_history.json")); es = hs["events"][-1]
+    ok(len(hs["events"]) == len(hs0["events"]) + 1 and es["src"] == "O" and es.get("from") == "ppr" and es["by"] == "tester" and sorted(x[0] for x in es["ranking"]) == changed,
+       f"The SF event says it is a sync from AM PPR (src {es['src']}, from {es.get('from')}) and lists the {len(es['ranking'])} players")
+    ok(all(hs["players"].get(s_, [])[:len(l)] == l for s_, l in hs0["players"].items()) and hs["events"][:-1] == hs0["events"], "Every earlier SF history entry and event kept")
+    ss = snap(f"data/rank_snapshots/{es['ts'][:7]}.json")
+    ok(ss["ts"] == es["ts"] and all(ss["players"][s_] == [int(v["rank"]), int(v["pos_rank"]), int(v["tier"]), int(v["value"])] for s_, v in sf1.items() if s_), "The SF snapshot is the synced SF board")
+    ok(not pg.evaluate("() => document.getElementById('sync-dialog').open") and pg.inner_text("#eb-count").strip() == "All saved", "The preview closes and the editor shows the synced board with nothing pending")
+    shown = {r_[0]: r_ for r_ in B()}
+    ok(all(shown[s_][1] == int(v["rank"]) and shown[s_][4] == int(v["value"]) for s_, v in sf1.items() if s_), "The page shows the synced board")
+    pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
+    shown = {r_[0]: r_ for r_ in B()}
+    ok(all(shown[s_][1] == int(v["rank"]) for s_, v in sf1.items() if s_) and pg.inner_text("#eb-count").strip() == "All saved", "…and still does after a reload")
+    open_sync(pg)
+    ok(pg.is_disabled("#sync-apply") and "Nothing to sync" in pg.inner_text("#sync-box"), "Opened again, there is nothing left to sync at RB and WR")
+    pg.click("#sync-cancel")
+    pg.context.close()
+
+    # G. phone, dark theme: the preview fits
+    ctx = br.new_context(viewport={"width": 390, "height": 844})
+    pg = page(token=True, board="sf-tep", ctx=ctx)
+    pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'dark')")
+    if pg.locator("#eb-sync").is_visible():
+        open_sync(pg); pg.check('#sync-pos input[data-sync-pos="QB"]'); pg.wait_for_timeout(200)
+        box = pg.evaluate("() => { const d = document.getElementById('sync-dialog').getBoundingClientRect(), b = document.getElementById('sync-box'); return [d.left, d.right, d.top, d.bottom, innerWidth, innerHeight, b.scrollWidth - b.clientWidth, document.documentElement.scrollWidth - innerWidth]; }")
+        ok(box[0] >= 0 and box[1] <= box[4] and box[2] >= 0 and box[3] <= box[5] and box[6] <= 1 and box[7] <= 1, f"390px: the preview fits the screen with no sideways scroll ({[round(x) for x in box]})")
+        if os.environ.get("SHOTS"): pg.screenshot(path=os.path.join(os.environ["SHOTS"], "sync_phone_dark.png"))
+    else:
+        ok(False, "390px, signed in: the editor bar offers the sync")
+    ctx.close()
     ok(not errs, f"No page errors: {errs[:3]}")
     br.close()
 

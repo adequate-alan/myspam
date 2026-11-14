@@ -16,8 +16,8 @@ Checks, through the real UI unless noted:
   7. Save (no token) -> reload -> League-adjusted still has the move; Cancel back to the saved board; Save + Publish
      against the in-memory GitHub (tests/gh_mock.py) publishes a League-adjusted move as one commit
   8. a league whose board isn't the edited board stays read-only in League-adjusted (with the Edit <board> switch)
-  9. AM SF PPR TE+ following AM PPR's order (live page, order sync on): a within-position move from League-adjusted is
-     refused exactly as on the AM Board
+  9. AM SF PPR TE+ on the live page (its order is its own since Nov 14): a within-position move from League-adjusted is
+     applied like on any board, and its reverse restores the board
  10. phone (390px) and both themes: the controls are there, a League-adjusted arrow works, no sideways scroll
 Runs on the frozen test board (tests/fixture_board.py) except 1 and 9. Nothing reaches GitHub or the files on disk.
 Screenshots: SHOTS=dir python3 tests/positional_shared_check.py
@@ -229,13 +229,15 @@ with sync_playwright() as pw:
     move_to(pg, r9, 9); ok(same(state(pg), p0), "AM PPR: moved back, the board is exactly as it was")
     ctx.close()
 
-    # 9. live page, order sync on: AM SF PPR TE+ refuses a within-position move from League-adjusted, as on the AM Board
+    # 9. live page: AM SF PPR TE+ takes a within-position move from League-adjusted like any board (Nov 14: its order is
+    #    its own; the AM PPR order sync is an optional action in the editor bar, never a restriction)
     ctx = new_ctx(fixture=False, edit_board="sf-tep"); pg = open_page(ctx); tab(pg, "WR")
     s9 = state(pg); w3 = at(pg, 3)
     if pg.locator("#rank-body .arrow").count():
         rowof(pg, w3).hover(); rowof(pg, w3).locator(".arrow[data-dir='-1']").click(); pg.wait_for_timeout(500)
-        ok(same(state(pg), s9) and at(pg, 3) == w3 and "AM PPR" in pg.inner_text("#toast"),
-           "AM SF PPR TE+ in League-adjusted: a within-position move is refused (order follows AM PPR): " + pg.inner_text("#toast")[:90])
+        ok(at(pg, 2) == w3 and "AM PPR" not in pg.inner_text("#toast"), "AM SF PPR TE+ in League-adjusted: a within-position move works (WR3 -> WR2)")
+        rowof(pg, w3).hover(); rowof(pg, w3).locator(".arrow[data-dir='1']").click(); pg.wait_for_timeout(500)
+        ok(same(state(pg), s9), "...and moved back, the board is exactly as it was")
     else:
         ok(False, "AM SF PPR TE+ in League-adjusted: the WR tab has editor controls")
     ctx.close()
@@ -266,7 +268,7 @@ with sync_playwright() as pw:
     def tier_of(pg, pid): return next(r[3] for r in state(pg)["board"] if r[0] == pid)
     for board, fmt, live in [("sf-tep", FMT, False), ("sf-tep", FMT, True), ("ppr", FMT_1QB, True)]:
         for v in ["league", "base"]:
-            name = f"{'AM PPR' if board == 'ppr' else 'AM SF PPR TE+'}{' (live, order sync on)' if live else ''}, {'League-adjusted' if v == 'league' else 'AM Board'}"
+            name = f"{'AM PPR' if board == 'ppr' else 'AM SF PPR TE+'}{' (live)' if live else ''}, {'League-adjusted' if v == 'league' else 'AM Board'}"
             ctx = new_ctx(fixture=not live, edit_board=board); pg = open_page(ctx, fmt); view(pg, v); tab(pg, "WR")
             w = at(pg, 6)
             ok(out_via_pop(pg, w), f"{name}: the Move to rank popover offers Out for season")

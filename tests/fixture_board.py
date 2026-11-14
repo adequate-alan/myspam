@@ -38,9 +38,7 @@ def html(src=None):
     if len(blocks) != 1: raise RuntimeError(f"index.html holds {len(blocks)} RANKINGS_CSV blocks, expected exactly one")
     m = CSV_RE.search(src)
     out = src[:m.start(2)] + CSV.encode("utf-8") + src[m.end(2):]
-    # the frozen AM SF board has nothing to do with today's AM PPR, so the position order sync (Oct 19) is off here:
-    # these tests are about how the editor, history and market work, not about which board orders positions
-    return out.replace(b"<head>", b"<head><script>window.__SPM_ORDER_SYNC_OFF = true;</script>", 1)
+    return out
 
 def files():
     return {k: open(p, "rb").read() for k, p in FILES.items()}
