@@ -276,11 +276,17 @@ with sync_playwright() as p:
         g = pl["g"][-1]; tm, w, sn = g[ci["tm"]], g[ci["w"]], g[ci["snap"]] or 0
         if tm and (tm not in last or (w, sn) > last[tm][:2]): last[tm] = (w, sn, sid_)
     chi_fb = last["CHI"][2]
+    # A room is the team the page projects him for: the frozen board's team column for a board player, Sleeper's
+    # player file for everyone else (weekOutlookOf, roleFor). The player file is live data and follows later moves
+    # (Nov 17: Kirk Cousins LV -> MIN, Jacoby Brissett ARI -> BAL), so grouping board players by it put LV's and ARI's
+    # frozen Week 3 starters into MIN's and BAL's rooms and read them as second starters there.
+    import csv
+    board_team = {r["sleeper_id"]: r["team"] for r in csv.DictReader(open(os.path.join(ROOT, "tests", "fixtures", "board", "rankings.csv"))) if r["pos"] == "QB" and r["sleeper_id"]}
     def qb_rooms():
-        return pg.evaluate("""async () => { const out = {}; const sp = await (await fetch('data/sleeper_players.json')).json();
-          for (const [sid, v] of Object.entries(sp)) { if (v[1] !== 'QB' || !v[2]) continue; const o = await SPM.weekOutlookOf(sid, 4);
-            if (o && o.kind === 'upcoming' && o.est != null && o.est >= 5) (out[v[2]] = out[v[2]] || []).push([v[0], Math.round(o.est * 10) / 10]); }
-          return out; }""")
+        return pg.evaluate("""async bt => { const out = {}; const sp = await (await fetch('data/sleeper_players.json')).json();
+          for (const [sid, v] of Object.entries(sp)) { const tm = sid in bt ? bt[sid] : v[2]; if (v[1] !== 'QB' || !tm) continue; const o = await SPM.weekOutlookOf(sid, 4);
+            if (o && o.kind === 'upcoming' && o.est != null && o.est >= 5) (out[tm] = out[tm] || []).push([v[0], Math.round(o.est * 10) / 10]); }
+          return out; }""", board_team)
     for label, R in (("missing", {}), ("unreadable", "garbage"), ("malformed entries", {CALEB: [2, 1, 1, 1, 1, None, "CHI", 4, 1], KEENUM: ["x"]})):
         setr(R)
         c, b, k = get(CALEB), get(BAGENT), get(KEENUM)
