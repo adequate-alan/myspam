@@ -26,6 +26,9 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/sf_smoothing_c
 """
 import csv, functools, http.server, io, json, math, os, re, socketserver, statistics, sys, threading
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fixture_board as FB
+STATS_WEEK = 9   # the pinned readings were recorded on the game logs through Week 9; later games would move the scoring-profile nudge
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, "tests", "fixtures", "sf-smoothing")
@@ -127,6 +130,7 @@ TRADE_JS = """(T) => (async () => {
 
 def run(br, html, full=False):
     pg = br.new_page()
+    FB.freeze_stats(pg, STATS_WEEK)
     pg.route(re.compile(r"https?://(?!127\.0\.0\.1).*"), lambda r: r.abort())
     pg.route(re.compile(re.escape(BASE) + r"/(index\.html)?([?#].*)?$"), lambda r: r.fulfill(status=200, content_type="text/html", body=html))
     pg.add_init_script("window.__SPM_TEST_HOOKS = true;")

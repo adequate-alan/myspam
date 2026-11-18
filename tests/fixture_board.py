@@ -16,8 +16,11 @@ rank_snapshots/2026-10.json from the same commit. It is read only here and never
     FB.route(page, base)   Playwright routes so `base/` and `base/index.html` serve FB.html() and the two data files
                       serve the fixture copies (base = the local server's origin); everything else (stats, players,
                       market files) is still served from the repo as usual
+    FB.freeze_stats(page, week)   serve this season's stats file with only the games through `week`: the league layer
+                      nudges each value by the player's own scoring profile over his recent games, so a suite that
+                      pins league-adjusted readings on a committed board must also fix the games they are read from
 """
-import csv, io, os, re
+import csv, io, json, os, re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIR = os.path.join(ROOT, "tests", "fixtures", "board")
@@ -54,3 +57,20 @@ def route(page, base):
         elif path.startswith("data/rank_snapshots/"): r.fulfill(status=404, content_type="application/json", body=b"{}")   # the fixture has one month
         else: r.continue_()
     page.route(re.compile(re.escape(base) + r"/data/(rank_history\.json|rank_snapshots/[^/?]+\.json).*"), data_file)
+
+_STATS = {}
+def freeze_stats(page, week, season=2026):
+    """Serve data/stats/<season>.json with every game log cut at `week` (a Playwright Page or BrowserContext).
+
+    The league layer's scoring-profile nudge (up to 10% either way, from a player's recent games in the format's
+    scoring) reads this file, so pinned league-adjusted values and trade readings on a frozen board moved every time a
+    new week of games arrived (Nov 17: sf_alignment_check's named trade +3.8% -> +3.6% and AJ Barner 115 -> 114 in
+    sf_tier_follow_check once Week 10 was in). Only the game logs are cut: nothing else in the file feeds pricing."""
+    if (season, week) not in _STATS:
+        d = json.load(open(os.path.join(ROOT, "data", "stats", f"{season}.json")))
+        wi = d["cols"].index("w")
+        for pl in d["players"].values(): pl["g"] = [g for g in pl["g"] if g[wi] <= week]
+        d["updated"] = f"frozen-through-week-{week}"
+        _STATS[(season, week)] = json.dumps(d, separators=(",", ":"))
+    body = _STATS[(season, week)]
+    page.route(re.compile(rf".*/data/stats/{season}\.json.*"), lambda r: r.fulfill(status=200, content_type="application/json", body=body))
