@@ -22,7 +22,8 @@ D. The SF editor is free: a move inside a position (Move to rank through the pop
 E. A later AM PPR publish leaves SF's own order exactly as published.
 F. The optional sync: the editor bar offers it on SF only; the preview lists every player who would change spot, before
    and after, for the ticked positions (RB and WR by default); Cancel changes nothing; unsaved changes block it; without
-   a token it asks to sign in; a preview that no longer matches what is live is stopped with nothing written; "Publish
+   a token it asks to sign in; a preview that no longer matches what is live is stopped with nothing written, also when
+   only an SF value, an SF tier or a player's eligibility on AM PPR changed while it was open (same players, same ranks); "Publish
    sync" is ONE commit with the SF block, history (source O, from "ppr") and snapshot, AM PPR untouched; a position left
    unticked keeps SF's own order.
 G. Phone and dark theme: the preview fits the screen. No page errors.
@@ -323,6 +324,37 @@ with sync_playwright() as p:
         pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1800)
     else:
         ok(False, "The mock repository can take a commit from outside (needed for the stale-preview check)")
+    # ...and so is one whose values, tiers or eligible players changed while it was open, with the order unchanged
+    # (Alan, Nov 17: a sync gives a player his new spot's value, so the preview he approved must be what is written)
+    def edit_block(html, rx, fn):
+        T = list(csv.reader(io.StringIO(block(html, rx)))); fn(T[0], T[1:])
+        o = io.StringIO(); csv.writer(o, lineterminator="\n").writerows(T)
+        return rx.sub(lambda m: m[1] + o.getvalue().rstrip("\n").encode() + m[3], html, count=1)
+    def sf_value(H, R):
+        by = {int(r_[H.index("rank")]): r_ for r_ in R}
+        m = next(m for m in cur["moved"] if int(by[m["to"]["rank"]][H.index("value")]) - 1 > int(by[m["to"]["rank"] + 1][H.index("value")]))
+        by[m["to"]["rank"]][H.index("value")] = str(m["to"]["value"] - 1)
+    def sf_tier(H, R):
+        pr = lambda m, d: next((r_ for r_ in R if r_[H.index("pos")] == m["pos"] and int(r_[H.index("pos_rank")]) == m["to"]["pos_rank"] + d), None)
+        m = next((m for m in cur["moved"] if pr(m, 1) and pr(m, 1)[H.index("tier")] != pr(m, 0)[H.index("tier")] and pr(m, -1) and pr(m, -1)[H.index("tier")] == pr(m, 0)[H.index("tier")]), None)
+        if m:   # the last player of a tier joins the tier below: tiers stay in one piece
+            for c in ("tier", "tier_name"): pr(m, 0)[H.index(c)] = pr(m, 1)[H.index(c)]
+        else: pr(cur["moved"][0], 0)[H.index("tier_name")] += " (renamed)"
+    def ppr_out(H, R):
+        r_ = next(r_ for r_ in R if r_[H.index("sleeper_id")] == cur["moved"][0]["sid"]); r_[H.index("tier")] = "99"
+    for label, rx, fn in (("an SF value changed", SF_RE, sf_value), ("an SF tier changed", SF_RE, sf_tier), ("an AM PPR player became ineligible (Out for season there)", PPR_RE, ppr_out)):
+        good = repo.read("index.html")
+        cur = pg.evaluate("([s, d]) => SPM.syncOrder(s, d, ['RB', 'WR'])", [block(good, PPR_RE), block(good, SF_RE)])
+        open_sync(pg); shown = rows(pg)
+        elsewhere = edit_block(good, rx, fn); repo.commit_file("index.html", elsewhere, f"{label} elsewhere")
+        after_plan = pg.evaluate("([s, d]) => SPM.syncOrder(s, d, ['RB', 'WR'])", [block(elsewhere, PPR_RE), block(elsewhere, SF_RE)])
+        same_order = [(m["sid"], m["from"]["rank"], m["to"]["rank"]) for m in cur["moved"]] == [(m["sid"], m["from"]["rank"], m["to"]["rank"]) for m in after_plan["moved"]]
+        head1 = repo.head; files1 = {f: repo.read(f) for f in FILES}
+        pg.click("#sync-apply"); pg.wait_for_function("() => /changed since|Publish/.test(document.getElementById('sync-error').textContent + document.getElementById('toast').textContent) && !/Publishing/.test(document.getElementById('sync-error').textContent)", timeout=30000)
+        ok(elsewhere != good and "changed since" in pg.inner_text("#sync-error") and repo.head == head1 and all(repo.read(f) == files1[f] for f in FILES) and pg.evaluate("() => document.getElementById('sync-dialog').open"),
+           f"While the preview was open {label}{' (same players, same ranks)' if same_order else ''}: the sync is stopped and asks for a fresh preview, nothing written ({pg.inner_text('#sync-error')[:60]!r})")
+        pg.click("#sync-cancel"); repo.commit_file("index.html", good, "put back")
+        pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1800)
     # no token: it asks to sign in, and nothing is written
     pg.evaluate("() => { localStorage.removeItem('spm_editor_token'); sessionStorage.removeItem('spm_editor_token'); }")
     pg.reload(); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)

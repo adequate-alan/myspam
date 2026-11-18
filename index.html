@@ -10583,7 +10583,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const ix = (t, c) => t.head.findIndex(h => h.toLowerCase() === c), sc = c => ix(S, c), dc = c => ix(D, c);
     const sidOf = (t, r) => String(r[ix(t, "sleeper_id")] ?? "").trim();
     const src = new Map(S.rows.map(r => [sidOf(S, r), r]).filter(([k]) => k));
-    const spot = r => ({ rank: Number(r[dc("rank")]), pos_rank: Number(r[dc("pos_rank")]), tier: String(r[dc("tier")] ?? ""), value: Number(r[dc("value")]) });
+    const spot = r => ({ rank: Number(r[dc("rank")]), pos_rank: Number(r[dc("pos_rank")]), tier: String(r[dc("tier")] ?? ""), value: Number(r[dc("value")]),
+      cols: SPOT_COLS.map(c => (dc(c) >= 0 ? String(r[dc(c)] ?? "") : "")) });   // every column a sync writes, for the preview's fingerprint
     const moved = [], kept = [], byPos = {};
     D.rows.forEach(r => { const p = String(r[dc("pos")] || "").toUpperCase(); if (EDIT_POS.includes(p) && (!only || only.includes(p))) (byPos[p] = byPos[p] || []).push(r); });
     for (const [pos, list] of Object.entries(byPos)) {
@@ -11057,9 +11058,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      live as one commit of this board alone (its block, its history with source O and its snapshot), read from and
      checked against GitHub like any publish; the source board is never written. It is applied to the published board,
      so unsaved or unpublished edits here are saved, published or discarded first; a preview that no longer matches what
-     is live (either board changed meanwhile) is stopped. "Spots stay" as before (syncOrder). */
+     is live (either board changed meanwhile: an order, a value, a tier, who is eligible) is stopped. "Spots stay" as before (syncOrder). */
   const SYNC = { only: ["RB", "WR"], key: "" };
-  const syncKey = moved => moved.map(m => `${m.sid}:${m.from.rank}>${m.to.rank}`).join(",");
+  // The fingerprint of a preview is everything it showed and everything it would write: who moves, each spot's rank,
+  // position rank, tier, tier name, value and source before and after, and who is kept in place and why. A value, a
+  // tier or an eligibility change on either board while the preview is open makes it another sync (Alan, Nov 17).
+  const syncKey = plan => JSON.stringify([plan.moved.map(m => [m.sid, m.pos, m.from.cols, m.to.cols]), plan.kept.map(k => [k.sid, k.pos, k.why])]);
   function syncPlan(only) {
     const src = orderSource(ACTIVE_BOARD);
     return src ? syncOrder(boardCsv(src), publishedCsv, only) : { moved: [], kept: [] };
@@ -11076,7 +11080,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     const all = syncOrder(boardCsv(src), publishedCsv), per = {};
     all.moved.forEach(m => { per[m.pos] = (per[m.pos] || 0) + 1; });
     const plan = SYNC.only.length ? syncPlan(SYNC.only) : { moved: [], kept: [] }, n = plan.moved.length, blocked = syncBlocked();
-    SYNC.key = syncKey(plan.moved);
+    SYNC.key = syncKey(plan);
     $("sync-title").textContent = `Sync position order from ${src.label}`;
     $("sync-intro").textContent = `Optional. At the positions you tick, ${ACTIVE_BOARD.label}'s players take ${src.label}'s published order. Each spot on ${ACTIVE_BOARD.label} keeps its rank, tier and value, so a player who changes spot takes that spot's value. Nothing changes until you publish the sync, and ${src.label} is never changed.`;
     $("sync-pos").innerHTML = EDIT_POS.map(pos => `<label><input type="checkbox" data-sync-pos="${pos}"${SYNC.only.includes(pos) ? " checked" : ""}> ${pos} <span>${per[pos] ? plural(per[pos], "player moves", "players move") : "in order"}</span></label>`).join("");
@@ -11121,7 +11125,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         if (index.text == null) throw ghError("data", `${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
         const cur = extractRankings(index.text).csv, sync = syncOrder(extractRankings(index.text, src).csv, cur, only);
         // what goes live is exactly what was previewed: either board changing meanwhile stops it
-        if (syncKey(sync.moved) !== expect) throw ghError("data", `the live rankings changed since this preview was made, so nothing was changed. Reload the page and preview the sync again.`);
+        if (syncKey(sync) !== expect) throw ghError("data", `the live rankings changed since this preview was made, so nothing was changed. Reload the page and preview the sync again.`);
         if (!sync.moved.length) { done = { csv: cur, none: true }; break; }
         const tp = validateRankings(sync.csv, cur, new Set(sync.moved.map(m => `${m.name}|${m.pos}`.toLowerCase())));
         if (tp.length) throw ghError("data", `the synced board didn't pass the pre-publish checks, so nothing was changed (${tp.slice(0, 3).join("; ")}${tp.length > 3 ? `; +${tp.length - 3} more` : ""}).`);
