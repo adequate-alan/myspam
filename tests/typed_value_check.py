@@ -181,16 +181,22 @@ with sync_playwright() as p:
         ok(state(board()) == state(pub) and unsaved() == "All saved", f"{L}: Cancel restores the published board")
 
         # 7. he moves himself after typing: his value follows the curve, as for any mover
-        edit("setValue", X["id"], v + 2); edit("movePlayer", X["id"], xr["posNum"] + 3); c7 = cur(X["sid"])
-        ok(c7["posNum"] == xr["posNum"] + 3 and c7["value"] < v + 2, f"{L}: moved down three spots himself, his value follows the curve ({v + 2} → {c7['value']})")
+        # (a value that fits between his neighbours on the published board, whatever the movers left around him)
+        dn = next(r for r in pub if r["rank"] == xr["rank"] + 1)
+        t7 = xr["value"] + 1 if up["value"] - xr["value"] > 1 else xr["value"] - 1
+        assert dn["value"] < t7 < up["value"], (dn["value"], t7, up["value"])
+        edit("setValue", X["id"], t7)
+        ok(cur(X["sid"])["value"] == t7, f"{L}: typed {t7} on the published board")
+        edit("movePlayer", X["id"], xr["posNum"] + 3); c7 = cur(X["sid"])
+        ok(c7["posNum"] == xr["posNum"] + 3 and c7["value"] < t7, f"{L}: moved down three spots himself, his value follows the curve ({t7} → {c7['value']})")
         edit("movePlayer", X["id"], xr["posNum"])
-        ok(cur(X["sid"])["value"] == v + 2, f"{L}: …and moved back, the typed value is back exactly")
+        ok(cur(X["sid"])["value"] == t7, f"{L}: …and moved back, the typed value is back exactly")
         pg.click("#eb-cancel"); pg.wait_for_timeout(500)
 
         # 8. a tier added above his (position tiers renumber)
         if bid == "sf-tep":
-            edit("setValue", X["id"], v + 2); edit("tierAction", "above", "RB", int(xr["tier"])); c8 = cur(X["sid"])
-            ok(c8["value"] == v + 2 and int(c8["tier"]) == int(xr["tier"]) + 1, f"{L}: an empty tier added above his: the typed value stays {v + 2} (Tier {xr['tier']} → {c8['tier']})")
+            edit("setValue", X["id"], t7); edit("tierAction", "above", "RB", int(xr["tier"])); c8 = cur(X["sid"])
+            ok(c8["value"] == t7 and int(c8["tier"]) == int(xr["tier"]) + 1, f"{L}: an empty tier added above his: the typed value stays {t7} (Tier {xr['tier']} → {c8['tier']})")
             pg.click("#eb-cancel"); pg.wait_for_timeout(500)
             ok(state(board()) == state(pub), f"{L}: Cancel restores the published board")
 
