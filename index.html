@@ -9570,6 +9570,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   // an edit of his own still standing: a move not undone, a deliberate tier, a value edit, or an edit saved before this
   // bookkeeping existed
   const valueEdited = p => { const t = touchDraft.get(valueKey(p)); return !!(t && t.edit); };
+  // call after the draft has its new order and tiers, before the rebuild: the typed values of everyone the edit isn't about stay as typed
+  function keepTyped(others) {
+    const typed = players.filter(q => others(q) && typedExact(q)).map(q => ({ id: q.id, k: valueKey(q), name: q.name, tier: String(q.tier) }));
+    if (typed.length) {
+      const cur = new Map(loadPlayers(tableToCsv(draft)).map(q => [valueKey(q), q.curve]));
+      typed.forEach(x => { const c = cur.get(x.k), t = touchDraft.get(x.k); if (t && c != null) touchDraft.set(x.k, { ...t, pv: c }); });
+    }
+    return typed;
+  }
+  // a value you typed that is still exactly his value: he hasn't moved or changed tier himself since
+  const typedExact = p => { const t = touchDraft.get(valueKey(p)); return !!(t && t.edit && p.curve != null && Math.abs(p.curve - t.pv) < 1e-9); };
   function ownEdit(id) {   // a value from Recalculate Auto players isn't his own edit: Auto players keep their auto source
     const S = editSession(), p = byId.get(id) || players.find(q => q.id === id);
     return (S.moves.get(id) || []).length > 0 || S.pinned.has(id) || S.kept.has(id) || (!!p && valueEdited(p) && !S.autoRecalc.has(id)) || !S.refRow.get(id);
@@ -9666,6 +9677,12 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       draft.rows[p.id][iPos] = String(counts[p.pos]);
     });
     const moved = tierChanged || Number(draft.rows[me.id][iRank]) !== me.rank, oldVal = me.value;
+    /* A value you typed stays his value when somebody else moves (Alan, Nov 18). It is anchored at the curve of the
+       spot he held when you typed it, and another player moving past him shifts that spot by one, which used to
+       re-price him along the curve (Swift typed at 4,945, another RB moved up: 4,836, with no notice). While his typed
+       value is still exactly his value, the anchor follows his spot instead; once he moves himself, his value follows
+       the curve from it like any mover's. */
+    const typed = keepTyped(q => q !== me);
     if (moved) touch(me);
     pruneTouched();
     makeManual();
@@ -9675,9 +9692,17 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     pruneRevalued();
     rebuild();
     const now = byId.get(me.id);
-    if (!now) { REVALUED.delete(me.id); return; }
-    if (split) { splitNotice(now, split); return; }
-    if (!moved || (opts && opts.quiet)) return;
+    // a typed value that could not be kept as typed, or whose player changed tier, is said out loud, never silent
+    const typedNote = typed.map(x => {
+      const q = byId.get(x.id), t = touchDraft.get(x.k); if (!q || !t || !t.edit) return "";
+      if (q.value !== Math.round(t.v)) return `${x.name}'s typed value ${fmt(Math.round(t.v))} no longer fits between the players around him: now ${fmt(q.value)}.`;
+      if (String(q.tier) !== x.tier) return `${x.name} keeps his typed value ${fmt(q.value)} but is now in Tier ${q.tier}.`;
+      return "";
+    }).filter(Boolean).join(" ");
+    if (!now) { REVALUED.delete(me.id); if (typedNote) toast(typedNote, 12000); return; }
+    if (split) { splitNotice(now, split); if (typedNote) toast(typedNote, 12000); return; }
+    if (!moved || (opts && opts.quiet)) { if (typedNote) toast(typedNote, 12000); return; }
+    if (typedNote) { toast(`${now.name}: ${fmt(oldVal)} → ${fmt(now.value)} · #${now.rank} overall, ${now.posRank}. ${typedNote}`, 12000); return; }
     if (now.value === 0 && oldVal === 0 && !isTagTier(now.tier)) { zeroNotice(now); return; }
     if (opts && opts.sameRankTier) { tierMoveNotice(now, String(me.tier), oldVal); return; }
     toast(`${now.name}: ${fmt(oldVal)} → ${fmt(now.value)} · #${now.rank} overall, ${now.posRank}.`);
@@ -9946,13 +9971,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const at = act === "above" ? t : t + 1;
       shiftTiers(pos, at, 1);
       (TIER_EMPTY[pos] = TIER_EMPTY[pos] || []).push({ tier: at, name: "" });
-      rebuild(); return;
+      keepTyped(() => true); rebuild(); return;
     }
     if (act === "delete") {
       if (!members.length) {   // empty tier: just remove it
         materializeTierNames(pos);
         TIER_EMPTY[pos] = (TIER_EMPTY[pos] || []).filter(e => e.tier !== t);
-        shiftTiers(pos, t + 1, -1); TIER_DEL = null; rebuild(); return;
+        shiftTiers(pos, t + 1, -1); TIER_DEL = null; keepTyped(() => true); rebuild(); return;
       }
       TIER_DEL = { pos, tier: t }; renderRankings(); return;   // ask where its players go
     }
@@ -9966,7 +9991,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       makeManual();
       TIER_EMPTY[pos] = (TIER_EMPTY[pos] || []).filter(e => e.tier !== target);
       shiftTiers(pos, t + 1, -1);
-      TIER_DEL = null; rebuild(); toast(`Tier deleted. ${members.length} player${members.length > 1 ? "s" : ""} moved to the tier ${act === "del-up" ? "above" : "below"}.`);
+      TIER_DEL = null; keepTyped(q => !members.includes(q)); rebuild(); toast(`Tier deleted. ${members.length} player${members.length > 1 ? "s" : ""} moved to the tier ${act === "del-up" ? "above" : "below"}.`);
     }
   }
   $("rank-body").addEventListener("click", e => {
