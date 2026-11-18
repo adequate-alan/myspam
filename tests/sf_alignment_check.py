@@ -24,6 +24,8 @@ Checks, over 108 formats (8 / 10 / 12 / 14 teams x 1QB / Superflex / 2QB x 0 / 0
 """
 import csv, functools, http.server, io, json, math, os, re, socketserver, statistics, sys, threading
 from playwright.sync_api import sync_playwright
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fixture_board as FB
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, "tests", "fixtures", "sf-alignment")
@@ -73,10 +75,12 @@ def page_with(csv_block):
     m = CSV_RE.search(src)
     return src[:m.start(2)] + csv_block + src[m.end(2):]
 
-def run(br, html, fc=False):
+STATS_WEEK = 9   # the readings below were recorded on the game logs through Week 9; later games would move the scoring-profile nudge
+def run(br, html, fc=False, frozen=True):
     pg = br.new_page()
     pg.route(re.compile(r"https?://(?!127\.0\.0\.1).*"), lambda r: r.abort())
     pg.route(re.compile(re.escape(BASE) + r"/(index\.html)?([?#].*)?$"), lambda r: r.fulfill(status=200, content_type="text/html", body=html))
+    if frozen: FB.freeze_stats(pg, STATS_WEEK)
     pg.add_init_script("window.__SPM_TEST_HOOKS = true; window.__SPM_ORDER_SYNC_OFF = true;")
     pg.on("pageerror", lambda e: errors.append(str(e)))
     pg.goto(BASE + "/"); pg.wait_for_function("() => window.SPM && SPM.adjFor", timeout=60000)
@@ -90,7 +94,7 @@ with sync_playwright() as p:
     br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
     before, _, _ = run(br, page_with(BEFORE))
     after, nat, chk = run(br, page_with(AFTER), fc=True)
-    live, _, _ = run(br, SRC)   # today's two boards as published, for the advisory section at the end (never checked)
+    live, _, _ = run(br, SRC, frozen=False)   # today's two boards as published, for the advisory section at the end (never checked)
     br.close()
 
 sf = [f for f in FORMATS if f["qb"] != "1"]
