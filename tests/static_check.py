@@ -36,24 +36,6 @@ OVERALL_TIERS = {"RANKINGS_CSV_PPR"}   # boards whose tiers are one scale down t
 # each board's ranking history and snapshot folder (Oct 14: AM PPR has its own, from its baseline)
 HIST_SETS = [("data/rank_history.json", "data/rank_snapshots"), ("data/boards/ppr/rank_history.json", "data/boards/ppr/rank_snapshots")]
 
-# AM SF PPR TE+ (RANKINGS_CSV) takes its QB / RB / WR / TE order from AM PPR's published order (Oct 19, the page's
-# syncOrder): a player in a tag tier (90+) on either board, valued 0 on SF, missing from AM PPR or at another position
-# there keeps his own spot; everyone else must stand in AM PPR's order
-def order_off(src_text, dst_text):
-    sh, srows = table(src_text); dh, drows = table(dst_text)
-    src = {r[sh.index("sleeper_id")]: r for r in srows if len(r) == len(sh)}
-    tag = lambda t: t.strip().isdigit() and int(t) >= 90
-    off = []
-    for pos in ("QB", "RB", "WR", "TE"):
-        lst = sorted((r for r in drows if len(r) == len(dh) and r[dh.index("pos")] == pos), key=lambda r: int(r[dh.index("rank")]))
-        def free(r):
-            s_ = src.get(r[dh.index("sleeper_id")])
-            return s_ is not None and s_[sh.index("pos")] == pos and not tag(r[dh.index("tier")]) and not tag(s_[sh.index("tier")]) and (r[dh.index("value")] or "0").isdigit() and int(r[dh.index("value")] or 0) > 0
-        here = [r for r in lst if free(r)]
-        want = sorted(here, key=lambda r: int(src[r[dh.index("sleeper_id")]][sh.index("rank")]))
-        off += [f"{pos}: {a[dh.index('player')]} where AM PPR has {b[dh.index('player')]}" for a, b in zip(here, want) if a is not b][:2]
-    return off
-
 failures = []
 def ok(cond, msg):
     print(("PASS " if cond else "FAIL ") + msg)
@@ -221,10 +203,7 @@ def main():
             if split: errs.append(f"overall tiers split {split[:3]}")
         ok(not errs, f"{name} passes the publish rules ({len(brows)} players) {errs[:5]}")
 
-    ppr = BOARD_RES["RANKINGS_CSV_PPR"].findall(html)
-    if text is not None and len(ppr) == 1:
-        off = order_off(ppr[0], text)
-        ok(not off, f"AM SF PPR TE+ position order follows AM PPR's published order {off[:4]}")
+    # (Nov 14: the boards are ordered independently; AM SF PPR TE+ no longer has to follow AM PPR's position order)
 
     # 3. ranking history: every board's history file and snapshot folder
     hists = {}
