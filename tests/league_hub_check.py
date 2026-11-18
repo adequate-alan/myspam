@@ -492,7 +492,10 @@ with sync_playwright() as p:
                     adj_dec = "after package adjustment" in dec
                     # the other reading showing 0.0% may sit a hair on the other side (no side is named under 0.05%): then the
                     # package-adjusted reading decides while it's under the fair line, as in valueRead
-                    want = (adj_dec == ((on if not adj_dec else dn) < 3)) if " for " in dec else dn <= on + 0.05 or (adj_dec and on < 0.05 and dn < 3)
+                    # a package-adjusted reading printed as 3.0% is 2.95-3.05 unrounded, so one decimal can't say which side
+                    # of the fair line it is on (Nov 18: 2.9x, correctly deciding, printed 3.0%): either reading is consistent
+                    adjv = on if not adj_dec else dn
+                    want = (abs(adjv - 3) < 0.05 or adj_dec == (adjv < 3)) if " for " in dec else dn <= on + 0.05 or (adj_dec and on < 0.05 and dn < 3)
                     if not want: bare.append(("wrong reading", d[:90]))
                 if probe is None: probe = (v, i, d)
             elif not d.split(" · ")[0].endswith("% value difference") or size.split("-for-")[0] != size.split("-for-")[1]: bare.append((size, d[:60]))
