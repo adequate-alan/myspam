@@ -1405,6 +1405,19 @@ main { padding-block: 20px 72px; }
   font-size: 0.72rem; font-weight: 650; color: var(--muted); white-space: nowrap; background: var(--surface); }
 .rk-dir:hover { color: var(--ink); border-color: var(--border-strong); }
 .rk-dir:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+/* Recent PPG game count (Alan, Nov 18): "LAST [− 5 games +]" beside Sort, any number from 1 to 18 */
+.rk-n { display: inline-flex; align-items: center; gap: 10px; }
+.rk-n[hidden] { display: none; }
+.rk-n-lab { font-size: 0.6rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.rk-n-box { display: inline-flex; align-items: center; height: 34px; border-radius: var(--r-md); background: var(--fill-1); border: 1px solid transparent; }
+.rk-n-box:focus-within { border-color: var(--focus-line); }
+.rk-n-btn { all: unset; box-sizing: border-box; width: 30px; height: 100%; text-align: center; font-size: 1rem; font-weight: 600; line-height: 1; color: var(--text-secondary);
+  cursor: pointer; border-radius: var(--r-md); user-select: none; }
+.rk-n-btn:hover { color: var(--ink); background: var(--fill-2); }
+.rk-n-btn:disabled { opacity: .35; cursor: default; background: none; }
+.rk-n-btn:focus-visible, .rk-n-in:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.rk-n-in { all: unset; box-sizing: border-box; width: 2.1ch; height: 100%; text-align: right; font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
+.rk-n-unit { padding: 0 4px 0 5px; font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
 td.prod-col { width: 34%; min-width: 190px; padding-left: 14px; }
 .prodbar { display: grid; grid-template-columns: minmax(60px, 1fr) auto; align-items: center; column-gap: 14px; }
 .prodbar .track { height: 2px; border-radius: 2px; background: var(--line-soft); overflow: hidden; }
@@ -1417,7 +1430,8 @@ td.val.val-2 .num-2 { font-size: 0.8rem; font-weight: 600; color: var(--muted); 
 .spam-rk { display: block; margin-top: 3px; font-size: 0.58rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 #panel-rankings thead th.prod-col { padding-left: 14px; }
 #panel-rankings thead th.val-2 { text-align: right; padding-right: 20px; }
-@media (max-width: 900px) { .rk-sort { flex-wrap: wrap; } }
+@media (max-width: 900px) { .rk-sort { flex-wrap: wrap; } .rk-prod-opts { flex-wrap: wrap; } }
+@media (max-width: 480px) { .rk-n-lab { display: none; } .rk-n-btn { width: 28px; } }   /* phones: count, minimum and direction on one row */
 @media (max-width: 760px) {   /* phones: the production number stays on screen; bar and AM value step aside */
   td.prod-col { min-width: 0; width: auto; padding-left: 8px !important; }
   #panel-rankings thead th.prod-col { padding-left: 8px; }
@@ -5531,8 +5545,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           <select class="select" id="rk-sort" aria-label="Sort">
             <option value="spam">AM Rank</option>
             <option value="ppg">Season PPG</option>
-            <option value="l3">Last 3 PPG</option>
-            <option value="l5">Last 5 PPG</option>
+            <option value="recent">Recent PPG</option>
             <option value="pts">Season Points</option>
             <optgroup label="Market edge">
               <option value="mkbuy">Biggest buy</option>
@@ -5544,6 +5557,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           </select>
         </label>
         <span class="rk-prod-opts" id="rk-prod-opts" hidden>
+          <span class="rk-n" id="rk-n-wrap" role="group" aria-label="Games counted in Recent PPG" hidden>
+            <span class="rk-n-lab" aria-hidden="true">Last</span>
+            <span class="rk-n-box">
+              <button class="rk-n-btn" id="rk-n-dec" type="button" aria-label="One game fewer" title="One game fewer">−</button>
+              <input class="rk-n-in" id="rk-n" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Games counted in Recent PPG, 1 to 18" title="His most recent games played, 1 to 18">
+              <span class="rk-n-unit" id="rk-n-unit" aria-hidden="true">games</span>
+              <button class="rk-n-btn" id="rk-n-inc" type="button" aria-label="One game more" title="One game more">+</button>
+            </span>
+          </span>
           <select class="select" id="rk-min" aria-label="Minimum games played">
             <option value="0">No minimum</option>
             <option value="2">2+ games</option>
@@ -6907,13 +6929,36 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   });
   $("rank-search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderRankings(); });
   /* Production sort (Alan, Oct 6): re-sort the same board by actual fantasy production in the selected league's
-     scoring (Season PPG, Last 3 / Last 5 PPG, Season Points). A viewing mode only: it never touches ranks, tiers,
+     scoring (Season PPG, Recent PPG over his last RK.n games played, Season Points). A viewing mode only: it never touches ranks, tiers,
      values, publishing or history; AM Rank restores the normal board. RK.min null = the default for this week. */
   const RK = { sort: "spam", min: null, dir: "desc" };
   const RK_HEAD = $("rk-head-row").innerHTML;
-  const PROD_MODES = { ppg: { label: "Season PPG", short: "PPG", unit: "PPG" }, l3: { label: "Last 3 PPG", short: "L3", unit: "PPG", n: 3 },
-    l5: { label: "Last 5 PPG", short: "L5", unit: "PPG", n: 5 }, pts: { label: "Season Points", short: "Pts", unit: "pts" } };
+  const PROD_MODES = { ppg: { label: "Season PPG", short: "PPG", unit: "PPG" }, recent: { label: "Recent PPG", short: "L", unit: "PPG", recent: true },
+    pts: { label: "Season Points", short: "Pts", unit: "pts" } };
   const prodOn = () => !!PROD_MODES[RK.sort] && posFilter !== "PICK" && RK.week == null;
+  /* Recent PPG (Alan, Nov 18; replaced Last 3 / Last 5 PPG): points per game over his last RK.n games actually played
+     (1–18, default 5), counted back from the selected week, so byes and weeks he missed never use up a game and a
+     past week never sees later games. The count is its own saved setting (spm_rk_recent), kept across positions,
+     boards, pages and reloads. In a Week view it is the Sort menu's "Recent PPG": the same table through that week. */
+  const RK_N_MIN = 1, RK_N_MAX = 18, RK_N_DEFAULT = 5;
+  const rkN = v => { const x = Math.round(Number(v)); return v == null || v === "" || !isFinite(x) ? RK_N_DEFAULT : Math.min(RK_N_MAX, Math.max(RK_N_MIN, x)); };
+  RK.n = RK_N_DEFAULT;
+  try { const v = localStorage.getItem("spm_rk_recent"); if (v != null) RK.n = rkN(v); } catch (e) {}
+  const recentWk = () => RK.week != null && RK.wsort === "rppg" && posFilter !== "PICK";
+  const rkThru = () => (recentWk() && RK.week > 0 ? RK.week : null);   // the last week Recent PPG may read (null = every game played)
+  function setRkN(v, keepText) {
+    const n = rkN(v), same = n === RK.n;
+    RK.n = n;
+    try { localStorage.setItem("spm_rk_recent", String(n)); } catch (e) {}
+    syncRkN(keepText);
+    if (!same) renderRankings();
+  }
+  function syncRkN(keepText) {
+    const inp = $("rk-n");
+    if (!keepText && inp.value !== String(RK.n)) inp.value = String(RK.n);
+    $("rk-n-unit").textContent = RK.n === 1 ? "game" : "games";
+    $("rk-n-dec").disabled = RK.n <= RK_N_MIN; $("rk-n-inc").disabled = RK.n >= RK_N_MAX;
+  }
   // Market edge sorts (Alan, Oct 8): AM vs the market / expert consensus, never blended (see mkAll)
   const MK_MODES = { mkbuy: { label: "Biggest buy" }, mksell: { label: "Biggest sell" }, mkcons: { label: "AM vs consensus" }, mkfc: { label: "AM vs FantasyCalc", src: "fc" }, mkfl: { label: "AM vs Flock", src: "fl" } };
   const mkOn = () => !!MK_MODES[RK.sort] && posFilter !== "PICK" && RK.week == null;
@@ -6929,13 +6974,16 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     wkWeekOptions();
     $("rk-week").value = wk ? String(RK.week) : "";
     $("rk-sort-lab").hidden = wk; $("rk-wsort-lab").hidden = !wk;
-    if (wk) { if (!$("rk-wsort").options.length) $("rk-wsort").innerHTML = WK_GROUPS.map(gr => `<optgroup label="${gr}">${Object.entries(WK_STATS).filter(([, S]) => S.grp === gr).map(([k, S]) => `<option value="${k}">${esc(S.label)}</option>`).join("")}</optgroup>`).join(""); $("rk-wsort").value = RK.wsort; }
-    $("rk-cols-wrap").hidden = !wk;
-    if (!wk && WK_POP.open) setColsPop(false);
+    if (wk) { if (!$("rk-wsort").options.length) $("rk-wsort").innerHTML = WK_GROUPS.map(gr => `<optgroup label="${gr}">${Object.entries(WK_STATS).filter(([, S]) => S.grp === gr).map(([k, S]) => `<option value="${k}">${esc(S.label)}</option>`).join("")}${gr === "Fantasy" ? `<option value="rppg">Recent PPG</option>` : ""}</optgroup>`).join(""); $("rk-wsort").value = RK.wsort; }
+    const rw = wk && RK.wsort === "rppg";   // Recent PPG through the chosen week: the production table, no stat columns
+    $("rk-cols-wrap").hidden = !wk || rw;
+    if ((!wk || rw) && WK_POP.open) setColsPop(false);
     $("rk-sort").value = RK.sort;
     $("rk-prod-opts").hidden = !PROD_MODES[RK.sort] && !wk;
-    $("rk-min").hidden = wk;
+    $("rk-min").hidden = wk && !rw;
     $("rk-min").value = String(rkMin());
+    $("rk-n-wrap").hidden = !(rw || (!wk && RK.sort === "recent"));
+    syncRkN();
     const b = $("rk-dir"); b.textContent = RK.dir === "desc" ? "High → Low" : "Low → High";
     b.title = RK.dir === "desc" ? "Highest first · click for lowest first" : "Lowest first · click for highest first";
   }
@@ -6947,9 +6995,27 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   });
   $("rk-sort").addEventListener("change", e => { RK.sort = e.target.value; syncRkControls(); saveRk(); renderRankings(); });
   $("rk-min").addEventListener("change", e => { RK.min = Number(e.target.value); saveRk(); renderRankings(); });
+  // game count: − / +, arrow keys, or type a number; a valid number applies as it's typed, anything else on leaving the box
+  $("rk-n-dec").addEventListener("click", () => setRkN(RK.n - 1));
+  $("rk-n-inc").addEventListener("click", () => setRkN(RK.n + 1));
+  $("rk-n").addEventListener("input", e => {
+    const t = e.target.value.replace(/\D/g, ""); if (t !== e.target.value) e.target.value = t;
+    const v = Number(t);
+    if (t && v >= RK_N_MIN && v <= RK_N_MAX) setRkN(v, true);
+  });
+  $("rk-n").addEventListener("blur", e => setRkN(e.target.value === "" ? RK.n : e.target.value));
+  $("rk-n").addEventListener("focus", e => e.target.select());
+  // a mouse press always selects the number (never a caret inside two digits), so typing replaces it
+  $("rk-n").addEventListener("mousedown", e => { e.preventDefault(); e.target.focus(); e.target.select(); });
+  $("rk-n").addEventListener("keydown", e => {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); setRkN(RK.n + (e.key === "ArrowUp" ? 1 : -1)); e.target.select(); }
+    else if (e.key === "Enter") { setRkN(e.target.value === "" ? RK.n : e.target.value); e.target.select(); }
+  });
   $("rk-week").addEventListener("change", e => {
     const w = e.target.value === "" ? null : Number(e.target.value);   // 0 = Season stats
-    if (w != null && RK.week == null) { RK.wsort = "pts"; RK.dir = "desc"; }   // a week opens on its highest scorers
+    // a week opens on its highest scorers; from Recent PPG it stays Recent PPG, now through that week (and back again)
+    if (w != null && RK.week == null) { RK.wsort = RK.sort === "recent" ? "rppg" : "pts"; RK.dir = "desc"; }
+    else if (w == null && RK.wsort === "rppg") RK.sort = "recent";
     RK.week = w; syncRkControls(); saveRk(); renderRankings();
   });
   $("rk-wsort").addEventListener("change", e => { RK.wsort = e.target.value; RK.dir = "desc"; syncRkControls(); saveRk(); renderRankings(); });
@@ -7168,9 +7234,9 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     DRAG_STATE.pending = false;
     $("rk-sort-wrap").hidden = posFilter === "PICK";
     $("mk-bar").hidden = !mkOn();
-    if (wkOn()) return renderWeek();
+    if (wkOn() && !recentWk()) return renderWeek();
     $("rk-head-row").closest("table").classList.remove("wk-many", "wk-st-on");
-    if (prodOn()) return renderProd();
+    if (prodOn() || recentWk()) return renderProd();
     if (mkOn()) return renderMkt();
     if ($("rk-head-row").dataset.prod) { $("rk-head-row").innerHTML = RK_HEAD; delete $("rk-head-row").dataset.prod; }
     let list, rk, group;
@@ -7300,26 +7366,30 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
      bar scaled to the best in the filtered set is the main comparison. Players under the minimum games, or with no
      games this season, are left out rather than given a made-up number. */
   function renderProd() {
-    const M = PROD_MODES[RK.sort], season = STATS_SEASONS[0], head = $("rk-head-row");
+    const mode = recentWk() ? "recent" : RK.sort, M0 = PROD_MODES[mode], season = STATS_SEASONS[0], head = $("rk-head-row");
+    const N = M0.recent ? RK.n : 0, thru = rkThru();
+    const M = N ? { ...M0, label: `Last ${N} PPG`, short: `L${N}`, n: N } : M0;
     document.body.classList.remove("editing");
-    if (!head.dataset.prod || head.dataset.prod !== RK.sort) {
-      head.innerHTML = `<th scope="col" id="edit-head" hidden></th><th scope="col" id="rk-head"><span class="hd-lg">${esc(M.short)} Rk</span><span class="hd-sm">Rk</span></th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="prod-col"><span class="hd-lg">${esc(M.label)}</span><span class="hd-sm">${esc(M.short)}</span></th><th scope="col" class="val val-2">Value</th>`;
-      head.dataset.prod = RK.sort;
+    const sig = N ? `recent|${N}` : mode;
+    if (!head.dataset.prod || head.dataset.prod !== sig) {
+      head.innerHTML = `<th scope="col" id="edit-head" hidden></th><th scope="col" id="rk-head"><span class="hd-lg">${esc(M.short)} Rk</span><span class="hd-sm">Rk</span></th><th scope="col">Player</th><th scope="col" class="pos-col">Pos</th><th scope="col" class="prod-col"${N ? ` title="${esc(`Points per game over his last ${N} game${N === 1 ? "" : "s"} played: byes and weeks he missed don't count`)}"` : ""}><span class="hd-lg">${esc(M.label)}</span><span class="hd-sm">${esc(M.short)}</span></th><th scope="col" class="val val-2">Value</th>`;
+      head.dataset.prod = sig;
     }
     const data = prodData();
     if (!data) {
-      if (statsCache[season] === undefined) loadSeason(season).then(() => { if (prodOn()) renderRankings(); });
+      if (statsCache[season] === undefined) loadSeason(season).then(() => { syncRkControls(); if (prodOn() || recentWk()) renderRankings(); });
       $("rank-body").innerHTML = `<tr><td class="empty" colspan="5">${statsCache[season] === null ? "This season's stats couldn't be loaded." : "Loading this season's stats…"}</td></tr>`;
       $("rank-count").textContent = "";
       return;
     }
+    const thruWk = thru != null ? Math.min(thru, statsCache[season].through_week ?? thru) : null;   // a week not played yet has no games to add
     const min = rkMin(), spamRk = p => (leagueView() ? LG.adjRank.get(p.id) : p.rank) ?? 1e9;
     if ($("rk-min").value !== String(min)) $("rk-min").value = String(min);   // the week's default once stats are in
     let pool = players.filter(p => EDIT_POS.includes(p.pos) && (posFilter === "ALL" || p.pos === posFilter));
     let none = 0, under = 0;
     const rows = [];
     pool.forEach(p => {
-      const m = prodMetric(data, p.sleeperId, RK.sort);
+      const m = prodMetric(data, p.sleeperId, mode, { n: N, thru });
       if (!m) { none++; return; }
       if (m.gp < min) { under++; return; }
       rows.push({ p, ...m });
@@ -7338,7 +7408,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       const pct = top > 0 ? Math.max(0, r.v) / top * 100 : 0;
       const num = fp(r.v);
       const star = r.short ? `<span class="inj-star" title="${esc(`Includes ${shortCount(r.short)} (left early with an injury); the game still counts`)}">*</span>` : "";
-      const sub = M.n ? (r.gp < M.n ? `<span class="psub thin" title="Only ${r.n} game${r.n === 1 ? "" : "s"} played this season">last ${r.n}</span>` : `<span class="psub">last ${r.n}</span>`) : `<span class="psub">${r.gp} GP</span>`;
+      const sub = M.n ? (r.n < M.n ? `<span class="psub thin" title="${esc(`Only ${r.n} game${r.n === 1 ? "" : "s"} played ${thru != null ? `through Week ${thru}` : "this season"}: averaged over ${r.n === 1 ? "that game" : `those ${r.n}`}, not ${M.n}`)}">${r.n} of ${M.n} games</span>`
+        : `<span class="psub" title="${esc(`His last ${r.n} game${r.n === 1 ? "" : "s"} played: Week${r.n === 1 ? "" : "s"} ${r.weeks.join(", ")}`)}">last ${r.n}</span>`) : `<span class="psub">${r.gp} GP</span>`;
       const sr = spamRk(p), spamTxt = sr < 1e9 ? `AM #${sr}` : "AM —";
       return `<tr class="player prod${own && own.mine ? " mine" : ""}${CMP.on ? (cmpA ? " cmp-a" : " cmp-row") : ""}" data-id="${p.id}"${CMP.on && !cmpA && p.sleeperId ? ` title="Compare with ${esc(CMP.name)}"` : ""}>
         <td class="rk">${r.rank}</td>
@@ -7351,8 +7422,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     $("rank-body").innerHTML = out.length ? out.join("") :
       `<tr><td class="empty" colspan="5">${query ? `No players match “${esc(query)}”.` : "No players meet this minimum yet."}</td></tr>`;
     const notes = [`${list.length} player${list.length === 1 ? "" : "s"} · ${M.label} in ${scoringLabel()}`];
+    if (N) notes.push(`his last ${N === 1 ? "game" : N + " games"} played${thru != null ? ` through Week ${thru}` : ""}, byes and missed weeks not counted`);
+    if (thru != null && thruWk < thru) notes.push(`stats run through Week ${thruWk}`);
+    if (N) { const few = rows.filter(r => r.n < N).length; if (few) notes.push(`${few} with fewer than ${N} games`); }
     if (under) notes.push(`${under} under ${min} games hidden`);
-    if (none) notes.push(`${none} without a game this season`);
+    if (none) notes.push(thru != null ? `${none} without a game through Week ${thru}` : `${none} without a game this season`);
     notes.push("AM-ranked players only");
     $("rank-count").textContent = notes.join(" · ");
     updateEditorBar();
@@ -16038,12 +16112,15 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   // One player's number for a production mode: v (the metric), gp (games played this season), n (games in the
   // sample), short (injury-shortened games in the sample, still counted)
-  function prodMetric(data, sid, mode) {
-    const games = sid && data.get(String(sid));
+  // opts.n: Recent PPG's game count (his last n games played); opts.thru: the last NFL week that may count (a past
+  // week's view never reads later games; gp is then his games played through that week)
+  function prodMetric(data, sid, mode, opts) {
+    const all = sid && data.get(String(sid)), thru = opts && opts.thru != null ? opts.thru : null;
+    const games = all && thru != null ? all.filter(g => g.w <= thru) : all;
     if (!games || !games.length) return null;
-    const k = (PROD_MODES[mode] || {}).n, sample = k ? games.slice(-k) : games;
+    const k = mode === "recent" ? rkN(opts && opts.n) : 0, sample = k ? games.slice(-k) : games;
     const sum = sample.reduce((a, g) => a + g.pts, 0);
-    return { v: mode === "pts" ? sum : sum / sample.length, gp: games.length, n: sample.length, short: sample.filter(g => g.short).length };
+    return { v: mode === "pts" ? sum : sum / sample.length, gp: games.length, n: sample.length, short: sample.filter(g => g.short).length, weeks: sample.map(g => g.w) };
   }
   /* Production ranks for the player drawer (Alan, Oct 8): his position rank by total fantasy points (FPTS) and by
      points per game (PPG) this season, from raw stats in the selected league's scoring (prodData: played games only,
@@ -16106,21 +16183,28 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     return `<div class="pm-prodrk" aria-label="AM rank and this season's production ranks">${out.join("")}</div>`;
   }
   // Default minimum games by the NFL week being played: weeks 1–2 none, week 3 2+, weeks 4–5 3+, week 6 on 4+
-  function rkMinDefault() {
-    const w = currentWeek();
+  function rkMinDefault(wk) {
+    const w = wk != null ? wk : currentWeek();
     if (w == null) return 4;
     return w <= 2 ? 0 : w === 3 ? 2 : w <= 5 ? 3 : 4;
   }
-  function rkMin() { return RK.min == null ? (typeof statsCache === "object" && statsCache[STATS_SEASONS[0]] ? rkMinDefault() : 0) : RK.min; }
+  // Recent PPG through a past week: that week's own default, so Week 2 isn't held to today's 4+ games
+  function rkMin() { return RK.min == null ? (typeof statsCache === "object" && statsCache[STATS_SEASONS[0]] ? rkMinDefault(rkThru()) : 0) : RK.min; }
   // restore the last production view (sort, minimum, direction, position) saved in this browser
   (() => {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem("spm_rk_sort") || "null"); } catch (e) {}
     loadSeason(STATS_SEASONS[0]).then(() => wkWeekOptions());   // the Week menu lists the season's weeks once the schedule is in
+    // Last 3 / Last 5 PPG became Recent PPG (Nov 18): a browser that saved one opens Recent PPG with that count
+    if (saved && (saved.sort === "l3" || saved.sort === "l5")) {
+      let has = false; try { has = localStorage.getItem("spm_rk_recent") != null; } catch (e) {}
+      if (!has) RK.n = saved.sort === "l3" ? 3 : 5;
+      saved.sort = "recent";
+    }
     if (!saved || !(PROD_MODES[saved.sort] || MK_MODES[saved.sort] || Number.isInteger(saved.week))) return;
     if (PROD_MODES[saved.sort] || MK_MODES[saved.sort]) RK.sort = saved.sort;
     RK.dir = saved.dir === "asc" ? "asc" : "desc";
-    if (Number.isInteger(saved.week) && saved.week >= 0 && saved.week <= 22) { RK.week = saved.week; RK.wsort = WK_STATS[saved.wsort] ? saved.wsort : "pts"; }
+    if (Number.isInteger(saved.week) && saved.week >= 0 && saved.week <= 22) { RK.week = saved.week; RK.wsort = WK_STATS[saved.wsort] || saved.wsort === "rppg" ? saved.wsort : "pts"; }
     RK.min = [0, 2, 3, 4].includes(saved.min) ? saved.min : null;
     if (filters.includes(saved.pos) && saved.pos !== "PICK") {
       posFilter = saved.pos;

@@ -7,10 +7,11 @@ expected number in Python straight from data/stats/<season>.json with the same r
   - a game counts only if he played (a stat line or offensive snaps); byes, inactive weeks, games he never
     entered and future games are never games played
   - each game is scored with the league's scoring_settings (rounded to 0.01 like gamePoints)
-  - Season PPG = points / games played; Season Points = total; Last 3 / Last 5 = his most recent games played
+  - Season PPG = points / games played; Season Points = total; Recent PPG = his most recent N games played
+    (tests/recent_ppg_check.py covers the game count, past weeks and missed games in depth)
 Checks: Full vs Half PPR, TE premium none vs +, 4 vs 6 pt passing TD, fumble -1 vs -2, a yardage bonus, All vs
 one position, minimum games (default for the week and overrides), bye/inactive handling, injury-shortened games
-(starred, still counted), Last 3 with fewer than 3 games, sort direction, persistence, the player drawer, and
+(starred, still counted), Recent PPG with fewer games than asked, sort direction, persistence, the player drawer, and
 that going back to AM Rank restores the board exactly (ranks, values and header).
 """
 import csv, functools, http.server, io, json, os, re, socketserver, sys, threading
@@ -45,7 +46,7 @@ def expected(sc, mode="ppg"):
         sh = {x[0] for x in (S.get("short") or {}).get(sid, [])}
         games = sorted([(a[0], game_pts(a, pl["p"], sc), a[0] in sh) for a in pl["g"] if played(a)])
         if not games: continue
-        k = {"l3": 3, "l5": 5}.get(mode)
+        k = {"l3": 3, "l5": 5}.get(mode)   # Recent PPG over his last 3 / 5 games played
         sample = games[-k:] if k else games
         tot = sum(g[1] for g in sample)
         out[sid] = (tot if mode == "pts" else tot / len(sample), len(games), len(sample), sum(1 for g in sample if g[2]))
@@ -162,13 +163,15 @@ with sync_playwright() as p:
     for m in (4, 0):
         set_min(pg, m); g = pg.evaluate(READ)
         compare(f"Minimum {m}+ games", g, full, m)
-    # Last 3 with fewer than 3 games (no minimum): uses the games he has, says so
-    set_sort(pg, "l3"); l3 = pg.evaluate(READ); e3 = expected(SCORING["FULL"], "l3")
+    # Recent PPG over 3 games with fewer than 3 played (no minimum): uses the games he has, says so
+    def set_n(pg, n):
+        pg.click("#rk-n"); pg.keyboard.type(str(n)); pg.wait_for_timeout(400)
+    set_sort(pg, "recent"); set_n(pg, 3); l3 = pg.evaluate(READ); e3 = expected(SCORING["FULL"], "l3")
     compare("Last 3 PPG, no minimum", l3, e3, 0, "l3")
     few = [r for r in l3 if e3[name_sid[r["name"]]][2] < 3]
-    ok(few and all(r["thin"] and r["sub"] == f"last {e3[name_sid[r['name']]][2]}" for r in few), f"Fewer than 3 games: 'last N' flagged ({len(few)} players, e.g. {few[0]['name'] if few else ''} {few[0]['sub'] if few else ''})")
+    ok(few and all(r["thin"] and r["sub"] == f"{e3[name_sid[r['name']]][2]} of 3 games" for r in few), f"Fewer than 3 games: 'N of 3 games' flagged ({len(few)} players, e.g. {few[0]['name'] if few else ''} {few[0]['sub'] if few else ''})")
     ok(all(r["sub"] == "last 3" and not r["thin"] for r in l3 if e3[name_sid[r["name"]]][2] == 3), "Full samples read 'last 3'")
-    set_sort(pg, "l5"); compare("Last 5 PPG, no minimum", pg.evaluate(READ), expected(SCORING["FULL"], "l5"), 0, "l5")
+    set_n(pg, 5); compare("Last 5 PPG, no minimum", pg.evaluate(READ), expected(SCORING["FULL"], "l5"), 0, "l5")
     set_sort(pg, "pts"); compare("Season Points, no minimum", pg.evaluate(READ), expected(SCORING["FULL"], "pts"), 0, "pts")
     # bye / inactive: a week with no stat line and no snaps isn't a game; byes and future games aren't either
     set_sort(pg, "ppg"); g0 = {r["name"]: r for r in pg.evaluate(READ)}
