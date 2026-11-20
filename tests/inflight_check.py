@@ -77,6 +77,7 @@ with sync_playwright() as pw:
     errs = []
     def open_page(repo, token=True, ctx=None):
         ctx = ctx or br.new_context(viewport={"width": 1440, "height": 1000})
+        ctx.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
         ctx.add_init_script("window.__SPM_TEST_HOOKS = true;" + (" try { localStorage.setItem('spm_editor_token', 'test-token'); } catch (e) {}" if token else ""))
         pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.route("https://api.github.com/**", repo.handle)
