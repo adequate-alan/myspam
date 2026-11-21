@@ -76,6 +76,7 @@ with sync_playwright() as p:
         path = "data/" + r.request.url.split("/data/")[1].split("?")[0]; body = repo.read(path)
         r.fulfill(status=200 if body is not None else 404, content_type="application/json", body=body or b"{}")
     pg.route(re.compile(re.escape(BASE) + r"/data/(rank_history|injury_overrides|rank_snapshots/[^/]+)\.json.*"), data_file)
+    pg.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
     pg.add_init_script("try { localStorage.setItem('spm_editor_token', 'test-token'); } catch (e) {}")
     pg.goto(BASE + "/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
     pg.click("#pos-chips button:has-text('All')"); pg.wait_for_timeout(300)

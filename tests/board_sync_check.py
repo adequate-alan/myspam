@@ -94,6 +94,7 @@ with sync_playwright() as p:
         init = "window.__SPM_TEST_HOOKS = true;"
         if token: init += " localStorage.setItem('spm_editor_token', 'test-token');"
         if board: init += f" localStorage.setItem('spm_edit_board', '{board}'); localStorage.setItem('spm_rk_board', '{board}');"
+        pg.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
         pg.add_init_script("try { if (!sessionStorage.getItem('i0')) { sessionStorage.setItem('i0', '1'); " + init + " } else { window.__SPM_TEST_HOOKS = true; } } catch (e) {}")
         pg.goto(BASE + "/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1800)
         return pg

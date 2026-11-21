@@ -70,6 +70,7 @@ with sync_playwright() as p:
         pg.route(re.compile(re.escape(BASE) + r"/(index\.html)?([?#].*)?$"), lambda r: r.fulfill(status=200, content_type="text/html; charset=utf-8", body=repo.read("index.html")))
         pg.route(re.compile(re.escape(BASE) + r"/data/(rank_history|injury_overrides)\.json.*"), lambda r: r.fulfill(status=200, content_type="application/json",
                  body=repo.read("data/" + r.request.url.split("/data/")[1].split("?")[0])))
+        pg.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
         if token == "local": pg.add_init_script(f"try {{ if (!sessionStorage.getItem('t0')) {{ localStorage.setItem('spm_editor_token', '{TOKEN}'); sessionStorage.setItem('t0', '1'); }} }} catch (e) {{}}")
         if init: pg.add_init_script(init)
         pg.goto(BASE + "/#rankings"); pg.wait_for_selector("#rank-body tr.player"); pg.wait_for_timeout(1500)
