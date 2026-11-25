@@ -4,7 +4,7 @@ Run from the repo root:  CHROMIUM=/path/to/chromium python3 tests/flock_lists_ch
 
 Checks, on the migrated lists as published by the migration (tests/fixtures/flock/, a copy of data/market/flock_sf.json
 and flock_ppr.json at 15046cb, served to the page in place of the live files, so publishing a real list from the list
-manager never breaks this suite) and the first, append-only snapshot of the migrated list:
+manager never breaks this suite; on a clock frozen a week after the list's export, so the list never ages out) and the first, append-only snapshot of the migrated list:
   · every row of the migrated export is accounted for: matched rows + unmatched rows = the export's rows, ranks 1..N
   · the page's import parser matches the snapshot's original CSV exactly like pipeline/flock_v2_migrate.py did
   · Flock IDs that belong to another player are never trusted (Flock's Chris Bell 13269 is Sleeper's Mendoza); a matching
@@ -69,12 +69,17 @@ def serve():
     return srv.server_address[1]
 port = serve()
 FLOCK_FILES = re.compile(r".*/data/market/flock_(sf|ppr)\.json(\?.*)?$")
+# A frozen list needs a frozen clock (Nov 25): the page drops a Flock list 45 days after its export (MK_DEAD.fl), and the
+# fixture was exported Oct 7, so on the real clock the suite went red on unchanged code from Nov 21. Every page runs a
+# week after the export, when the migrated list was published and current (not yet stale at 14 days).
+NOW = "2026-10-14T18:00:00Z"
 
 with sync_playwright() as p:
     br = p.chromium.launch(**({"executable_path": os.environ["CHROMIUM"]} if os.environ.get("CHROMIUM") else {}))
     errs = []
     def page(q="", flock=True, legacy=None):
         pg = br.new_context(viewport={"width": 1440, "height": 1000}).new_page()
+        pg.clock.install(time=NOW)
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.route(re.compile(r"https://.*"), lambda r: r.abort())   # no network: Sleeper, photos, fonts
         if not flock: pg.route(FLOCK_FILES, lambda r: r.fulfill(status=404, body=""))
