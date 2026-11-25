@@ -1,0 +1,184 @@
+pos,pos_rank,player,am_ppr_tier,sf_tier_now,sf_tier_proposed,tier_name_now,tier_name_proposed,value_now,value_proposed,change_pct,overall_now,overall_proposed
+RB,1,Jahmyr Gibbs,1,1,1,Elite RB1,Elite RB1,10000,10000,+0.0,1,1
+RB,2,Christian McCaffrey,2,2,2,High RB1,High RB1,8854,8494,-4.1,5,7
+RB,3,Kenneth Walker III,2,2,2,High RB1,High RB1,8588,8061,-6.1,7,8
+RB,4,Bijan Robinson,3,3,3,RB1,RB1,8014,7522,-6.1,9,9
+RB,5,James Cook III,3,3,3,RB1,RB1,7709,7396,-4.1,10,11
+RB,6,Bucky Irving,4,4,4,Low RB1,Low RB1,6528,6751,+3.4,16,14
+RB,7,Chuba Hubbard,4,4,4,Low RB1,Low RB1,6366,6268,-1.5,18,20
+RB,8,Javonte Williams,4,5,4,High RB2,Low RB1,5192,5820,+12.1,30,25
+RB,9,Jonah Coleman,4,5,4,High RB2,Low RB1,5001,5403,+8.0,33,29
+RB,10,Kyren Williams,5,5,5,High RB2,High RB2,4816,4515,-6.2,34,37
+RB,11,Bhaysul Tuten,5,5,5,High RB2,High RB2,4639,4412,-4.9,36,42
+RB,12,D'Andre Swift,5,6,5,RB2,High RB2,3843,4311,+12.2,46,44
+RB,13,Chase Brown,6,6,6,RB2,RB2,3765,3487,-7.4,47,52
+RB,14,Derrick Henry,6,6,6,RB2,RB2,3690,3399,-7.9,48,53
+RB,15,Jaylen Warren,6,6,6,RB2,RB2,3615,3312,-8.4,50,54
+RB,16,Breece Hall,6,6,6,RB2,RB2,3542,3228,-8.9,53,55
+RB,17,Cam Skattebo,6,6,6,RB2,RB2,3471,3145,-9.4,56,56
+RB,18,Ashton Jeanty,6,7,6,Low RB2,RB2,2772,3065,+10.6,63,57
+RB,19,Jonathan Taylor,6,7,6,Low RB2,RB2,2577,2987,+15.9,68,61
+RB,20,Saquon Barkley,7,7,7,Low RB2,Low RB2,2396,2498,+4.3,73,70
+RB,21,Tony Pollard,7,7,7,Low RB2,Low RB2,2228,2373,+6.5,78,74
+RB,22,Blake Corum,7,7,7,Low RB2,Low RB2,2071,2254,+8.8,83,78
+RB,23,Ollie Gordon II,8,7,8,Low RB2,RB3/Flex,1926,1843,-4.3,85,83
+RB,24,Josh Jacobs,8,8,8,RB3/Flex,RB3/Flex,1699,1744,+2.6,89,87
+RB,25,Quinshon Judkins,8,8,8,RB3/Flex,RB3/Flex,1620,1651,+1.9,92,91
+RB,26,Omarion Hampton,8,8,8,RB3/Flex,RB3/Flex,1545,1562,+1.1,94,94
+RB,27,Zach Charbonnet,8,8,8,RB3/Flex,RB3/Flex,1473,1478,+0.3,97,97
+RB,28,Emmet Johnson,8,8,8,RB3/Flex,RB3/Flex,1404,1399,-0.4,99,100
+RB,29,Kyle Monangai,8,8,8,RB3/Flex,RB3/Flex,1339,1323,-1.2,102,104
+RB,30,Jacorey Croskey-Merritt,9,9,9,Low RB3/Flex,Low RB3/Flex,1154,1143,-1.0,109,109
+RB,31,Travis Ettienne Jr.,9,9,9,Low RB3/Flex,Low RB3/Flex,1134,1130,-0.4,110,110
+RB,32,David Montgomery,9,9,9,Low RB3/Flex,Low RB3/Flex,1113,1117,+0.4,111,111
+RB,33,Rhamondre Stevenson,9,9,9,Low RB3/Flex,Low RB3/Flex,1093,1104,+1.0,112,112
+RB,34,Jadarian Price,10,10,10,Flex depth,Flex depth,785,785,+0.0,114,116
+RB,35,Jeremiyah Love,10,10,10,Flex depth,Flex depth,758,758,+0.0,115,119
+RB,36,Aaron Jones Sr.,10,10,10,Flex depth,Flex depth,731,731,+0.0,117,121
+RB,37,Braelon Allen,10,10,10,Flex depth,Flex depth,705,705,+0.0,118,122
+RB,38,Jordan Mason,10,10,10,Flex depth,Flex depth,680,679,-0.1,121,124
+RB,39,Rico Dowdle,10,10,10,Flex depth,Flex depth,657,657,+0.0,122,125
+RB,40,Chris Rodriguez,10,10,10,Flex depth,Flex depth,634,634,+0.0,123,126
+RB,41,Kenny Gainwell,11,11,11,Bench/Handcuff,Bench/Handcuff,363,361,-0.6,131,131
+RB,42,Woody Marks,11,11,11,Bench/Handcuff,Bench/Handcuff,357,356,-0.3,132,133
+RB,43,Justice Hill,11,11,11,Bench/Handcuff,Bench/Handcuff,351,351,+0.0,134,135
+RB,44,Kaelon Black,11,11,11,Bench/Handcuff,Bench/Handcuff,346,346,+0.0,135,137
+RB,45,Samaje Perine,11,11,11,Bench/Handcuff,Bench/Handcuff,340,342,+0.6,136,138
+RB,46,Dylan Sampson,11,11,11,Bench/Handcuff,Bench/Handcuff,335,337,+0.6,137,140
+RB,47,Rachaad White,11,11,11,Bench/Handcuff,Bench/Handcuff,330,332,+0.6,139,141
+RB,48,Tyler Allgeier,11,11,11,Bench/Handcuff,Bench/Handcuff,324,328,+1.2,141,142
+RB,49,Alvin Kamara,11,11,11,Bench/Handcuff,Bench/Handcuff,319,323,+1.3,142,144
+RB,50,RJ Harvey,12,11,12,Bench/Handcuff,Bench Depth,314,313,-0.3,144,146
+RB,51,Seth McGowan,13,12,13,Deep bench,Deep bench,304,304,+0.0,146,148
+RB,52,Mike Washington Jr.,13,12,13,Deep bench,Deep bench,298,298,+0.0,149,150
+RB,53,Bam Knight,13,12,13,Deep bench,Deep bench,232,232,+0.0,164,164
+RB,54,TreVeyon Henderson,13,12,13,Deep bench,Deep bench,231,231,+0.0,165,165
+RB,55,Corey Kiner,13,12,13,Deep bench,Deep bench,222,222,+0.0,169,170
+RB,56,Audric Estime,13,12,13,Deep bench,Deep bench,221,221,+0.0,170,171
+RB,57,J.K. Dobbins,13,12,13,Deep bench,Deep bench,166,166,+0.0,180,180
+RB,58,Emanuel Wilson,13,12,13,Deep bench,Deep bench,117,117,+0.0,199,199
+RB,59,Brian Robinson,13,12,13,Deep bench,Deep bench,112,112,+0.0,201,201
+RB,60,Kendre Miller,13,12,13,Deep bench,Deep bench,109,109,+0.0,203,203
+RB,61,Tyrone Tracy Jr.,13,12,13,Deep bench,Deep bench,104,104,+0.0,205,205
+RB,62,Keaton Mitchell,13,12,13,Deep bench,Deep bench,82,82,+0.0,210,210
+RB,63,MarShawn Lloyd,13,12,13,Deep bench,Deep bench,66,66,+0.0,214,214
+RB,64,Jaylen Wright,14,12,13,Deep bench,Deep bench,64,64,+0.0,216,216
+RB,65,Will Shipley,14,12,13,Deep bench,Deep bench,61,61,+0.0,218,218
+RB,66,Jonathon Brooks,14,12,13,Deep bench,Deep bench,43,43,+0.0,225,225
+RB,67,Tyjae Spears,14,12,13,Deep bench,Deep bench,39,39,+0.0,228,228
+RB,68,Kaleb Johnson,14,12,13,Deep bench,Deep bench,38,38,+0.0,229,229
+RB,69,Kimani Vidal,14,12,13,Deep bench,Deep bench,36,36,+0.0,231,231
+RB,70,Isiah Pacheco,14,12,13,Deep bench,Deep bench,30,30,+0.0,237,237
+RB,71,Devin Singletary,14,12,13,Deep bench,Deep bench,27,27,+0.0,240,240
+RB,72,Tank Bigsby,14,12,13,Deep bench,Deep bench,24,24,+0.0,243,243
+RB,73,Trey Benson,14,12,13,Deep bench,Deep bench,21,21,+0.0,246,246
+RB,74,Raheim Sanders,14,12,13,Deep bench,Deep bench,15,15,+0.0,252,252
+RB,75,Najee Harris,14,12,13,Deep bench,Deep bench,11,11,+0.0,256,256
+RB,76,Ty Johnson,14,12,13,Deep bench,Deep bench,9,9,+0.0,258,258
+RB,77,De'Von Achane,99,99,99,Out for season,Out for season,0,0,+0.0,265,265
+WR,1,Jaxon Smith-Njigba,1,1,1,Elite WR1,Elite WR1,9578,9578,+0.0,2,2
+WR,2,Ja'Marr Chase,2,2,2,High WR1,High WR1,8738,8738,+0.0,6,5
+WR,3,CeeDee Lamb,2,2,2,High WR1,High WR1,8552,8550,-0.0,8,6
+WR,4,Amon-Ra St. Brown,3,3,3,WR1,WR1,7443,7445,+0.0,11,10
+WR,5,Justin Jefferson,4,4,4,Low WR1,Low WR1,6702,6557,-2.2,14,15
+WR,6,Malik Nabers,4,4,4,Low WR1,Low WR1,6444,6374,-1.1,17,17
+WR,7,Tee Higgins,4,4,4,Low WR1,Low WR1,6196,6196,+0.0,21,21
+WR,8,Christian Watson,4,4,4,Low WR1,Low WR1,5957,6023,+1.1,23,22
+WR,9,Matthew Golden,4,4,4,Low WR1,Low WR1,5728,5854,+2.2,25,24
+WR,10,Parker Washington,5,5,5,High WR2,High WR2,5236,5071,-3.2,28,31
+WR,11,George Pickens,5,5,5,High WR2,High WR2,5014,4903,-2.2,32,33
+WR,12,Drake London,5,5,5,High WR2,High WR2,4801,4740,-1.3,35,34
+WR,13,Nico Collins,5,5,5,High WR2,High WR2,4597,4583,-0.3,37,36
+WR,14,Chris Olave,5,5,5,High WR2,High WR2,4402,4431,+0.7,42,41
+WR,15,Luther Burden III,5,5,5,High WR2,High WR2,4215,4284,+1.6,44,45
+WR,16,Zay Flowers,5,5,5,High WR2,High WR2,4036,4142,+2.6,45,46
+WR,17,Mike Evans,6,6,6,WR2,WR2,3599,3631,+0.9,51,48
+WR,18,DJ Moore,6,6,6,WR2,WR2,3526,3569,+1.2,54,49
+WR,19,Tetairoa McMillan,7,6,7,WR2,Low WR2,3455,2908,-15.8,57,62
+WR,20,Jameson Williams,7,6,7,WR2,Low WR2,3386,2771,-18.2,58,63
+WR,21,Garrett Wilson,7,7,7,Low WR2,Low WR2,2831,2639,-6.8,62,66
+WR,22,DeVonta Smith,7,7,7,Low WR2,Low WR2,2608,2514,-3.6,66,69
+WR,23,Rashee Rice,7,7,7,Low WR2,Low WR2,2503,2394,-4.4,70,72
+WR,24,Carnell Tate,7,7,7,Low WR2,Low WR2,2403,2281,-5.1,72,76
+WR,25,Stefon Diggs,8,7,8,Low WR2,WR3,2306,1812,-21.4,76,85
+WR,26,Jordyn Tyson,8,7,8,Low WR2,WR3,2214,1761,-20.5,79,86
+WR,27,KC Concepcion Jr.,8,8,8,WR3,WR3,1832,1712,-6.6,86,88
+WR,28,Ladd McConkey,8,8,8,WR3,WR3,1754,1662,-5.2,88,90
+WR,29,Davante Adams,8,8,8,WR3,WR3,1680,1617,-3.7,90,92
+WR,30,Rome Odunze,8,8,8,WR3,WR3,1609,1572,-2.3,93,93
+WR,31,Josh Downs,8,8,8,WR3,WR3,1540,1528,-0.8,95,95
+WR,32,Denzel Boston,8,8,8,WR3,WR3,1475,1485,+0.7,96,96
+WR,33,Antonio Williams,8,8,8,WR3,WR3,1413,1443,+2.1,98,98
+WR,34,Caleb Douglas,8,8,8,WR3,WR3,1353,1403,+3.7,101,99
+WR,35,Emeka Egbuka,8,8,8,WR3,WR3,1295,1364,+5.3,103,102
+WR,36,Jaylen Waddle,8,8,8,WR3,WR3,1240,1325,+6.9,106,103
+WR,37,Deebo Samuel SR.,9,9,9,Low WR3,Low WR3,744,820,+10.2,116,114
+WR,38,Jalen Coker,9,9,9,Low WR3,Low WR3,687,801,+16.6,119,115
+WR,39,DK Metcalf,9,9,9,Low WR3,Low WR3,633,782,+23.5,124,117
+WR,40,Jakobi Meyers,9,9,9,Low WR3,Low WR3,585,764,+30.6,125,118
+WR,41,Keenan Allen,9,9,9,Low WR3,Low WR3,540,747,+38.3,127,120
+WR,42,Khalil Shakir,10,9,10,Low WR3,Flex Play,499,371,-25.7,128,130
+WR,43,Omar Cooper Jr.,10,10,10,Flex Play,Flex Play,334,359,+7.5,138,132
+WR,44,Germie Bernard,10,10,10,Flex Play,Flex Play,326,348,+6.7,140,136
+WR,45,Makai Lemon,10,10,10,Flex Play,Flex Play,317,338,+6.6,143,139
+WR,46,Tank Dell,10,10,10,Flex Play,Flex Play,309,327,+5.8,145,143
+WR,47,Chimere Dike,10,10,10,Flex Play,Flex Play,301,317,+5.3,148,145
+WR,48,Ryan Flournoy,10,11,10,Shaky Flex,Flex Play,286,307,+7.3,150,147
+WR,49,Adonai Mitchell,10,11,10,Shaky Flex,Flex Play,283,297,+4.9,151,151
+WR,50,A.J. Brown,11,11,11,Shaky Flex,Shaky Flex,279,280,+0.4,152,152
+WR,51,Tre Tucker,12,11,12,Shaky Flex,Bench,276,270,-2.2,153,153
+WR,52,Ted Hurst,12,11,12,Shaky Flex,Bench,272,265,-2.6,154,154
+WR,53,Xavier Hutchinson,12,11,12,Shaky Flex,Bench,269,261,-3.0,155,155
+WR,54,Pat Bryant,12,11,12,Shaky Flex,Bench,265,257,-3.0,156,157
+WR,55,Rashod Batemen,12,11,12,Shaky Flex,Bench,262,252,-3.8,157,159
+WR,56,Konata Mumpfield,12,11,12,Shaky Flex,Bench,259,247,-4.6,158,160
+WR,57,Malik Washington,12,11,12,Shaky Flex,Bench,255,243,-4.7,161,161
+WR,58,DeMario Douglas,12,11,12,Shaky Flex,Bench,253,239,-5.5,162,162
+WR,59,Courtland Sutton,12,11,12,Shaky Flex,Bench,249,235,-5.6,163,163
+WR,60,Ja'Kobi Lane,12,12,12,Deep bench,Bench,184,230,+25.0,176,166
+WR,61,Tre Harris,13,12,13,Deep bench,Deep bench,183,183,+0.0,177,177
+WR,62,Elic Ayomanor,13,12,13,Deep bench,Deep bench,182,182,+0.0,178,178
+WR,63,Jordan Addison,13,12,13,Deep bench,Deep bench,151,151,+0.0,182,182
+WR,64,Devaughn Vele,13,12,13,Deep bench,Deep bench,148,148,+0.0,183,183
+WR,65,Wan'Dale Robinson,13,12,13,Deep bench,Deep bench,141,141,+0.0,184,184
+WR,66,Mack Hollins,13,12,13,Deep bench,Deep bench,139,139,+0.0,185,185
+WR,67,Alec Pierce,13,12,13,Deep bench,Deep bench,138,138,+0.0,186,186
+WR,68,Marvin Harrison Jr.,13,12,13,Deep bench,Deep bench,137,137,+0.0,187,187
+WR,69,Xavier Worthy,13,12,13,Deep bench,Deep bench,135,135,+0.0,188,188
+WR,70,Chris Godwin Jr.,13,12,13,Deep bench,Deep bench,134,134,+0.0,189,189
+WR,71,Travis Hunter,13,12,13,Deep bench,Deep bench,133,133,+0.0,190,190
+WR,72,Josh Cameron,13,12,13,Deep bench,Deep bench,132,132,+0.0,191,191
+WR,73,Jaylin Noel,13,12,13,Deep bench,Deep bench,131,131,+0.0,192,192
+WR,74,Keon Coleman,13,12,13,Deep bench,Deep bench,130,130,+0.0,193,193
+WR,75,Dontayvion Wicks,13,12,13,Deep bench,Deep bench,129,129,+0.0,194,194
+WR,76,Romeo Doubs,13,12,13,Deep bench,Deep bench,128,128,+0.0,195,195
+WR,77,Kendrick Bourne,13,12,13,Deep bench,Deep bench,127,127,+0.0,196,196
+WR,78,Kalif Raymond,14,12,13,Deep bench,Deep bench,121,121,+0.0,197,197
+WR,79,Brian Thomas Jr.,14,12,13,Deep bench,Deep bench,120,120,+0.0,198,198
+WR,80,Michael Pittman Jr.,14,12,13,Deep bench,Deep bench,113,113,+0.0,200,200
+WR,81,Quentin Johnston,14,12,13,Deep bench,Deep bench,88,88,+0.0,208,208
+WR,82,Tyreek Hill,14,12,13,Deep bench,Deep bench,65,65,+0.0,215,215
+WR,83,Cyrus Allen,14,12,13,Deep bench,Deep bench,60,60,+0.0,219,219
+WR,84,Dohnte Meyers,14,12,13,Deep bench,Deep bench,49,49,+0.0,221,221
+WR,85,Chris Bell,14,12,13,Deep bench,Deep bench,44,44,+0.0,224,224
+WR,86,Jauan Jennings,14,12,13,Deep bench,Deep bench,41,41,+0.0,226,226
+WR,87,De'Zhaun Stribling,14,12,13,Deep bench,Deep bench,40,40,+0.0,227,227
+WR,88,Roman Wilson,14,12,13,Deep bench,Deep bench,37,37,+0.0,230,230
+WR,89,Rashid Shaheed,14,12,13,Deep bench,Deep bench,35,35,+0.0,232,232
+WR,90,Cooper Kupp,14,12,13,Deep bench,Deep bench,34,34,+0.0,233,233
+WR,91,Jayden Reed,14,12,13,Deep bench,Deep bench,32,32,+0.0,235,235
+WR,92,Tory Horton,14,12,13,Deep bench,Deep bench,29,29,+0.0,238,238
+WR,93,Kayshon Boutte,14,12,13,Deep bench,Deep bench,28,28,+0.0,239,239
+WR,94,Ricky Pearsall,14,12,13,Deep bench,Deep bench,25,25,+0.0,242,242
+WR,95,Troy Franklin,14,12,13,Deep bench,Deep bench,23,23,+0.0,244,244
+WR,96,Josh Palmer,14,12,13,Deep bench,Deep bench,20,20,+0.0,247,247
+WR,97,Jayden Higgins,14,12,13,Deep bench,Deep bench,18,18,+0.0,249,249
+WR,98,Marquise Brown,14,12,13,Deep bench,Deep bench,16,16,+0.0,251,251
+WR,99,Malachi Fields,14,12,13,Deep bench,Deep bench,13,13,+0.0,254,254
+WR,100,Jerry Jeudy,14,12,13,Deep bench,Deep bench,10,10,+0.0,257,257
+WR,101,Jalen Nailor,14,12,13,Deep bench,Deep bench,8,8,+0.0,259,259
+WR,102,Xavier Legette,14,12,13,Deep bench,Deep bench,6,6,+0.0,261,261
+WR,103,Calvin Ridley,14,12,13,Deep bench,Deep bench,3,3,+0.0,264,264
+WR,104,Terry McLaurin,99,99,99,,,0,0,+0.0,268,268
+WR,105,Michael Wilson,99,99,99,,,0,0,+0.0,270,270
+WR,106,Puka Nacua,99,99,99,Out for season,Out for season,0,0,+0.0,272,272
