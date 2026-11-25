@@ -1,0 +1,274 @@
+player,pos,team,rank,pos_rank,tier,value,sleeper_id,source,tier_name
+Jahmyr Gibbs,RB,DET,1,1,1,10000,9221,manual,Tier 1
+Jaxon Smith-Njigba,WR,SEA,2,1,1,9746,9488,manual,Tier 1
+Ja'Marr Chase,WR,CIN,3,2,2,9037,7564,manual,Tier 2
+Christian McCaffrey,RB,SF,4,2,2,8799,4034,manual,Tier 2
+CeeDee Lamb,WR,DAL,5,3,2,8567,6786,manual,Tier 2
+Kenneth Walker III,RB,KC,6,3,2,8341,8151,manual,Tier 2
+Bijan Robinson,RB,ATL,7,4,3,7965,9509,manual,Tier 3
+Amon-Ra St. Brown,WR,DET,8,4,3,7812,7547,manual,Tier 3
+James Cook III,RB,BUF,9,5,3,7662,8138,manual,Tier 3
+Bucky Irving,RB,TB,10,6,4,7210,11584,manual,Tier 4
+Chuba Hubbard,RB,CAR,11,7,4,7018,7594,manual,Tier 4
+Justin Jefferson,WR,MIN,12,5,4,6831,6794,manual,Tier 4
+Malik Nabers,WR,NYG,13,6,4,6650,11632,manual,Tier 4
+Tee Higgins,WR,CIN,14,7,4,6473,6801,manual,Tier 4
+Christian Watson,WR,GB,15,8,4,6300,8167,manual,Tier 4
+Matthew Golden,WR,GB,16,9,4,6133,12501,manual,Tier 4
+Javonte Williams,RB,DAL,17,8,4,5970,7588,manual,Tier 4
+Jonah Coleman,RB,DEN,18,9,4,5811,13345,manual,Tier 4
+Brock Bowers,TE,LV,19,1,5,5547,11604,manual,Tier 5
+Parker Washington,WR,JAX,20,10,5,5440,9487,manual,Tier 5
+George Pickens,WR,DAL,21,11,5,5335,8137,manual,Tier 5
+Drake London,WR,ATL,22,12,5,5232,8112,manual,Tier 5
+Nico Collins,WR,HOU,23,13,5,5131,7569,manual,Tier 5
+Chris Olave,WR,NO,24,14,5,5032,8144,manual,Tier 5
+Kyren Williams,RB,LAR,25,10,5,4935,8150,manual,Tier 5
+Bhaysul Tuten,RB,JAX,26,11,5,4839,12490,manual,Tier 5
+D'Andre Swift,RB,CHI,27,12,5,4746,6790,manual,Tier 5
+Josh Allen,QB,BUF,28,1,5,4654,4984,manual,Tier 5
+Luther Burden III,WR,CHI,29,15,5,4564,12519,manual,Tier 5
+Zay Flowers,WR,BAL,30,16,5,4476,9997,manual,Tier 5
+George Kittle,TE,SF,31,2,6,4247,4217,manual,Tier 6
+Trey Mcbride,TE,ARI,32,3,6,4173,8130,manual,Tier 6
+Mike Evans,WR,SF,33,17,6,4101,2216,manual,Tier 6
+DJ Moore,WR,BUF,34,18,6,4030,4983,manual,Tier 6
+Chase Brown,RB,CIN,35,13,6,3960,9224,manual,Tier 6
+Derrick Henry,RB,BAL,36,14,6,3891,3198,manual,Tier 6
+Jaylen Warren,RB,PIT,37,15,6,3824,8228,manual,Tier 6
+Joe Burrow,QB,CIN,38,2,6,3758,6770,manual,Tier 6
+Isaiah Likely,TE,NYG,39,4,6,3693,8131,manual,Tier 6
+Breece Hall,RB,NYJ,40,16,6,3629,8155,manual,Tier 6
+Cam Skattebo,RB,NYG,41,17,6,3566,12481,manual,Tier 6
+Ashton Jeanty,RB,LV,42,18,6,3504,12527,manual,Tier 6
+Jonathan Taylor,RB,IND,43,19,6,3443,6813,manual,Tier 6
+Tetairoa McMillan,WR,CAR,44,19,7,3299,12526,manual,Tier 7
+Jameson Williams,WR,DET,45,20,7,3216,8148,manual,Tier 7
+Garrett Wilson,WR,NYJ,46,21,7,3135,8146,manual,Tier 7
+Saquon Barkley,RB,PHI,47,20,7,3056,4866,manual,Tier 7
+DeVonta Smith,WR,PHI,48,22,7,2979,7525,manual,Tier 7
+Tony Pollard,RB,TEN,49,21,7,2904,5967,manual,Tier 7
+Blake Corum,RB,LAR,50,22,7,2831,11586,manual,Tier 7
+Colston Loveland,TE,CHI,51,5,7,2760,12517,manual,Tier 7
+Rashee Rice,WR,KC,52,23,7,2691,10229,manual,Tier 7
+Carnell Tate,WR,TEN,53,24,7,2623,13279,manual,Tier 7
+Ollie Gordon II,RB,MIA,54,23,8,2368,12495,manual,Tier 8
+Josh Jacobs,RB,GB,55,24,8,2328,5850,manual,Tier 8
+Harold Fannin Jr.,TE,CLE,56,6,8,2288,12506,manual,Tier 8
+Stefon Diggs,WR,WAS,57,25,8,2250,2449,manual,Tier 8
+Jordyn Tyson,WR,NO,58,26,8,2211,13281,manual,Tier 8
+KC Concepcion Jr.,WR,CLE,59,27,8,2174,13298,manual,Tier 8
+Ladd McConkey,WR,LAC,60,28,8,2137,11635,manual,Tier 8
+Brock Purdy,QB,SF,61,3,8,2101,8183,manual,Tier 8
+Quinshon Judkins,RB,CLE,62,25,8,2066,12512,manual,Tier 8
+Omarion Hampton,RB,LAC,63,26,8,2031,12507,manual,Tier 8
+Zach Charbonnet,RB,SEA,64,27,8,1996,9753,manual,Tier 8
+Emmet Johnson,RB,KC,65,28,8,1962,13337,manual,Tier 8
+Davante Adams,WR,LAR,66,29,8,1929,2133,manual,Tier 8
+Rome Odunze,WR,CHI,67,30,8,1897,11620,manual,Tier 8
+Josh Downs,WR,KC,68,31,8,1865,9500,manual,Tier 8
+Denzel Boston,WR,CLE,69,32,8,1833,13346,manual,Tier 8
+Antonio Williams,WR,WAS,70,33,8,1802,13301,manual,Tier 8
+Caleb Douglas,WR,MIA,71,34,8,1771,13296,manual,Tier 8
+Emeka Egbuka,WR,TB,72,35,8,1742,12514,manual,Tier 8
+Jaylen Waddle,WR,DEN,73,36,8,1712,7526,manual,Tier 8
+Kyle Monangai,RB,CHI,74,29,8,1683,12534,manual,Tier 8
+Dak Prescott,QB,DAL,75,4,9,1616,3294,manual,Tier 9
+Patrick Mahomes II,QB,KC,76,5,9,1578,4046,manual,Tier 9
+Caleb Williams,QB,CHI,77,6,9,1540,11560,manual,Tier 9
+Trevor Lawrence,QB,JAX,78,7,9,1504,7523,manual,Tier 9
+Sam LaPorta,TE,DET,79,7,9,1469,10859,manual,Tier 9
+Jacorey Croskey-Merritt,RB,WAS,80,30,9,1434,12533,manual,Tier 9
+Travis Ettienne Jr.,RB,NO,81,31,9,1400,7543,manual,Tier 9
+David Montgomery,RB,HOU,82,32,9,1367,5892,manual,Tier 9
+Rhamondre Stevenson,RB,NE,83,33,9,1335,7611,manual,Tier 9
+Travis Kelce,TE,KC,84,8,9,1304,1466,manual,Tier 9
+Tucker Kraft,TE,GB,85,9,9,1273,9484,manual,Tier 9
+Deebo Samuel SR.,WR,SF,86,37,9,1243,5872,manual,Tier 9
+Jalen Coker,WR,CAR,87,38,9,1214,11646,manual,Tier 9
+DK Metcalf,WR,PIT,88,39,9,1185,5846,manual,Tier 9
+Jakobi Meyers,WR,JAX,89,40,9,1157,5947,manual,Tier 9
+Keenan Allen,WR,SF,90,41,9,1130,1479,manual,Tier 9
+Jadarian Price,RB,SEA,91,34,10,1025,13286,manual,Tier 10
+Jeremiyah Love,RB,ARI,92,35,10,993,13287,manual,Tier 10
+Jordan Love,QB,GB,93,8,10,961,6804,manual,Tier 10
+C.J. Stroud,QB,HOU,94,9,10,930,9758,manual,Tier 10
+Jayden Daniels,QB,WAS,95,10,10,900,11566,manual,Tier 10
+Jared Goff,QB,DET,96,11,10,871,3163,manual,Tier 10
+T.J. Hockenson,TE,MIN,97,10,10,843,5844,manual,Tier 10
+Aaron Jones Sr.,RB,MIN,98,36,10,816,4199,manual,Tier 10
+Braelon Allen,RB,NYJ,99,37,10,790,11576,manual,Tier 10
+Jordan Mason,RB,MIN,100,38,10,765,8408,manual,Tier 10
+Rico Dowdle,RB,PIT,101,39,10,740,7021,manual,Tier 10
+Chris Rodriguez,RB,JAX,102,40,10,716,10219,manual,Tier 10
+Khalil Shakir,WR,BUF,103,42,10,693,8134,manual,Tier 10
+Omar Cooper Jr.,WR,NYJ,104,43,10,671,13276,manual,Tier 10
+Germie Bernard,WR,PIT,105,44,10,650,13274,manual,Tier 10
+Makai Lemon,WR,PHI,106,45,10,629,13294,manual,Tier 10
+Tank Dell,WR,HOU,107,46,10,609,9502,manual,Tier 10
+Chimere Dike,WR,TEN,108,47,10,589,12540,manual,Tier 10
+Ryan Flournoy,WR,DAL,109,48,10,570,11783,manual,Tier 10
+Adonai Mitchell,WR,NYJ,110,49,10,552,11625,manual,Tier 10
+Kirk Cousins,QB,MIN,111,12,11,509,1166,manual,Tier 11
+Matthew Stafford,QB,LAR,112,13,11,500,421,manual,Tier 11
+Tyler Shough,QB,NO,113,14,11,492,12545,manual,Tier 11
+Bryce Young,QB,CAR,114,15,11,484,9228,manual,Tier 11
+Dalton Kincaid,TE,BUF,115,11,11,476,10236,manual,Tier 11
+Chig Okonkwo,TE,WAS,116,12,11,468,8210,manual,Tier 11
+Tyler Warren,TE,IND,117,13,11,460,12518,manual,Tier 11
+Kyle Pitts Sr.,TE,ATL,118,14,11,452,7553,manual,Tier 11
+Dallas Goedert,TE,PHI,119,15,11,444,5022,manual,Tier 11
+A.J. Brown,WR,NE,120,50,11,437,5859,manual,Tier 11
+Kenny Gainwell,RB,TB,121,41,11,430,7567,manual,Tier 11
+Woody Marks,RB,HOU,122,42,11,422,12474,manual,Tier 11
+Justice Hill,RB,BAL,123,43,11,415,5995,manual,Tier 11
+Kaelon Black,RB,SF,124,44,11,408,13414,manual,Tier 11
+Samaje Perine,RB,CIN,125,45,11,401,4147,manual,Tier 11
+Dylan Sampson,RB,CLE,126,46,11,395,12469,manual,Tier 11
+Rachaad White,RB,WAS,127,47,11,388,8136,manual,Tier 11
+Tyler Allgeier,RB,ARI,128,48,11,381,8132,manual,Tier 11
+Alvin Kamara,RB,NO,129,49,11,375,4035,manual,Tier 11
+RJ Harvey,RB,DEN,130,50,12,363,12489,manual,Tier 12
+Tre Tucker,WR,LV,131,51,12,360,10213,manual,Tier 12
+Ted Hurst,WR,TB,132,52,12,357,13317,manual,Tier 12
+Xavier Hutchinson,WR,HOU,133,53,12,354,10218,manual,Tier 12
+Pat Bryant,WR,DEN,134,54,12,350,12492,manual,Tier 12
+Rashod Batemen,WR,BAL,135,55,12,347,7571,manual,Tier 12
+Konata Mumpfield,WR,LAR,136,56,12,344,12718,manual,Tier 12
+Malik Washington,WR,MIA,137,57,12,341,11610,manual,Tier 12
+DeMario Douglas,WR,NE,138,58,12,338,9501,manual,Tier 12
+Courtland Sutton,WR,DEN,139,59,12,335,5045,manual,Tier 12
+Brenton Strange,TE,JAX,140,16,12,332,9480,manual,Tier 12
+Mark Andrews,TE,BAL,141,17,12,329,5012,manual,Tier 12
+Mike Gesicki,TE,CIN,142,18,12,326,4993,manual,Tier 12
+Pat Freiermuth,TE,PIT,143,19,12,323,7600,manual,Tier 12
+Tyler Higbee,TE,LAR,144,20,12,320,3271,manual,Tier 12
+Ja'Kobi Lane,WR,BAL,145,60,12,317,13293,manual,Tier 12
+Darren Waller,TE,CAR,146,21,12,314,2505,manual,Tier 12
+Dalton Schultz,TE,HOU,147,22,12,311,5001,manual,Tier 12
+Hunter Henry,TE,NE,148,23,12,309,3214,manual,Tier 12
+Juwan Johnson,TE,NO,149,24,12,306,7002,manual,Tier 12
+AJ Barner,TE,SEA,150,25,12,303,11603,manual,Tier 12
+Bo Nix,QB,DEN,151,16,12,300,11563,manual,Tier 12
+Deshaun Watson,QB,CLE,152,17,12,298,4017,manual,Tier 12
+Cam Ward,QB,TEN,153,18,12,295,12522,manual,Tier 12
+Aaron Rodgers,QB,PIT,154,19,12,292,96,manual,Tier 12
+Fernando Mendoza,QB,LV,155,20,12,290,13269,manual,Tier 12
+J.J. McCarthy,QB,NYG,156,21,12,287,11565,manual,Tier 12
+Justin Herbert,QB,LAC,157,22,12,284,6797,manual,Tier 12
+Jacoby Brissett,QB,BAL,158,23,12,282,3257,manual,Tier 12
+Geno Smith,QB,NYJ,159,24,12,279,1373,manual,Tier 12
+Baker Mayfield,QB,TB,160,25,12,277,4892,manual,Tier 12
+Seth McGowan,RB,IND,161,51,13,269,13424,auto,Not on updated list
+Mike Washington Jr.,RB,LV,162,52,13,265,13305,auto,Not on updated list
+Bam Knight,RB,ARI,163,53,13,261,8122,auto,Not on updated list
+Tre Harris,WR,LAC,164,61,13,257,12509,auto,Not on updated list
+Elic Ayomanor,WR,TEN,165,62,13,253,12499,auto,Not on updated list
+Jordan Addison,WR,MIN,166,63,13,249,9756,auto,Not on updated list
+Michael Penix Jr.,QB,ATL,167,26,13,245,11559,auto,Not on updated list
+Sam Darnold,QB,SEA,168,27,13,241,4943,auto,Not on updated list
+Michael Mayer,TE,LV,169,26,13,238,9482,auto,Not on updated list
+Drake Maye,QB,NE,170,28,13,234,11564,auto,Not on updated list
+TreVeyon Henderson,RB,NE,171,54,13,230,12529,auto,Not on updated list
+Corey Kiner,RB,NE,172,55,13,227,12491,auto,Not on updated list
+Audric Estime,RB,NO,173,56,13,223,11579,auto,Not on updated list
+Devaughn Vele,WR,NO,174,64,13,220,11834,auto,Not on updated list
+Wan'Dale Robinson,WR,TEN,175,65,13,217,8126,auto,Not on updated list
+Mack Hollins,WR,NE,176,66,13,213,4177,auto,Not on updated list
+Alec Pierce,WR,IND,177,67,13,210,8142,auto,Not on updated list
+Marvin Harrison Jr.,WR,HOU,178,68,13,207,11628,auto,Not on updated list
+J.K. Dobbins,RB,DEN,179,57,13,204,6806,auto,Not on updated list
+Xavier Worthy,WR,KC,180,69,13,200,11624,auto,Not on updated list
+Chris Godwin Jr.,WR,TB,181,70,13,197,4037,auto,Not on updated list
+Anthony Richardson,QB,IND,182,29,13,194,9229,manual,Not on updated list
+Malik Willis,QB,MIA,183,30,13,191,8161,auto,Not on updated list
+Eli Raridon,TE,NE,184,27,13,188,13421,auto,Not on updated list
+Carson Beck,QB,ARI,185,31,13,186,13272,manual,Not on updated list
+Greg Dulcich,TE,MIA,186,28,13,183,8172,auto,Not on updated list
+Emanuel Wilson,RB,SEA,187,58,13,180,11435,auto,Not on updated list
+Travis Hunter,WR,JAX,188,71,13,177,12530,auto,Not on updated list
+Josh Cameron,WR,JAX,189,72,13,174,13394,auto,Not on updated list
+Mason Taylor,TE,NYJ,190,29,13,172,12498,auto,Not on updated list
+Kenyon Sadiq,TE,NYJ,191,30,13,169,13330,auto,Not on updated list
+Brian Robinson,RB,ATL,192,59,13,167,8154,auto,Not on updated list
+Kendre Miller,RB,DAL,193,60,13,164,9757,auto,Not on updated list
+Tyrone Tracy Jr.,RB,NYG,194,61,13,162,11655,auto,Not on updated list
+Jaylin Noel,WR,HOU,195,73,13,159,12536,auto,Not on updated list
+Keon Coleman,WR,BUF,196,74,13,157,11637,auto,Not on updated list
+Dontayvion Wicks,WR,PHI,197,75,13,154,9486,auto,Not on updated list
+Keaton Mitchell,RB,LAC,198,62,13,152,9511,auto,Not on updated list
+MarShawn Lloyd,RB,GB,199,63,13,150,11581,auto,Not on updated list
+Romeo Doubs,WR,NE,200,76,13,147,8121,auto,Not on updated list
+Kendrick Bourne,WR,ARI,201,77,13,145,4454,auto,Not on updated list
+Jaylen Wright,RB,MIA,202,64,14,141,11643,auto,Provisional
+Will Shipley,RB,PHI,203,65,14,138,11577,auto,Provisional
+Jonathon Brooks,RB,CAR,204,66,14,133,11583,auto,Provisional
+Tyjae Spears,RB,TEN,205,67,14,131,9508,auto,Provisional
+Kaleb Johnson,RB,GB,206,68,14,128,12504,auto,Provisional
+Kimani Vidal,RB,LAC,207,69,14,124,11647,auto,Provisional
+Isiah Pacheco,RB,DET,208,70,14,121,8205,auto,Provisional
+Kalif Raymond,WR,CHI,209,78,14,117,3634,auto,Provisional
+Brian Thomas Jr.,WR,JAX,210,79,14,114,11631,auto,Provisional
+Michael Pittman Jr.,WR,PIT,211,80,14,111,6819,auto,Provisional
+Quentin Johnston,WR,LAC,212,81,14,108,9754,auto,Provisional
+Tyreek Hill,WR,FA,213,82,14,105,3321,auto,Provisional
+Cyrus Allen,WR,KC,214,83,14,102,13413,auto,Provisional
+Dohnte Meyers,WR,CIN,215,84,14,98,13264,auto,Provisional
+Chris Bell,WR,MIA,216,85,14,96,13311,auto,Provisional
+Jauan Jennings,WR,MIN,217,86,14,83,7049,auto,Provisional
+De'Zhaun Stribling,WR,SF,218,87,14,80,13417,auto,Provisional
+Roman Wilson,WR,PIT,219,88,14,74,11630,auto,Provisional
+Devin Singletary,RB,NYG,220,71,14,65,6130,auto,Provisional
+Jake Ferguson,TE,DAL,221,31,14,63,8110,auto,Provisional
+Rashid Shaheed,WR,SEA,222,89,14,61,8676,auto,Provisional
+Cooper Kupp,WR,SEA,223,90,14,59,4039,auto,Provisional
+Tank Bigsby,RB,PHI,224,72,14,56,9225,auto,Provisional
+Oronde Gadsden II,TE,LAC,225,32,14,54,12493,auto,Provisional
+Trey Benson,RB,ARI,226,73,14,52,11589,auto,Provisional
+Jayden Reed,WR,GB,227,91,14,50,10222,auto,Provisional
+Tory Horton,WR,SEA,228,92,14,44,12497,auto,Provisional
+Raheim Sanders,RB,CLE,229,74,14,41,12472,auto,Provisional
+Kayshon Boutte,WR,HOU,230,93,14,40,9504,auto,Provisional
+Ricky Pearsall,WR,SF,231,94,14,39,11638,auto,Provisional
+Troy Franklin,WR,DEN,232,95,14,37,11627,auto,Provisional
+Cade Otton,TE,TB,233,33,14,36,8111,auto,Provisional
+Josh Palmer,WR,BUF,234,96,14,35,7670,auto,Provisional
+Jayden Higgins,WR,HOU,235,97,14,34,12484,auto,Provisional
+Zach Ertz,TE,PHI,236,34,14,33,1339,auto,Provisional
+Marquise Brown,WR,FA,237,98,14,32,5848,auto,Provisional
+Najee Harris,RB,FA,238,75,14,31,7528,auto,Provisional
+Noah Fant,TE,NO,239,35,14,29,5857,auto,Provisional
+David Njoku,TE,LAC,240,36,14,28,4033,auto,Provisional
+Daniel Jones,QB,FA,241,32,14,27,5870,auto,Provisional
+Malachi Fields,WR,NYG,242,99,14,26,13285,auto,Provisional
+Ty Johnson,RB,BUF,243,76,14,24,6039,auto,Provisional
+Jerry Jeudy,WR,CLE,244,100,14,23,6783,auto,Provisional
+Jake Tonges,TE,SF,245,37,14,22,8698,auto,Provisional
+Jalen Nailor,WR,LV,246,101,14,21,8180,auto,Provisional
+Theo Johnson,TE,NYG,247,38,14,20,11597,auto,Provisional
+Xavier Legette,WR,CAR,248,102,14,19,11626,auto,Provisional
+Gunnar Helm,TE,TEN,249,39,14,18,12502,auto,Provisional
+Calvin Ridley,WR,TEN,250,103,14,17,4981,auto,Provisional
+Evan Engram,TE,DEN,251,40,14,16,4066,auto,Provisional
+Colby Parkinson,TE,LAR,252,41,14,15,6865,auto,Provisional
+Jameis Winston,QB,NYG,253,33,14,14,2306,auto,Provisional
+Kyler Murray,QB,MIN,254,34,14,13,5849,manual,Provisional
+Shedeur Sanders,QB,CLE,255,35,14,12,12524,manual,Provisional
+Jalon Daniels,QB,TB,256,36,14,11,13425,manual,Provisional
+Marcus Mariota,QB,WAS,257,37,14,10,2307,auto,Provisional
+Carson Wentz,QB,MIN,258,38,14,9,3161,auto,Provisional
+Case Keenum,QB,CHI,259,39,14,8,1737,auto,Provisional
+Drew Lock,QB,SEA,260,40,14,7,5854,auto,Provisional
+Tua Tagovailoa,QB,ATL,261,41,14,6,6768,auto,Provisional
+Justin Fields,QB,KC,262,42,14,5,7591,auto,Provisional
+Tyson Bagent,QB,CHI,263,43,14,4,11256,auto,Provisional
+Mac Jones,QB,SF,264,44,14,3,7527,auto,Provisional
+Kyle McCord,QB,MIA,265,45,14,2,12494,auto,Provisional
+Lamar Jackson,QB,BAL,266,46,99,0,4881,manual,Out for season
+De'Von Achane,RB,MIA,267,77,99,0,9226,auto,Out for season
+Jaxson Dart,QB,NYG,268,47,99,0,12508,auto,Out for season
+Jalen Hurts,QB,PHI,269,48,99,0,6904,manual,Out for season
+Terry McLaurin,WR,WAS,270,104,99,0,5927,manual,Out for season
+Michael Wilson,WR,ARI,271,105,99,0,10232,manual,Out for season
+Puka Nacua,WR,LAR,272,106,99,0,9493,manual,Out for season
+Terrance Ferguson,TE,LAR,273,42,99,0,12487,manual,Out for season

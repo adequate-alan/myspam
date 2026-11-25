@@ -100,6 +100,7 @@
       "out_value_check",
       "sf_tier_follow_check",
       "sf_tier_follow_w11_check",
+      "sf_tier_follow_w12_check",
       "auto_step_check"
     ],
     "weights": {
@@ -138,6 +139,7 @@
       "out_value_check": 2,
       "sf_tier_follow_check": 15,
       "sf_tier_follow_w11_check": 15,
+      "sf_tier_follow_w12_check": 15,
       "xss_check": 26,
       "board_edit_check": 26,
       "typed_value_check": 40,
