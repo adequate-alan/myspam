@@ -72,6 +72,7 @@ with sync_playwright() as pw:
         if theme: init += f"try {{ localStorage.setItem('spm_theme', '{theme}'); }} catch (e) {{}}"
         if edit_board: init += f"try {{ if (!sessionStorage.getItem('eb_set')) {{ localStorage.setItem('spm_edit_board', '{edit_board}'); sessionStorage.setItem('eb_set', '1'); }} }} catch (e) {{}}"
         if token: init += "try { localStorage.setItem('spm_editor_token', 'test-token'); } catch (e) {}"
+        ctx.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
         ctx.add_init_script(init)
         return ctx
     def open_page(ctx, fmt=FMT, extra=""):

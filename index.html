@@ -4313,6 +4313,40 @@ dialog.signin .sync-pos input { width: 16px; height: 16px; padding: 0; }
 .sync-box .sy-sub { display: block; color: var(--muted); font-size: 0.74rem; font-weight: 500; }
 .sync-box .sy-to { font-weight: 600; color: var(--ink); }
 .sync-box .sy-none { padding: 18px 12px; color: var(--muted); font-size: 0.86rem; }
+/* Positional changes on both formats (Nov 20): asked once per publish, with the before / after on both boards */
+.ap-opts { display: grid; gap: 8px; margin: 4px 0 12px; }
+dialog.signin .ap-opt { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.9rem; font-weight: 500; color: var(--ink); }
+dialog.signin .ap-opt:has(input:checked) { border-color: var(--focus-line); background: var(--fill-1); }
+dialog.signin .ap-opt:has(input:disabled) { cursor: default; }
+dialog.signin .ap-opt:has(input:disabled) b { color: var(--muted); }
+dialog.signin .ap-opt input { width: 16px; height: 16px; padding: 0; margin: 2px 0 0; flex: none; }
+.ap-opt span { display: grid; gap: 2px; min-width: 0; }
+.ap-opt b { font-weight: 700; }
+.ap-opt small { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+.ap-sug { font-style: normal; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-left: 6px; }
+.ap-flag { color: var(--warn-text); margin: 0 0 10px; }
+.ap-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 0; margin: 0 0 8px; font-size: 0.82rem; }
+.ap-toggle::after { content: ""; width: 6px; height: 6px; border-right: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor; transform: rotate(-135deg) translate(-2px, -2px); }
+.ap-toggle[aria-expanded="false"]::after { transform: rotate(45deg) translate(-1px, -1px); }
+dialog.apply-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+dialog.apply-dialog > * { flex: none; }
+dialog.apply-dialog > .ap-box { flex: 1 1 auto; min-height: 96px; max-height: none; overflow: auto; }
+dialog.apply-dialog > .ap-toggle { align-self: flex-start; }
+.ap-box[hidden] { display: none; }
+.ap-box h3 { margin: 0; padding: 9px 10px 7px; font-size: 0.8rem; font-weight: 700; color: var(--heading); background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.ap-box h3 small { font-weight: 500; color: var(--muted); font-size: 0.74rem; margin-left: 6px; }
+.ap-box table + h3 { border-top: 1px solid var(--line); }
+.ap-box th { position: static; }
+.ap-box .ap-off { opacity: 1; }
+.ap-box .ap-off td, .ap-box .ap-off .sy-name, .ap-box .ap-off .sy-to { color: var(--muted); font-weight: 500; }
+.ap-box .ap-val { display: block; font-size: 0.74rem; font-weight: 500; color: var(--text-secondary); }
+.ap-box p { margin: 0; padding: 8px 10px; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid var(--line); }
+.ap-box p.ap-warn { color: var(--warn-text); }
+@media (max-width: 560px) {
+  dialog.apply-dialog { padding: 18px 14px; }
+  .ap-box th, .ap-box td { padding: 6px 7px; }
+  .ap-box table { font-size: 0.76rem; }
+}
 dialog.signin h2 { margin: 0 0 10px; font-weight: 850; font-stretch: 110%; font-size: 1.2rem; letter-spacing: 0; text-transform: uppercase; color: var(--heading); }
 dialog.signin p { margin: 0 0 10px; font-size: 0.88rem; color: var(--ink-2); }
 dialog.signin .hint { color: var(--muted); font-size: 0.82rem; }
@@ -5814,6 +5848,22 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   <div class="signin-actions">
     <button class="btn" id="sync-cancel" type="button">Cancel</button>
     <button class="btn primary" id="sync-apply" type="button">Publish sync</button>
+  </div>
+</dialog>
+<dialog class="signin sync-dialog apply-dialog" id="apply-dialog" aria-labelledby="apply-title">
+  <h2 id="apply-title">Apply positional changes to both formats?</h2>
+  <p id="apply-intro"></p>
+  <div class="ap-opts" id="apply-opts" role="radiogroup" aria-labelledby="apply-title">
+    <label class="ap-opt"><input type="radio" name="apply-where" id="apply-both" value="both"><span><b>Both formats <i class="ap-sug">Suggested</i></b><small id="apply-both-sub"></small></span></label>
+    <label class="ap-opt"><input type="radio" name="apply-where" id="apply-only" value="only"><span><b id="apply-only-label"></b><small id="apply-only-sub"></small></span></label>
+  </div>
+  <p class="hint ap-flag" id="apply-flag" hidden></p>
+  <button class="btn link ap-toggle" id="apply-toggle" type="button" aria-expanded="true" aria-controls="apply-box">Preview changes before publishing</button>
+  <div class="sync-box ap-box" id="apply-box" tabindex="0" aria-label="Before and after on both boards"></div>
+  <p class="signin-error" id="apply-error" role="alert"></p>
+  <div class="signin-actions">
+    <button class="btn" id="apply-cancel" type="button">Cancel</button>
+    <button class="btn primary" id="apply-confirm" type="button">Publish</button>
   </div>
 </dialog>
 <dialog class="signin sleeper-dialog" id="sleeper-dialog" aria-labelledby="sd-title">
@@ -9292,11 +9342,13 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   }
   const keyOf = (t, r) => (r[colOf(t, "player")] + "|" + r[colOf(t, "pos")]).toLowerCase();
 
+  var MIRRORING = null;   // set while another board's moves are worked out (mirrorOn): no drawing, no notices
   function rebuild() {
     LAST_FIT = reprice();
     players = LAST_FIT.players; LAST_FIT.players = null;
     byId = new Map(players.map(p => [p.id, p]));
     maxValue = Math.max(1, ...players.map(p => p.value));
+    if (MIRRORING) return;
     leagueRecalc();
     renderRankings();
     // the calculator redraws only when it's on screen; otherwise it's marked stale and redrawn when its tab opens
@@ -9956,7 +10008,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
 
   // Notices above the board (#ed-warn): a value that doesn't fit, a tier change that doesn't fit his rank, a tier that
   // would split, a player at 0 moved off the Out list
-  function edWarn(id, html) { const box = $("ed-warn"); box.innerHTML = html; box.dataset.id = id; box.hidden = false; }
+  function edWarn(id, html) { if (MIRRORING) return; const box = $("ed-warn"); box.innerHTML = html; box.dataset.id = id; box.hidden = false; }
   function hideEdWarn() { const b = $("ed-warn"); if (b) { b.hidden = true; b.innerHTML = ""; delete b.dataset.v; delete b.dataset.rank; delete b.dataset.tier; } }
   function valueNotice(me, v, f) {
     const lim = f.high ? f.up.value - 1 : f.dn.value + 1;
@@ -10099,6 +10151,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   });
 
   function toast(msg, ms = 4000) {   // errors pass a longer time, so a failure message can be read in full
+    if (MIRRORING) return;
     const t = $("toast");
     t.textContent = msg; t.hidden = false;
     clearTimeout(toast.timer);
@@ -11149,6 +11202,8 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     if (index == null) throw ghError("data", `${FILE} wasn't found in the landed commit ${prev.commit.slice(0, 7)}, so nothing was changed.`);
     const csv = extractRankings(index).csv, month = snapMonth(prev.at || new Date().toISOString());
     const hist = normalizeHistory(parseOr(await readAt(base, HISTORY_FILE), HISTORY_FILE, null)), snapFile = parseOr(await readAt(base, snapPath(month)), snapPath(month), null);
+    const twin = prev.twin ? boardById(prev.twin) : null;   // a two-board publish: the other board landed in the same commit
+    if (twin && twin !== ACTIVE_BOARD) adoptOther(twin, extractRankings(index, twin).csv, normalizeHistory(parseOr(await readAt(base, twin.history), twin.history, null)), null);
     const left = adoptPublished(csv, { hist, month, snapFile }, typeof prev.start === "string" ? prev.start : savedCsv);
     writePublish(null); writePending([]);
     persistEdits();   // what's left is saved again, now against the board that landed
@@ -11265,7 +11320,197 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     } finally { $("sync-cancel").disabled = false; if ($("sync-dialog").open) renderSyncButtons(); }
   }
   function renderSyncButtons() { const keep = $("sync-error").textContent; renderSync(); if (keep) $("sync-error").textContent = keep; }
-  async function publishLive() {
+  /* Positional changes on both formats (Alan, Nov 20; otherBoard, orderChanges, mirrorOn, applyPlan, openApply,
+     adoptOther; tests/board_apply_check.py). The two boards stay independent (§2.16a), but a positional move doesn't
+     have to be repeated by hand: when a publish changes the order inside a position (QB / RB / WR / TE), Adequate asks
+     once, at that publish, never per drag: "Both formats" or this board only. Nothing reaches the other board without
+     that answer. Both formats means the ORDER change, nothing else:
+     - Only the players whose own order changed here (the movers: the fewest players that explain the new order, the
+       ones you edited first) move on the other board. Each is put right behind the same player he now follows here (or
+       ahead of the one he now leads, at the top of a position); everyone else there keeps the order that board had.
+     - Each move runs through the other board's own editor code (movePlayer, on that board's curve, tiers and tier
+       scope), exactly as if it were made by hand there: the mover's value follows that board's curve to his new spot,
+       his tier comes from his new neighbours, nobody else's tier or value changes. No value, tier or tier name is ever
+       copied across, so the Superflex QB premium and the TE-premium ladder stay that board's own.
+     - A player who is Out for season or valued 0 on either board, isn't on the other board, or is listed at another
+       position there is never moved: he is named in the preview with the reason. Moves the other board's pre-publish
+       checks refuse (no whole number left between two neighbours, …) switch "Both formats" off, with the reason.
+     - The preview shows every mover's rank, position rank, tier and value before and after on both boards.
+     - Publishing: this board's block, history and snapshot and the other board's block, history and snapshot are read
+       from ONE commit and written in ONE commit, so they land together or not at all. The other board's moves are
+       worked out again from what is on GitHub at that moment and must equal the preview (applyKey), or nothing is
+       written. A lost answer is settled like any publish, for both boards (the pending record names the twin).
+     "This board only" is the plain publish: the other board's block and files are not read, written or changed.
+     The optional full position order sync (SYNC, "spots stay") is a separate tool and unchanged. */
+  const otherBoard = () => BOARDS.find(b => b !== ACTIVE_BOARD && !b.readOnly && b.history) || null;
+  const applyOff = () => window.__SPM_APPLY_OFF === true;   // tests of the plain publish: never ask, this board only
+  /* What changed in the order inside each position between two versions of one board. Players who are Out for season
+     or at 0 in either version are left out of the comparison (a status, never an order). The movers are the players
+     outside the heaviest run that kept its old order, where a player with an edit of his own (touchMap) weighs least,
+     so the players you actually moved are the movers, not the ones they passed. Pure.
+     { positions: ["WR"], order: { WR: [sid …] } (the new order), movers: [{ sid, key, name, pos, from, to }], status } */
+  function orderChanges(oldCsv, newCsv, touchMap) {
+    const read = csv => {
+      const t = csvToTable(csv), ix = c => t.head.findIndex(h => h.toLowerCase() === c), c = { sid: ix("sleeper_id"), pos: ix("pos"), rank: ix("rank"), pr: ix("pos_rank"), tier: ix("tier"), value: ix("value"), name: ix("player") };
+      return t.rows.map(r => ({ sid: String(r[c.sid] ?? "").trim(), pos: String(r[c.pos] || "").toUpperCase(), name: r[c.name], key: (r[c.name] + "|" + r[c.pos]).toLowerCase(),
+        rank: Number(r[c.rank]), pos_rank: Number(r[c.pr]), tier: String(r[c.tier] ?? ""), value: Number(r[c.value]) })).filter(x => x.sid && EDIT_POS.includes(x.pos)).sort((a, b) => a.rank - b.rank);
+    };
+    const A = read(oldCsv), B = read(newCsv), was = new Map(A.map(x => [x.sid, x])), live = x => !isTagTier(x.tier) && x.value > 0;
+    const spot = x => ({ rank: x.rank, pos_rank: x.pos_rank, tier: x.tier, value: x.value });
+    const out = { positions: [], order: {}, movers: [], status: [] };
+    for (const pos of EDIT_POS) {
+      const here = B.filter(x => x.pos === pos && was.has(x.sid) && was.get(x.sid).pos === pos);
+      here.forEach(x => { if (live(x) !== live(was.get(x.sid))) out.status.push({ sid: x.sid, name: x.name, pos, out: !live(x) }); });
+      const N = here.filter(x => live(x) && live(was.get(x.sid))), old = N.map(x => was.get(x.sid).rank);
+      if (old.every((r, i) => !i || r > old[i - 1])) continue;   // the same order as before
+      const w = N.map(x => (touchMap && touchMap.has(x.key) ? 1 : 1000)), best = [], prev = [];
+      for (let i = 0; i < N.length; i++) {
+        best[i] = w[i]; prev[i] = -1;
+        for (let j = 0; j < i; j++) if (old[j] < old[i] && best[j] + w[i] > best[i]) { best[i] = best[j] + w[i]; prev[i] = j; }
+      }
+      let e = 0; best.forEach((v, i) => { if (v > best[e]) e = i; });
+      const keep = new Set(); for (let i = e; i >= 0; i = prev[i]) keep.add(i);
+      out.positions.push(pos); out.order[pos] = N.map(x => x.sid);
+      N.forEach((x, i) => { if (!keep.has(i)) out.movers.push({ sid: x.sid, key: x.key, name: x.name, pos, from: spot(was.get(x.sid)), to: spot(x) }); });
+    }
+    return out;
+  }
+  /* The same order changes made on board b (csv = its published rankings), through its own editor: this page's editor
+     state is set aside, b's board is loaded in its place, every mover is moved with movePlayer, and everything is put
+     back before it returns (synchronous; nothing is drawn, saved or stored). Returns
+     { csv, applied: [{ sid, key, name, pos, from, to, note }], skipped: [{ sid, name, pos, why }], values: [{ name, pos, from, to }]
+       (players other than the movers whose value changes), shifted (others whose rank or position rank changes), touched }. */
+  function mirrorOn(b, csv, ch, src = ACTIVE_BOARD) {
+    const keep = { ACTIVE_BOARD, CALC_BOARD, publishedCsv, savedCsv, draft, localEdits, touchSaved, touchDraft, PUB_STATE, EDIT_SESSION, SESSION_AT_SAVE, players, byId, maxValue, LAST_FIT,
+      revalued: [...REVALUED], recalc: [...RECALC_TAG], empty: Object.entries(TIER_EMPTY) };
+    const res = { csv, applied: [], skipped: [], values: [], shifted: 0, touched: new Set(), problems: [], steps: [] }, done = [];
+    try {
+      MIRRORING = res; ACTIVE_BOARD = b; CALC_BOARD = b;
+      publishedCsv = csv; savedCsv = csv; draft = csvToTable(csv); localEdits = {}; touchSaved = new Map(); touchDraft = new Map(); PUB_STATE = { csv: null };
+      EDIT_SESSION = null; SESSION_AT_SAVE = false;   // false: no saved bookkeeping is read or cleared for this board
+      REVALUED.clear(); RECALC_TAG.clear(); Object.keys(TIER_EMPTY).forEach(k => delete TIER_EMPTY[k]);
+      players = loadPlayers(csv); byId = new Map(players.map(p => [p.id, p])); maxValue = Math.max(1, ...players.map(p => p.value));
+      const first = new Map(players.map(p => [valueKey(p), { rank: p.rank, pos_rank: p.posNum, tier: String(p.tier), value: p.value }]));
+      const spot = p => ({ rank: p.rank, pos_rank: p.posNum, tier: String(p.tier), value: p.value });
+      for (const pos of ch.positions) {
+        const N = ch.order[pos], movers = new Map(ch.movers.filter(m => m.pos === pos).map(m => [m.sid, m]));
+        for (let i = 0; i < N.length; i++) {
+          const m = movers.get(N[i]); if (!m) continue;
+          const bySid = new Map(players.filter(p => p.sleeperId).map(p => [String(p.sleeperId), p])), me = bySid.get(m.sid);
+          const why = !me ? `not on ${b.label}` : me.pos !== pos ? `listed as ${me.pos} on ${b.label}`
+            : isTagTier(me.tier) ? `${tierLabel(pos, me.tier)} on ${b.label}` : !(me.value > 0) ? `valued 0 on ${b.label}` : null;
+          if (why) { res.skipped.push({ sid: m.sid, name: m.name, pos, why }); continue; }
+          const usable = sid => { const q = bySid.get(sid); return q && q !== me && q.pos === pos && q.posNum != null && !isTagTier(q.tier) && q.value > 0 ? q : null; };
+          let ahead = null, behind = null;   // who he now follows / leads on the board he was moved on, among players both boards rank here
+          for (let j = i - 1; j >= 0 && !ahead; j--) ahead = usable(N[j]);
+          for (let j = i + 1; j < N.length && !behind; j++) if (!movers.has(N[j])) behind = usable(N[j]);
+          if (!ahead && !behind) { res.skipped.push({ sid: m.sid, name: m.name, pos, why: `nobody ranked around him on ${src.label} is ranked at ${pos} on ${b.label}` }); continue; }
+          const group = players.filter(p => p.pos === pos && p.posNum != null).sort((x, y) => x.posNum - y.posNum), rest = group.filter(p => p !== me);
+          const to = ahead ? rest.indexOf(ahead) + 1 : rest.indexOf(behind), from = group.indexOf(me);
+          const note = ahead && behind && rest.indexOf(behind) < rest.indexOf(ahead) ? `${b.label} ranks ${behind.name} ahead of ${ahead.name}, so he goes right behind ${ahead.name}` : "";
+          if (to !== from) { movePlayer(me.id, to + 1); done.push({ m, key: valueKey(me), note }); res.steps.push([m.sid, to + 1]); }
+        }
+      }
+      const now = new Map(players.map(p => [valueKey(p), p])), moved = new Set(done.map(d => d.key));
+      done.forEach(d => { const p = now.get(d.key); if (p) res.applied.push({ sid: d.m.sid, key: d.key, name: p.name, pos: p.pos, from: first.get(d.key), to: spot(p), note: d.note }); });
+      res.applied.sort((x, y) => x.to.rank - y.to.rank);
+      players.forEach(p => {
+        const k = valueKey(p), f = first.get(k); if (!f || moved.has(k) || p.pos === "PICK") return;
+        if (f.value !== p.value) res.values.push({ name: p.name, pos: p.pos, from: f.value, to: p.value });
+        else if (f.rank !== p.rank || f.pos_rank !== p.posNum) res.shifted++;
+      });
+      const edits = diffEdits(csv, draft);
+      res.touched = new Set([...touchDraft.keys(), ...moved]);
+      if (Object.keys(edits).length) res.csv = tableToCsv(applyEdits(csv, edits));   // only the fields that changed, as a publish writes them
+    } finally {
+      MIRRORING = null;
+      ({ ACTIVE_BOARD, CALC_BOARD, publishedCsv, savedCsv, draft, localEdits, touchSaved, touchDraft, PUB_STATE, EDIT_SESSION, SESSION_AT_SAVE, players, byId, maxValue, LAST_FIT } = keep);
+      REVALUED.clear(); keep.revalued.forEach(x => REVALUED.add(x)); RECALC_TAG.clear(); keep.recalc.forEach(x => RECALC_TAG.add(x));
+      Object.keys(TIER_EMPTY).forEach(k => delete TIER_EMPTY[k]); keep.empty.forEach(([k, v]) => { TIER_EMPTY[k] = v; });
+    }
+    if (res.csv !== csv) res.problems = validateRankings(res.csv, csv, res.touched, b);
+    return res;
+  }
+  // everything a preview showed and a two-board publish would write: this board's new order at the changed positions,
+  // every row that changes on the other board (before and after), who is left in place and why, and any refusal
+  function applyKey(ch, mirror, destCsv) {
+    const A = csvToTable(destCsv), B = csvToTable(mirror.csv), am = new Map(A.rows.map(r => [keyOf(A, r), r])), rows = [];
+    B.rows.forEach(r => { const k = keyOf(B, r), a = am.get(k); if (!a) return;
+      const was = EDIT_COLS.map(c => a[colOf(A, c)] ?? ""), now = EDIT_COLS.map(c => r[colOf(B, c)] ?? "");
+      if (was.join("\u0001") !== now.join("\u0001")) rows.push([k, was, now]); });
+    return JSON.stringify([ch.positions.map(p => [p, ch.order[p]]), rows, mirror.skipped.map(s => [s.sid, s.pos, s.why]), mirror.problems]);
+  }
+  function applyPlan(oldCsv, newCsv, destCsv, touchMap, dest) {
+    const ch = orderChanges(oldCsv, newCsv, touchMap);
+    const mirror = ch.positions.length ? mirrorOn(dest, destCsv, ch) : { csv: destCsv, applied: [], skipped: [], values: [], shifted: 0, touched: new Set(), problems: [], steps: [] };
+    return { ch, mirror, dest, key: applyKey(ch, mirror, destCsv) };
+  }
+  const applyPlanNow = () => applyPlan(publishedCsv, savedCsv, boardCsv(otherBoard()).trim(), touchSaved, otherBoard());
+  // why "Both formats" can't be offered right now ("" = it can)
+  function applyBlocked(plan) {
+    const o = plan.dest, has = k => { try { const v = JSON.parse(localStorage.getItem(boardKey(k, o)) || "null"); return !!v && Object.keys(v).length > 0; } catch (e) { return false; } };
+    if (has("spm_local_edits")) return `This browser has unpublished ${o.label} edits. Publish or discard them on that board first, so they aren't mixed with these moves.`;
+    if (has("spm_publish_pending")) return `An earlier ${o.label} publish from this browser isn't confirmed yet. Settle it on that board first.`;
+    if (plan.mirror.problems.length) return `${o.label} can't take ${plan.mirror.applied.length === 1 ? "this move" : "these moves"} as ${plan.mirror.applied.length === 1 ? "it is" : "they are"}: ${plan.mirror.problems.slice(0, 2).join("; ")}. Make the move on ${o.label} by hand.`;
+    if (!plan.mirror.applied.length) return plan.mirror.skipped.length ? `Nothing can be applied to ${o.label}: ${plan.mirror.skipped.map(x => `${x.name} (${x.why})`).join("; ")}.` : `${o.label} already has this order.`;
+    return "";
+  }
+  const APPLY = { plan: null, where: "both", open: true };
+  function renderApply() {
+    const plan = APPLY.plan; if (!plan) return;
+    const o = plan.dest, A = ACTIVE_BOARD, pos = plan.ch.positions, list = pos.length > 1 ? pos.slice(0, -1).join(", ") + " and " + pos[pos.length - 1] : pos[0];
+    const blocked = applyBlocked(plan), both = !blocked && APPLY.where === "both", n = plan.mirror.applied.length;
+    $("apply-intro").textContent = `You've changed the ${list} positional order on ${A.label}. Choose where to apply it. Only the order is applied: each board keeps its own values and tiers.`;
+    $("apply-both-sub").textContent = `Apply the ${list} ordering change to ${A.label} and ${o.label}.`;
+    $("apply-only-label").textContent = `${A.label} only`;
+    $("apply-only-sub").textContent = `Keep ${o.label} unchanged.`;
+    $("apply-both").disabled = !!blocked; $("apply-both").checked = both; $("apply-only").checked = !both;
+    const flags = [];
+    if (blocked) flags.push(blocked);
+    else if (plan.mirror.skipped.length) flags.push(`${plural(plan.mirror.skipped.length, "player stays", "players stay")} where ${plan.mirror.skipped.length === 1 ? "he is" : "they are"} on ${o.label}: ${plan.mirror.skipped.map(s => `${s.name} (${s.why})`).join("; ")}.`);
+    $("apply-flag").textContent = flags.join(" "); $("apply-flag").hidden = !flags.length;
+    const spot = (x, p) => `#${x.rank} · ${p}${x.pos_rank}${x.tier !== "" ? ` · ${isTagTier(x.tier) ? esc(tierLabel(p, x.tier)) : "T" + esc(x.tier)}` : ""}`;
+    const val = (f, t) => `<span class="ap-val">${f.value === t.value ? fmt(t.value) : `${fmt(f.value)} → ${fmt(t.value)}`}</span>`;
+    const row = (m, off) => `<tr${off ? ' class="ap-off"' : ""}><td><span class="sy-name">${esc(m.name)}</span><span class="sy-sub">${m.pos}${m.from.pos_rank} → ${m.pos}${m.to.pos_rank}${m.note ? " · " + esc(m.note) : ""}</span></td><td>${spot(m.from, m.pos)}<span class="ap-val">${fmt(m.from.value)}</span></td><td class="sy-to">${spot(m.to, m.pos)}${val(m.from, m.to)}</td></tr>`;
+    const tbl = (rows, off) => `<table><thead><tr><th>Player</th><th>Before</th><th>After</th></tr></thead><tbody>${rows.map(m => row(m, off)).join("")}</tbody></table>`;
+    let html = `<h3>${esc(A.label)}<small>your changes</small></h3>${tbl(plan.ch.movers, false)}`;
+    html += `<h3>${esc(o.label)}<small>${both ? "with Both formats" : blocked ? "unchanged" : "unchanged with " + esc(A.label) + " only"}</small></h3>`;
+    if (n) html += tbl(plan.mirror.applied, !both);
+    else html += `<p>${esc(blocked || `${o.label} already has this order.`)}</p>`;
+    if (n && !blocked) {
+      const v = plan.mirror.values, notes = [`${n === 1 ? "His" : "Their"} new value${n === 1 ? "" : "s"} on ${esc(o.label)} follow${n === 1 ? "s" : ""} that board's own curve at the new spot, as for a move made by hand there. Nothing is copied from ${esc(A.label)}.`];
+      notes.push(v.length ? `${plural(v.length, "other value steps", "other values step")} a point for whole-number room: ${v.slice(0, 6).map(x => `${esc(x.name)} ${fmt(x.from)} → ${fmt(x.to)}`).join(", ")}${v.length > 6 ? ", …" : ""}.` : `Nobody else's value or tier changes${plan.mirror.shifted ? `; ${plural(plan.mirror.shifted, "player shifts", "players shift")} a spot` : ""}.`);
+      html += `<p>${notes.join(" ")}</p>`;
+    }
+    if (plan.mirror.skipped.length) html += `<p class="ap-warn">Not applied on ${esc(o.label)}: ${plan.mirror.skipped.map(s => `${esc(s.name)} (${esc(s.why)})`).join("; ")}.</p>`;
+    if (plan.ch.status.length) html += `<p>Out for season and values of 0 are set on each board separately: ${plan.ch.status.map(s => esc(s.name)).join(", ")} ${plan.ch.status.length === 1 ? "is" : "are"} not changed on ${esc(o.label)}.</p>`;
+    $("apply-box").innerHTML = html; $("apply-box").hidden = !APPLY.open;
+    $("apply-toggle").setAttribute("aria-expanded", String(APPLY.open));
+    $("apply-confirm").textContent = both ? "Publish to both formats" : `Publish ${A.label} only`;
+  }
+  function openApply(plan) {
+    APPLY.plan = plan; APPLY.where = "both"; APPLY.open = true; $("apply-error").textContent = "";
+    renderApply();
+    const d = $("apply-dialog"); if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute("open", ""); }
+  }
+  $("apply-opts").addEventListener("change", e => { if (e.target && e.target.name === "apply-where" && e.target.checked) { APPLY.where = e.target.value; renderApply(); $(e.target.id).focus(); } });
+  $("apply-toggle").addEventListener("click", () => { APPLY.open = !APPLY.open; renderApply(); });
+  $("apply-cancel").addEventListener("click", () => { $("apply-dialog").close(); toast("Nothing was published. Your edits are still saved in this browser."); });
+  $("apply-confirm").addEventListener("click", () => {
+    const plan = APPLY.plan; if (!plan) return;
+    const both = APPLY.where === "both" && !applyBlocked(plan);
+    $("apply-dialog").close(); APPLY.plan = null;
+    publishLive({ both, key: plan.key });
+  });
+  /* Another board as it was just published from this page (the two-board publish): its block, its history and its
+     snapshot month replace what this page loaded, and everything priced from it is priced again by the next rebuild. */
+  function adoptOther(b, csv, hist, h) {
+    BOARD_BLOCKS[b.block] = csv; BOARD_LISTS.delete(b.id); NATIVE_T.delete(b.id);
+    HIST_OTHER.set(b.id, { h: hist, loading: null });
+    if (h && h.snapFile) snapsOf(b).files[h.month] = h.snapFile;
+    adjCache = new Map(); factorCache.key = null;
+  }
+  async function publishLive(choice) {
     if (editor.saving) return;
     const prev = readPublish();
     if (!Object.keys(localEdits).length && !(prev && prev.commit)) { toast("Nothing to publish: there are no unpublished edits in this browser."); return; }
@@ -11285,10 +11530,18 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
           }
         }
       }
+      // a positional order change: ask once, here, where it goes (this board, or both). Nothing is written before the answer.
+      const other = otherBoard();
+      if (!(choice && typeof choice === "object" && "both" in choice)) {
+        choice = null;
+        const plan = other && !applyOff() ? applyPlanNow() : null;
+        if (plan && plan.ch.positions.length && (plan.mirror.applied.length || plan.mirror.skipped.length)) { editor.saving = false; updateEditorBar(); openApply(plan); return; }
+      }
+      const both = !!(choice && choice.both && other);
       const count = Object.keys(localEdits).length;
       let done = null;
       for (let attempt = 0; attempt < 3 && !done; attempt++) {
-        const base = await repoSnapshot([FILE, HISTORY_FILE]), index = base.files[FILE];
+        const base = await repoSnapshot(both ? [FILE, HISTORY_FILE, other.history] : [FILE, HISTORY_FILE]), index = base.files[FILE];
         if (index.text == null) throw ghError("data", `${FILE} wasn't found on the ${BRANCH} branch of ${REPO}, so nothing was changed.`);
         const cur = extractRankings(index.text);
         const { csv, conflicts } = mergeInto(cur.csv);
@@ -11299,25 +11552,49 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
         const hp = checkPublication(h, ts);
         if (hp.length) throw ghError("data", `the ranking history didn't pass the pre-publish checks, so nothing was changed (${hp.slice(0, 3).join("; ")}). Your edits are still saved in this browser.`);
         const same = csv === cur.csv;
+        /* Both formats (Alan, Nov 20): the other board's moves are worked out again from what is on GitHub right now,
+           from the same commit as everything else, and must be exactly what the preview showed. Its block, history and
+           snapshot go into the SAME commit as this board's, so the two land together or not at all. */
+        let twin = null;
+        if (both && !same) {
+          const dcur = extractRankings(index.text, other).csv, plan = applyPlan(cur.csv, csv, dcur, touchSaved, other);
+          if (plan.key !== choice.key) {   // stale: show what is live now in the next preview, write nothing
+            if (dcur !== String(boardCsv(other)).trim()) adoptOther(other, dcur, normalizeHistory(parseOr(base.files[other.history].text, other.history, null)), null);
+            const fresh = applyPlanNow().key === plan.key;
+            throw ghError("data", `the live rankings changed since this preview was made, so nothing was published on either board. Your edits are still saved in this browser. ${fresh ? "Publish again to see the updated preview." : "Reload the page, then publish again to see a fresh preview."}`);
+          }
+          if (plan.mirror.problems.length) throw ghError("data", `${other.label} didn't pass the pre-publish checks with these moves, so nothing was published on either board (${plan.mirror.problems.slice(0, 3).join("; ")}). Your edits are still saved in this browser.`);
+          if (plan.mirror.csv !== dcur) {
+            const h2 = await historyUpdate(base, dcur, plan.mirror.csv, ts, other, "M", new Map(), ACTIVE_BOARD.id), hp2 = checkPublication(h2, ts);
+            if (hp2.length) throw ghError("data", `${other.label}'s ranking history didn't pass the pre-publish checks, so nothing was published on either board (${hp2.slice(0, 3).join("; ")}). Your edits are still saved in this browser.`);
+            twin = { board: other, csv: plan.mirror.csv, h: h2, n: plan.mirror.applied.length };
+          }
+        }
         if (same && !h.r.changed) { done = { csv, same, h }; break; }   // already live (e.g. published from another tab)
         const changes = [];
-        const text = same ? index.text : replaceRankings(index.text, csv);
+        let text = same ? index.text : replaceRankings(index.text, csv);
+        if (twin) text = replaceRankings(text, twin.csv, other);
         if (text !== index.text) changes.push({ path: FILE, text });
         if (h.histNew != null) changes.push({ path: HISTORY_FILE, text: h.histNew });
         if (h.snapNew != null) changes.push({ path: h.path, text: h.snapNew });
+        if (twin && twin.h.histNew != null) changes.push({ path: other.history, text: twin.h.histNew });
+        if (twin && twin.h.snapNew != null) changes.push({ path: twin.h.path, text: twin.h.snapNew });
         const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36), hl = h.r.changed ? historyMessage(h.r.ev) : "";
-        const msg = same ? hl : `${ACTIVE_BOARD === DEFAULT_BOARD ? "Rankings edit" : ACTIVE_BOARD.label + " rankings edit"}${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})` + (hl ? "\n\n" + hl : "");
+        const msg = same ? hl : `${ACTIVE_BOARD === DEFAULT_BOARD ? "Rankings edit" : ACTIVE_BOARD.label + " rankings edit"}${editor.login ? " by @" + editor.login : ""} (${count} player${count === 1 ? "" : "s"})`
+          + (twin ? ` + positional changes on ${other.label} (${plural(twin.n, "player", "players")})` : "") + (hl ? "\n\n" + hl : "")
+          + (twin && twin.h.r.changed ? `\n${other.label}: ${historySummary(twin.h.r.ev) || "exact snapshot"}` : "");
         diag("publish", `attempt ${attempt + 1} on ${base.head.slice(0, 7)}: ${changes.map(c => c.path).join(" + ")}`);
-        const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts, start: startCsv }));
-        if (res) done = { csv, same, h };   // null: the branch moved underneath us, so read and merge again
+        const res = await repoCommit(base, changes, msg, sha => writePublish({ id, commit: sha, at: ts, start: startCsv, ...(twin ? { twin: other.id } : {}) }));
+        if (res) done = { csv, same, h, twin };   // null: the branch moved underneath us, so read and merge again
         else diag("publish", "branch moved, re-reading");
       }
       if (!done) throw ghError("server", "the site kept changing while publishing. Your edits are still saved in this browser; try again.");
       writePublish(null); writePending([]);
       // confirmed: the merged rankings are now the published ones. Unsaved changes made while publishing are kept on top.
       editor.saving = false;
+      if (done.twin) adoptOther(done.twin.board, done.twin.csv, done.twin.h.hist, done.twin.h.r.snapshot ? done.twin.h : null);   // before this board's own redraw
       const left = adoptPublished(done.csv, { hist: done.h.hist, month: done.h.month, snapFile: done.h.r.snapshot ? done.h.snapFile : null }, startCsv);
-      const s = done.h.r.changed && historySummary(done.h.r.ev), snapNote = s ? ` Ranking history: ${s}.` : "";
+      const s = done.h.r.changed && historySummary(done.h.r.ev), snapNote = (done.twin ? ` ${plural(done.twin.n, "player", "players")} also moved on ${done.twin.board.label}.` : choice && choice.both && !done.same ? ` ${other.label} already had that order: unchanged.` : "") + (s ? ` Ranking history: ${s}.` : "");
       const leftNote = left ? ` ${left} edit${left === 1 ? "" : "s"} made while publishing ${left === 1 ? "is" : "are"} still unsaved.` : "";
       toast(settledNote + (done.same ? "Already live: these edits were already in the published rankings." : "Published and confirmed. The live site updates in about a minute.") + snapNote + leftNote);
     } catch (err) {
@@ -11359,7 +11636,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
     REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn();
     draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); toast("Changes discarded.");
   });
-  $("eb-publish").addEventListener("click", publishLive);
+  $("eb-publish").addEventListener("click", () => publishLive());
   $("eb-discard").addEventListener("click", discardLocal);
   $("eb-signout").addEventListener("click", forgetToken);
 
@@ -11383,7 +11660,7 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
       $("signin-token").value = "";
       dialog.close();
       const next = AFTER_SIGNIN; AFTER_SIGNIN = null;
-      (next || publishLive)();
+      if (next) next(); else publishLive();
     } catch (err) {
       editor.token = null;
       $("signin-error").textContent = err.kind === "auth" ? "GitHub didn't recognize that token." : redact(err.message);
@@ -20409,6 +20686,11 @@ body.editing #panel-rankings table td.val { width: 220px; min-width: 0; }   /* r
   if (window.__SPM_TEST_HOOKS === true) SPM.acceptance = a => acceptance(a);   // the shared Acceptance read on given inputs (tests)
   if (window.__SPM_TEST_HOOKS === true) SPM.hcVs = (am, v, who, lead) => hcVs(am, v, who, lead);   // AM vs a market price as shown in the cards
   if (window.__SPM_TEST_HOOKS === true) SPM.mkConfWhy = sids => mkConfWhy(sids.map(s => players.find(p => String(p.sleeperId) === String(s))));
+  // the "both formats" plan for the saved edits, as the publish prompt would show it (tests only)
+  if (window.__SPM_TEST_HOOKS === true) SPM.boardBlock = id => String(boardCsv(BOARDS.find(b => b.id === id))).trim();   // this page's copy of a board (tests only)
+  if (window.__SPM_TEST_HOOKS === true) SPM.applyPlan = () => { const o = otherBoard(); if (!o) return null; const p = applyPlanNow();
+    return { dest: p.dest.id, positions: p.ch.positions, movers: p.ch.movers, status: p.ch.status, applied: p.mirror.applied, skipped: p.mirror.skipped, values: p.mirror.values, shifted: p.mirror.shifted,
+      problems: p.mirror.problems, steps: p.mirror.steps, csv: p.mirror.csv, blocked: applyBlocked(p), key: p.key }; };
   if (window.__SPM_TEST_HOOKS === true) SPM.edit = Object.assign(EDIT_API, { draft: () => tableToCsv(draft), unsaved: () => changedRows().length,
     reset: () => { for (const k of Object.keys(TIER_EMPTY)) delete TIER_EMPTY[k]; REVALUED.clear(); RECALC_TAG.clear(); hideEdWarn(); draft = csvToTable(savedCsv); touchDraft = new Map(touchSaved); resetEditSession(); rebuild(); } });
 

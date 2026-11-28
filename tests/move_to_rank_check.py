@@ -62,6 +62,7 @@ with sync_playwright() as pw:
         ctx.route("https://api.github.com/**", lambda r: r.abort())
         ctx.route(re.compile(r"https://(sleepercdn\.com|a\.espncdn\.com|api\.sleeper\.(app|com)|use\.typekit\.net|fonts\.(googleapis|gstatic)\.com)/.*"), lambda r: r.abort())
         FB.route(ctx, BASE)
+        ctx.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
         ctx.add_init_script("window.__SPM_TEST_HOOKS = true;")
         return ctx
     def open_page(ctx):
@@ -261,6 +262,7 @@ with sync_playwright() as pw:
             if body is None: r.fulfill(status=404, content_type="application/json", body=b"{}")
             else: r.fulfill(status=200, content_type="application/json", body=body)
         ctx.route(re.compile(re.escape(BASE) + r"/data/(rank_history\.json|injury_overrides\.json|rank_snapshots/[^/?]+\.json).*"), data_file)
+        ctx.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
         ctx.add_init_script("window.__SPM_TEST_HOOKS = true;")
         if token: ctx.add_init_script("try { localStorage.setItem('spm_editor_token', 'test-token'); } catch (e) {}")
         return ctx

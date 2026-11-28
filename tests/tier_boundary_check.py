@@ -45,6 +45,7 @@ with sync_playwright() as pw:
     ctx.route("https://api.github.com/**", lambda r: (writes.append(r.request.method), r.abort()))
     ctx.route("https://*.sleepercdn.com/**", lambda r: r.abort())
     FB.route(ctx, BASE)   # the frozen test board, never the live rankings
+    ctx.add_init_script("window.__SPM_APPLY_OFF = true;")   # the plain publish: no "both formats" prompt (tests/board_apply_check.py covers it)
     ctx.add_init_script("window.__SPM_TEST_HOOKS = true;")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
 
